@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Superhero Forge — Nocturnal Knights</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:#09090F;color:#E8E4D4;font-family:'Courier New',monospace;overflow-x:hidden;}
+  input,button,textarea,select{font-family:'Courier New',monospace;}
+  input[type=text],input[type=number],input[type=password],textarea{
+    background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);
+    border-radius:7px;padding:9px 13px;color:#E8E4D4;font-size:12px;
+    outline:none;width:100%;resize:vertical;
+  }
+  input:focus,textarea:focus{border-color:rgba(212,175,55,0.4);}
+  ::-webkit-scrollbar{width:4px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+  ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:2px;}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<!-- Vendor JS loaded locally (run setup.py first) -->
+<script>
+  // Storage polyfill — replaces Claude's window.storage with localStorage
+  window.storage = {
+    get: async (key) => {
+      const val = localStorage.getItem(key);
+      if (val === null) throw new Error("Key not found: " + key);
+      return { key, value: val };
+    },
+    set: async (key, value) => {
+      const str = typeof value === "string" ? value : JSON.stringify(value);
+      localStorage.setItem(key, str);
+      return { key, value: str };
+    },
+    delete: async (key) => {
+      localStorage.removeItem(key);
+      return { key, deleted: true };
+    },
+    list: async (prefix) => {
+      const keys = Object.keys(localStorage).filter(k => !prefix || k.startsWith(prefix));
+      return { keys };
+    }
+  };
+</script>
+
+<script src="/vendor/react.js"></script>
+<script src="/vendor/react-dom.js"></script>
+<script src="/vendor/babel.js"></script>
+
+<script type="text/babel" data-presets="react">
+const { useState, useRef, useEffect, useCallback } = React;
+const G = "#D4AF37";
+const API = "/api/chat";
+
+// ── Data ──────────────────────────────────────────────────────────────────────
+const DEFAULT_NK = [
+  { id:"darkstar",heroName:"Darkstar",realName:"Kareem Carter",role:"Leader · Powerhouse",
+    color:"#534AB7",colorLight:"#AFA9EC",initials:"KC",number:"01",isCore:true,
+    tagline:"The night bends to his will.",
+    powers:[
+      {name:"Dark Ki Projection",desc:"Concentrated void-violet energy blasts that crack the air on release."},
+      {name:"Shadow Threading",desc:"Dark energy tendrils for grappling, binding, and high-speed traversal."},
+      {name:"Gravity Surge",desc:"Overrides gravity — flight, aerial combat, concussive ground launches."},
+      {name:"Final Surge",desc:"Full aura release multiplying strength and speed. Visible cost when it fades."},
+    ],
+    origin:"Former Division I athlete and physics prodigy. Survived a government black-site dark energy experiment that killed every other subject. The energy bonded to him at a cellular level. He didn't form the Knights out of heroism — he formed them because the organization was still operating and no one was stopping them.",
+    dna:["Vegeta","Spider-Man","Superman"],
+    stats:{Power:95,Speed:80,Tech:40,Intellect:70,Will:85},
+    costumeDesc:"sleek void-black bodysuit with deep violet (#534AB7) glowing circuit lines on chest and forearms, NK crest",
+    powerFX:"void-violet aura radiating from both hands and faintly from eyes, floating 2 feet off the ground",
+    consistencyNotes:"Suit ALWAYS void-black with violet accent lines only. Faint violet eye glow. No capes. No wings.",
+  },
+  { id:"phantom-edge",heroName:"Phantom Edge",realName:"Jon Bethea",role:"Second in Command · Tech Striker",
+    color:"#0F6E56",colorLight:"#5DCAA5",initials:"JB",number:"02",isCore:true,
+    tagline:"Every battle is already solved before it starts.",
+    powers:[
+      {name:"Chrono Blade",desc:"Vibranium-alloy energy sword that phases through non-organic matter. Trails teal afterimages."},
+      {name:"Adaptive Nanosuit",desc:"Reconfigures in real-time — absorbs damage, shifts to offense, deploys micro-drones mid-combat."},
+      {name:"Elastic Form",desc:"Limbs stretch, coil, and rebound for unpredictable strikes and instant distance closing."},
+      {name:"Battlefield IQ",desc:"Visor HUD analyzes enemy patterns in seconds and feeds tactical data to the whole team."},
+    ],
+    origin:"Top engineering graduate who discovered his employer was a front for the same organization that experimented on Kareem. He walked into their server room alone, copied everything, burned the rest, and rebuilt his tech from scratch.",
+    dna:["Trunks","Mr. Fantastic","Black Panther"],
+    stats:{Power:72,Speed:85,Tech:98,Intellect:95,Will:78},
+    costumeDesc:"adaptive nanosuit in void-black with glowing teal (#0F6E56) circuit lines, full helmet with data visor",
+    powerFX:"teal energy sword with afterimage trail, one arm elastically stretched, HUD data in visor",
+    consistencyNotes:"Helmet ALWAYS on with teal visor glow. No bare face in armored mode.",
+  },
+  { id:"chimera",heroName:"Chimera",realName:'Jesus "Omar" Fernandez',role:"Scientist · Genetic Brawler",
+    color:"#993C1D",colorLight:"#F0997B",initials:"JF",number:"03",isCore:true,
+    tagline:"He rewrote the rules of his own biology.",
+    powers:[
+      {name:"Live Gene-Shift",desc:"Rewrites his own DNA on the fly — bone plating, razor claws, enhanced senses on demand."},
+      {name:"Catalyst Spheres",desc:"Self-guided orbs that detonate, emit EMP bursts, or form reactive barriers."},
+      {name:"Precision Strike",desc:"Baseball-honed reflexes plus enhanced genetics — lethal throwing accuracy at any range."},
+      {name:"Beast Intellect",desc:"Monstrous physical form doesn't dull the mind. Processes combat and science simultaneously."},
+    ],
+    origin:"A geneticist whose research was stolen and weaponized without his knowledge. He administered his own prototype to himself. The process was supposed to be reversible. Most of it was. He kept the 20% that made him dangerous.",
+    dna:["Mr. Terrific","The Beast","Baseball Precision"],
+    stats:{Power:82,Speed:75,Tech:90,Intellect:97,Will:80},
+    costumeDesc:"tactical void-black bodysuit with torn sleeves revealing reinforced dark bone plating on arms, NK crest",
+    powerFX:"razor bone claws on one hand, rust-orange (#993C1D) catalyst orb mid-throw, second orb orbiting shoulder",
+    consistencyNotes:"Arms always show bone plating. Rust-orange ONLY accent color. Mostly human-looking with enhanced limbs.",
+  },
+  { id:"paladin",heroName:"Paladin",realName:"Mario Richardson",role:"Heart of the Team · Clutch Factor",
+    color:"#185FA5",colorLight:"#85B7EB",initials:"MR",number:"04",isCore:true,
+    tagline:"He doesn't have the most power. He has the most heart.",
+    powers:[
+      {name:"Resolve Shield",desc:"Nearly unbreakable energy barrier fueled by pure willpower. Glows brighter as odds stack higher."},
+      {name:"Rally Aura",desc:"Pulse that restores focus and stamina to downed teammates. The team fights harder near him."},
+      {name:"Last Stand Surge",desc:"Strength and durability spike dramatically when the mission is truly on the brink."},
+      {name:"Unbreakable Will",desc:"Immune to mental attacks, fear, and manipulation. His calm steadies everyone around him."},
+    ],
+    origin:"No experiment. No accident. Mario stood beside Kareem when everyone else backed away. His power has no scientific explanation — a will so unbreakable it bends physics slightly.",
+    dna:["Captain America","Heart of the team"],
+    stats:{Power:65,Speed:68,Tech:30,Intellect:72,Will:100},
+    costumeDesc:"reinforced void-black tactical suit with blue (#185FA5) energy lines, broad chest plate with NK crest glowing blue",
+    powerFX:"large semi-transparent blue energy shield radiating soft pulsing light, warm blue aura surrounding entire body",
+    consistencyNotes:"Shield ALWAYS large and present. Blue aura is warm/pulsing. Face always visible — no helmet.",
+  },
+];
+
+const DYNAMICS=[
+  {a:"darkstar",b:"phantom-edge",label:"Volatile Alliance",color:"#E8A020",
+   desc:"The loudest tension on the team. They argue constantly and efficiently — fights last under 90 seconds because they both know the other is usually half right. Jon is the only one who can call Kareem wrong mid-mission without consequence."},
+  {a:"darkstar",b:"chimera",label:"Unspoken Bond",color:"#8B5CF6",
+   desc:"Both were changed by the same organization. Neither talks about it much, but they understand each other in a way the others don't access. Omar reads Kareem's anger as grief and calls it out — and Kareem lets him."},
+  {a:"darkstar",b:"paladin",label:"Leader & Conscience",color:"#185FA5",
+   desc:"Kareem leads. Mario decides where the line is. There is an unspoken team rule: if Mario won't do it, it doesn't happen. Kareem respects this more than he admits."},
+  {a:"phantom-edge",b:"chimera",label:"The Think Tank",color:"#0F6E56",
+   desc:"Their shorthand is almost telepathic. Jon identifies the structural weakness, Omar deploys the solution before Jon finishes the sentence. In a room together: breakthrough or 3-hour methodology argument."},
+  {a:"phantom-edge",b:"paladin",label:"Tactical Trust",color:"#5BA3D4",
+   desc:"Jon plans for every contingency. Mario executes when every plan has failed. They almost never talk outside missions — but on the field their trust is absolute."},
+  {a:"chimera",b:"paladin",label:"Heart & Mind",color:"#F0997B",
+   desc:"The most different members who understand each other best. Omar makes Mario laugh mid-mission. Mario is the only one Omar trusts with what the experiment still does to him."},
+];
+
+const RECRUIT_QUIZ=[
+  {id:"background",question:"What's your background?",options:[
+    {id:"military",label:"Military / Law enforcement",value:"military discipline, tactical training, command instincts"},
+    {id:"science",label:"Science / Academia",value:"scientific genius, analytical mind, research-driven problem solving"},
+    {id:"tech",label:"Tech / Engineering",value:"tech prodigy, builder mindset, solves problems by creating tools"},
+    {id:"street",label:"Street / Self-taught",value:"self-taught fighter, street survivor, raw resourcefulness and grit"},
+    {id:"athletics",label:"Athletics / Sports",value:"elite athlete, peak conditioning, competitive instinct and precision"},
+    {id:"arts",label:"Arts / Performance",value:"performer background, reads people instinctively, unpredictable in combat"},
+  ]},
+  {id:"fightStyle",question:"How do you approach a fight?",options:[
+    {id:"brawler",label:"Head-on — overwhelming force",value:"aggressive frontline brawler, overwhelms with raw power"},
+    {id:"tactician",label:"Calculate first, then strike",value:"tactical and precise, waits for the right moment"},
+    {id:"adaptive",label:"Adapt to whatever comes",value:"fluid and adaptive, reads the fight in real-time"},
+    {id:"support",label:"Hold the line, protect others",value:"defensive anchor, absorbs pressure so teammates operate freely"},
+    {id:"stealth",label:"Unseen until it's over",value:"stealth-based, patient, ends fights before they're noticed"},
+  ]},
+  {id:"motivation",question:"What drives you to fight?",options:[
+    {id:"vengeance",label:"Personal vendetta",value:"fueled by personal injustice, a specific score to settle"},
+    {id:"protection",label:"Protect the people I love",value:"protective instinct is the core driver"},
+    {id:"system",label:"Fix a broken system",value:"fights the structures that created the problem"},
+    {id:"duty",label:"Pure sense of duty",value:"duty-driven, doesn't need a personal reason"},
+    {id:"curiosity",label:"Curiosity / Thrill of it",value:"drawn to danger, fights because it's where they feel most alive"},
+  ]},
+  {id:"powerOrigin",question:"What power origin fits your vibe?",options:[
+    {id:"energy",label:"Energy / Ki / Cosmic force",value:"internal energy or ki-based powers, aura projection"},
+    {id:"tech",label:"Tech / Suit / Gadgets",value:"technology-based abilities, engineered suit or weapons"},
+    {id:"bio",label:"Biology / Mutation / Genetics",value:"biological enhancement, body modification, genetic mutation"},
+    {id:"will",label:"Willpower / Aura / Manifestation",value:"willpower-based manifestation, mental fortitude made physical"},
+    {id:"elemental",label:"Elemental / Environmental",value:"elemental control — fire, ice, lightning, earth, shadow, or light"},
+    {id:"psychic",label:"Psychic / Mental powers",value:"telepathy, telekinesis, precognition, or mental domination"},
+  ]},
+  {id:"personality",question:"Pick your personality type:",options:[
+    {id:"proud",label:"Intense / Proud / Competitive",value:"intense pride and competitive drive, refuses to lose"},
+    {id:"strategic",label:"Strategic / Quiet / Calculated",value:"calm and calculating, speaks rarely but always meaningfully"},
+    {id:"chaotic",label:"Chaotic / Unpredictable / Brilliant",value:"brilliant chaos energy, unpredictable even to allies"},
+    {id:"loyal",label:"Warm / Loyal / Unbreakable",value:"deeply loyal and warm, the emotional anchor of any group"},
+    {id:"dark",label:"Brooding / Haunted / Driven",value:"haunted by something, quiet intensity, controlled fury"},
+  ]},
+  {id:"weakness",question:"What's your biggest weakness?",options:[
+    {id:"ego",label:"Pride / Ego",value:"pride can blind them or cloud judgment under pressure"},
+    {id:"attachment",label:"Attachment to loved ones",value:"deeply vulnerable when someone they care about is threatened"},
+    {id:"toofar",label:"Going too far",value:"tendency to escalate beyond what's necessary"},
+    {id:"doubt",label:"Self-doubt",value:"inner uncertainty that can freeze them at critical moments"},
+    {id:"control",label:"Loss of control over power",value:"power not fully stable — stress risks catastrophic overload"},
+  ]},
+];
+
+const VILLAIN_QUIZ=[
+  {id:"role",question:"What is their role in the organization?",options:[
+    {id:"architect",label:"The Architect — designed the experiments",value:"mastermind who designed the dark energy experiments, brilliant and methodical"},
+    {id:"director",label:"The Director — runs all field operations",value:"tactical director who commands operatives, thinks in systems and acceptable losses"},
+    {id:"soldier",label:"The Soldier turned Commander",value:"former field operative elevated to command, still prefers direct violence"},
+    {id:"scientist",label:"The Scientist — chose the org over ethics",value:"genius who chose the org's methods deliberately, not under coercion"},
+    {id:"handler",label:"The Handler — controlled the test subjects",value:"psychologist who studied, manipulated, and conditioned the subjects including Kareem"},
+  ]},
+  {id:"drive",question:"What drives them?",options:[
+    {id:"believer",label:"True believer in the org's mission",value:"genuinely believes the org's work will save the world — the Knights are the obstacle"},
+    {id:"loss",label:"Lost someone because of the Knights",value:"lost someone they loved as collateral damage — grief has become a weapon"},
+    {id:"power",label:"Pure hunger for power and control",value:"uses the org as a vehicle for personal power, ultimately loyal to no one"},
+    {id:"subject",label:"Was also a test subject — broken by it",value:"survived the same experiment as Kareem but was fundamentally shattered by it"},
+    {id:"protection",label:"Protecting someone inside the org",value:"does terrible things to shield someone they love who is entangled in the org"},
+  ]},
+  {id:"connection",question:"Their personal connection to the Knights?",options:[
+    {id:"creator",label:"They ran the experiment on Kareem",value:"directly responsible for what Kareem became — has studied the Knights for years"},
+    {id:"betrayal",label:"Was once a Knight who turned",value:"former ally who knows every secret, every weakness, every blind spot"},
+    {id:"counter",label:"Built specifically to counter the Knights",value:"engineered by the org after the Knights became a threat — designed to win"},
+    {id:"personal",label:"Knew Kareem before everything",value:"deep pre-experiment history with Kareem — the betrayal runs deeply personal"},
+    {id:"collateral",label:"Lost someone to the Knights' methods",value:"a civilian caught in the crossfire of the Knights' war with the org"},
+  ]},
+  {id:"power",question:"What is their power source?",options:[
+    {id:"corrupted",label:"Corrupted dark energy — same as Darkstar",value:"wields the same dark energy as Kareem but without restraint, fully consumed"},
+    {id:"superior_tech",label:"Tech that surpasses Phantom Edge",value:"carries tech so advanced it makes Jon's feel obsolete, built on stolen research"},
+    {id:"bio_weapon",label:"Weaponized biology — counters Chimera",value:"biological weaponry designed specifically to neutralize Omar's adaptations"},
+    {id:"psychic",label:"Psychic assault and mental domination",value:"breaks minds, rewrites memories, turns allies against each other mid-mission"},
+    {id:"army",label:"Commands an army — force multiplier",value:"no personal power but commands hundreds of operatives with terrifying efficiency"},
+  ]},
+  {id:"flaw",question:"What is their fatal flaw?",options:[
+    {id:"hero",label:"They believe they are the real hero",value:"genuine conviction they are right and the Knights are the true villains"},
+    {id:"grief",label:"Grief has made them irrational",value:"the thing they lost has distorted every judgment — they cannot see clearly"},
+    {id:"orders",label:"Still following orders they stopped believing",value:"too deep in the org to leave, acting on momentum not conviction"},
+    {id:"pride",label:"Underestimates the Knights out of pride",value:"contempt for the Knights is their blindspot — cannot imagine losing to them"},
+    {id:"mercy",label:"There is still mercy left in them",value:"one of the Knights means something to them. They cannot fully commit to destroying them."},
+  ]},
+];
+
+const SCENARIOS=[
+  {id:"ambush",label:"Ambush",icon:"⚡",desc:"The Knights are caught off-guard"},
+  {id:"infiltration",label:"Infiltration",icon:"👁",desc:"Stealth mission into org territory"},
+  {id:"rescue",label:"Rescue",icon:"🔗",desc:"One Knight has been captured"},
+  {id:"confrontation",label:"Confrontation",icon:"💥",desc:"Direct face-off with the villain"},
+  {id:"revelation",label:"Revelation",icon:"📁",desc:"A dark truth about the org surfaces"},
+  {id:"heist",label:"Heist",icon:"🎯",desc:"Extract a target from deep cover"},
+];
+
+const TONES=[{id:"intense",label:"Intense"},{id:"dark",label:"Dark & Gritty"},{id:"triumphant",label:"Triumphant"},{id:"desperate",label:"Desperate"}];
+const ACCENT_COLORS=[
+  {id:"crimson",label:"Crimson",hex:"#A32D2D"},{id:"jade",label:"Jade",hex:"#1D9E75"},
+  {id:"amber",label:"Amber",hex:"#BA7517"},{id:"silver",label:"Silver",hex:"#888780"},
+  {id:"indigo",label:"Indigo",hex:"#4A3FA0"},{id:"copper",label:"Copper",hex:"#8B4513"},
+  {id:"frost",label:"Frost",hex:"#378ADD"},{id:"violet",label:"Violet",hex:"#8B2FC9"},
+];
+
+// ── Shared UI ─────────────────────────────────────────────────────────────────
+function StatBar({label,value,color}){
+  return(
+    <div style={{marginBottom:6}}>
+      <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
+        <span style={{fontSize:9,letterSpacing:"0.1em",color:"rgba(255,255,255,0.35)",textTransform:"uppercase"}}>{label}</span>
+        <span style={{fontSize:9,color,fontWeight:"bold"}}>{value}</span>
+      </div>
+      <div style={{height:2,background:"rgba(255,255,255,0.06)",borderRadius:2}}>
+        <div style={{height:2,width:`${value}%`,background:color,borderRadius:2}}/>
+      </div>
+    </div>
+  );
+}
+
+function CharacterPage({member,imageUrl,isVillain=false}){
+  const c=member.color,cl=member.colorLight||c;
+  return(
+    <div style={{background:"#07070E",border:`1px solid ${c}44`,borderRadius:12,overflow:"hidden"}}>
+      <div style={{background:isVillain?"rgba(163,45,45,0.15)":`${c}16`,borderBottom:`1px solid ${c}2A`,padding:"10px 18px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <div style={{fontSize:9,letterSpacing:"0.2em",color:cl,textTransform:"uppercase"}}>{isVillain?"— CLASSIFIED THREAT —":"Nocturnal Knights · "+member.number}</div>
+        <div style={{fontSize:9,color:`${c}88`,textTransform:"uppercase"}}>{member.role}</div>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1.15fr"}}>
+        <div style={{position:"relative",background:"#0A0A14",borderRight:`1px solid ${c}1A`,minHeight:440}}>
+          {imageUrl
+            ?<img src={imageUrl} alt={member.heroName} style={{width:"100%",height:"100%",minHeight:440,objectFit:"cover",objectPosition:"center top",display:"block"}}/>
+            :<div style={{minHeight:440,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:10}}>
+              <div style={{width:56,height:56,borderRadius:"50%",background:`${c}14`,border:`2px dashed ${c}40`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:"bold",color:c}}>{member.initials}</div>
+              <div style={{fontSize:10,color:"rgba(255,255,255,0.18)"}}>{isVillain?"Image classified":"No image uploaded"}</div>
+            </div>
+          }
+          <div style={{position:"absolute",bottom:0,left:0,right:0,height:90,background:"linear-gradient(transparent,#07070E)",pointerEvents:"none"}}/>
+          <div style={{position:"absolute",bottom:14,left:14,right:14}}>
+            <div style={{fontSize:22,fontWeight:"bold",color:"#F2EDD8",lineHeight:1,textShadow:"0 2px 14px rgba(0,0,0,0.95)"}}>{member.heroName}</div>
+            <div style={{fontSize:10,color:cl,marginTop:3}}>{member.realName}</div>
+          </div>
+        </div>
+        <div style={{padding:"16px 18px",display:"flex",flexDirection:"column",gap:13,maxHeight:560,overflowY:"auto"}}>
+          {member.tagline&&<div style={{borderLeft:`2px solid ${c}`,paddingLeft:10,fontSize:11.5,color:"rgba(255,255,255,0.5)",fontStyle:"italic",lineHeight:1.5}}>{member.tagline}</div>}
+          <div>
+            <div style={{fontSize:9,letterSpacing:"0.18em",color:`${c}88`,textTransform:"uppercase",marginBottom:8}}>Stats</div>
+            {Object.entries(member.stats).map(([k,v])=><StatBar key={k} label={k} value={v} color={c}/>)}
+          </div>
+          <div>
+            <div style={{fontSize:9,letterSpacing:"0.18em",color:`${c}88`,textTransform:"uppercase",marginBottom:8}}>Abilities</div>
+            {member.powers.map((p,i)=>(
+              <div key={i} style={{marginBottom:8}}>
+                <div style={{fontSize:11,fontWeight:"bold",color:cl}}>{p.name}</div>
+                <div style={{fontSize:10.5,color:"rgba(255,255,255,0.35)",lineHeight:1.5,marginTop:2}}>{p.desc}</div>
+              </div>
+            ))}
+          </div>
+          <div>
+            <div style={{fontSize:9,letterSpacing:"0.18em",color:`${c}88`,textTransform:"uppercase",marginBottom:6}}>Origin</div>
+            <div style={{fontSize:10.5,color:"rgba(255,255,255,0.35)",lineHeight:1.6}}>{member.origin}</div>
+          </div>
+          {member.dna&&member.dna.length>0&&(
+            <div>
+              <div style={{fontSize:9,letterSpacing:"0.18em",color:`${c}88`,textTransform:"uppercase",marginBottom:6}}>DNA</div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
+                {member.dna.map(d=><span key={d} style={{fontSize:9.5,padding:"2px 9px",background:`${c}12`,border:`1px solid ${c}2E`,borderRadius:20,color:cl}}>{d}</span>)}
+              </div>
+            </div>
+          )}
+          <div style={{marginTop:"auto",paddingTop:10,borderTop:`1px solid ${c}1A`,display:"flex",justifyContent:"space-between"}}>
+            <div style={{fontSize:8,color:"rgba(255,255,255,0.15)"}}>{isVillain?"HIGH PRIORITY TARGET":"NOCTURNAL KNIGHTS · CLASSIFIED"}</div>
+            {member.number&&<div style={{fontSize:18,fontWeight:"bold",color:`${c}33`}}>{member.number}</div>}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EditPanel({member,onSave,onCancel}){
+  const [t,setT]=useState(member.tagline||"");
+  const [o,setO]=useState(member.origin||"");
+  const [stats,setStats]=useState({...member.stats});
+  const [powers,setPowers]=useState(member.powers.map(p=>({...p})));
+  const c=member.color;
+  return(
+    <div style={{padding:"18px 20px",background:"#07070E",border:`1px solid ${c}33`,borderRadius:"0 0 12px 12px"}}>
+      <div style={{fontSize:9,letterSpacing:"0.18em",color:`${c}88`,textTransform:"uppercase",marginBottom:6}}>Tagline</div>
+      <input type="text" value={t} onChange={e=>setT(e.target.value)} style={{marginBottom:14}}/>
+      <div style={{fontSize:9,letterSpacing:"0.18em",color:`${c}88`,textTransform:"uppercase",marginBottom:6}}>Origin</div>
+      <textarea value={o} onChange={e=>setO(e.target.value)} style={{height:80,marginBottom:14}}/>
+      <div style={{fontSize:9,letterSpacing:"0.18em",color:`${c}88`,textTransform:"uppercase",marginBottom:8}}>Stats</div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:14}}>
+        {Object.entries(stats).map(([k,v])=>(
+          <div key={k}>
+            <div style={{fontSize:9,color:"rgba(255,255,255,0.4)",marginBottom:4,textTransform:"uppercase"}}>{k}</div>
+            <input type="number" min="1" max="100" value={v} onChange={e=>setStats(p=>({...p,[k]:Math.min(100,Math.max(1,+e.target.value))}))} style={{padding:"6px 10px"}}/>
+          </div>
+        ))}
+      </div>
+      <div style={{fontSize:9,letterSpacing:"0.18em",color:`${c}88`,textTransform:"uppercase",marginBottom:8}}>Powers</div>
+      {powers.map((p,i)=>(
+        <div key={i} style={{marginBottom:10}}>
+          <input type="text" placeholder="Power name" value={p.name} onChange={e=>setPowers(pw=>pw.map((x,j)=>j===i?{...x,name:e.target.value}:x))} style={{marginBottom:4}}/>
+          <input type="text" placeholder="Description" value={p.desc} onChange={e=>setPowers(pw=>pw.map((x,j)=>j===i?{...x,desc:e.target.value}:x))}/>
+        </div>
+      ))}
+      <div style={{display:"flex",gap:10,marginTop:16}}>
+        <button onClick={onCancel} style={{flex:1,padding:"10px",background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:8,cursor:"pointer",color:"rgba(255,255,255,0.4)",fontSize:11}}>Cancel</button>
+        <button onClick={()=>onSave({tagline:t,origin:o,stats,powers})} style={{flex:2,padding:"10px",background:`${c}18`,border:`1px solid ${c}`,borderRadius:8,cursor:"pointer",color:c,fontSize:11,letterSpacing:"0.1em",textTransform:"uppercase"}}>Save Changes</button>
+      </div>
+    </div>
+  );
+}
+
+function OllamaSetupGuide(){
+  const steps=[
+    {n:"1",text:"Download Ollama from ollama.com and install it"},
+    {n:"2",text:'Open a terminal and run: ollama pull llama3.2'},
+    {n:"3",text:"Wait for the download (~2GB), then restart Superhero Forge"},
+  ];
+  return(
+    <div style={{padding:"20px 24px",background:"rgba(139,26,26,0.1)",border:"1px solid rgba(139,26,26,0.3)",borderRadius:12,marginBottom:20}}>
+      <div style={{fontSize:13,fontWeight:"bold",color:"#E07070",marginBottom:4}}>Ollama Not Running</div>
+      <div style={{fontSize:12,color:"rgba(255,255,255,0.45)",marginBottom:14,lineHeight:1.6}}>
+        Superhero Forge uses Ollama to run AI locally — free, no internet required for generation.<br/>
+        Follow these steps to get set up:
+      </div>
+      {steps.map(s=>(
+        <div key={s.n} style={{display:"flex",gap:12,marginBottom:10,alignItems:"flex-start"}}>
+          <div style={{width:22,height:22,borderRadius:"50%",background:"rgba(139,26,26,0.3)",border:"1px solid rgba(139,26,26,0.5)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,color:"#E07070",flexShrink:0}}>{s.n}</div>
+          <div style={{fontSize:12,color:"rgba(255,255,255,0.55)",lineHeight:1.5,paddingTop:2}}>{s.text}</div>
+        </div>
+      ))}
+      <a href="https://ollama.com" target="_blank" style={{fontSize:11,color:"#E07070",textDecoration:"none",letterSpacing:"0.08em"}}>→ ollama.com</a>
+    </div>
+  );
+}
+
+// ── Main App ──────────────────────────────────────────────────────────────────
+function App(){
+  // Core state
+  const [tab,setTab]=useState("roster");
+  const [roster,setRoster]=useState(DEFAULT_NK);
+  const [images,setImages]=useState({});
+  const [expanded,setExpanded]=useState({});
+  const [editing,setEditing]=useState({});
+  const [edits,setEdits]=useState({});
+  const [villain,setVillain]=useState(null);
+  const [saved,setSaved]=useState(false);
+  // Ollama status
+  const [ollamaOk,setOllamaOk]=useState(null);
+  const [models,setModels]=useState([]);
+  const [currentModel,setCurrentModel]=useState("llama3.2");
+  const [showSettings,setShowSettings]=useState(false);
+  // Recruit
+  const [rStep,setRStep]=useState(0);const [rAnswers,setRAnswers]=useState({});
+  const [rName,setRName]=useState("");const [rAccent,setRAccent]=useState("crimson");
+  const [rLoading,setRLoading]=useState(false);const [rResult,setRResult]=useState(null);
+  // Villain
+  const [vStep,setVStep]=useState(0);const [vAnswers,setVAnswers]=useState({});
+  const [vName,setVName]=useState("");
+  const [vLoading,setVLoading]=useState(false);const [vResult,setVResult]=useState(null);
+  // Story
+  const [sCast,setSCast]=useState([]);const [sScenario,setSScenario]=useState("ambush");
+  const [sTone,setSTone]=useState("intense");
+  const [sLoading,setSLoading]=useState(false);const [sResult,setSResult]=useState(null);
+  // Dynamics
+  const [dynActive,setDynActive]=useState(null);
+  const [copied,setCopied]=useState({});
+  const fileRefs=useRef({});
+
+  // ── Ollama status check ──────────────────────────────────────────────────
+  const checkOllama=useCallback(()=>{
+    fetch("/api/status").then(r=>r.json()).then(d=>{
+      setOllamaOk(d.ollama);
+      setModels(d.models||[]);
+      setCurrentModel(d.current_model||"llama3.2");
+    }).catch(()=>setOllamaOk(false));
+  },[]);
+
+  useEffect(()=>{
+    checkOllama();
+    const t=setInterval(checkOllama,10000);
+    return()=>clearInterval(t);
+  },[checkOllama]);
+
+  // ── Persistence ──────────────────────────────────────────────────────────
+  useEffect(()=>{
+    (async()=>{
+      try{const r=await window.storage.get("nk-recruits");if(r){const rec=JSON.parse(r.value);setRoster([...DEFAULT_NK,...rec]);}}catch(e){}
+      try{const v=await window.storage.get("nk-villain");if(v)setVillain(JSON.parse(v.value));}catch(e){}
+      try{const e=await window.storage.get("nk-edits");if(e)setEdits(JSON.parse(e.value));}catch(e){}
+    })();
+  },[]);
+
+  const persist=async(key,data)=>{
+    try{await window.storage.set(key,JSON.stringify(data));setSaved(true);setTimeout(()=>setSaved(false),2000);}catch(e){}
+  };
+
+  // ── API ──────────────────────────────────────────────────────────────────
+  const callAI=async(prompt)=>{
+    const res=await fetch(API,{
+      method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({model:currentModel,max_tokens:1200,messages:[{role:"user",content:prompt}]})
+    });
+    const d=await res.json();
+    if(d.error)throw new Error(d.error.message||"AI error");
+    const text=d.content?.find(b=>b.type==="text")?.text||"{}";
+    // Try to extract JSON even if model wraps it
+    const clean=text.replace(/```json\n?/g,"").replace(/```\n?/g,"").trim();
+    try{return JSON.parse(clean);}
+    catch{
+      const m=clean.match(/\{[\s\S]*\}/);
+      if(m)return JSON.parse(m[0]);
+      throw new Error("Response was not valid JSON");
+    }
+  };
+
+  // ── Helpers ──────────────────────────────────────────────────────────────
+  const handleImg=(id,file)=>{
+    if(!file||!file.type.startsWith("image/"))return;
+    setImages(p=>({...p,[id]:URL.createObjectURL(file)}));
+  };
+  const toggle=id=>setExpanded(p=>({...p,[id]:!p[id]}));
+  const copy=(key,text)=>{
+    navigator.clipboard.writeText(text).then(()=>{setCopied(p=>({...p,[key]:true}));setTimeout(()=>setCopied(p=>({...p,[key]:false})),2000);});
+  };
+  const getMember=m=>edits[m.id]?{...m,...edits[m.id]}:m;
+  const saveEdit=(id,data)=>{
+    const ne={...edits,[id]:data};setEdits(ne);
+    setEditing(p=>({...p,[id]:false}));persist("nk-edits",ne);
+  };
+
+  // ── Recruit ──────────────────────────────────────────────────────────────
+  const generateRecruit=async()=>{
+    setRLoading(true);setRResult(null);
+    const hex=ACCENT_COLORS.find(a=>a.id===rAccent)?.hex||"#A32D2D";
+    const answers=RECRUIT_QUIZ.map(q=>{const opt=q.options.find(o=>o.id===rAnswers[q.id]);return `${q.question}: ${opt?.value||""}`;}).join("\n");
+    try{
+      const p=await callAI(`Create a Nocturnal Knights anti-hero character. JSON only — keys: heroName, tagline, role, origin, powers, stats, costumeDesc, powerFX, consistencyNotes, dna.\n\nReal name: ${rName||"Unknown"}\nAccent color: ${hex}\nExisting members (pick a DIFFERENT name): Darkstar, Phantom Edge, Chimera, Paladin\n\nQuiz answers:\n${answers}\n\nJSON structure required:\n{\n  "heroName": "2-word dark name",\n  "tagline": "one punchy sentence",\n  "role": "Role · Descriptor",\n  "origin": "2-3 sentence backstory tied to the same shadowy org",\n  "powers": [{"name":"Power Name","desc":"1-2 visual sentences"},{"name":"...","desc":"..."},{"name":"...","desc":"..."},{"name":"...","desc":"..."}],\n  "stats": {"Power":75,"Speed":70,"Tech":60,"Intellect":80,"Will":85},\n  "costumeDesc": "void-black suit with ${hex} accent lines and NK crest",\n  "powerFX": "visible energy effects using ${hex}",\n  "consistencyNotes": "1-2 design lock rules",\n  "dna": ["Inspiration 1","Inspiration 2"]\n}`);
+      const num=String(roster.length+1).padStart(2,"0");
+      setRResult({id:`recruit-${Date.now()}`,realName:rName||"Unknown",color:hex,colorLight:hex+"CC",initials:rName?rName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",number:num,isRecruit:true,...p});
+    }catch(e){setRResult({error:true,msg:e.message});}
+    setRLoading(false);
+  };
+
+  const addRecruit=()=>{
+    if(!rResult||rResult.error)return;
+    const recs=[...roster.filter(m=>m.isRecruit),rResult];
+    setRoster([...DEFAULT_NK,...recs]);persist("nk-recruits",recs);
+    setRResult(null);setRAnswers({});setRName("");setRStep(0);setTab("roster");
+  };
+
+  // ── Villain ──────────────────────────────────────────────────────────────
+  const generateVillain=async()=>{
+    setVLoading(true);setVResult(null);
+    const answers=VILLAIN_QUIZ.map(q=>{const opt=q.options.find(o=>o.id===vAnswers[q.id]);return `${q.question}: ${opt?.value||""}`;}).join("\n");
+    try{
+      const p=await callAI(`Create a primary villain for the Nocturnal Knights. JSON only — keys: heroName, tagline, role, origin, powers, stats, dna.\n\nName: ${vName||"Unknown"}\nContext: villain connected to the shadowy org that created the Knights\n\nQuiz answers:\n${answers}\n\nJSON structure:\n{\n  "heroName": "Villain codename",\n  "tagline": "one chilling sentence",\n  "role": "Threat · Descriptor",\n  "origin": "3-4 sentences deeply connected to the Knights origin",\n  "powers": [{"name":"Power Name","desc":"description, mirror or counter to a Knight's ability"},{"name":"...","desc":"..."},{"name":"...","desc":"..."},{"name":"...","desc":"..."}],\n  "stats": {"Power":85,"Speed":78,"Tech":82,"Intellect":90,"Will":88},\n  "dna": ["Villain Inspiration 1","Villain Inspiration 2"]\n}`);
+      setVResult({id:"villain",realName:vName||"Unknown",color:"#8B1A1A",colorLight:"#E07070",initials:vName?vName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",isVillain:true,...p});
+    }catch(e){setVResult({error:true,msg:e.message});}
+    setVLoading(false);
+  };
+
+  const saveVillain=()=>{
+    if(!vResult||vResult.error)return;
+    setVillain(vResult);persist("nk-villain",vResult);
+    setVResult(null);setVAnswers({});setVName("");setVStep(0);
+  };
+
+  // ── Story ────────────────────────────────────────────────────────────────
+  const generateStory=async()=>{
+    setSLoading(true);setSResult(null);
+    const allChars=[...roster,...(villain?[villain]:[])];
+    const cast=allChars.filter(m=>sCast.includes(m.id)).map(m=>getMember(m));
+    const scene=SCENARIOS.find(s=>s.id===sScenario);
+    const villainNote=villain&&sCast.includes("villain")?`Villain ${villain.heroName}: ${villain.role}. Powers: ${villain.powers?.map(p=>p.name).join(", ")}.`:"";
+    try{
+      const p=await callAI(`Write a Meta AI image generation prompt for a Nocturnal Knights scene. JSON only, key "prompt".\n\nCast: ${cast.map(m=>`${m.heroName} (${m.powerFX||m.color+" energy effects"}, costume: ${m.costumeDesc||"void-black suit"})`).join("; ")}\nScenario: ${scene?.label} — ${scene?.desc}\nTone: ${sTone}\n${villainNote}\n\nJSON:\n{\n  "prompt": "4-6 sentence Meta AI image prompt. Include each character with their exact visual power effects and costume colors. Describe the scenario playing out in a specific dramatic moment. Dramatic nighttime urban setting. End with: Cinematic wide shot, all characters fully visible, high-detail comic book illustration style."\n}`);
+      setSResult(p.prompt||"Generation failed — try again.");
+    }catch(e){setSResult("Generation failed: "+e.message);}
+    setSLoading(false);
+  };
+
+  // ── Styles ────────────────────────────────────────────────────────────────
+  const s={
+    tab:a=>({padding:"10px 16px",fontSize:10,letterSpacing:"0.14em",textTransform:"uppercase",cursor:"pointer",border:"none",background:"transparent",color:a?G:"rgba(255,255,255,0.28)",borderBottom:a?`2px solid ${G}`:"2px solid transparent",fontFamily:"monospace",whiteSpace:"nowrap",flexShrink:0}),
+    card:{background:"rgba(255,255,255,0.025)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:10,padding:"14px 16px"},
+    lbl:{fontSize:9,letterSpacing:"0.18em",color:"rgba(212,175,55,0.45)",textTransform:"uppercase",marginBottom:8,display:"block"},
+    chip:(a,c=G)=>({padding:"6px 12px",background:a?`${c}16`:"rgba(255,255,255,0.03)",border:`1px solid ${a?c:"rgba(255,255,255,0.07)"}`,borderRadius:20,cursor:"pointer",fontSize:10.5,color:a?c:"rgba(255,255,255,0.38)",fontFamily:"monospace",fontWeight:a?"bold":"normal",transition:"all 0.12s"}),
+    pBox:{background:"rgba(0,0,0,0.45)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:8,padding:"12px 14px",fontFamily:"monospace",fontSize:11.5,color:"#BFBBA6",lineHeight:1.7,whiteSpace:"pre-wrap",wordBreak:"break-word"},
+    cpyBtn:d=>({padding:"4px 11px",background:d?`${G}1A`:"rgba(255,255,255,0.04)",border:`1px solid ${d?G:"rgba(255,255,255,0.1)"}`,borderRadius:6,cursor:"pointer",fontSize:10,color:d?G:"rgba(255,255,255,0.32)",fontFamily:"monospace"}),
+    bigBtn:(d,c=G)=>({width:"100%",padding:"12px",background:d?"rgba(255,255,255,0.03)":`${c}14`,border:`1px solid ${d?"rgba(255,255,255,0.07)":c}`,borderRadius:8,cursor:d?"not-allowed":"pointer",color:d?"rgba(255,255,255,0.22)":c,fontSize:10.5,letterSpacing:"0.12em",textTransform:"uppercase",fontFamily:"monospace",marginTop:6}),
+    optBtn:(a,c=G)=>({width:"100%",padding:"11px 16px",background:a?`${c}18`:"rgba(255,255,255,0.025)",border:`1px solid ${a?c:"rgba(255,255,255,0.07)"}`,borderRadius:9,cursor:"pointer",color:a?"#F0EAD6":"rgba(255,255,255,0.5)",fontFamily:"monospace",fontSize:12,textAlign:"left",marginBottom:8,transition:"all 0.12s"}),
+  };
+
+  const rHex=ACCENT_COLORS.find(a=>a.id===rAccent)?.hex||G;
+  const rCurrentQ=RECRUIT_QUIZ[rStep-1];
+  const vCurrentQ=VILLAIN_QUIZ[vStep-1];
+  const coreMembers=roster.filter(m=>m.isCore);
+  const N=coreMembers.length;
+  const cx=200,cy=155,r=105;
+  const positions=coreMembers.map((_,i)=>{const angle=(2*Math.PI*i/N)-Math.PI/2;return{x:cx+r*Math.cos(angle),y:cy+r*Math.sin(angle)};});
+
+  return(
+    <div style={{background:"#09090F",minHeight:"100vh",paddingBottom:60}}>
+
+      {/* Header */}
+      <div style={{borderBottom:"1px solid rgba(212,175,55,0.15)",padding:"12px 22px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+        <div>
+          <div style={{fontSize:9,letterSpacing:"0.22em",color:G,textTransform:"uppercase"}}>Nocturnal Knights</div>
+          <div style={{fontSize:19,fontWeight:"bold",letterSpacing:"0.05em",color:"#F0EAD6"}}>SUPERHERO FORGE</div>
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          {saved&&<div style={{fontSize:9,color:"#5DCAA5",padding:"3px 10px",background:"rgba(15,110,86,0.12)",border:"1px solid rgba(15,110,86,0.3)",borderRadius:20}}>✓ Saved</div>}
+          {/* Ollama status */}
+          <div style={{display:"flex",alignItems:"center",gap:6,padding:"5px 12px",background:"rgba(255,255,255,0.03)",border:`1px solid ${ollamaOk?"rgba(15,110,86,0.3)":ollamaOk===false?"rgba(139,26,26,0.4)":"rgba(255,255,255,0.1)"}`,borderRadius:20}}>
+            <div style={{width:7,height:7,borderRadius:"50%",background:ollamaOk?"#5DCAA5":ollamaOk===false?"#E07070":"#888780"}}/>
+            <span style={{fontSize:9,color:"rgba(255,255,255,0.5)",letterSpacing:"0.08em"}}>{ollamaOk===null?"Checking...":ollamaOk?currentModel:"Ollama offline"}</span>
+          </div>
+          {/* Model selector */}
+          {ollamaOk&&models.length>0&&(
+            <select value={currentModel} onChange={e=>{setCurrentModel(e.target.value);fetch("/api/config",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:e.target.value})});}}
+              style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:7,padding:"5px 10px",color:"#E8E4D4",fontSize:10,cursor:"pointer"}}>
+              {models.map(m=><option key={m} value={m}>{m}</option>)}
+            </select>
+          )}
+          <button onClick={checkOllama} style={{padding:"5px 10px",background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:7,cursor:"pointer",color:"rgba(255,255,255,0.4)",fontSize:9,fontFamily:"monospace"}}>↻</button>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div style={{display:"flex",borderBottom:"1px solid rgba(212,175,55,0.1)",padding:"0 22px",overflowX:"auto"}}>
+        {[["roster","Roster"],["team","Team"],["recruit","+ Recruit"],["villain","Villain"],["story","Story"]].map(([id,label])=>(
+          <button key={id} style={s.tab(tab===id)} onClick={()=>setTab(id)}>{label}</button>
+        ))}
+      </div>
+
+      <div style={{padding:"22px",maxWidth:900,margin:"0 auto"}}>
+        {ollamaOk===false&&<OllamaSetupGuide/>}
+
+        {/* ── ROSTER ─────────────────────────────────────────────────────── */}
+        {tab==="roster"&&(
+          <>
+            <p style={{fontSize:12,color:"rgba(255,255,255,0.4)",marginBottom:18,lineHeight:1.7}}>Upload character images, expand to view full pages, or Edit to modify any character.</p>
+            <div style={{display:"grid",gridTemplateColumns:`repeat(${Math.min(roster.length,4)},1fr)`,gap:10,marginBottom:24}}>
+              {roster.map(m=>(
+                <div key={m.id}>
+                  <input type="file" accept="image/*" style={{display:"none"}} ref={el=>fileRefs.current[m.id]=el} onChange={e=>handleImg(m.id,e.target.files[0])}/>
+                  <div onClick={()=>fileRefs.current[m.id]?.click()} style={{background:images[m.id]?"transparent":`${m.color}08`,border:`1.5px dashed ${images[m.id]?m.color+"66":m.color+"2E"}`,borderRadius:9,overflow:"hidden",cursor:"pointer",aspectRatio:"3/4",position:"relative",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:6}}>
+                    {images[m.id]?(
+                      <>
+                        <img src={images[m.id]} alt={m.heroName} style={{width:"100%",height:"100%",objectFit:"cover",objectPosition:"top",position:"absolute",inset:0}}/>
+                        <div style={{position:"absolute",inset:0,background:"linear-gradient(transparent 55%,rgba(0,0,0,0.88))"}}/>
+                        <div style={{position:"absolute",bottom:8,left:8}}><div style={{fontSize:11,fontWeight:"bold",color:"#fff"}}>{m.heroName}</div><div style={{fontSize:8,color:m.colorLight||m.color}}>{m.number}</div></div>
+                        <div style={{position:"absolute",top:6,right:6,background:`${m.color}dd`,borderRadius:10,padding:"2px 6px",fontSize:8,color:"#fff"}}>✓</div>
+                      </>
+                    ):(
+                      <>
+                        <div style={{width:34,height:34,borderRadius:"50%",background:`${m.color}14`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:"bold",color:m.color}}>{m.initials}</div>
+                        <div style={{fontSize:9,color:"rgba(255,255,255,0.22)",textAlign:"center",lineHeight:1.4}}>{m.heroName}<br/>tap to upload</div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:8}}>
+              {roster.map(m=>{
+                const dm=getMember(m);
+                return(
+                  <div key={m.id}>
+                    <div style={{display:"flex",alignItems:"center",gap:12,padding:"11px 16px",background:expanded[m.id]?`${m.color}0E`:"rgba(255,255,255,0.02)",border:`1px solid ${expanded[m.id]?m.color+"44":"rgba(255,255,255,0.06)"}`,borderRadius:editing[m.id]||expanded[m.id]?"10px 10px 0 0":10,cursor:"pointer"}}>
+                      {images[m.id]?<img src={images[m.id]} alt="" style={{width:38,height:38,borderRadius:6,objectFit:"cover",objectPosition:"top",flexShrink:0}} onClick={()=>toggle(m.id)}/>:<div style={{width:38,height:38,borderRadius:6,background:`${m.color}14`,border:`1px dashed ${m.color}44`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:"bold",color:m.color,flexShrink:0}} onClick={()=>toggle(m.id)}>{m.initials}</div>}
+                      <div style={{flex:1}} onClick={()=>toggle(m.id)}>
+                        <div style={{display:"flex",alignItems:"center",gap:8}}>
+                          <span style={{fontSize:13,fontWeight:"bold",color:"#F0EAD6"}}>{dm.heroName}</span>
+                          {m.isRecruit&&<span style={{fontSize:8,background:`${G}22`,border:`1px solid ${G}44`,color:G,padding:"1px 6px",borderRadius:8}}>NEW</span>}
+                          {edits[m.id]&&<span style={{fontSize:8,background:"rgba(15,110,86,0.15)",border:"1px solid rgba(15,110,86,0.3)",color:"#5DCAA5",padding:"1px 6px",borderRadius:8}}>Edited</span>}
+                        </div>
+                        <div style={{fontSize:10,color:"rgba(255,255,255,0.3)",marginTop:1}}>{dm.role}</div>
+                      </div>
+                      <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                        <button onClick={e=>{e.stopPropagation();setEditing(p=>({...p,[m.id]:!p[m.id]}));setExpanded(p=>({...p,[m.id]:false}));}} style={{fontSize:9,padding:"3px 9px",background:editing[m.id]?`${m.color}22`:"rgba(255,255,255,0.04)",border:`1px solid ${editing[m.id]?m.color:"rgba(255,255,255,0.1)"}`,borderRadius:6,cursor:"pointer",color:editing[m.id]?m.color:"rgba(255,255,255,0.35)",fontFamily:"monospace"}}>{editing[m.id]?"Close":"Edit"}</button>
+                        {m.isRecruit&&<button onClick={e=>{e.stopPropagation();const r=roster.filter(x=>x.id!==m.id);setRoster(r);persist("nk-recruits",r.filter(x=>x.isRecruit));}} style={{fontSize:9,padding:"3px 9px",background:"rgba(163,45,45,0.1)",border:"1px solid rgba(163,45,45,0.28)",borderRadius:6,cursor:"pointer",color:"#e74c3c",fontFamily:"monospace"}}>Remove</button>}
+                        <div style={{fontSize:11,color:`${m.color}88`,minWidth:16}} onClick={()=>toggle(m.id)}>{expanded[m.id]?"▲":"▼"}</div>
+                      </div>
+                    </div>
+                    {editing[m.id]&&<EditPanel member={dm} onSave={d=>saveEdit(m.id,d)} onCancel={()=>setEditing(p=>({...p,[m.id]:false}))}/>}
+                    {expanded[m.id]&&!editing[m.id]&&<div style={{border:`1px solid ${m.color}44`,borderTop:"none",borderRadius:"0 0 10px 10px",overflow:"hidden"}}><CharacterPage member={dm} imageUrl={images[m.id]||null}/></div>}
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
+
+        {/* ── TEAM ───────────────────────────────────────────────────────── */}
+        {tab==="team"&&(
+          <>
+            <div style={{fontSize:9,letterSpacing:"0.2em",color:`${G}77`,textTransform:"uppercase",marginBottom:12}}>Relationship Map</div>
+            <div style={{background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:12,overflow:"hidden",marginBottom:24}}>
+              <svg viewBox="0 0 400 310" style={{width:"100%",display:"block"}}>
+                {DYNAMICS.map((d,i)=>{
+                  const ai=coreMembers.findIndex(m=>m.id===d.a),bi=coreMembers.findIndex(m=>m.id===d.b);
+                  if(ai<0||bi<0)return null;
+                  const pa=positions[ai],pb=positions[bi],active=dynActive===i;
+                  return(
+                    <g key={i} style={{cursor:"pointer"}} onClick={()=>setDynActive(dynActive===i?null:i)}>
+                      <line x1={pa.x} y1={pa.y} x2={pb.x} y2={pb.y} stroke={d.color} strokeWidth={active?2.5:1.5} strokeOpacity={active?0.9:0.3}/>
+                      <circle cx={(pa.x+pb.x)/2} cy={(pa.y+pb.y)/2} r={15} fill={active?`${d.color}28`:"rgba(255,255,255,0.03)"} stroke={d.color} strokeWidth={active?1.5:0.5} strokeOpacity={0.7}/>
+                      <text x={(pa.x+pb.x)/2} y={(pa.y+pb.y)/2+3} textAnchor="middle" fontSize="6.5" fill={d.color} fontFamily="monospace" opacity={0.85}>{d.label.split(" ").slice(0,2).join(" ")}</text>
+                    </g>
+                  );
+                })}
+                {coreMembers.map((m,i)=>{
+                  const p=positions[i],dm=getMember(m);
+                  return(
+                    <g key={m.id}>
+                      <defs><clipPath id={`cl-${m.id}`}><circle cx={p.x} cy={p.y} r={28}/></clipPath></defs>
+                      <circle cx={p.x} cy={p.y} r={34} fill={`${m.color}18`} stroke={m.color} strokeWidth={1.5}/>
+                      {images[m.id]?<image href={images[m.id]} x={p.x-28} y={p.y-28} width={56} height={56} clipPath={`url(#cl-${m.id})`} preserveAspectRatio="xMidYMin slice"/>:<text x={p.x} y={p.y+5} textAnchor="middle" fontSize="12" fontWeight="bold" fill={m.color} fontFamily="monospace">{m.initials}</text>}
+                      <text x={p.x} y={p.y+48} textAnchor="middle" fontSize="8.5" fill="#E8E4D4" fontFamily="monospace" fontWeight="bold">{dm.heroName}</text>
+                    </g>
+                  );
+                })}
+              </svg>
+              <div style={{fontSize:9,color:"rgba(255,255,255,0.22)",textAlign:"center",paddingBottom:10,letterSpacing:"0.08em"}}>Tap a connection label to see relationship details</div>
+            </div>
+            {dynActive!==null&&DYNAMICS[dynActive]&&(
+              <div style={{marginBottom:20,padding:"16px 18px",background:`${DYNAMICS[dynActive].color}0C`,border:`1px solid ${DYNAMICS[dynActive].color}33`,borderRadius:10}}>
+                <div style={{fontSize:13,fontWeight:"bold",color:DYNAMICS[dynActive].color,marginBottom:6}}>{DYNAMICS[dynActive].label}</div>
+                <div style={{fontSize:12,color:"rgba(255,255,255,0.55)",lineHeight:1.65}}>{DYNAMICS[dynActive].desc}</div>
+                <div style={{fontSize:9,color:"rgba(255,255,255,0.25)",marginTop:8,letterSpacing:"0.08em"}}>{coreMembers.find(m=>m.id===DYNAMICS[dynActive].a)?.heroName} ↔ {coreMembers.find(m=>m.id===DYNAMICS[dynActive].b)?.heroName}</div>
+              </div>
+            )}
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(255px,1fr))",gap:10}}>
+              {DYNAMICS.map((d,i)=>(
+                <div key={i} onClick={()=>setDynActive(dynActive===i?null:i)} style={{background:dynActive===i?`${d.color}0E`:"rgba(255,255,255,0.025)",border:`1px solid ${dynActive===i?d.color+"44":"rgba(255,255,255,0.06)"}`,borderRadius:10,padding:"13px 15px",cursor:"pointer"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:6}}><div style={{width:7,height:7,borderRadius:"50%",background:d.color}}/><span style={{fontSize:12,fontWeight:"bold",color:"#F0EAD6"}}>{d.label}</span></div>
+                  <div style={{fontSize:9,color:d.color,marginBottom:6,letterSpacing:"0.06em"}}>{coreMembers.find(m=>m.id===d.a)?.heroName} · {coreMembers.find(m=>m.id===d.b)?.heroName}</div>
+                  <div style={{fontSize:11,color:"rgba(255,255,255,0.38)",lineHeight:1.5}}>{d.desc.slice(0,100)}...</div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* ── RECRUIT ────────────────────────────────────────────────────── */}
+        {tab==="recruit"&&(
+          <>
+            <div style={{marginBottom:20}}>
+              <div style={{height:3,background:"rgba(255,255,255,0.06)",borderRadius:2,marginBottom:6}}><div style={{height:3,width:`${rResult?100:(rStep/(RECRUIT_QUIZ.length+1))*100}%`,background:G,borderRadius:2,transition:"width 0.3s ease"}}/></div>
+              <div style={{display:"flex",justifyContent:"space-between"}}><span style={{fontSize:10,color:"rgba(255,255,255,0.4)"}}>{rResult?"Review recruit":rStep===0?"Identity":`Question ${rStep} of ${RECRUIT_QUIZ.length}`}</span><span style={{fontSize:10,color:G}}>{rResult?"Complete":`${Math.round((rStep/(RECRUIT_QUIZ.length+1))*100)}%`}</span></div>
+            </div>
+            {!rResult&&rStep===0&&(
+              <div style={s.card}>
+                <div style={{fontSize:15,fontWeight:"bold",color:"#F0EAD6",marginBottom:14}}>Who is this recruit?</div>
+                <span style={s.lbl}>Real Name (optional)</span>
+                <input type="text" placeholder="e.g. Devon Marshall" value={rName} onChange={e=>setRName(e.target.value)} style={{marginBottom:16}}/>
+                <span style={s.lbl}>Accent Color</span>
+                <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+                  {ACCENT_COLORS.map(ac=><button key={ac.id} onClick={()=>setRAccent(ac.id)} style={{display:"flex",alignItems:"center",gap:7,padding:"7px 12px",background:rAccent===ac.id?`${ac.hex}18`:"rgba(255,255,255,0.03)",border:`1px solid ${rAccent===ac.id?ac.hex:"rgba(255,255,255,0.07)"}`,borderRadius:20,cursor:"pointer",fontFamily:"monospace",fontSize:11,color:rAccent===ac.id?"#F0EAD6":"rgba(255,255,255,0.4)"}}><div style={{width:10,height:10,borderRadius:"50%",background:ac.hex,flexShrink:0}}/>{ac.label}</button>)}
+                </div>
+                <button style={s.bigBtn(false)} onClick={()=>setRStep(1)}>Begin Assessment →</button>
+              </div>
+            )}
+            {!rResult&&rStep>=1&&rStep<=RECRUIT_QUIZ.length&&rCurrentQ&&(
+              <div style={s.card}>
+                <div style={{fontSize:15,fontWeight:"bold",color:"#F0EAD6",marginBottom:18,lineHeight:1.4}}>{rCurrentQ.question}</div>
+                {rCurrentQ.options.map(opt=><button key={opt.id} onClick={()=>{setRAnswers(p=>({...p,[rCurrentQ.id]:opt.id}));if(rStep<RECRUIT_QUIZ.length)setRStep(p=>p+1);}} style={s.optBtn(rAnswers[rCurrentQ.id]===opt.id,rHex)}>{opt.label}</button>)}
+                <div style={{display:"flex",gap:10,marginTop:10}}>
+                  <button onClick={()=>setRStep(p=>Math.max(0,p-1))} style={{flex:1,padding:"10px",background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:8,cursor:"pointer",color:"rgba(255,255,255,0.35)",fontSize:10.5,fontFamily:"monospace"}}>← Back</button>
+                  {rStep===RECRUIT_QUIZ.length&&rAnswers[rCurrentQ.id]&&<button onClick={generateRecruit} disabled={rLoading} style={{flex:2,...s.bigBtn(rLoading,rHex),marginTop:0}}>{rLoading?"Forging identity...":"Generate Recruit →"}</button>}
+                </div>
+              </div>
+            )}
+            {rResult&&!rResult.error&&(
+              <>
+                <div style={{marginBottom:12,padding:"12px 16px",background:`${rResult.color}0C`,border:`1px solid ${rResult.color}33`,borderRadius:10,display:"flex",alignItems:"center",gap:12}}>
+                  <div style={{width:42,height:42,borderRadius:"50%",background:`${rResult.color}18`,border:`1px solid ${rResult.color}55`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:"bold",color:rResult.color,flexShrink:0}}>{rResult.initials}</div>
+                  <div><div style={{fontSize:17,fontWeight:"bold",color:"#F0EAD6"}}>{rResult.heroName}</div><div style={{fontSize:11,color:rResult.color}}>{rResult.realName} · {rResult.role}</div></div>
+                </div>
+                <CharacterPage member={rResult} imageUrl={null}/>
+                <div style={{display:"flex",gap:10,marginTop:14}}>
+                  <button onClick={()=>{setRResult(null);setRStep(0);setRAnswers({});}} style={{flex:1,padding:"11px",background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:8,cursor:"pointer",color:"rgba(255,255,255,0.4)",fontSize:10.5,fontFamily:"monospace"}}>Regenerate</button>
+                  <button onClick={addRecruit} style={{flex:2,padding:"11px",background:`${rResult.color}16`,border:`1px solid ${rResult.color}`,borderRadius:8,cursor:"pointer",color:rResult.color,fontSize:10.5,letterSpacing:"0.1em",textTransform:"uppercase",fontFamily:"monospace"}}>Add to Roster →</button>
+                </div>
+              </>
+            )}
+            {rResult?.error&&<div style={{padding:"12px",background:"rgba(192,57,43,0.1)",border:"1px solid rgba(192,57,43,0.28)",borderRadius:8,fontSize:11,color:"#e74c3c"}}>Generation failed: {rResult.msg}<br/><span style={{opacity:0.7}}>Make sure Ollama is running and try again.</span></div>}
+          </>
+        )}
+
+        {/* ── VILLAIN ────────────────────────────────────────────────────── */}
+        {tab==="villain"&&(
+          <>
+            {villain&&!vStep&&!vResult&&(
+              <>
+                <div style={{marginBottom:14,padding:"12px 16px",background:"rgba(139,26,26,0.15)",border:"1px solid rgba(139,26,26,0.3)",borderRadius:10,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                  <div><div style={{fontSize:9,color:"#E07070",letterSpacing:"0.14em",textTransform:"uppercase",marginBottom:3}}>Primary Antagonist</div><div style={{fontSize:15,fontWeight:"bold",color:"#F0EAD6"}}>{villain.heroName}</div><div style={{fontSize:11,color:"rgba(255,255,255,0.4)"}}>{villain.realName}</div></div>
+                  <button onClick={()=>setVStep(1)} style={{padding:"6px 14px",background:"rgba(139,26,26,0.2)",border:"1px solid rgba(139,26,26,0.4)",borderRadius:7,cursor:"pointer",color:"#E07070",fontSize:10,fontFamily:"monospace"}}>Rebuild</button>
+                </div>
+                <CharacterPage member={villain} imageUrl={null} isVillain={true}/>
+              </>
+            )}
+            {(!villain||vStep>0||vResult)&&(
+              <>
+                <div style={{marginBottom:20}}>
+                  <div style={{height:3,background:"rgba(255,255,255,0.06)",borderRadius:2,marginBottom:6}}><div style={{height:3,width:`${vResult?100:(vStep/(VILLAIN_QUIZ.length+1))*100}%`,background:"#8B1A1A",borderRadius:2,transition:"width 0.3s ease"}}/></div>
+                  <div style={{display:"flex",justifyContent:"space-between"}}><span style={{fontSize:10,color:"rgba(255,255,255,0.4)"}}>{vResult?"Review villain":vStep===0?"Identity":`Question ${vStep} of ${VILLAIN_QUIZ.length}`}</span><span style={{fontSize:10,color:"#E07070"}}>{vResult?"Complete":`${Math.round((vStep/(VILLAIN_QUIZ.length+1))*100)}%`}</span></div>
+                </div>
+                {!vResult&&vStep===0&&(
+                  <div style={s.card}>
+                    <div style={{fontSize:15,fontWeight:"bold",color:"#F0EAD6",marginBottom:4}}>Create the Antagonist</div>
+                    <div style={{fontSize:12,color:"rgba(255,255,255,0.4)",marginBottom:14,lineHeight:1.6}}>This villain will be built around the Knights — connected to their origin, dangerous in specific ways.</div>
+                    <span style={s.lbl}>Real Name (optional)</span>
+                    <input type="text" placeholder="e.g. Marcus Vane" value={vName} onChange={e=>setVName(e.target.value)} style={{marginBottom:6}}/>
+                    <button style={s.bigBtn(false,"#8B1A1A")} onClick={()=>setVStep(1)}>Begin Threat Assessment →</button>
+                  </div>
+                )}
+                {!vResult&&vStep>=1&&vStep<=VILLAIN_QUIZ.length&&vCurrentQ&&(
+                  <div style={s.card}>
+                    <div style={{fontSize:15,fontWeight:"bold",color:"#F0EAD6",marginBottom:18,lineHeight:1.4}}>{vCurrentQ.question}</div>
+                    {vCurrentQ.options.map(opt=><button key={opt.id} onClick={()=>{setVAnswers(p=>({...p,[vCurrentQ.id]:opt.id}));if(vStep<VILLAIN_QUIZ.length)setVStep(p=>p+1);}} style={s.optBtn(vAnswers[vCurrentQ.id]===opt.id,"#8B1A1A")}>{opt.label}</button>)}
+                    <div style={{display:"flex",gap:10,marginTop:10}}>
+                      <button onClick={()=>setVStep(p=>Math.max(0,p-1))} style={{flex:1,padding:"10px",background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:8,cursor:"pointer",color:"rgba(255,255,255,0.35)",fontSize:10.5,fontFamily:"monospace"}}>← Back</button>
+                      {vStep===VILLAIN_QUIZ.length&&vAnswers[vCurrentQ.id]&&<button onClick={generateVillain} disabled={vLoading} style={{flex:2,...s.bigBtn(vLoading,"#8B1A1A"),marginTop:0}}>{vLoading?"Forging threat...":"Generate Villain →"}</button>}
+                    </div>
+                  </div>
+                )}
+                {vResult&&!vResult.error&&(
+                  <>
+                    <div style={{marginBottom:12,padding:"12px 16px",background:"rgba(139,26,26,0.15)",border:"1px solid rgba(139,26,26,0.3)",borderRadius:10,display:"flex",alignItems:"center",gap:12}}>
+                      <div style={{width:42,height:42,borderRadius:"50%",background:"rgba(139,26,26,0.2)",border:"1px solid rgba(139,26,26,0.4)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:"bold",color:"#E07070",flexShrink:0}}>{vResult.initials}</div>
+                      <div><div style={{fontSize:17,fontWeight:"bold",color:"#F0EAD6"}}>{vResult.heroName}</div><div style={{fontSize:11,color:"#E07070"}}>{vResult.realName} · {vResult.role}</div></div>
+                    </div>
+                    <CharacterPage member={vResult} imageUrl={null} isVillain={true}/>
+                    <div style={{display:"flex",gap:10,marginTop:14}}>
+                      <button onClick={()=>{setVResult(null);setVStep(0);setVAnswers({});}} style={{flex:1,padding:"11px",background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:8,cursor:"pointer",color:"rgba(255,255,255,0.4)",fontSize:10.5,fontFamily:"monospace"}}>Regenerate</button>
+                      <button onClick={saveVillain} style={{flex:2,padding:"11px",background:"rgba(139,26,26,0.2)",border:"1px solid #8B1A1A",borderRadius:8,cursor:"pointer",color:"#E07070",fontSize:10.5,letterSpacing:"0.1em",textTransform:"uppercase",fontFamily:"monospace"}}>Set as Primary Villain →</button>
+                    </div>
+                  </>
+                )}
+                {vResult?.error&&<div style={{padding:"12px",background:"rgba(192,57,43,0.1)",border:"1px solid rgba(192,57,43,0.28)",borderRadius:8,fontSize:11,color:"#e74c3c"}}>Generation failed: {vResult.msg}</div>}
+              </>
+            )}
+          </>
+        )}
+
+        {/* ── STORY ──────────────────────────────────────────────────────── */}
+        {tab==="story"&&(
+          <>
+            <p style={{fontSize:12,color:"rgba(255,255,255,0.4)",marginBottom:18,lineHeight:1.7}}>Build the cast, pick a scenario and tone, and generate a Meta AI cinematic scene prompt.</p>
+            <div style={s.card}>
+              <span style={s.lbl}>Select Cast</span>
+              <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:18}}>
+                {[...roster,...(villain?[{...villain,id:"villain"}]:[])].map(m=>(
+                  <button key={m.id} onClick={()=>setSCast(p=>p.includes(m.id)?p.filter(x=>x!==m.id):[...p,m.id])} style={{display:"flex",alignItems:"center",gap:6,...s.chip(sCast.includes(m.id),m.isVillain?"#8B1A1A":m.color)}}>
+                    {images[m.id]&&<img src={images[m.id]} alt="" style={{width:18,height:18,borderRadius:"50%",objectFit:"cover",objectPosition:"top"}}/>}
+                    {m.isVillain&&<span style={{fontSize:9}}>⚠</span>}
+                    {getMember(m).heroName}
+                  </button>
+                ))}
+              </div>
+              <span style={s.lbl}>Scenario</span>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:18}}>
+                {SCENARIOS.map(sc=>(
+                  <button key={sc.id} onClick={()=>setSScenario(sc.id)} style={{...s.chip(sScenario===sc.id),padding:"10px 12px",textAlign:"left",borderRadius:9,display:"flex",flexDirection:"column",gap:2}}>
+                    <span style={{fontSize:15}}>{sc.icon}</span>
+                    <span style={{fontSize:11,fontWeight:"bold"}}>{sc.label}</span>
+                    <span style={{fontSize:9,opacity:0.55}}>{sc.desc}</span>
+                  </button>
+                ))}
+              </div>
+              <span style={s.lbl}>Tone</span>
+              <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:6}}>
+                {TONES.map(t=><button key={t.id} style={s.chip(sTone===t.id)} onClick={()=>setSTone(t.id)}>{t.label}</button>)}
+              </div>
+              <button style={s.bigBtn(sCast.length<1||sLoading)} onClick={generateStory} disabled={sCast.length<1||sLoading}>
+                {sLoading?"Generating scene...":"Generate Scene Prompt"}
+              </button>
+            </div>
+            {sResult&&(
+              <div style={{...s.card,marginTop:14}}>
+                <span style={s.lbl}>Meta AI Scene Prompt — Copy &amp; Paste into meta.ai</span>
+                <div style={s.pBox}>{sResult}</div>
+                <div style={{display:"flex",justifyContent:"flex-end",marginTop:8}}>
+                  <button style={s.cpyBtn(copied.story)} onClick={()=>copy("story",sResult)}>{copied.story?"Copied!":"Copy"}</button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(App));
+</script>
+</body>
+</html>
