@@ -3,7 +3,7 @@ Superhero Forge — Desktop App
 Local AI powered by Ollama. No API keys. No subscriptions.
 """
 
-import os, sys, json, threading, time, socket, base64, io, subprocess, shutil
+import os, sys, json, threading, time, socket, base64, io, subprocess, shutil, signal, atexit
 import urllib.request, urllib.error
 from flask import Flask, request, jsonify, send_from_directory, send_file
 
@@ -12,7 +12,31 @@ STATIC     = os.path.join(BASE, "static")
 VENDOR     = os.path.join(BASE, "vendor")
 CONFIG_FILE= os.path.join(BASE, "config.json")
 IMAGES_DIR = os.path.join(BASE, "images")
+LOCK_FILE  = os.path.join(BASE, ".forge.lock")
 os.makedirs(IMAGES_DIR, exist_ok=True)
+
+def _existing_instance():
+    if not os.path.exists(LOCK_FILE):
+        return None
+    try:
+        with open(LOCK_FILE) as f:
+            pid = int(f.read().strip())
+        os.kill(pid, 0)
+        return pid
+    except Exception:
+        return None
+
+def _write_lock():
+    with open(LOCK_FILE, "w") as f:
+        f.write(str(os.getpid()))
+
+def _remove_lock():
+    try:
+        with open(LOCK_FILE) as f:
+            if int(f.read().strip()) == os.getpid():
+                os.remove(LOCK_FILE)
+    except Exception:
+        pass
 
 DEFAULTS = {"model": "llama3.2", "ollama_url": "http://localhost:11434", "port": 7432}
 
@@ -440,6 +464,29 @@ def run_flask(port):
     app.run(host="127.0.0.1", port=port, debug=False, use_reloader=False, threaded=True)
 
 if __name__ == "__main__":
+    existing = _existing_instance()
+    if existing:
+        import tkinter as tk
+        from tkinter import messagebox
+        root = tk.Tk(); root.withdraw()
+        proceed = messagebox.askyesno(
+            "Superhero Forge Already Running",
+            f"Superhero Forge is already open (PID {existing}).\n\nClose it and launch a new instance?",
+            icon="warning"
+        )
+        root.destroy()
+        if proceed:
+            try:
+                os.kill(existing, signal.SIGTERM)
+                time.sleep(1.2)
+                try: os.kill(existing, signal.SIGKILL)
+                except ProcessLookupError: pass
+            except Exception: pass
+        else:
+            sys.exit(0)
+    _write_lock()
+    atexit.register(_remove_lock)
+
     print("\n  Starting Ollama...")
     ollama_ok = ensure_ollama()
     print(f"  Ollama {'ready' if ollama_ok else 'not found — AI features disabled'}")

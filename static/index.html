@@ -228,6 +228,10 @@ const DEEP_LORE_PHASES=[
 ];
 
 
+const TIER_DEFS=[{id:"S",label:"S",color:"#D4AF37"},{id:"A",label:"A",color:"#5DCAA5"},{id:"B",label:"B",color:"#5EB1FF"},{id:"C",label:"C",color:"#888780"}];
+const autoScore=m=>{const v=Object.values(m.stats||{});return v.length?Math.round(v.reduce((a,b)=>a+b,0)/v.length):0;};
+const autoTierFn=m=>{const sc=autoScore(m);return sc>=85?"S":sc>=70?"A":sc>=55?"B":"C";};
+
 // ── Shared UI components ──────────────────────────────────────────────────────
 function AlignmentBadge({alignment}){
   const m=ALIGN_META[alignment]||ALIGN_META.neutral;
@@ -467,6 +471,18 @@ function App(){
   const[editingChar,setEditingChar]=useState({});
   const[images,setImages]=useState({});
   const[removedMembers,setRemovedMembers]=useState({});
+  const[battleA,setBattleA]=useState(null);
+  const[battleB,setBattleB]=useState(null);
+  const[battleLoading,setBattleLoading]=useState(false);
+  const[battleResult,setBattleResult]=useState(null);
+  const[arcTitle,setArcTitle]=useState("");
+  const[arcVillain,setArcVillain]=useState("");
+  const[arcIssues,setArcIssues]=useState(3);
+  const[arcTone,setArcTone]=useState("intense");
+  const[arcTeams,setArcTeams]=useState([]);
+  const[arcLoading,setArcLoading]=useState(false);
+  const[arcResult,setArcResult]=useState(null);
+  const[tierOverrides,setTierOverrides]=useState(()=>{try{return JSON.parse(localStorage.getItem("forge-tiers")||"{}");}catch{return {};}});
   // ── Villain pool ────────────────────────────────────────────────────────
   const[villainPool,setVillainPool]=useState([]);
   // ── Ollama ──────────────────────────────────────────────────────────────
@@ -740,6 +756,28 @@ function App(){
     setPLoading(false);
   };
 
+  const generateBattle=async()=>{
+    if(!battleA||!battleB)return;
+    setBattleLoading(true);setBattleResult(null);
+    try{
+      const ci=m=>`${m.heroName}: Powers: ${(m.powers||[]).map(p=>p.name).join(", ")||"Unknown"}. Stats: ${JSON.stringify(m.stats||{})}. DNA: ${(m.dna||[]).join("+")}. Origin: ${(m.origin||"").slice(0,100)}`;
+      const r=await callAI(`Simulate a superhero fight. JSON only.\n\nFighter A: ${ci(battleA)}\nFighter B: ${ci(battleB)}\n\n{"winner":"exact hero name","margin":"narrow|decisive|overwhelming","aEdge":["advantage 1","advantage 2"],"bEdge":["advantage 1","advantage 2"],"keyMoment":"one dramatic turning point sentence","narrative":"3-4 cinematic sentences describing the fight","finisher":"one sentence finishing move"}`);
+      setBattleResult({...r,a:battleA,b:battleB});
+    }catch(e){setBattleResult({error:true});}
+    setBattleLoading(false);
+  };
+
+  const generateArc=async()=>{
+    setArcLoading(true);setArcResult(null);
+    try{
+      const cast=arcTeams.length?arcTeams.flatMap(tid=>getTeamRoster(tid)):activeRoster;
+      const villain=arcVillain||(villainPool[0]?.heroName)||"Unknown Threat";
+      const r=await callAI(`Create a superhero story arc. JSON only.\n\nTitle: "${arcTitle||"Untitled Arc"}"\nVillain: ${villain}\nCast: ${cast.map(m=>`${m.heroName} (${m.role||"Hero"})`).join(", ")}\nTone: ${arcTone}\nIssues: ${arcIssues}\n\n{"arcTitle":"string","tagline":"short punchy tagline","villainGoal":"what they want","issues":[{"number":1,"title":"string","summary":"2-3 sentences","spotlightHero":"hero name","villainMove":"what villain does","cliffhanger":"one sentence"}],"resolution":"2 sentences final outcome","teaser":"1 sentence next arc hook"}`);
+      setArcResult(r);
+    }catch(e){setArcResult({error:true});}
+    setArcLoading(false);
+  };
+
   // ── PDF Export ────────────────────────────────────────────────────────────
   const exportPDF=async()=>{
     setPdfLoading(true);
@@ -825,7 +863,7 @@ function App(){
 
     {/* ── Tabs ───────────────────────────────────────────────────────────── */}
     <div style={{display:"flex",borderBottom:"1px solid rgba(212,175,55,0.15)",padding:"0 22px",overflowX:"auto",background:"var(--bg-base)"}}>
-      {[["teams","Teams"],["roster","Roster"],["team","Team"],["prompts","Prompts"],["recruit","+ Recruit"],["villains","Villains"],["story","Story"]].map(([id,label])=>(
+      {[["teams","Teams"],["roster","Roster"],["team","Team"],["prompts","Prompts"],["recruit","+ Recruit"],["villains","Villains"],["story","Story"],["battle","⚡ Battle"],["arc","Arc"],["tiers","Tiers"],["universe","Universe"]].map(([id,label])=>(
         <button key={id} style={s.tab(tab===id)} onClick={()=>setTab(id)}>{label}</button>
       ))}
     </div>
@@ -1305,6 +1343,220 @@ function App(){
           <div style={{display:"flex",justifyContent:"flex-end",marginTop:8}}><button style={s.cpyBtn(copied.story)} onClick={()=>copy("story",sResult)}>{copied.story?"Copied!":"Copy"}</button></div>
         </div>)}
       </>)}
+
+      {/* ── BATTLE TAB ────────────────────────────────────────────────── */}
+      {tab==="battle"&&(()=>{
+        const battlePool=[...allCharacters,...villainPool.map(v=>({...v,isVillain:true}))];
+        return(<>
+          <div style={{fontSize:9,letterSpacing:"0.2em",color:`${G}77`,textTransform:"uppercase",marginBottom:16}}>Battle Simulator — Select Two Fighters</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 44px 1fr",gap:10,alignItems:"start",marginBottom:16}}>
+            <div>
+              <div style={{fontSize:9,color:"var(--text4)",marginBottom:8,letterSpacing:"0.1em"}}>FIGHTER A</div>
+              <select value={battleA?.id||""} onChange={e=>{setBattleA(battlePool.find(m=>m.id===e.target.value)||null);setBattleResult(null);}} style={{width:"100%",background:"var(--bg3)",border:`1px solid ${battleA?battleA.color+"55":"var(--border)"}`,borderRadius:8,padding:"10px 12px",color:"var(--text-primary)",fontSize:11,cursor:"pointer",marginBottom:8}}>
+                <option value="">— Select —</option>
+                {allCharacters.map(m=><option key={m.id} value={m.id}>{m.heroName}</option>)}
+                {villainPool.map(v=><option key={v.id} value={v.id}>⚠ {v.heroName}</option>)}
+              </select>
+              {battleA&&<div style={{padding:"10px",background:`${battleA.color}0A`,border:`1px solid ${battleA.color}33`,borderRadius:8}}>
+                {images[battleA.id]&&<img src={images[battleA.id]} alt="" style={{width:"100%",height:100,objectFit:"cover",objectPosition:"top",borderRadius:6,marginBottom:8}}/>}
+                <div style={{fontSize:13,fontWeight:"bold",color:battleA.color,marginBottom:2}}>{battleA.heroName}</div>
+                <div style={{fontSize:9,color:"var(--text3)",marginBottom:6}}>{battleA.realName}</div>
+                {battleA.stats&&Object.entries(battleA.stats).map(([k,v])=><div key={k} style={{display:"flex",gap:6,alignItems:"center",marginBottom:3}}><div style={{fontSize:8,color:"var(--text4)",width:55}}>{k}</div><div style={{flex:1,height:3,background:"rgba(255,255,255,0.08)",borderRadius:2,overflow:"hidden"}}><div style={{width:`${v}%`,height:"100%",background:battleA.color,borderRadius:2}}/></div><div style={{fontSize:8,color:battleA.color,width:18,textAlign:"right"}}>{v}</div></div>)}
+              </div>}
+            </div>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"center",paddingTop:36}}>
+              <div style={{fontSize:15,fontWeight:"bold",color:G}}>VS</div>
+            </div>
+            <div>
+              <div style={{fontSize:9,color:"var(--text4)",marginBottom:8,letterSpacing:"0.1em"}}>FIGHTER B</div>
+              <select value={battleB?.id||""} onChange={e=>{setBattleB(battlePool.find(m=>m.id===e.target.value)||null);setBattleResult(null);}} style={{width:"100%",background:"var(--bg3)",border:`1px solid ${battleB?battleB.color+"55":"var(--border)"}`,borderRadius:8,padding:"10px 12px",color:"var(--text-primary)",fontSize:11,cursor:"pointer",marginBottom:8}}>
+                <option value="">— Select —</option>
+                {allCharacters.map(m=><option key={m.id} value={m.id}>{m.heroName}</option>)}
+                {villainPool.map(v=><option key={v.id} value={v.id}>⚠ {v.heroName}</option>)}
+              </select>
+              {battleB&&<div style={{padding:"10px",background:`${battleB.color}0A`,border:`1px solid ${battleB.color}33`,borderRadius:8}}>
+                {images[battleB.id]&&<img src={images[battleB.id]} alt="" style={{width:"100%",height:100,objectFit:"cover",objectPosition:"top",borderRadius:6,marginBottom:8}}/>}
+                <div style={{fontSize:13,fontWeight:"bold",color:battleB.color,marginBottom:2}}>{battleB.heroName}</div>
+                <div style={{fontSize:9,color:"var(--text3)",marginBottom:6}}>{battleB.realName}</div>
+                {battleB.stats&&Object.entries(battleB.stats).map(([k,v])=><div key={k} style={{display:"flex",gap:6,alignItems:"center",marginBottom:3}}><div style={{fontSize:8,color:"var(--text4)",width:55}}>{k}</div><div style={{flex:1,height:3,background:"rgba(255,255,255,0.08)",borderRadius:2,overflow:"hidden"}}><div style={{width:`${v}%`,height:"100%",background:battleB.color,borderRadius:2}}/></div><div style={{fontSize:8,color:battleB.color,width:18,textAlign:"right"}}>{v}</div></div>)}
+              </div>}
+            </div>
+          </div>
+          <button style={s.bigBtn(!battleA||!battleB||battleLoading)} onClick={generateBattle} disabled={!battleA||!battleB||battleLoading}>{battleLoading?"Simulating...":"Run Battle"}</button>
+          {battleResult&&!battleResult.error&&(<div style={{...s.card,marginTop:16}}>
+            <div style={{textAlign:"center",padding:"12px 0 14px",marginBottom:14,borderBottom:"1px solid var(--border2)"}}>
+              <div style={{fontSize:9,color:"var(--text4)",letterSpacing:"0.15em",marginBottom:4}}>WINNER</div>
+              <div style={{fontSize:24,fontWeight:"bold",color:battleResult.winner===battleResult.a?.heroName?battleResult.a?.color:battleResult.b?.color}}>{battleResult.winner}</div>
+              <div style={{fontSize:10,color:"var(--text3)",marginTop:2,fontStyle:"italic"}}>{battleResult.margin} victory</div>
+            </div>
+            {battleResult.narrative&&<><span style={s.lbl}>Narrative</span><div style={{...s.pBox,marginBottom:12}}>{battleResult.narrative}</div></>}
+            {battleResult.keyMoment&&<><span style={s.lbl}>Key Moment</span><div style={{...s.pBox,marginBottom:12,fontStyle:"italic",color:G}}>{battleResult.keyMoment}</div></>}
+            {battleResult.finisher&&<><span style={s.lbl}>Finishing Move</span><div style={{...s.pBox,marginBottom:12,color:"#e74c3c"}}>{battleResult.finisher}</div></>}
+            {(battleResult.aEdge||battleResult.bEdge)&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginTop:4}}>
+              {battleResult.aEdge&&<div style={{background:`${battleResult.a.color}0A`,border:`1px solid ${battleResult.a.color}33`,borderRadius:8,padding:"10px 12px"}}><div style={{fontSize:8,color:battleResult.a.color,letterSpacing:"0.1em",marginBottom:6}}>{battleResult.a.heroName} EDGE</div>{battleResult.aEdge.map((e,i)=><div key={i} style={{fontSize:10,color:"var(--text2)",marginBottom:3}}>· {e}</div>)}</div>}
+              {battleResult.bEdge&&<div style={{background:`${battleResult.b.color}0A`,border:`1px solid ${battleResult.b.color}33`,borderRadius:8,padding:"10px 12px"}}><div style={{fontSize:8,color:battleResult.b.color,letterSpacing:"0.1em",marginBottom:6}}>{battleResult.b.heroName} EDGE</div>{battleResult.bEdge.map((e,i)=><div key={i} style={{fontSize:10,color:"var(--text2)",marginBottom:3}}>· {e}</div>)}</div>}
+            </div>}
+            <div style={{display:"flex",justifyContent:"flex-end",marginTop:10}}><button style={s.cpyBtn(copied.battle)} onClick={()=>copy("battle",[battleResult.narrative,battleResult.keyMoment,battleResult.finisher].filter(Boolean).join("\n\n"))}>{copied.battle?"Copied!":"Copy"}</button></div>
+          </div>)}
+          {battleResult?.error&&<div style={{marginTop:12,padding:"12px",background:"rgba(192,57,43,0.1)",border:"1px solid rgba(192,57,43,0.28)",borderRadius:8,fontSize:11,color:"#e74c3c"}}>Battle simulation failed — check Ollama is running.</div>}
+        </>);
+      })()}
+
+      {/* ── ARC TAB ───────────────────────────────────────────────────── */}
+      {tab==="arc"&&(<>
+        <div style={{fontSize:9,letterSpacing:"0.2em",color:`${G}77`,textTransform:"uppercase",marginBottom:16}}>Arc Generator — Build a Story Arc</div>
+        <div style={s.card}>
+          <span style={s.lbl}>Arc Title</span>
+          <input type="text" value={arcTitle} onChange={e=>setArcTitle(e.target.value)} placeholder="e.g. The Omega Protocol" style={{marginBottom:16}}/>
+          <span style={s.lbl}>Villain / Threat</span>
+          <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap",alignItems:"center"}}>
+            {villainPool.map(v=><button key={v.id} onClick={()=>setArcVillain(arcVillain===v.heroName?"":v.heroName)} style={{...s.chip(arcVillain===v.heroName,"#8B1A1A"),padding:"5px 12px"}}>{v.heroName}</button>)}
+            <input type="text" value={arcVillain} onChange={e=>setArcVillain(e.target.value)} placeholder="Or type a name..." style={{flex:1,minWidth:140}}/>
+          </div>
+          <span style={s.lbl}>Teams Involved</span>
+          <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:16}}>
+            {teams.map(t=><button key={t.id} onClick={()=>setArcTeams(p=>p.includes(t.id)?p.filter(x=>x!==t.id):[...p,t.id])} style={{...s.chip(arcTeams.includes(t.id),t.color),padding:"5px 12px"}}>{t.name}</button>)}
+            {arcTeams.length===0&&<div style={{fontSize:9,color:"var(--text4)",padding:"6px 4px"}}>None selected — uses active team</div>}
+          </div>
+          <div style={{display:"flex",gap:16,marginBottom:16,flexWrap:"wrap"}}>
+            <div style={{flex:1,minWidth:160}}>
+              <span style={s.lbl}>Tone</span>
+              <div style={{display:"flex",flexWrap:"wrap",gap:6}}>{TONES.map(t=><button key={t.id} style={s.chip(arcTone===t.id)} onClick={()=>setArcTone(t.id)}>{t.label}</button>)}</div>
+            </div>
+            <div>
+              <span style={s.lbl}>Issues</span>
+              <div style={{display:"flex",gap:6}}>{[3,4,5].map(n=><button key={n} style={{...s.chip(arcIssues===n),padding:"6px 14px"}} onClick={()=>setArcIssues(n)}>{n}</button>)}</div>
+            </div>
+          </div>
+          <button style={s.bigBtn(arcLoading||!ollamaOk)} onClick={generateArc} disabled={arcLoading||!ollamaOk}>{arcLoading?"Writing arc...":"Generate Arc"}</button>
+        </div>
+        {arcResult&&!arcResult.error&&(<div style={{marginTop:16}}>
+          <div style={{padding:"16px 18px",background:"rgba(212,175,55,0.06)",border:"1px solid rgba(212,175,55,0.25)",borderRadius:10,marginBottom:14}}>
+            <div style={{fontSize:20,fontWeight:"bold",color:G,marginBottom:4}}>{arcResult.arcTitle}</div>
+            <div style={{fontSize:12,color:"var(--text2)",fontStyle:"italic",marginBottom:8}}>{arcResult.tagline}</div>
+            {arcResult.villainGoal&&<div style={{fontSize:10,color:"var(--text3)"}}><span style={{color:"#e74c3c"}}>Threat: </span>{arcResult.villainGoal}</div>}
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            {(arcResult.issues||[]).map(issue=><div key={issue.number} style={{padding:"14px 16px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:10}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8,flexWrap:"wrap",gap:6}}>
+                <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                  <div style={{fontSize:8,color:"var(--text4)",letterSpacing:"0.1em",background:"rgba(255,255,255,0.05)",padding:"2px 7px",borderRadius:20}}>#{issue.number}</div>
+                  <div style={{fontSize:13,fontWeight:"bold",color:"var(--text-primary)"}}>{issue.title}</div>
+                </div>
+                {issue.spotlightHero&&<div style={{fontSize:9,padding:"2px 9px",background:`${G}12`,border:`1px solid ${G}44`,borderRadius:20,color:G}}>★ {issue.spotlightHero}</div>}
+              </div>
+              <div style={{fontSize:11,color:"var(--text2)",lineHeight:1.65,marginBottom:8}}>{issue.summary}</div>
+              {issue.villainMove&&<div style={{fontSize:10,color:"#e07070",marginBottom:5}}>⚠ {issue.villainMove}</div>}
+              {issue.cliffhanger&&<div style={{fontSize:10,color:"var(--text3)",fontStyle:"italic",borderTop:"1px solid var(--border)",paddingTop:6,marginTop:4}}>↳ {issue.cliffhanger}</div>}
+            </div>)}
+          </div>
+          {arcResult.resolution&&<div style={{marginTop:10,padding:"14px 16px",background:"rgba(93,202,165,0.06)",border:"1px solid rgba(93,202,165,0.25)",borderRadius:10}}>
+            <div style={{fontSize:8,color:"#5DCAA5",letterSpacing:"0.1em",marginBottom:4}}>RESOLUTION</div>
+            <div style={{fontSize:11,color:"var(--text2)",lineHeight:1.65}}>{arcResult.resolution}</div>
+          </div>}
+          {arcResult.teaser&&<div style={{marginTop:8,padding:"12px 16px",background:"rgba(212,175,55,0.04)",border:"1px solid rgba(212,175,55,0.18)",borderRadius:10}}>
+            <div style={{fontSize:8,color:G,letterSpacing:"0.1em",marginBottom:4}}>NEXT ARC</div>
+            <div style={{fontSize:11,color:"var(--text2)",fontStyle:"italic"}}>{arcResult.teaser}</div>
+          </div>}
+          <div style={{display:"flex",justifyContent:"flex-end",marginTop:12}}>
+            <button style={s.cpyBtn(copied.arc)} onClick={()=>{const txt=(arcResult.issues||[]).map(i=>`Issue #${i.number}: ${i.title}\n${i.summary}${i.cliffhanger?"\n↳ "+i.cliffhanger:""}`).join("\n\n");copy("arc",`${arcResult.arcTitle}\n${arcResult.tagline}\n\n${txt}${arcResult.resolution?"\n\nResolution: "+arcResult.resolution:""}`)}}>{copied.arc?"Copied!":"Copy Arc"}</button>
+          </div>
+        </div>)}
+        {arcResult?.error&&<div style={{marginTop:12,padding:"12px",background:"rgba(192,57,43,0.1)",border:"1px solid rgba(192,57,43,0.28)",borderRadius:8,fontSize:11,color:"#e74c3c"}}>Arc generation failed — check Ollama is running.</div>}
+      </>)}
+
+      {/* ── TIERS TAB ─────────────────────────────────────────────────── */}
+      {tab==="tiers"&&(()=>{
+        const cycleTier=m=>{
+          const cur=tierOverrides[m.id]||autoTierFn(m);
+          const tl=["S","A","B","C"];
+          const nn={...tierOverrides,[m.id]:tl[(tl.indexOf(cur)+1)%tl.length]};
+          setTierOverrides(nn);try{localStorage.setItem("forge-tiers",JSON.stringify(nn));}catch{}
+        };
+        return(<>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+            <div style={{fontSize:9,letterSpacing:"0.2em",color:`${G}77`,textTransform:"uppercase"}}>Power Tier Rankings — All Characters</div>
+            <button onClick={()=>{setTierOverrides({});try{localStorage.removeItem("forge-tiers");}catch{}}} style={{fontSize:9,padding:"3px 10px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:20,cursor:"pointer",color:"var(--text3)",fontFamily:"monospace"}}>Reset</button>
+          </div>
+          {TIER_DEFS.map(tier=>{
+            const members=allCharacters.filter(m=>(tierOverrides[m.id]||autoTierFn(m))===tier.id);
+            return(<div key={tier.id} style={{display:"flex",alignItems:"stretch",marginBottom:8,minHeight:76,border:`1px solid ${tier.color}22`,borderRadius:10,overflow:"hidden"}}>
+              <div style={{width:46,background:`${tier.color}14`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                <div style={{fontSize:22,fontWeight:"bold",color:tier.color}}>{tier.id}</div>
+              </div>
+              <div style={{flex:1,display:"flex",flexWrap:"wrap",gap:8,padding:"10px 12px",alignItems:"center"}}>
+                {members.length===0&&<div style={{fontSize:10,color:"var(--text4)",fontStyle:"italic"}}>—</div>}
+                {members.map(m=><div key={m.id} onClick={()=>cycleTier(m)} title="Click to move to next tier" style={{display:"flex",alignItems:"center",gap:7,padding:"6px 10px",background:`${m.color}10`,border:`1px solid ${m.color}33`,borderRadius:8,cursor:"pointer"}}>
+                  {images[m.id]?<img src={images[m.id]} alt="" style={{width:26,height:26,borderRadius:"50%",objectFit:"cover",objectPosition:"top",flexShrink:0}}/>:<div style={{width:26,height:26,borderRadius:"50%",background:`${m.color}20`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:8,fontWeight:"bold",color:m.color,flexShrink:0}}>{m.initials}</div>}
+                  <div><div style={{fontSize:11,fontWeight:"bold",color:"var(--text-primary)"}}>{m.heroName}</div><div style={{fontSize:8,color:m.color}}>{autoScore(m)} avg</div></div>
+                </div>)}
+              </div>
+            </div>);
+          })}
+          <div style={{marginTop:8,fontSize:9,color:"var(--text4)",textAlign:"center"}}>Click any character to cycle tier · Auto-ranked by average stats · Overrides saved locally</div>
+        </>);
+      })()}
+
+      {/* ── UNIVERSE MAP TAB ──────────────────────────────────────────── */}
+      {tab==="universe"&&(()=>{
+        const otherTeams=teams.filter(t=>t.id!=="nocturnal-knights");
+        const nkC={x:400,y:258};
+        const RAD=188;
+        const teamPos=otherTeams.map((t,i)=>{
+          const a=(i/Math.max(otherTeams.length,1))*Math.PI*2-Math.PI/2;
+          return{...t,x:nkC.x+Math.cos(a)*RAD,y:nkC.y+Math.sin(a)*RAD};
+        });
+        const nkRoster=getTeamRoster("nocturnal-knights").slice(0,6);
+        const ALINE={allied:"#0F6E56",rival:"#BA7517",enemy:"#8B1A1A",neutral:"#555555",splinter:"#993C1D",base:"#534AB7",member:"#534AB7"};
+        return(<>
+          <div style={{fontSize:9,letterSpacing:"0.2em",color:`${G}77`,textTransform:"uppercase",marginBottom:12}}>Universe Map — All Teams & Relationships</div>
+          <div style={{background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:12,overflow:"hidden",marginBottom:12}}>
+            <svg viewBox="0 0 800 516" style={{width:"100%",display:"block"}}>
+              {teamPos.map(t=>{
+                const lc=ALINE[t.nkAlignment]||"#555";
+                const dash=t.nkAlignment==="enemy"?"8,5":t.nkAlignment==="rival"?"5,4":undefined;
+                return <line key={t.id+"-l"} x1={nkC.x} y1={nkC.y} x2={t.x} y2={t.y} stroke={lc} strokeWidth={1.5} strokeOpacity={0.45} strokeDasharray={dash}/>;
+              })}
+              <circle cx={nkC.x} cy={nkC.y} r={70} fill={`${NK_TEAM.color}10`} stroke={NK_TEAM.color} strokeWidth={1.5} strokeOpacity={0.7}/>
+              <text x={nkC.x} y={nkC.y-78} textAnchor="middle" fontSize="11" fill={NK_TEAM.color} fontFamily="monospace" fontWeight="bold">{NK_TEAM.abbr}</text>
+              {nkRoster.map((m,i)=>{
+                const a=(i/Math.max(nkRoster.length,1))*Math.PI*2-Math.PI/2;
+                const mx=nkC.x+Math.cos(a)*45,my=nkC.y+Math.sin(a)*45;
+                return(<g key={m.id}>
+                  <defs><clipPath id={`um-${m.id}`}><circle cx={mx} cy={my} r={14}/></clipPath></defs>
+                  <circle cx={mx} cy={my} r={16} fill={`${m.color}22`} stroke={m.color} strokeWidth={1.2}/>
+                  {images[m.id]?<image href={images[m.id]} x={mx-14} y={my-14} width={28} height={28} clipPath={`url(#um-${m.id})`} preserveAspectRatio="xMidYMin slice"/>:<text x={mx} y={my+4} textAnchor="middle" fontSize="7" fontWeight="bold" fill={m.color} fontFamily="monospace">{m.initials}</text>}
+                </g>);
+              })}
+              {teamPos.map(t=>{
+                const roster=getTeamRoster(t.id).slice(0,5);
+                const lc=ALINE[t.nkAlignment]||"#555";
+                return(<g key={t.id}>
+                  <circle cx={t.x} cy={t.y} r={50} fill={`${t.color}0E`} stroke={t.color} strokeWidth={1} strokeOpacity={0.6}/>
+                  <text x={t.x} y={t.y+(roster.length?-58:-8)} textAnchor="middle" fontSize="9.5" fill={t.color} fontFamily="monospace" fontWeight="bold">{t.abbr}</text>
+                  {roster.length>0&&<text x={t.x} y={t.y-47} textAnchor="middle" fontSize="7" fill={lc} fontFamily="monospace">{t.nkAlignment}</text>}
+                  {roster.map((m,i)=>{
+                    const a=(i/Math.max(roster.length,1))*Math.PI*2-Math.PI/2;
+                    const mx=t.x+Math.cos(a)*30,my=t.y+Math.sin(a)*30;
+                    return(<g key={m.id}>
+                      <defs><clipPath id={`um2-${m.id}`}><circle cx={mx} cy={my} r={10}/></clipPath></defs>
+                      <circle cx={mx} cy={my} r={11} fill={`${m.color}20`} stroke={m.color} strokeWidth={0.8}/>
+                      {images[m.id]?<image href={images[m.id]} x={mx-10} y={my-10} width={20} height={20} clipPath={`url(#um2-${m.id})`} preserveAspectRatio="xMidYMin slice"/>:<text x={mx} y={my+3} textAnchor="middle" fontSize="5.5" fontWeight="bold" fill={m.color} fontFamily="monospace">{m.initials}</text>}
+                    </g>);
+                  })}
+                </g>);
+              })}
+            </svg>
+          </div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:8}}>
+            {[["allied","#0F6E56"],["rival","#BA7517"],["enemy","#8B1A1A"],["splinter","#993C1D"],["neutral","#555555"]].map(([k,c])=><div key={k} style={{display:"flex",alignItems:"center",gap:5,padding:"3px 9px",background:`${c}10`,border:`1px solid ${c}33`,borderRadius:20}}>
+              <div style={{width:14,height:2,background:c,borderRadius:1}}/>
+              <span style={{fontSize:9,color:c,fontFamily:"monospace"}}>{k}</span>
+            </div>)}
+          </div>
+          {otherTeams.length===0&&<div style={{textAlign:"center",padding:"16px",color:"var(--text3)",fontSize:11}}>Create additional teams in the Teams tab to populate the map.</div>}
+        </>);
+      })()}
 
     </div>
   </div>);
