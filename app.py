@@ -7,10 +7,12 @@ import os, sys, json, threading, time, socket, base64, io, subprocess, shutil
 import urllib.request, urllib.error
 from flask import Flask, request, jsonify, send_from_directory, send_file
 
-BASE   = os.path.dirname(os.path.abspath(__file__))
-STATIC = os.path.join(BASE, "static")
-VENDOR = os.path.join(BASE, "vendor")
-CONFIG_FILE = os.path.join(BASE, "config.json")
+BASE       = os.path.dirname(os.path.abspath(__file__))
+STATIC     = os.path.join(BASE, "static")
+VENDOR     = os.path.join(BASE, "vendor")
+CONFIG_FILE= os.path.join(BASE, "config.json")
+IMAGES_DIR = os.path.join(BASE, "images")
+os.makedirs(IMAGES_DIR, exist_ok=True)
 
 DEFAULTS = {"model": "llama3.2", "ollama_url": "http://localhost:11434", "port": 7432}
 
@@ -76,6 +78,46 @@ def config_route():
     if request.method == "POST":
         return jsonify(save_config(request.get_json() or {}))
     return jsonify(load_config())
+
+@app.route("/api/images", methods=["GET"])
+def list_images():
+    import glob
+    ids = [os.path.splitext(os.path.basename(f))[0]
+           for f in glob.glob(os.path.join(IMAGES_DIR, "*"))]
+    return jsonify(ids)
+
+@app.route("/api/images/<img_id>", methods=["GET", "POST", "DELETE"])
+def manage_image(img_id):
+    img_id = os.path.basename(img_id)  # sanitize
+    EXTS = [".jpg", ".jpeg", ".png", ".gif", ".webp"]
+
+    if request.method == "GET":
+        for ext in EXTS:
+            path = os.path.join(IMAGES_DIR, img_id + ext)
+            if os.path.exists(path):
+                return send_file(path)
+        return jsonify({"error": "not found"}), 404
+
+    elif request.method == "POST":
+        b64 = (request.get_json() or {}).get("data", "")
+        ext = ".jpg"
+        if "," in b64:
+            header, b64 = b64.split(",", 1)
+            if "png" in header: ext = ".png"
+            elif "gif" in header: ext = ".gif"
+            elif "webp" in header: ext = ".webp"
+        for old_ext in EXTS:
+            old = os.path.join(IMAGES_DIR, img_id + old_ext)
+            if os.path.exists(old): os.remove(old)
+        with open(os.path.join(IMAGES_DIR, img_id + ext), "wb") as f:
+            f.write(base64.b64decode(b64))
+        return jsonify({"ok": True})
+
+    elif request.method == "DELETE":
+        for ext in EXTS:
+            path = os.path.join(IMAGES_DIR, img_id + ext)
+            if os.path.exists(path): os.remove(path)
+        return jsonify({"ok": True})
 
 @app.route("/api/pull", methods=["POST"])
 def pull_model():
