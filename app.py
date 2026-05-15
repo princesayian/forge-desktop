@@ -3,7 +3,7 @@ Superhero Forge — Desktop App
 Local AI powered by Ollama. No API keys. No subscriptions.
 """
 
-import os, sys, json, threading, time, socket, base64, io
+import os, sys, json, threading, time, socket, base64, io, subprocess, shutil
 import urllib.request, urllib.error
 from flask import Flask, request, jsonify, send_from_directory, send_file
 
@@ -26,6 +26,28 @@ def save_config(data):
     with open(CONFIG_FILE, "w") as f:
         json.dump(cfg, f, indent=2)
     return cfg
+
+def ensure_ollama():
+    cfg = load_config()
+    try:
+        urllib.request.urlopen(f"{cfg['ollama_url']}/api/tags", timeout=2)
+        return True
+    except Exception:
+        pass
+    ollama_bin = shutil.which("ollama") or "/usr/local/bin/ollama"
+    if not os.path.exists(ollama_bin):
+        return False
+    subprocess.Popen([ollama_bin, "serve"],
+                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                     start_new_session=True)
+    for _ in range(40):
+        time.sleep(0.5)
+        try:
+            urllib.request.urlopen(f"{cfg['ollama_url']}/api/tags", timeout=1)
+            return True
+        except Exception:
+            pass
+    return False
 
 app = Flask(__name__, static_folder=STATIC)
 app.config["JSON_SORT_KEYS"] = False
@@ -376,6 +398,10 @@ def run_flask(port):
     app.run(host="127.0.0.1", port=port, debug=False, use_reloader=False, threaded=True)
 
 if __name__ == "__main__":
+    print("\n  Starting Ollama...")
+    ollama_ok = ensure_ollama()
+    print(f"  Ollama {'ready' if ollama_ok else 'not found — AI features disabled'}")
+
     port = find_free_port()
     url  = f"http://127.0.0.1:{port}"
     flask_thread = threading.Thread(target=run_flask, args=(port,), daemon=True)
