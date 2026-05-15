@@ -1,4 +1,6 @@
 {
   "model": "llama3.2",
-  "ollama_url": "http://localhost:11434"
+  "ollama_url": "http://localhost:11434",
+  "port": 7432,
+  "secret_key": "LcHtGOnDUOADBWzsIZkZ+2auKyeP33La"
 }

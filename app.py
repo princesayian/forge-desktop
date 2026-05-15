@@ -5,7 +5,7 @@ Local AI powered by Ollama. No API keys. No subscriptions.
 
 import os, sys, json, threading, time, socket, base64, io, subprocess, shutil, signal, atexit
 import urllib.request, urllib.error
-from flask import Flask, request, jsonify, send_from_directory, send_file
+from flask import Flask, request, jsonify, send_from_directory, send_file, session, redirect
 
 BASE       = os.path.dirname(os.path.abspath(__file__))
 STATIC     = os.path.join(BASE, "static")
@@ -14,6 +14,63 @@ CONFIG_FILE= os.path.join(BASE, "config.json")
 IMAGES_DIR = os.path.join(BASE, "images")
 LOCK_FILE  = os.path.join(BASE, ".forge.lock")
 os.makedirs(IMAGES_DIR, exist_ok=True)
+
+TUNNEL_URL   = None
+_TUNNEL_PROC = None
+
+# ── Update helpers ────────────────────────────────────────────────────────────
+def check_for_updates():
+    try:
+        r = subprocess.run(["git", "fetch", "origin", "--quiet"],
+                           cwd=BASE, capture_output=True, timeout=15)
+        if r.returncode != 0:
+            return False, None, None
+        local  = subprocess.run(["git", "rev-parse", "HEAD"], cwd=BASE,
+                                capture_output=True, text=True).stdout.strip()[:7]
+        remote = subprocess.run(["git", "rev-parse", "origin/main"], cwd=BASE,
+                                capture_output=True, text=True).stdout.strip()[:7]
+        return local != remote, local, remote
+    except Exception:
+        return False, None, None
+
+def pull_update():
+    try:
+        r = subprocess.run(["git", "pull", "origin", "main", "--rebase"],
+                           cwd=BASE, capture_output=True, text=True, timeout=60)
+        return r.returncode == 0, (r.stdout + r.stderr).strip()
+    except Exception as e:
+        return False, str(e)
+
+# ── Remote access helpers ─────────────────────────────────────────────────────
+def start_cloudflared(port):
+    global TUNNEL_URL, _TUNNEL_PROC
+    import re
+    cf = shutil.which("cloudflared")
+    if not cf:
+        return None
+    _TUNNEL_PROC = subprocess.Popen(
+        [cf, "tunnel", "--url", f"http://localhost:{port}"],
+        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
+    )
+    for _ in range(120):
+        line = _TUNNEL_PROC.stdout.readline()
+        if not line:
+            break
+        m = re.search(r'https://[a-z0-9-]+\.trycloudflare\.com', line)
+        if m:
+            TUNNEL_URL = m.group(0)
+            return TUNNEL_URL
+    return None
+
+def duckdns_loop(token, domain):
+    while True:
+        try:
+            urllib.request.urlopen(
+                f"https://www.duckdns.org/update?domains={domain}&token={token}&ip=",
+                timeout=10)
+        except Exception:
+            pass
+        time.sleep(300)
 
 def _existing_instance():
     if not os.path.exists(LOCK_FILE):
@@ -75,8 +132,71 @@ def ensure_ollama():
             pass
     return False
 
+FORGE_VERSION = "1.1"
+
 app = Flask(__name__, static_folder=STATIC)
 app.config["JSON_SORT_KEYS"] = False
+app.secret_key = os.urandom(24)  # replaced with persistent key at startup
+
+@app.before_request
+def _pin_guard():
+    cfg = load_config()
+    if not cfg.get("remote_enabled") or not cfg.get("remote_pin"):
+        return
+    if request.remote_addr in ("127.0.0.1", "::1"):
+        return
+    if session.get("pin_ok"):
+        return
+    if request.path in ("/forge-pin", "/api/verify-pin") or \
+       request.path.startswith(("/vendor/", "/api/images/")):
+        return
+    if request.path.startswith("/api/"):
+        return jsonify({"error": "pin_required"}), 401
+    return redirect("/forge-pin")
+
+@app.route("/forge-pin")
+def pin_page():
+    pin_html = """<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Forge — Enter PIN</title>
+<style>*{box-sizing:border-box;margin:0;padding:0;}body{background:#09090F;color:#F0EAD6;font-family:'Courier New',monospace;display:flex;align-items:center;justify-content:center;min-height:100vh;}
+.box{width:320px;text-align:center;}.title{font-size:18px;font-weight:bold;letter-spacing:.1em;color:#D4AF37;margin-bottom:6px;}
+.sub{font-size:11px;color:#888;margin-bottom:28px;}input{width:100%;padding:12px;background:#111;border:1px solid #333;border-radius:8px;color:#F0EAD6;font-size:20px;letter-spacing:.3em;text-align:center;margin-bottom:12px;}
+button{width:100%;padding:12px;background:#D4AF3720;border:1px solid #D4AF37;border-radius:8px;color:#D4AF37;font-size:12px;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;}
+.err{color:#e74c3c;font-size:11px;margin-top:8px;}</style></head>
+<body><div class="box"><div class="title">SUPERHERO FORGE</div><div class="sub">Remote access — enter PIN to continue</div>
+<input type="password" id="p" placeholder="PIN" autofocus onkeydown="if(event.key==='Enter')submit()"/>
+<button onclick="submit()">Unlock</button><div class="err" id="e"></div></div>
+<script>async function submit(){const r=await fetch('/api/verify-pin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pin:document.getElementById('p').value})});if((await r.json()).ok){location.href='/';}else{document.getElementById('e').textContent='Incorrect PIN.';}}</script></body></html>"""
+    return pin_html
+
+@app.route("/api/verify-pin", methods=["POST"])
+def verify_pin():
+    cfg = load_config()
+    pin = cfg.get("remote_pin", "")
+    if not pin or (request.get_json() or {}).get("pin") == pin:
+        session["pin_ok"] = True
+        return jsonify({"ok": True})
+    return jsonify({"ok": False}), 401
+
+@app.route("/api/update/check")
+def api_update_check():
+    has_update, local, remote = check_for_updates()
+    return jsonify({"has_update": has_update, "local": local, "remote": remote})
+
+@app.route("/api/update/pull", methods=["POST"])
+def api_update_pull():
+    ok, output = pull_update()
+    return jsonify({"ok": ok, "output": output})
+
+@app.route("/api/remote")
+def api_remote():
+    cfg = load_config()
+    return jsonify({
+        "enabled": cfg.get("remote_enabled", False),
+        "url": TUNNEL_URL,
+        "duck_domain": cfg.get("duck_domain", ""),
+        "pin_set": bool(cfg.get("remote_pin", "")),
+        "cloudflared": bool(shutil.which("cloudflared"))
+    })
 
 @app.route("/")
 def index():
@@ -448,7 +568,7 @@ def export_pdf():
 
 @app.route("/health")
 def health():
-    return jsonify({"status": "ok", "model": load_config()["model"]})
+    return jsonify({"status": "ok", "model": load_config()["model"], "version": FORGE_VERSION})
 
 def find_free_port(preferred=7432):
     s = socket.socket()
@@ -458,10 +578,10 @@ def find_free_port(preferred=7432):
         s.close(); s = socket.socket(); s.bind(("127.0.0.1", 0))
         port = s.getsockname()[1]; s.close(); return port
 
-def run_flask(port):
+def run_flask(port, host="127.0.0.1"):
     import logging
     logging.getLogger("werkzeug").setLevel(logging.ERROR)
-    app.run(host="127.0.0.1", port=port, debug=False, use_reloader=False, threaded=True)
+    app.run(host=host, port=port, debug=False, use_reloader=False, threaded=True)
 
 if __name__ == "__main__":
     existing = _existing_instance()
@@ -487,18 +607,47 @@ if __name__ == "__main__":
     _write_lock()
     atexit.register(_remove_lock)
 
+    # Persistent secret key for sessions
+    cfg = load_config()
+    if not cfg.get("secret_key"):
+        save_config({"secret_key": base64.b64encode(os.urandom(24)).decode()})
+        cfg = load_config()
+    app.secret_key = base64.b64decode(cfg["secret_key"])
+
+    # Bind host based on remote_enabled
+    flask_host = "0.0.0.0" if cfg.get("remote_enabled") else "127.0.0.1"
+
     print("\n  Starting Ollama...")
     ollama_ok = ensure_ollama()
     print(f"  Ollama {'ready' if ollama_ok else 'not found — AI features disabled'}")
 
     port = find_free_port()
     url  = f"http://127.0.0.1:{port}"
-    flask_thread = threading.Thread(target=run_flask, args=(port,), daemon=True)
+    flask_thread = threading.Thread(target=run_flask, args=(port, flask_host), daemon=True)
     flask_thread.start()
     for _ in range(20):
         try: urllib.request.urlopen(f"{url}/health", timeout=1); break
         except Exception: time.sleep(0.3)
-    print(f"\n  Superhero Forge ready at {url}")
+    print(f"\n  Superhero Forge v{FORGE_VERSION} ready at {url}")
+
+    # Auto-update check (background)
+    def _bg_update_check():
+        has_update, local, remote = check_for_updates()
+        if has_update:
+            print(f"  Update available: {local} → {remote} (open app to update)")
+    threading.Thread(target=_bg_update_check, daemon=True).start()
+
+    # Remote access
+    if cfg.get("remote_enabled"):
+        def _start_remote():
+            tunnel = start_cloudflared(port)
+            if tunnel:
+                print(f"  Remote (cloudflared): {tunnel}")
+            elif cfg.get("duck_domain"):
+                print(f"  Remote (DuckDNS): {cfg['duck_domain']}.duckdns.org:{port}")
+            if cfg.get("duck_token") and cfg.get("duck_domain"):
+                duckdns_loop(cfg["duck_token"], cfg["duck_domain"])
+        threading.Thread(target=_start_remote, daemon=True).start()
     try:
         import webview
         print("  Opening native window...\n")

@@ -483,6 +483,12 @@ function App(){
   const[arcLoading,setArcLoading]=useState(false);
   const[arcResult,setArcResult]=useState(null);
   const[tierOverrides,setTierOverrides]=useState(()=>{try{return JSON.parse(localStorage.getItem("forge-tiers")||"{}");}catch{return {};}});
+  const[switchingMember,setSwitchingMember]=useState(null);
+  const[redeemingVillain,setRedeemingVillain]=useState(null);
+  const[updateInfo,setUpdateInfo]=useState(null);
+  const[remoteInfo,setRemoteInfo]=useState(null);
+  const[showRemotePanel,setShowRemotePanel]=useState(false);
+  const[updatePulling,setUpdatePulling]=useState(false);
   // ── Villain pool ────────────────────────────────────────────────────────
   const[villainPool,setVillainPool]=useState([]);
   // ── Ollama ──────────────────────────────────────────────────────────────
@@ -554,6 +560,8 @@ function App(){
       try{const d=await window.storage.get("forge-meta-ai-pref");if(d)setHasMetaAI(JSON.parse(d.value));}catch(e){}
       try{const d=await window.storage.get("forge-removed");setRemovedMembers(JSON.parse(d.value)||{});}catch(e){}
       try{const r=await fetch("/api/images");const ids=await r.json();const loaded={};const t=Date.now();ids.forEach(id=>{loaded[id]=`/api/images/${id}?t=${t}`;});if(Object.keys(loaded).length)setImages(loaded);}catch(e){}
+      try{const r=await fetch("/api/update/check");setUpdateInfo(await r.json());}catch(e){}
+      try{const r=await fetch("/api/remote");setRemoteInfo(await r.json());}catch(e){}
     })();
   },[]);
 
@@ -628,6 +636,35 @@ function App(){
       setTeamRosters(newRosters);persist("forge-rosters",newRosters);
     }
   },[removedMembers,teamRosters,persist]);
+
+  const switchMemberTeam=useCallback((member,targetTeamId)=>{
+    let nr={...teamRosters};
+    let nrem={...removedMembers};
+    const src=member.teamId||activeTeamId;
+    if(member.isCore){nrem[src]=[...(nrem[src]||[]),member.id];setRemovedMembers(nrem);persist("forge-removed",nrem);}
+    else{nr[src]=(nr[src]||[]).filter(m=>m.id!==member.id);}
+    nr[targetTeamId]=[...(nr[targetTeamId]||[]),{...member,teamId:targetTeamId,isCore:false}];
+    setTeamRosters(nr);persist("forge-rosters",nr);setSwitchingMember(null);
+  },[teamRosters,removedMembers,activeTeamId,persist]);
+
+  const flipToVillain=useCallback((member)=>{
+    let nr={...teamRosters};
+    let nrem={...removedMembers};
+    const src=member.teamId||activeTeamId;
+    if(member.isCore){nrem[src]=[...(nrem[src]||[]),member.id];setRemovedMembers(nrem);persist("forge-removed",nrem);}
+    else{nr[src]=(nr[src]||[]).filter(m=>m.id!==member.id);setTeamRosters(nr);persist("forge-rosters",nr);}
+    const v={...member,isVillain:true,targetTeams:[src],nkAlignment:"enemy"};
+    const nv=[...villainPool,v];setVillainPool(nv);persist("forge-villains",nv);setSwitchingMember(null);
+  },[teamRosters,removedMembers,activeTeamId,villainPool,persist]);
+
+  const redeemVillain=useCallback((villain,targetTeamId)=>{
+    const nv=villainPool.filter(v=>v.id!==villain.id);
+    setVillainPool(nv);persist("forge-villains",nv);
+    const hero={...villain,isVillain:false,teamId:targetTeamId,isCore:false};
+    delete hero.isVillain;
+    const nr={...teamRosters,[targetTeamId]:[...(teamRosters[targetTeamId]||[]),hero]};
+    setTeamRosters(nr);persist("forge-rosters",nr);setRedeemingVillain(null);
+  },[villainPool,teamRosters,persist]);
 
   const copy=useCallback((key,text)=>{
     navigator.clipboard.writeText(text).then(()=>{setCopied(p=>({...p,[key]:true}));setTimeout(()=>setCopied(p=>({...p,[key]:false})),2000);});
@@ -841,7 +878,10 @@ function App(){
 
         <div>
           <div style={{fontSize:9,letterSpacing:"0.22em",color:G,textTransform:"uppercase"}}>Multi-Team System</div>
-          <div style={{fontSize:19,fontWeight:"bold",letterSpacing:"0.05em",color:"var(--text-primary)"}}>SUPERHERO FORGE</div>
+          <div style={{display:"flex",alignItems:"baseline",gap:8}}>
+            <div style={{fontSize:19,fontWeight:"bold",letterSpacing:"0.05em",color:"var(--text-primary)"}}>SUPERHERO FORGE</div>
+            <div style={{fontSize:9,color:"var(--text4)",letterSpacing:"0.1em"}}>v1.1</div>
+          </div>
         </div>
         {/* Active team indicator */}
         <div onClick={()=>setTab("teams")} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 14px",background:`${activeTeam.color}12`,border:`1px solid ${activeTeam.color}44`,borderRadius:20,cursor:"pointer"}}>
@@ -851,6 +891,15 @@ function App(){
       </div>
       <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
         {saved&&<div style={{fontSize:9,color:"#5DCAA5",padding:"3px 10px",background:"rgba(15,110,86,0.12)",border:"1px solid rgba(15,110,86,0.3)",borderRadius:20}}>✓ Saved</div>}
+        {updateInfo?.has_update&&<div style={{display:"flex",alignItems:"center",gap:6,padding:"4px 11px",background:"rgba(212,175,55,0.12)",border:"1px solid rgba(212,175,55,0.4)",borderRadius:20,cursor:"pointer"}} onClick={async()=>{if(updatePulling)return;setUpdatePulling(true);const r=await fetch("/api/update/pull",{method:"POST"});const d=await r.json();setUpdatePulling(false);if(d.ok){setUpdateInfo(null);alert("Updated! Restart the app to apply changes.");}else{alert("Update failed:\n"+d.output);}}}>
+          <div style={{width:6,height:6,borderRadius:"50%",background:G}}/>
+          <span style={{fontSize:9,color:G,fontFamily:"monospace"}}>{updatePulling?"Updating...":"Update available — click to pull"}</span>
+        </div>}
+        {remoteInfo?.url&&<div style={{display:"flex",alignItems:"center",gap:5,padding:"4px 11px",background:"rgba(94,177,255,0.08)",border:"1px solid rgba(94,177,255,0.3)",borderRadius:20,cursor:"pointer"}} onClick={()=>{navigator.clipboard.writeText(remoteInfo.url);}}>
+          <div style={{width:6,height:6,borderRadius:"50%",background:"#5EB1FF"}}/>
+          <span style={{fontSize:9,color:"#5EB1FF",fontFamily:"monospace",maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{remoteInfo.url}</span>
+        </div>}
+        <button onClick={()=>setShowRemotePanel(p=>!p)} title="Remote Access & Settings" style={{padding:"5px 10px",background:showRemotePanel?"rgba(94,177,255,0.12)":"var(--bg3)",border:`1px solid ${showRemotePanel?"rgba(94,177,255,0.4)":"var(--border)"}`,borderRadius:7,cursor:"pointer",color:showRemotePanel?"#5EB1FF":"var(--text2)",fontSize:11}}>⚙</button>
         <div style={{display:"flex",alignItems:"center",gap:6,padding:"5px 12px",background:"var(--bg3)",border:`1px solid ${ollamaOk?"rgba(15,110,86,0.3)":ollamaOk===false?"rgba(139,26,26,0.4)":"var(--border)"}`,borderRadius:20}}>
           <div style={{width:7,height:7,borderRadius:"50%",background:ollamaOk?"#5DCAA5":ollamaOk===false?"#E07070":"#888780"}}/>
           <span style={{fontSize:9,color:"var(--text2)"}}>{ollamaOk===null?"Checking...":ollamaOk?currentModel:"Ollama offline"}</span>
@@ -860,6 +909,52 @@ function App(){
         <button onClick={()=>setLightMode(p=>!p)} title={lightMode?"Switch to Dark Mode":"Switch to Light Mode"} style={{padding:"5px 11px",background:lightMode?"rgba(0,0,0,0.08)":"var(--bg2)",border:`1px solid ${lightMode?"rgba(0,0,0,0.15)":"var(--border)"}`,borderRadius:7,cursor:"pointer",fontSize:13,lineHeight:1,transition:"all 0.2s"}}>{lightMode?"🌙":"☀️"}</button>
       </div>
     </div>
+
+    {/* ── Remote / Settings Panel ────────────────────────────────────── */}
+    {showRemotePanel&&(()=>{
+      const[rpin,setRpin]=React.useState(()=>remoteInfo?.pin_set?"••••":"");
+      const[rdomain,setRdomain]=React.useState(remoteInfo?.duck_domain||"");
+      const[rtoken,setRtoken]=React.useState("");
+      const[saving,setSaving]=React.useState(false);
+      const saveRemote=async(enabled)=>{
+        setSaving(true);
+        const body={remote_enabled:enabled};
+        if(rpin&&rpin!=="••••")body.remote_pin=rpin;
+        if(rdomain)body.duck_domain=rdomain;
+        if(rtoken)body.duck_token=rtoken;
+        await fetch("/api/config",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+        const r=await fetch("/api/remote");setRemoteInfo(await r.json());
+        setSaving(false);
+      };
+      return(<div style={{background:"var(--bg2)",borderBottom:"1px solid var(--border)",padding:"14px 22px"}}>
+        <div style={{maxWidth:960,margin:"0 auto"}}>
+          <div style={{fontSize:9,letterSpacing:"0.18em",color:"#5EB1FF88",textTransform:"uppercase",marginBottom:12}}>Remote Access & Settings — Superhero Forge v1.1</div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))",gap:12}}>
+            <div style={{padding:"12px 14px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:8}}>
+              <div style={{fontSize:10,fontWeight:"bold",color:"#5EB1FF",marginBottom:8}}>Cloudflared Tunnel</div>
+              <div style={{fontSize:10,color:"var(--text2)",lineHeight:1.6,marginBottom:8}}>{remoteInfo?.cloudflared?"✓ cloudflared installed":"✗ Not installed — run: brew install cloudflared"}</div>
+              {remoteInfo?.url?<div style={{fontSize:10,color:"#5DCAA5",wordBreak:"break-all"}}>{remoteInfo.url}</div>:<div style={{fontSize:10,color:"var(--text4)"}}>Tunnel starts when Remote Access is enabled</div>}
+            </div>
+            <div style={{padding:"12px 14px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:8}}>
+              <div style={{fontSize:10,fontWeight:"bold",color:G,marginBottom:8}}>DuckDNS (persistent domain)</div>
+              <input type="text" value={rdomain} onChange={e=>setRdomain(e.target.value)} placeholder="your-domain (no .duckdns.org)" style={{marginBottom:6,fontSize:10}}/>
+              <input type="text" value={rtoken} onChange={e=>setRtoken(e.target.value)} placeholder="DuckDNS token" style={{marginBottom:2,fontSize:10}}/>
+              <div style={{fontSize:9,color:"var(--text4)"}}>Get a free domain at duckdns.org + forward port {7432} on your router</div>
+            </div>
+            <div style={{padding:"12px 14px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:8}}>
+              <div style={{fontSize:10,fontWeight:"bold",color:"#e74c3c",marginBottom:8}}>Access PIN</div>
+              <input type="password" value={rpin} onChange={e=>setRpin(e.target.value)} placeholder="Set a PIN for remote access" style={{marginBottom:6,fontSize:10}}/>
+              <div style={{fontSize:9,color:"var(--text4)"}}>Remote visitors must enter this PIN. Local access is always unrestricted.</div>
+            </div>
+          </div>
+          <div style={{display:"flex",gap:10,marginTop:12}}>
+            <button onClick={()=>saveRemote(true)} disabled={saving} style={{...s.bigBtn(saving,"#5EB1FF"),width:"auto",padding:"8px 20px",marginTop:0}}>{saving?"Saving...":"Enable Remote Access"}</button>
+            <button onClick={()=>saveRemote(false)} disabled={saving} style={{...s.bigBtn(saving),width:"auto",padding:"8px 20px",marginTop:0,color:"var(--text3)"}}>{saving?"...":"Disable"}</button>
+            <button onClick={()=>setShowRemotePanel(false)} style={{padding:"8px 16px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:8,cursor:"pointer",color:"var(--text3)",fontSize:10,fontFamily:"monospace",marginLeft:"auto"}}>Close</button>
+          </div>
+        </div>
+      </div>);
+    })()}
 
     {/* ── Tabs ───────────────────────────────────────────────────────────── */}
     <div style={{display:"flex",borderBottom:"1px solid rgba(212,175,55,0.15)",padding:"0 22px",overflowX:"auto",background:"var(--bg-base)"}}>
@@ -1002,13 +1097,20 @@ function App(){
               </div>
               <div style={{display:"flex",gap:6,alignItems:"center"}}>
                 <button onClick={e=>{e.stopPropagation();setEditingChar(p=>({...p,[m.id]:!p[m.id]}));setExpanded(p=>({...p,[m.id]:false}));}} style={{fontSize:9,padding:"3px 9px",background:editingChar[m.id]?`${m.color}22`:"var(--bg3)",border:`1px solid ${editingChar[m.id]?m.color:"var(--border)"}`,borderRadius:6,cursor:"pointer",color:editingChar[m.id]?m.color:"var(--text3)",fontFamily:"monospace"}}>{editingChar[m.id]?"Close":"Edit"}</button>
+                <button onClick={e=>{e.stopPropagation();setSwitchingMember(switchingMember===m.id?null:m.id);}} style={{fontSize:9,padding:"3px 9px",background:switchingMember===m.id?`${m.color}22`:"var(--bg3)",border:`1px solid ${switchingMember===m.id?m.color:"var(--border)"}`,borderRadius:6,cursor:"pointer",color:switchingMember===m.id?m.color:"var(--text3)",fontFamily:"monospace"}}>Switch</button>
                 <button onClick={e=>{e.stopPropagation();removeMember(activeTeamId,m);}} style={{fontSize:9,padding:"3px 9px",background:"rgba(163,45,45,0.1)",border:"1px solid rgba(163,45,45,0.28)",borderRadius:6,cursor:"pointer",color:"#e74c3c",fontFamily:"monospace"}}>Remove</button>
                 {images[m.id]&&<button onClick={e=>{e.stopPropagation();generateTripo3D(m);}} style={{fontSize:9,padding:"3px 9px",background:"rgba(15,110,86,0.1)",border:"1px solid rgba(15,110,86,0.3)",borderRadius:6,cursor:"pointer",color:"#5DCAA5",fontFamily:"monospace",whiteSpace:"nowrap"}}>{tripo3DLoading&&tripo3DTarget===m.id?"...":"⬡ Tripo3D"}</button>}
                 <div style={{fontSize:11,color:`${m.color}88`,minWidth:16}} onClick={()=>toggle(m.id)}>{expanded[m.id]?"▲":"▼"}</div>
               </div>
             </div>
+            {switchingMember===m.id&&(<div style={{display:"flex",flexWrap:"wrap",gap:6,padding:"10px 16px",background:`${m.color}08`,border:`1px solid ${m.color}33`,borderTop:"none",borderRadius:"0 0 8px 8px",alignItems:"center"}}>
+              <span style={{fontSize:9,color:"var(--text4)",letterSpacing:"0.1em",marginRight:4}}>MOVE TO:</span>
+              {teams.filter(t=>t.id!==activeTeamId).map(t=><button key={t.id} onClick={()=>switchMemberTeam(m,t.id)} style={{fontSize:9,padding:"3px 10px",background:`${t.color}14`,border:`1px solid ${t.color}44`,borderRadius:20,cursor:"pointer",color:t.color,fontFamily:"monospace"}}>{t.name}</button>)}
+              <button onClick={()=>flipToVillain(m)} style={{fontSize:9,padding:"3px 10px",background:"rgba(139,26,26,0.12)",border:"1px solid rgba(139,26,26,0.35)",borderRadius:20,cursor:"pointer",color:"#e74c3c",fontFamily:"monospace"}}>⚠ Go Villain</button>
+              <button onClick={()=>setSwitchingMember(null)} style={{fontSize:9,padding:"3px 8px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:20,cursor:"pointer",color:"var(--text4)",fontFamily:"monospace",marginLeft:4}}>Cancel</button>
+            </div>)}
             {editingChar[m.id]&&<EditPanel member={m} onSave={d=>saveCharEdit(m.id,d)} onCancel={()=>setEditingChar(p=>({...p,[m.id]:false}))}/>}
-            {expanded[m.id]&&!editingChar[m.id]&&(<div style={{border:`1px solid ${m.color}44`,borderTop:"none",borderRadius:"0 0 10px 10px",overflow:"hidden"}}><CharacterPage member={m} imageUrl={images[m.id]||null} teamName={activeTeam.name} teamColor={activeTeam.color}/></div>)}
+            {expanded[m.id]&&!editingChar[m.id]&&!switchingMember&&(<div style={{border:`1px solid ${m.color}44`,borderTop:"none",borderRadius:"0 0 10px 10px",overflow:"hidden"}}><CharacterPage member={m} imageUrl={images[m.id]||null} teamName={activeTeam.name} teamColor={activeTeam.color}/></div>)}
           </div>))}
         </div>
       </>)}
@@ -1280,7 +1382,10 @@ function App(){
                     <div style={{width:36,height:36,borderRadius:"50%",background:"rgba(139,26,26,0.2)",border:"1px solid rgba(139,26,26,0.4)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:"bold",color:"#E07070",flexShrink:0}}>{v.initials}</div>
                     <div><div style={{fontSize:13,fontWeight:"bold",color:"var(--text-primary)"}}>{v.heroName}</div><div style={{fontSize:10,color:"var(--text2)"}}>{v.realName} · {v.role}</div></div>
                   </div>
-                  <button onClick={()=>removeVillain(v.id)} style={{fontSize:9,padding:"3px 9px",background:"rgba(163,45,45,0.1)",border:"1px solid rgba(163,45,45,0.28)",borderRadius:6,cursor:"pointer",color:"#e74c3c",fontFamily:"monospace"}}>Remove</button>
+                  <div style={{display:"flex",gap:6}}>
+                    <button onClick={()=>setRedeemingVillain(redeemingVillain===v.id?null:v.id)} style={{fontSize:9,padding:"3px 9px",background:redeemingVillain===v.id?"rgba(93,202,165,0.12)":"var(--bg3)",border:`1px solid ${redeemingVillain===v.id?"rgba(93,202,165,0.4)":"var(--border)"}`,borderRadius:6,cursor:"pointer",color:redeemingVillain===v.id?"#5DCAA5":"var(--text3)",fontFamily:"monospace"}}>Recruit</button>
+                    <button onClick={()=>removeVillain(v.id)} style={{fontSize:9,padding:"3px 9px",background:"rgba(163,45,45,0.1)",border:"1px solid rgba(163,45,45,0.28)",borderRadius:6,cursor:"pointer",color:"#e74c3c",fontFamily:"monospace"}}>Remove</button>
+                  </div>
                 </div>
                 <div style={{fontSize:11,color:"var(--text2)",fontStyle:"italic",lineHeight:1.5,marginBottom:8}}>{v.tagline}</div>
                 {v.targetTeams&&v.targetTeams.length>0&&(<div>
@@ -1288,6 +1393,11 @@ function App(){
                   <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
                     {v.targetTeams.map(tid=>{const t=teams.find(x=>x.id===tid);return t?<span key={tid} style={{fontSize:9,padding:"2px 9px",background:`${t.color}14`,border:`1px solid ${t.color}33`,borderRadius:20,color:t.color}}>{t.abbr} · {t.name}</span>:null;})}
                   </div>
+                </div>)}
+                {redeemingVillain===v.id&&(<div style={{display:"flex",flexWrap:"wrap",gap:6,padding:"10px 0 2px",alignItems:"center"}}>
+                  <span style={{fontSize:9,color:"#5DCAA5",letterSpacing:"0.1em",marginRight:4}}>RECRUIT TO:</span>
+                  {teams.map(t=><button key={t.id} onClick={()=>redeemVillain(v,t.id)} style={{fontSize:9,padding:"3px 10px",background:`${t.color}14`,border:`1px solid ${t.color}44`,borderRadius:20,cursor:"pointer",color:t.color,fontFamily:"monospace"}}>{t.name}</button>)}
+                  <button onClick={()=>setRedeemingVillain(null)} style={{fontSize:9,padding:"3px 8px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:20,cursor:"pointer",color:"var(--text4)",fontFamily:"monospace"}}>Cancel</button>
                 </div>)}
               </div>))}
             </div>
