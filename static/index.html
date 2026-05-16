@@ -496,6 +496,51 @@ function Tripo3DLauncher({prompt,copied,onCopy}){
 }
 
 // ── Main App ──────────────────────────────────────────────────────────────────
+function RemotePanel({remoteInfo,setRemoteInfo,onClose,G,s}){
+  const[rpin,setRpin]=useState(()=>remoteInfo?.pin_set?"••••":"");
+  const[rdomain,setRdomain]=useState(remoteInfo?.duck_domain||"");
+  const[rtoken,setRtoken]=useState("");
+  const[saving,setSaving]=useState(false);
+  const saveRemote=async(enabled)=>{
+    setSaving(true);
+    const body={remote_enabled:enabled};
+    if(rpin&&rpin!=="••••")body.remote_pin=rpin;
+    if(rdomain)body.duck_domain=rdomain;
+    if(rtoken)body.duck_token=rtoken;
+    await fetch("/api/config",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+    const r=await fetch("/api/remote");setRemoteInfo(await r.json());
+    setSaving(false);
+  };
+  return(<div style={{background:"var(--bg2)",borderBottom:"1px solid var(--border)",padding:"14px 22px"}}>
+    <div style={{maxWidth:960,margin:"0 auto"}}>
+      <div style={{fontSize:9,letterSpacing:"0.18em",color:"#5EB1FF88",textTransform:"uppercase",marginBottom:12}}>Remote Access & Settings — Superhero Forge v1.1</div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))",gap:12}}>
+        <div style={{padding:"12px 14px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:8}}>
+          <div style={{fontSize:10,fontWeight:"bold",color:"#5EB1FF",marginBottom:8}}>Cloudflared Tunnel</div>
+          <div style={{fontSize:10,color:"var(--text2)",lineHeight:1.6,marginBottom:8}}>{remoteInfo?.cloudflared?"✓ cloudflared installed":"✗ Not installed — run: winget install cloudflare.cloudflared"}</div>
+          {remoteInfo?.url?<div style={{fontSize:10,color:"#5DCAA5",wordBreak:"break-all"}}>{remoteInfo.url}</div>:<div style={{fontSize:10,color:"var(--text4)"}}>Tunnel starts when Remote Access is enabled</div>}
+        </div>
+        <div style={{padding:"12px 14px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:8}}>
+          <div style={{fontSize:10,fontWeight:"bold",color:G,marginBottom:8}}>DuckDNS (persistent domain)</div>
+          <input type="text" value={rdomain} onChange={e=>setRdomain(e.target.value)} placeholder="your-domain (no .duckdns.org)" style={{marginBottom:6,fontSize:10}}/>
+          <input type="text" value={rtoken} onChange={e=>setRtoken(e.target.value)} placeholder="DuckDNS token" style={{marginBottom:2,fontSize:10}}/>
+          <div style={{fontSize:9,color:"var(--text4)"}}>Get a free domain at duckdns.org + forward port 7432 on your router</div>
+        </div>
+        <div style={{padding:"12px 14px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:8}}>
+          <div style={{fontSize:10,fontWeight:"bold",color:"#e74c3c",marginBottom:8}}>Access PIN</div>
+          <input type="password" value={rpin} onChange={e=>setRpin(e.target.value)} placeholder="Set a PIN for remote access" style={{marginBottom:6,fontSize:10}}/>
+          <div style={{fontSize:9,color:"var(--text4)"}}>Remote visitors must enter this PIN. Local access is always unrestricted.</div>
+        </div>
+      </div>
+      <div style={{display:"flex",gap:10,marginTop:12}}>
+        <button onClick={()=>saveRemote(true)} disabled={saving} style={{...s.bigBtn(saving,"#5EB1FF"),width:"auto",padding:"8px 20px",marginTop:0}}>{saving?"Saving...":"Enable Remote Access"}</button>
+        <button onClick={()=>saveRemote(false)} disabled={saving} style={{...s.bigBtn(saving),width:"auto",padding:"8px 20px",marginTop:0,color:"var(--text3)"}}>{saving?"...":"Disable"}</button>
+        <button onClick={onClose} style={{padding:"8px 16px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:8,cursor:"pointer",color:"var(--text3)",fontSize:10,fontFamily:"monospace",marginLeft:"auto"}}>Close</button>
+      </div>
+    </div>
+  </div>);
+}
+
 function App(){
   // ── Team state ──────────────────────────────────────────────────────────
   const[teams,setTeams]=useState([NK_TEAM]);
@@ -956,50 +1001,7 @@ function App(){
     </div>
 
     {/* ── Remote / Settings Panel ────────────────────────────────────── */}
-    {showRemotePanel&&(()=>{
-      const[rpin,setRpin]=React.useState(()=>remoteInfo?.pin_set?"••••":"");
-      const[rdomain,setRdomain]=React.useState(remoteInfo?.duck_domain||"");
-      const[rtoken,setRtoken]=React.useState("");
-      const[saving,setSaving]=React.useState(false);
-      const saveRemote=async(enabled)=>{
-        setSaving(true);
-        const body={remote_enabled:enabled};
-        if(rpin&&rpin!=="••••")body.remote_pin=rpin;
-        if(rdomain)body.duck_domain=rdomain;
-        if(rtoken)body.duck_token=rtoken;
-        await fetch("/api/config",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
-        const r=await fetch("/api/remote");setRemoteInfo(await r.json());
-        setSaving(false);
-      };
-      return(<div style={{background:"var(--bg2)",borderBottom:"1px solid var(--border)",padding:"14px 22px"}}>
-        <div style={{maxWidth:960,margin:"0 auto"}}>
-          <div style={{fontSize:9,letterSpacing:"0.18em",color:"#5EB1FF88",textTransform:"uppercase",marginBottom:12}}>Remote Access & Settings — Superhero Forge v1.1</div>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))",gap:12}}>
-            <div style={{padding:"12px 14px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:8}}>
-              <div style={{fontSize:10,fontWeight:"bold",color:"#5EB1FF",marginBottom:8}}>Cloudflared Tunnel</div>
-              <div style={{fontSize:10,color:"var(--text2)",lineHeight:1.6,marginBottom:8}}>{remoteInfo?.cloudflared?"✓ cloudflared installed":"✗ Not installed — run: brew install cloudflared"}</div>
-              {remoteInfo?.url?<div style={{fontSize:10,color:"#5DCAA5",wordBreak:"break-all"}}>{remoteInfo.url}</div>:<div style={{fontSize:10,color:"var(--text4)"}}>Tunnel starts when Remote Access is enabled</div>}
-            </div>
-            <div style={{padding:"12px 14px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:8}}>
-              <div style={{fontSize:10,fontWeight:"bold",color:G,marginBottom:8}}>DuckDNS (persistent domain)</div>
-              <input type="text" value={rdomain} onChange={e=>setRdomain(e.target.value)} placeholder="your-domain (no .duckdns.org)" style={{marginBottom:6,fontSize:10}}/>
-              <input type="text" value={rtoken} onChange={e=>setRtoken(e.target.value)} placeholder="DuckDNS token" style={{marginBottom:2,fontSize:10}}/>
-              <div style={{fontSize:9,color:"var(--text4)"}}>Get a free domain at duckdns.org + forward port {7432} on your router</div>
-            </div>
-            <div style={{padding:"12px 14px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:8}}>
-              <div style={{fontSize:10,fontWeight:"bold",color:"#e74c3c",marginBottom:8}}>Access PIN</div>
-              <input type="password" value={rpin} onChange={e=>setRpin(e.target.value)} placeholder="Set a PIN for remote access" style={{marginBottom:6,fontSize:10}}/>
-              <div style={{fontSize:9,color:"var(--text4)"}}>Remote visitors must enter this PIN. Local access is always unrestricted.</div>
-            </div>
-          </div>
-          <div style={{display:"flex",gap:10,marginTop:12}}>
-            <button onClick={()=>saveRemote(true)} disabled={saving} style={{...s.bigBtn(saving,"#5EB1FF"),width:"auto",padding:"8px 20px",marginTop:0}}>{saving?"Saving...":"Enable Remote Access"}</button>
-            <button onClick={()=>saveRemote(false)} disabled={saving} style={{...s.bigBtn(saving),width:"auto",padding:"8px 20px",marginTop:0,color:"var(--text3)"}}>{saving?"...":"Disable"}</button>
-            <button onClick={()=>setShowRemotePanel(false)} style={{padding:"8px 16px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:8,cursor:"pointer",color:"var(--text3)",fontSize:10,fontFamily:"monospace",marginLeft:"auto"}}>Close</button>
-          </div>
-        </div>
-      </div>);
-    })()}
+    {showRemotePanel&&<RemotePanel remoteInfo={remoteInfo} setRemoteInfo={setRemoteInfo} onClose={()=>setShowRemotePanel(false)} G={G} s={s}/>}
 
     {/* ── Tabs ───────────────────────────────────────────────────────────── */}
     <div style={{display:"flex",borderBottom:"1px solid rgba(212,175,55,0.15)",padding:"0 22px",overflowX:"auto",background:"var(--bg-base)"}}>
