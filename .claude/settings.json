@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell([System.IO.File]::ReadAllBytes\\(\"C:\\\\Users\\\\princ\\\\Desktop\\\\forge-desktop\\\\.gitignore\"\\) | ForEach-Object { \"{0:X2}\" -f $_ } | Join-String -Separator \" \" | Select-String -Pattern \"\" | ForEach-Object { $_.Line })",
+      "PowerShell($bytes = [System.IO.File]::ReadAllBytes\\(\"C:\\\\Users\\\\princ\\\\Desktop\\\\forge-desktop\\\\.gitignore\"\\); \\($bytes | ForEach-Object { \"{0:X2}\" -f $_ }\\) -join \" \")"
+    ]
+  }
+}
