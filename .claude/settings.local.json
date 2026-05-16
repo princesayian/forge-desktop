@@ -6,7 +6,11 @@
       "Bash(pkill -f \"python3.*app.py\")",
       "Bash(python3 /Users/princesayian/Desktop/forge-desktop/app.py)",
       "Bash(curl -s http://127.0.0.1:7432/health)",
-      "Bash(git config *)"
+      "Bash(git config *)",
+      "Bash(ollama list *)",
+      "Bash(echo \"---exit:$?\")",
+      "Bash(curl -s http://localhost:11434/api/tags)",
+      "Bash(curl -s http://localhost:7432/api/status)"
     ]
   }
 }

@@ -989,7 +989,7 @@ function App(){
                 <TeamCard
                   key={t.id} team={t} isActive={t.id===activeTeamId}
                   memberCount={getTeamMemberCount(t.id)}
-                  onSelect={()=>setActiveTeamId(t.id)}
+                  onSelect={()=>{setActiveTeamId(t.id);setTab("roster");}}
                   onEdit={()=>setEditingTeamData(t)}
                   onDelete={()=>deleteTeam(t.id)}
                 />
