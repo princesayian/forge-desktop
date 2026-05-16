@@ -5,7 +5,8 @@
       "Read(//private/tmp/**)",
       "Bash(pkill -f \"python3.*app.py\")",
       "Bash(python3 /Users/princesayian/Desktop/forge-desktop/app.py)",
-      "Bash(curl -s http://127.0.0.1:7432/health)"
+      "Bash(curl -s http://127.0.0.1:7432/health)",
+      "Bash(git config *)"
     ]
   }
 }
