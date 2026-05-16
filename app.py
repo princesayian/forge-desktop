@@ -566,6 +566,17 @@ def export_pdf():
     return send_file(buf, mimetype="application/pdf",
         as_attachment=True, download_name=f"{team_name.lower().replace(' ','-')}-roster.pdf")
 
+@app.route("/api/restart", methods=["POST"])
+def restart():
+    def do_restart():
+        time.sleep(0.5)
+        _remove_lock()
+        subprocess.Popen([sys.executable] + sys.argv, cwd=BASE,
+                         creationflags=subprocess.CREATE_NEW_CONSOLE if sys.platform == "win32" else 0)
+        os._exit(0)
+    threading.Thread(target=do_restart, daemon=True).start()
+    return jsonify({"ok": True})
+
 @app.route("/health")
 def health():
     return jsonify({"status": "ok", "model": load_config()["model"], "version": FORGE_VERSION})

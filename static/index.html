@@ -906,6 +906,7 @@ function App(){
         </div>
         {ollamaOk&&models.length>0&&<select value={currentModel} onChange={e=>{setCurrentModel(e.target.value);fetch("/api/config",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:e.target.value})});}} style={{background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:7,padding:"5px 10px",color:"var(--text-primary)",fontSize:10,cursor:"pointer"}}>{models.map(m=><option key={m} value={m}>{m}</option>)}</select>}
         <button onClick={checkOllama} style={{padding:"5px 10px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:7,cursor:"pointer",color:"var(--text2)",fontSize:9,fontFamily:"monospace"}}>↻</button>
+        <button onClick={()=>{fetch("/api/restart",{method:"POST"}).then(()=>{setTimeout(()=>window.location.reload(),1800);});}} title="Restart Forge" style={{padding:"5px 10px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:7,cursor:"pointer",color:"var(--text2)",fontSize:9,fontFamily:"monospace"}}>⟳ Restart</button>
         <button onClick={()=>setLightMode(p=>!p)} title={lightMode?"Switch to Dark Mode":"Switch to Light Mode"} style={{padding:"5px 11px",background:lightMode?"rgba(0,0,0,0.08)":"var(--bg2)",border:`1px solid ${lightMode?"rgba(0,0,0,0.15)":"var(--border)"}`,borderRadius:7,cursor:"pointer",fontSize:13,lineHeight:1,transition:"all 0.2s"}}>{lightMode?"🌙":"☀️"}</button>
       </div>
     </div>
