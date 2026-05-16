@@ -70,7 +70,7 @@ The app opens in its own window. If PyWebView isn't installed, it falls back to 
 
 ---
 
-## Running on Your Plex Server (Windows)
+## Running on Server (Windows)
 
 To have it start automatically with Windows using NSSM:
 
