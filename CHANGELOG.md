@@ -15,6 +15,9 @@ All notable changes to Superhero Forge will be documented here.
 - **Version bumped** — `FORGE_VERSION` 1.1 → 1.2.0
 - **`save_character`/`save_team`/`save_story`** no longer return `path` in response (was leaking server paths)
 
+### Added
+- **Makefile** — common dev targets: `make run`, `make setup`, `make vendor`, `make test`, `make lint`, `make clean`, `make nuke`, `make version`, `make help`
+
 ### Fixed
 - `/api/status` and `/health` now use consistent `config.get("model", "llama3.2")` fallback
 
