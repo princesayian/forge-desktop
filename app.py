@@ -1,24 +1,153 @@
 """
 Superhero Forge — Desktop App
 Local AI powered by Ollama. No API keys. No subscriptions.
+Nocturnal Knights Character System · Remote & Local modes
 """
 
 import os, sys, json, threading, time, socket, base64, io, subprocess, shutil, signal, atexit
-import urllib.request, urllib.error
+import glob
+import requests
 from flask import Flask, request, jsonify, send_from_directory, send_file, session, redirect
 
-BASE       = os.path.dirname(os.path.abspath(__file__))
-STATIC     = os.path.join(BASE, "static")
-VENDOR     = os.path.join(BASE, "vendor")
-CONFIG_FILE= os.path.join(BASE, "config.json")
-IMAGES_DIR = os.path.join(BASE, "images")
-LOCK_FILE  = os.path.join(BASE, ".forge.lock")
-os.makedirs(IMAGES_DIR, exist_ok=True)
+# ---------------------------------------------------------------------------
+# Paths & Constants
+# ---------------------------------------------------------------------------
+BASE        = os.path.dirname(os.path.abspath(__file__))
+STATIC      = os.path.join(BASE, "static")
+VENDOR      = os.path.join(BASE, "vendor")
+CONFIG_FILE = os.path.join(BASE, "config.json")
+DATA_DIR    = os.path.join(BASE, "data")
+CHARACTERS_DIR = os.path.join(DATA_DIR, "characters")
+TEAMS_DIR   = os.path.join(DATA_DIR, "teams")
+STORIES_DIR = os.path.join(DATA_DIR, "stories")
+IMAGES_DIR  = os.path.join(BASE, "images")
+LOCK_FILE   = os.path.join(BASE, ".forge.lock")
+
+FORGE_VERSION = "1.1"
 
 TUNNEL_URL   = None
 _TUNNEL_PROC = None
 
-# ── Update helpers ────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------------
+# Config helpers
+# ---------------------------------------------------------------------------
+DEFAULTS = {
+    "model": "llama3.2",
+    "default_model": "llama3.2",
+    "ollama_url": "http://localhost:11434",
+    "ollama_api_key": "",
+    "port": 7432,
+}
+
+def load_config():
+    try:
+        with open(CONFIG_FILE) as f:
+            cfg = json.load(f)
+        for k, v in DEFAULTS.items():
+            cfg.setdefault(k, v)
+        return cfg
+    except Exception:
+        return DEFAULTS.copy()
+
+def save_config(data):
+    cfg = load_config()
+    cfg.update(data)
+    with open(CONFIG_FILE, "w") as f:
+        json.dump(cfg, f, indent=2)
+    config.update(cfg)
+    return cfg
+
+config = load_config()
+
+# Persistent secret key for Flask sessions
+if "secret_key" not in config:
+    config["secret_key"] = base64.b64encode(os.urandom(24)).decode()
+    save_config(config)
+
+# ---------------------------------------------------------------------------
+# Data directories
+# ---------------------------------------------------------------------------
+for d in (CHARACTERS_DIR, TEAMS_DIR, STORIES_DIR, IMAGES_DIR):
+    os.makedirs(d, exist_ok=True)
+
+# ---------------------------------------------------------------------------
+# Mode helpers
+# ---------------------------------------------------------------------------
+def _is_remote():
+    """Return True if an API key is set (remote/OpenAI-compatible mode)."""
+    return bool(config.get("ollama_api_key"))
+
+def _headers():
+    """Build request headers — include Authorization if API key is set."""
+    hdrs = {"Content-Type": "application/json"}
+    key = config.get("ollama_api_key", "")
+    if key:
+        hdrs["Authorization"] = f"Bearer {key}"
+    return hdrs
+
+# ---------------------------------------------------------------------------
+# Ollama API helpers
+# ---------------------------------------------------------------------------
+def ollama_models():
+    """Return list of available model names."""
+    base = config["ollama_url"].rstrip("/")
+    try:
+        if _is_remote():
+            r = requests.get(f"{base}/v1/models", headers=_headers(), timeout=10)
+            r.raise_for_status()
+            data = r.json()
+            return [m["id"] for m in data.get("data", [])]
+        else:
+            r = requests.get(f"{base}/api/tags", timeout=5)
+            r.raise_for_status()
+            return [m["name"] for m in r.json().get("models", [])]
+    except Exception:
+        return []
+
+def ollama_generate(model: str, prompt: str) -> str:
+    """Send a generation request. Uses /v1/chat/completions for remote or /api/generate for local."""
+    base = config["ollama_url"].rstrip("/")
+    if _is_remote():
+        r = requests.post(
+            f"{base}/v1/chat/completions",
+            headers=_headers(),
+            json={
+                "model": model,
+                "messages": [{"role": "user", "content": prompt}],
+                "stream": False,
+            },
+            timeout=180,
+        )
+        r.raise_for_status()
+        data = r.json()
+        choices = data.get("choices", [])
+        if choices:
+            return choices[0].get("message", {}).get("content", "")
+        return data.get("content", "")
+    else:
+        r = requests.post(
+            f"{base}/api/generate",
+            json={"model": model, "prompt": prompt, "stream": False},
+            timeout=180,
+        )
+        r.raise_for_status()
+        return r.json().get("response", "")
+
+def ollama_is_running() -> bool:
+    base = config["ollama_url"].rstrip("/")
+    try:
+        if _is_remote():
+            r = requests.get(f"{base}/v1/models", headers=_headers(), timeout=5)
+            return r.status_code == 200
+        else:
+            r = requests.get(f"{base}/api/tags", timeout=3)
+            return r.status_code == 200
+    except Exception:
+        return False
+
+# ---------------------------------------------------------------------------
+# Update helpers
+# ---------------------------------------------------------------------------
 def check_for_updates():
     try:
         r = subprocess.run(["git", "fetch", "origin", "--quiet"],
@@ -41,7 +170,9 @@ def pull_update():
     except Exception as e:
         return False, str(e)
 
-# ── Remote access helpers ─────────────────────────────────────────────────────
+# ---------------------------------------------------------------------------
+# Remote access helpers
+# ---------------------------------------------------------------------------
 def start_cloudflared(port):
     global TUNNEL_URL, _TUNNEL_PROC
     import re
@@ -65,13 +196,16 @@ def start_cloudflared(port):
 def duckdns_loop(token, domain):
     while True:
         try:
-            urllib.request.urlopen(
+            requests.get(
                 f"https://www.duckdns.org/update?domains={domain}&token={token}&ip=",
                 timeout=10)
         except Exception:
             pass
         time.sleep(300)
 
+# ---------------------------------------------------------------------------
+# Single-instance lock
+# ---------------------------------------------------------------------------
 def _existing_instance():
     if not os.path.exists(LOCK_FILE):
         return None
@@ -80,7 +214,8 @@ def _existing_instance():
             pid = int(f.read().strip())
         os.kill(pid, 0)
         return pid
-    except Exception:
+    except (ValueError, ProcessLookupError, PermissionError):
+        _remove_lock()
         return None
 
 def _write_lock():
@@ -88,55 +223,152 @@ def _write_lock():
         f.write(str(os.getpid()))
 
 def _remove_lock():
+    """Remove the lock file only if it holds our PID."""
+    if not os.path.exists(LOCK_FILE):
+        return
     try:
-        with open(LOCK_FILE) as f:
-            if int(f.read().strip()) == os.getpid():
-                os.remove(LOCK_FILE)
-    except Exception:
+        with open(LOCK_FILE, "r") as f:
+            pid = int(f.read().strip())
+        if pid != os.getpid():
+            return  # don't remove another process's lock
+    except (ValueError, OSError):
         pass
-
-DEFAULTS = {"model": "llama3.2", "ollama_url": "http://localhost:11434", "port": 7432}
-
-def load_config():
     try:
-        with open(CONFIG_FILE) as f:
-            return {**DEFAULTS, **json.load(f)}
-    except Exception:
-        return DEFAULTS.copy()
-
-def save_config(data):
-    cfg = load_config(); cfg.update(data)
-    with open(CONFIG_FILE, "w") as f:
-        json.dump(cfg, f, indent=2)
-    return cfg
+        os.remove(LOCK_FILE)
+    except OSError:
+        pass
 
 def ensure_ollama():
-    cfg = load_config()
-    try:
-        urllib.request.urlopen(f"{cfg['ollama_url']}/api/tags", timeout=2)
+    """Check if Ollama is reachable; if not (and local mode), try to start it."""
+    if _is_remote():
         return True
-    except Exception:
-        pass
-    ollama_bin = shutil.which("ollama") or "/usr/local/bin/ollama"
-    if not os.path.exists(ollama_bin):
+    if ollama_is_running():
+        return True
+    ollama_bin = shutil.which("ollama")
+    if not ollama_bin:
         return False
-    subprocess.Popen([ollama_bin, "serve"],
-                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                     start_new_session=True)
-    for _ in range(40):
+    try:
+        subprocess.Popen(
+            ["ollama", "serve"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+    except Exception:
+        return False
+    for _ in range(30):
         time.sleep(0.5)
-        try:
-            urllib.request.urlopen(f"{cfg['ollama_url']}/api/tags", timeout=1)
+        if ollama_is_running():
             return True
-        except Exception:
-            pass
     return False
 
-FORGE_VERSION = "1.1"
+atexit.register(_remove_lock)
 
+# ---------------------------------------------------------------------------
+# Prompt templates
+# ---------------------------------------------------------------------------
+HERO_PROMPT = """You are a creative superhero character designer.
+Generate a unique superhero character. Return ONLY valid JSON, no markdown.
+
+Theme and concept: {extra}
+
+Use the theme above as creative inspiration — it is NOT a name. Invent an original codename, real name, powers, appearance, backstory, and personality that embody this theme. Be creative and varied — avoid dark/shadow/night defaults unless the theme calls for it.
+
+Return JSON with these fields:
+- name: string (invent an original hero codename — do NOT use the theme as the name)
+- real_name: string
+- alignment: string (hero/anti-hero/vigilante)
+- powers: array of strings (3-5 powers that fit the theme)
+- weaknesses: array of strings (1-3 weaknesses)
+- backstory: string (2-3 sentences)
+- personality: string (2-3 adjectives)
+- stats: object with keys strength, speed, durability, intelligence, energy (each 1-10)
+- appearance: string (brief visual description fitting the theme)
+
+Return ONLY the JSON object, no other text."""
+
+VILLAIN_PROMPT = """You are a creative supervillain character designer.
+Generate a unique supervillain character. Return ONLY valid JSON, no markdown.
+
+Theme and concept: {extra}
+
+Use the theme above as creative inspiration — it is NOT a name. Invent an original codename, real name, powers, appearance, backstory, and personality that embody this theme. Be creative and varied — avoid dark/shadow/night defaults unless the theme calls for it. Explore different genres, elements, and motivations.
+
+Return JSON with these fields:
+- name: string (invent an original villain codename — do NOT use the theme as the name)
+- real_name: string
+- alignment: string (villain/supervillain/mastermind)
+- powers: array of strings (2-4 powers that fit the theme)
+- weaknesses: array of strings (1-2 weaknesses)
+- backstory: string (2-3 sentences)
+- personality: string (2-3 adjectives)
+- threat_level: string (street/metro/global/cosmic)
+- goal: string (primary objective)
+- stats: object with keys strength, speed, durability, intelligence, energy (each 1-10)
+- appearance: string (brief visual description fitting the theme)
+
+Return ONLY the JSON object, no other text."""
+
+STORY_PROMPT = """You are a creative writer for a superhero universe.
+Write a short story scene featuring the following characters:
+
+Heroes: {heroes}
+Villains: {villains}
+Setting: {setting}
+
+Write 3-5 paragraphs of vivid, action-packed narrative. Include dialogue and dramatic tension.
+Return plain text only, no markdown formatting."""
+
+RECRUIT_PROMPT = """You are a superhero recruiter.
+Based on the current team composition, suggest a new hero that would complement the team.
+
+Current team: {team}
+
+Return ONLY valid JSON describing the new recruit:
+- name: string
+- real_name: string
+- role: string (what role they fill on the team)
+- powers: array of strings
+- personality: string
+- why_recruit: string (why they'd be valuable)
+
+Return ONLY the JSON object, no other text."""
+
+# ---------------------------------------------------------------------------
+# JSON extraction helper
+# ---------------------------------------------------------------------------
+def extract_json(text: str) -> dict:
+    """Extract JSON object from possibly markdown-wrapped text."""
+    text = text.strip()
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        pass
+
+    # Strip markdown code fences
+    if "```json" in text:
+        text = text.split("```json")[1].split("```")[0].strip()
+    elif "```" in text:
+        text = text.split("```")[1].split("```")[0].strip()
+
+    # Try to find first { ... } block
+    start = text.find("{")
+    end = text.rfind("}")
+    if start != -1 and end != -1 and end > start:
+        candidate = text[start:end + 1]
+        try:
+            return json.loads(candidate)
+        except json.JSONDecodeError:
+            pass
+
+    return {"error": "Could not parse JSON from model output", "raw": text}
+
+# ---------------------------------------------------------------------------
+# Flask app
+# ---------------------------------------------------------------------------
 app = Flask(__name__, static_folder=STATIC)
 app.config["JSON_SORT_KEYS"] = False
-app.secret_key = os.urandom(24)  # replaced with persistent key at startup
+app.secret_key = base64.b64decode(config.get("secret_key", base64.b64encode(os.urandom(24)).decode()))
 
 @app.before_request
 def _pin_guard():
@@ -177,6 +409,20 @@ def verify_pin():
         return jsonify({"ok": True})
     return jsonify({"ok": False}), 401
 
+# ---------------------------------------------------------------------------
+# Static routes
+# ---------------------------------------------------------------------------
+@app.route("/")
+def index():
+    return send_from_directory(STATIC, "index.html")
+
+@app.route("/vendor/<path:filename>")
+def vendor(filename):
+    return send_from_directory(VENDOR, filename)
+
+# ---------------------------------------------------------------------------
+# API: Update check/pull
+# ---------------------------------------------------------------------------
 @app.route("/api/update/check")
 def api_update_check():
     has_update, local, remote = check_for_updates()
@@ -187,6 +433,9 @@ def api_update_pull():
     ok, output = pull_update()
     return jsonify({"ok": ok, "output": output})
 
+# ---------------------------------------------------------------------------
+# API: Remote access
+# ---------------------------------------------------------------------------
 @app.route("/api/remote")
 def api_remote():
     cfg = load_config()
@@ -198,121 +447,467 @@ def api_remote():
         "cloudflared": bool(shutil.which("cloudflared"))
     })
 
-@app.route("/")
-def index():
-    return send_from_directory(STATIC, "index.html")
+# ---------------------------------------------------------------------------
+# API: Config (GET redacts API key)
+# ---------------------------------------------------------------------------
+@app.route("/api/config", methods=["GET"])
+def get_config():
+    safe = {k: v for k, v in config.items() if k not in ("ollama_api_key", "secret_key")}
+    safe["has_api_key"] = bool(config.get("ollama_api_key"))
+    safe["mode"] = "remote" if _is_remote() else "local"
+    return jsonify(safe)
 
-@app.route("/vendor/<path:filename>")
-def vendor(filename):
-    return send_from_directory(VENDOR, filename)
+@app.route("/api/config", methods=["POST"])
+def update_config():
+    data = request.get_json() or {}
+    if "model" in data:
+        config["model"] = data["model"]
+        config["default_model"] = data["model"]  # keep in sync
+    if "default_model" in data:
+        config["default_model"] = data["default_model"]
+        config["model"] = data["default_model"]  # keep in sync
+    if "ollama_url" in data:
+        config["ollama_url"] = data["ollama_url"].rstrip("/")
+    if "ollama_api_key" in data:
+        config["ollama_api_key"] = data["ollama_api_key"]
+    # Allow other keys through
+    for k, v in data.items():
+        if k not in ("model", "default_model", "ollama_url", "ollama_api_key"):
+            config[k] = v
+    save_config(config)
+    return jsonify({"ok": True, "mode": "remote" if _is_remote() else "local"})
 
+# ---------------------------------------------------------------------------
+# API: Status & Models
+# ---------------------------------------------------------------------------
 @app.route("/api/status")
 def status():
-    cfg = load_config()
-    try:
-        with urllib.request.urlopen(f"{cfg['ollama_url']}/api/tags", timeout=2) as resp:
-            data = json.loads(resp.read())
-        models = [m["name"] for m in data.get("models", [])]
-        return jsonify({"ollama": True, "models": models, "current_model": cfg["model"], "ollama_url": cfg["ollama_url"]})
-    except Exception:
-        return jsonify({"ollama": False, "models": [], "current_model": cfg["model"], "ollama_url": cfg["ollama_url"]})
+    running = ollama_is_running()
+    model = config.get("model") or config.get("default_model", "llama3.2")
+    models = ollama_models()
+    ollama_url = config.get("ollama_url", "http://localhost:11434")
+    return jsonify({
+        "ollama": running,
+        "ollama_running": running,
+        "models": models,
+        "current_model": model,
+        "model": model,
+        "ollama_url": ollama_url,
+        "mode": "remote" if _is_remote() else "local",
+    })
 
-@app.route("/api/config", methods=["GET", "POST"])
-def config_route():
-    if request.method == "POST":
-        return jsonify(save_config(request.get_json() or {}))
-    return jsonify(load_config())
+@app.route("/api/models")
+def list_models():
+    return jsonify(ollama_models())
+
+# ---------------------------------------------------------------------------
+# API: Characters CRUD
+# ---------------------------------------------------------------------------
+@app.route("/api/characters", methods=["GET"])
+def list_characters():
+    chars = []
+    for fname in os.listdir(CHARACTERS_DIR):
+        if fname.endswith(".json"):
+            with open(os.path.join(CHARACTERS_DIR, fname)) as f:
+                chars.append(json.load(f))
+    return jsonify(chars)
+
+@app.route("/api/characters", methods=["POST"])
+def save_character():
+    char = request.json
+    name = char.get("name", "unknown").replace(" ", "_").lower()
+    path = os.path.join(CHARACTERS_DIR, f"{name}.json")
+    with open(path, "w") as f:
+        json.dump(char, f, indent=2)
+    return jsonify({"ok": True, "path": path})
+
+@app.route("/api/characters/<name>", methods=["DELETE"])
+def delete_character(name):
+    path = os.path.join(CHARACTERS_DIR, f"{name}.json")
+    if os.path.exists(path):
+        os.remove(path)
+        return jsonify({"ok": True})
+    return jsonify({"ok": False, "error": "not found"}), 404
+
+# ---------------------------------------------------------------------------
+# API: Teams CRUD
+# ---------------------------------------------------------------------------
+@app.route("/api/teams", methods=["GET"])
+def list_teams():
+    teams = []
+    for fname in os.listdir(TEAMS_DIR):
+        if fname.endswith(".json"):
+            with open(os.path.join(TEAMS_DIR, fname)) as f:
+                teams.append(json.load(f))
+    return jsonify(teams)
+
+@app.route("/api/teams", methods=["POST"])
+def save_team():
+    team = request.json
+    name = team.get("name", "unknown").replace(" ", "_").lower()
+    path = os.path.join(TEAMS_DIR, f"{name}.json")
+    with open(path, "w") as f:
+        json.dump(team, f, indent=2)
+    return jsonify({"ok": True, "path": path})
+
+@app.route("/api/teams/<name>", methods=["DELETE"])
+def delete_team(name):
+    path = os.path.join(TEAMS_DIR, f"{name}.json")
+    if os.path.exists(path):
+        os.remove(path)
+        return jsonify({"ok": True})
+    return jsonify({"ok": False, "error": "not found"}), 404
+
+# ---------------------------------------------------------------------------
+# API: Stories CRUD
+# ---------------------------------------------------------------------------
+@app.route("/api/stories", methods=["GET"])
+def list_stories():
+    stories = []
+    for fname in os.listdir(STORIES_DIR):
+        if fname.endswith(".json"):
+            with open(os.path.join(STORIES_DIR, fname)) as f:
+                stories.append(json.load(f))
+    return jsonify(stories)
+
+@app.route("/api/stories", methods=["POST"])
+def save_story():
+    story = request.json
+    name = story.get("title", "untitled").replace(" ", "_").lower()
+    ts = int(time.time())
+    path = os.path.join(STORIES_DIR, f"{name}_{ts}.json")
+    with open(path, "w") as f:
+        json.dump(story, f, indent=2)
+    return jsonify({"ok": True, "path": path})
+
+@app.route("/api/stories/<name>", methods=["DELETE"])
+def delete_story(name):
+    path = os.path.join(STORIES_DIR, name)
+    if os.path.exists(path):
+        os.remove(path)
+        return jsonify({"ok": True})
+    return jsonify({"ok": False, "error": "not found"}), 404
+
+# ---------------------------------------------------------------------------
+# API: Model pull
+# ---------------------------------------------------------------------------
+@app.route("/api/pull", methods=["POST"])
+def pull_model():
+    data = request.get_json() or {}
+    model = data.get("model", "")
+    if not model:
+        model = config.get("model") or config.get("default_model", "llama3.2")
+    if _is_remote():
+        return jsonify({"error": "Pull not available for remote API"}), 400
+
+    def do_pull():
+        base = config["ollama_url"].rstrip("/")
+        try:
+            requests.post(
+                f"{base}/api/pull",
+                json={"name": model, "stream": False},
+                timeout=600,
+            )
+        except Exception as e:
+            print(f"Pull failed for {model}: {e}")
+
+    threading.Thread(target=do_pull, daemon=True).start()
+    return jsonify({"ok": True, "model": model})
+
+# ---------------------------------------------------------------------------
+# API: Images
+# ---------------------------------------------------------------------------
+IMAGE_EXTENSIONS = (".jpg", ".jpeg", ".png", ".gif", ".webp")
 
 @app.route("/api/images", methods=["GET"])
 def list_images():
-    import glob
-    ids = [os.path.splitext(os.path.basename(f))[0]
-           for f in glob.glob(os.path.join(IMAGES_DIR, "*"))]
-    return jsonify(ids)
+    ids = set()
+    for f in glob.glob(os.path.join(IMAGES_DIR, "*")):
+        name = os.path.basename(f)
+        root, ext = os.path.splitext(name)
+        if ext.lower() in IMAGE_EXTENSIONS:
+            ids.add(root)
+    return jsonify(sorted(ids))
 
-@app.route("/api/images/<img_id>", methods=["GET", "POST", "DELETE"])
-def manage_image(img_id):
-    img_id = os.path.basename(img_id)  # sanitize
-    EXTS = [".jpg", ".jpeg", ".png", ".gif", ".webp"]
+@app.route("/api/images/<img_id>", methods=["GET"])
+def get_image(img_id):
+    safe_id = os.path.basename(img_id)
+    for ext in IMAGE_EXTENSIONS:
+        path = os.path.join(IMAGES_DIR, f"{safe_id}{ext}")
+        if os.path.exists(path):
+            return send_file(path)
+    return jsonify({"error": "not found"}), 404
 
-    if request.method == "GET":
-        for ext in EXTS:
-            path = os.path.join(IMAGES_DIR, img_id + ext)
-            if os.path.exists(path):
-                return send_file(path)
-        return jsonify({"error": "not found"}), 404
+@app.route("/api/images/<img_id>", methods=["POST"])
+def save_image(img_id):
+    safe_id = os.path.basename(img_id)
+    data = request.json or {}
+    b64_data = data.get("data", "")
+    if not b64_data:
+        return jsonify({"error": "data is required"}), 400
 
-    elif request.method == "POST":
-        b64 = (request.get_json() or {}).get("data", "")
+    # Detect extension from data URI prefix
+    ext = ".png"  # default
+    if b64_data.startswith("data:image/jpeg") or b64_data.startswith("data:image/jpg"):
         ext = ".jpg"
-        if "," in b64:
-            header, b64 = b64.split(",", 1)
-            if "png" in header: ext = ".png"
-            elif "gif" in header: ext = ".gif"
-            elif "webp" in header: ext = ".webp"
-        for old_ext in EXTS:
-            old = os.path.join(IMAGES_DIR, img_id + old_ext)
-            if os.path.exists(old): os.remove(old)
-        with open(os.path.join(IMAGES_DIR, img_id + ext), "wb") as f:
-            f.write(base64.b64decode(b64))
-        return jsonify({"ok": True})
+    elif b64_data.startswith("data:image/png"):
+        ext = ".png"
+    elif b64_data.startswith("data:image/gif"):
+        ext = ".gif"
+    elif b64_data.startswith("data:image/webp"):
+        ext = ".webp"
 
-    elif request.method == "DELETE":
-        for ext in EXTS:
-            path = os.path.join(IMAGES_DIR, img_id + ext)
-            if os.path.exists(path): os.remove(path)
-        return jsonify({"ok": True})
+    # Strip data URI prefix if present
+    if ";base64," in b64_data:
+        b64_data = b64_data.split(";base64,", 1)[1]
 
-@app.route("/api/pull", methods=["POST"])
-def pull_model():
-    cfg = load_config()
-    model = (request.get_json() or {}).get("model", cfg["model"])
-    def do_pull():
-        body = json.dumps({"name": model, "stream": False}).encode()
-        req = urllib.request.Request(f"{cfg['ollama_url']}/api/pull", data=body,
-            headers={"Content-Type": "application/json"}, method="POST")
-        try: urllib.request.urlopen(req, timeout=300)
-        except Exception: pass
-    threading.Thread(target=do_pull, daemon=True).start()
-    return jsonify({"ok": True})
+    # Remove old file with different extension
+    for old_ext in IMAGE_EXTENSIONS:
+        old_path = os.path.join(IMAGES_DIR, f"{safe_id}{old_ext}")
+        if os.path.exists(old_path):
+            os.remove(old_path)
+
+    path = os.path.join(IMAGES_DIR, f"{safe_id}{ext}")
+    with open(path, "wb") as f:
+        f.write(base64.b64decode(b64_data))
+    return jsonify({"ok": True, "id": safe_id, "ext": ext})
+
+@app.route("/api/images/<img_id>", methods=["DELETE"])
+def delete_image(img_id):
+    safe_id = os.path.basename(img_id)
+    for ext in IMAGE_EXTENSIONS:
+        path = os.path.join(IMAGES_DIR, f"{safe_id}{ext}")
+        if os.path.exists(path):
+            os.remove(path)
+            return jsonify({"ok": True})
+    return jsonify({"ok": False, "error": "not found"}), 404
+
+# ---------------------------------------------------------------------------
+# API: AI Generation endpoints
+# ---------------------------------------------------------------------------
+def _get_model(data):
+    """Resolve model from request data or config."""
+    return data.get("model") or config.get("model") or config.get("default_model", "llama3.2")
+
+@app.route("/api/generate/hero", methods=["POST"])
+def generate_hero():
+    data = request.json or {}
+    model = _get_model(data)
+    extra = data.get("extra", "") or "Surprise me with a creative, varied hero archetype."
+    prompt = HERO_PROMPT.format(extra=extra)
+    raw = ""
+    try:
+        raw = ollama_generate(model, prompt)
+        char = extract_json(raw)
+        if "error" in char and "name" not in char:
+            return jsonify({"error": char["error"], "raw": char.get("raw", raw)}), 422
+        char["source_model"] = model
+        name = char.get("name", "unknown").replace(" ", "_").lower()
+        path = os.path.join(CHARACTERS_DIR, f"{name}.json")
+        with open(path, "w") as f:
+            json.dump(char, f, indent=2)
+        return jsonify(char)
+    except requests.exceptions.HTTPError as e:
+        if e.response is not None and e.response.status_code == 401:
+            return jsonify({"error": "Authentication failed. Check your API key."}), 401
+        return jsonify({"error": str(e)}), e.response.status_code if e.response else 500
+    except requests.exceptions.ConnectionError:
+        mode = "remote" if _is_remote() else "local"
+        if mode == "remote":
+            return jsonify({"error": "Cannot reach remote API. Check the URL and API key."}), 503
+        return jsonify({"error": "Ollama is not running. Start it with: ollama serve"}), 503
+    except requests.exceptions.Timeout:
+        return jsonify({"error": f"Model {model} timed out. Try a smaller model or check your connection."}), 504
+    except Exception as e:
+        return jsonify({"error": str(e), "raw": raw[:500] if raw else ""}), 500
+
+
+@app.route("/api/generate/villain", methods=["POST"])
+def generate_villain():
+    data = request.json or {}
+    model = _get_model(data)
+    extra = data.get("extra", "") or "Surprise me with a creative, varied villain archetype."
+    prompt = VILLAIN_PROMPT.format(extra=extra)
+    raw = ""
+    try:
+        raw = ollama_generate(model, prompt)
+        char = extract_json(raw)
+        if "error" in char and "name" not in char:
+            return jsonify({"error": char["error"], "raw": char.get("raw", raw)}), 422
+        char["source_model"] = model
+        name = char.get("name", "unknown").replace(" ", "_").lower()
+        path = os.path.join(CHARACTERS_DIR, f"{name}.json")
+        with open(path, "w") as f:
+            json.dump(char, f, indent=2)
+        return jsonify(char)
+    except requests.exceptions.HTTPError as e:
+        if e.response is not None and e.response.status_code == 401:
+            return jsonify({"error": "Authentication failed. Check your API key."}), 401
+        return jsonify({"error": str(e)}), e.response.status_code if e.response else 500
+    except requests.exceptions.ConnectionError:
+        mode = "remote" if _is_remote() else "local"
+        if mode == "remote":
+            return jsonify({"error": "Cannot reach remote API. Check the URL and API key."}), 503
+        return jsonify({"error": "Ollama is not running. Start it with: ollama serve"}), 503
+    except requests.exceptions.Timeout:
+        return jsonify({"error": f"Model {model} timed out. Try a smaller model or check your connection."}), 504
+    except Exception as e:
+        return jsonify({"error": str(e), "raw": raw[:500] if raw else ""}), 500
+
+
+@app.route("/api/generate/recruit", methods=["POST"])
+def generate_recruit():
+    data = request.json or {}
+    model = _get_model(data)
+    team = data.get("team", [])
+    prompt = RECRUIT_PROMPT.format(team=", ".join(team) if isinstance(team, list) else str(team))
+    raw = ""
+    try:
+        raw = ollama_generate(model, prompt)
+        recruit = extract_json(raw)
+        if "error" in recruit and "name" not in recruit:
+            return jsonify({"error": recruit["error"], "raw": recruit.get("raw", raw)}), 422
+        recruit["source_model"] = model
+        return jsonify(recruit)
+    except requests.exceptions.HTTPError as e:
+        if e.response is not None and e.response.status_code == 401:
+            return jsonify({"error": "Authentication failed. Check your API key."}), 401
+        return jsonify({"error": str(e)}), e.response.status_code if e.response else 500
+    except requests.exceptions.ConnectionError:
+        mode = "remote" if _is_remote() else "local"
+        if mode == "remote":
+            return jsonify({"error": "Cannot reach remote API. Check the URL and API key."}), 503
+        return jsonify({"error": "Ollama is not running. Start it with: ollama serve"}), 503
+    except requests.exceptions.Timeout:
+        return jsonify({"error": f"Model {model} timed out. Try a smaller model or check your connection."}), 504
+    except Exception as e:
+        return jsonify({"error": str(e), "raw": raw[:500] if raw else ""}), 500
+
+
+@app.route("/api/generate/story", methods=["POST"])
+def generate_story():
+    data = request.json or {}
+    model = _get_model(data)
+    heroes = data.get("heroes", [])
+    villains = data.get("villains", [])
+    setting = data.get("setting", "a dark city at night")
+    prompt = STORY_PROMPT.format(
+        heroes=", ".join(heroes) if isinstance(heroes, list) else str(heroes),
+        villains=", ".join(villains) if isinstance(villains, list) else str(villains),
+        setting=setting,
+    )
+    raw = ""
+    try:
+        raw = ollama_generate(model, prompt)
+        story = {
+            "title": f"{', '.join(heroes[:2])} vs {', '.join(villains[:2])}",
+            "heroes": heroes,
+            "villains": villains,
+            "setting": setting,
+            "content": raw,
+            "source_model": model,
+        }
+        # Auto-save
+        ts = int(time.time())
+        safe_title = story["title"].replace(" ", "_").lower()[:40]
+        path = os.path.join(STORIES_DIR, f"{safe_title}_{ts}.json")
+        with open(path, "w") as f:
+            json.dump(story, f, indent=2)
+        return jsonify(story)
+    except requests.exceptions.HTTPError as e:
+        if e.response is not None and e.response.status_code == 401:
+            return jsonify({"error": "Authentication failed. Check your API key."}), 401
+        return jsonify({"error": str(e)}), e.response.status_code if e.response else 500
+    except requests.exceptions.ConnectionError:
+        mode = "remote" if _is_remote() else "local"
+        if mode == "remote":
+            return jsonify({"error": "Cannot reach remote API. Check the URL and API key."}), 503
+        return jsonify({"error": "Ollama is not running. Start it with: ollama serve"}), 503
+    except requests.exceptions.Timeout:
+        return jsonify({"error": f"Model {model} timed out. Try a smaller model or check your connection."}), 504
+    except Exception as e:
+        return jsonify({"error": str(e), "raw": raw[:500] if raw else ""}), 500
+
+# ---------------------------------------------------------------------------
+# API: Chat (with remote support)
+# ---------------------------------------------------------------------------
+SYSTEM_PROMPT = "You are a creative writing assistant specializing in superhero fiction. When asked to return JSON, return ONLY valid JSON — no markdown fences, no preamble, no explanation. The JSON must be complete and parseable."
 
 @app.route("/api/chat", methods=["POST"])
 def chat():
-    cfg = load_config()
-    body = request.get_json() or {}
-    messages = body.get("messages", [])
-    all_content = " ".join(str(m.get("content","")) for m in messages if isinstance(m.get("content"), str))
-    needs_json = "JSON only" in all_content or '"prompt"' in all_content or "keys:" in all_content
+    data = request.json or {}
+    messages = data.get("messages", [])
+    max_tokens = data.get("max_tokens", 1200)
+    model = _get_model(data)
 
-    if not any(m.get("role") == "system" for m in messages):
-        messages = [{"role": "system", "content": (
-            "You are a creative writing assistant specializing in superhero fiction. "
-            "When asked to return JSON, return ONLY valid JSON — no markdown fences, "
-            "no preamble, no explanation. The JSON must be complete and parseable."
-        )}] + messages
+    # If no system message, prepend one
+    if not messages or messages[0].get("role") != "system":
+        messages.insert(0, {"role": "system", "content": SYSTEM_PROMPT})
 
-    ollama_body = {
-        "model": cfg["model"], "messages": messages, "stream": False,
-        "options": {"temperature": 0.8, "num_predict": body.get("max_tokens", 1200), "top_p": 0.9}
-    }
-    if needs_json:
-        ollama_body["format"] = "json"
+    # Detect JSON-only mode
+    use_json_format = False
+    for msg in messages:
+        content = msg.get("content", "")
+        if any(kw in content for kw in ("JSON only", '"prompt"', "keys:")):
+            use_json_format = True
+            break
+
+    base = config["ollama_url"].rstrip("/")
 
     try:
-        data = json.dumps(ollama_body).encode()
-        req = urllib.request.Request(f"{cfg['ollama_url']}/api/chat", data=data,
-            headers={"Content-Type": "application/json"}, method="POST")
-        with urllib.request.urlopen(req, timeout=120) as resp:
-            result = json.loads(resp.read())
-        text = result.get("message", {}).get("content", "")
-        return jsonify({"content": [{"type": "text", "text": text}]})
-    except urllib.error.URLError:
-        return jsonify({"error": {"type": "connection_error",
-            "message": "Ollama is not running. Start Ollama and try again."}}), 503
-    except Exception as e:
-        return jsonify({"error": {"type": "error", "message": str(e)}}), 500
+        if _is_remote():
+            r = requests.post(
+                f"{base}/v1/chat/completions",
+                headers=_headers(),
+                json={"model": model, "messages": messages, "max_tokens": max_tokens},
+                timeout=180,
+            )
+            if r.status_code == 401:
+                return jsonify({"error": "Authentication failed. Check your API key."}), 401
+            r.raise_for_status()
+            resp_data = r.json()
+            text = resp_data.get("choices", [{}])[0].get("message", {}).get("content", "")
+        else:
+            payload = {
+                "model": model,
+                "messages": messages,
+                "stream": False,
+                "options": {
+                    "temperature": 0.8,
+                    "num_predict": max_tokens,
+                    "top_p": 0.9,
+                },
+            }
+            if use_json_format:
+                payload["format"] = "json"
+            r = requests.post(
+                f"{base}/api/chat",
+                json=payload,
+                timeout=180,
+            )
+            r.raise_for_status()
+            resp_data = r.json()
+            text = resp_data.get("message", {}).get("content", "")
 
-# ── PDF Export ────────────────────────────────────────────────────────────────
+        return jsonify({"content": [{"type": "text", "text": text}]})
+
+    except requests.exceptions.ConnectionError:
+        mode = "remote" if _is_remote() else "local"
+        if mode == "remote":
+            return jsonify({"error": "Cannot reach remote API. Check the URL and API key."}), 503
+        return jsonify({"error": "Ollama is not running. Start it with: ollama serve"}), 503
+    except requests.exceptions.Timeout:
+        return jsonify({"error": f"Model {model} timed out."}), 504
+    except requests.exceptions.HTTPError as e:
+        if e.response is not None and e.response.status_code == 401:
+            return jsonify({"error": "Authentication failed. Check your API key."}), 401
+        return jsonify({"error": str(e)}), e.response.status_code if e.response is not None else 500
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# ---------------------------------------------------------------------------
+# PDF Export
+# ---------------------------------------------------------------------------
 @app.route("/api/export-pdf", methods=["POST"])
 def export_pdf():
     try:
@@ -372,7 +967,7 @@ def export_pdf():
 
     story = []
 
-    # ── Cover ────────────────────────────────────────────────────────────────
+    # -- Cover -----------------------------------------------------------------
     TEAM_C = rcolor(team_color)
     story.append(Spacer(1, 1.6*inch))
     story.append(Paragraph(team_name.upper(), sty("ct", 26, GOLD, True, TA_CENTER)))
@@ -385,7 +980,7 @@ def export_pdf():
     story.append(Spacer(1, 2.4*inch))
     story.append(Paragraph("FOR INTERNAL USE ONLY", sty("cw", 8, colors.Color(0.4,0.4,0.4), False, TA_CENTER)))
 
-    # ── Member pages ──────────────────────────────────────────────────────────
+    # -- Member pages ----------------------------------------------------------
     for member in members:
         story.append(PageBreak())
 
@@ -403,17 +998,18 @@ def export_pdf():
         is_v  = member.get("isVillain", False)
         m_team     = member.get("teamName", team_name)
         m_team_c   = member.get("teamColor", team_color)
-        nk_align   = member.get("nkAlignment", "neutral")
+        nk_alignment = member.get("nkAlignment", "neutral")
         affiliations = member.get("affiliations", [])
         shared_villains = member.get("sharedVillains", [])
+        appearance   = member.get("appearance", "")
 
-        align_color = ALIGN_COLORS.get(nk_align, "#888780")
-        align_label = ALIGN_LABELS.get(nk_align, "Neutral")
+        align_color = ALIGN_COLORS.get(nk_alignment, "#888780")
+        align_label = ALIGN_LABELS.get(nk_alignment, "Neutral")
         ALIGN_C = rcolor(align_color)
         MTEAM_C = rcolor(m_team_c)
 
         # Header band
-        hdr_txt = "— CLASSIFIED THREAT —" if is_v else f"{m_team.upper()} · {num}"
+        hdr_txt = "\u2014 CLASSIFIED THREAT \u2014" if is_v else f"{m_team.upper()} \u00b7 {num}"
         hd = Table([[
             Paragraph(hdr_txt, sty("h1", 7, rcolor(acc), False, TA_LEFT)),
             Paragraph(role, sty("h2", 7, MUTED, False, TA_RIGHT))
@@ -468,7 +1064,7 @@ def export_pdf():
         if tag:
             info_parts.append(HRFlowable(width="100%", thickness=0.5, color=ACC))
             info_parts.append(Spacer(1, 3))
-            info_parts.append(Paragraph(f'<i>"{tag}"</i>', sty("tg", 10, colors.Color(0.8,0.8,0.75), False, TA_LEFT, 14)))
+            info_parts.append(Paragraph(f'<i>\u201c{tag}\u201d</i>', sty("tg", 10, colors.Color(0.8,0.8,0.75), False, TA_LEFT, 14)))
             info_parts.append(Spacer(1, 7))
 
         # Stats
@@ -524,16 +1120,23 @@ def export_pdf():
             story.append(Paragraph(orig, sty("ot", 9, MUTED, False, TA_LEFT, 14)))
             story.append(Spacer(1, 0.08*inch))
 
+        # Appearance
+        if appearance:
+            story.append(Paragraph("APPEARANCE", sty("apl", 7, MUTED)))
+            story.append(Spacer(1, 3))
+            story.append(Paragraph(appearance, sty("apt", 9, MUTED, False, TA_LEFT, 14)))
+            story.append(Spacer(1, 0.08*inch))
+
         # DNA
         if dna:
-            story.append(Paragraph("DNA: " + " · ".join(dna), sty("dt", 8, GOLD)))
+            story.append(Paragraph("DNA: " + " \u00b7 ".join(dna), sty("dt", 8, GOLD)))
             story.append(Spacer(1, 0.08*inch))
 
         # Affiliations
         if affiliations:
             story.append(Paragraph("AFFILIATIONS", sty("afl", 7, MUTED)))
             story.append(Spacer(1, 3))
-            aff_text = "  ·  ".join([f"{a.get('teamName','')} ({a.get('role','')})" for a in affiliations])
+            aff_text = "  \u00b7  ".join([f"{a.get('teamName','')} ({a.get('role','')})" for a in affiliations])
             story.append(Paragraph(aff_text, sty("afv", 8, GOLD)))
             story.append(Spacer(1, 0.08*inch))
 
@@ -541,7 +1144,7 @@ def export_pdf():
         if shared_villains:
             story.append(HRFlowable(width="100%", thickness=0.5, color=RED))
             story.append(Spacer(1, 3))
-            story.append(Paragraph("⚠ SHARED THREAT: " + " · ".join(shared_villains), sty("sv2", 8, colors.Color(0.8, 0.2, 0.2), True)))
+            story.append(Paragraph("\u26a0 SHARED THREAT: " + " \u00b7 ".join(shared_villains), sty("sv2", 8, colors.Color(0.8, 0.2, 0.2), True)))
             story.append(Spacer(1, 0.06*inch))
 
         # Footer
@@ -549,7 +1152,7 @@ def export_pdf():
         story.append(HRFlowable(width="100%", thickness=0.5, color=colors.Color(*[x*0.22 for x in hex2rgb(acc)])))
         story.append(Spacer(1, 3))
         ft2 = Table([[
-            Paragraph(f"{m_team.upper()} · CLASSIFIED", sty("ft", 7, colors.Color(0.3,0.3,0.3))),
+            Paragraph(f"{m_team.upper()} \u00b7 CLASSIFIED", sty("ft", 7, colors.Color(0.3,0.3,0.3))),
             Paragraph(num, sty("fn", 16, colors.Color(*[x*0.25 for x in hex2rgb(acc)]), True, TA_RIGHT))
         ]], colWidths=["85%","15%"])
         ft2.setStyle(TableStyle([("TOPPADDING",(0,0),(-1,-1),0),("BOTTOMPADDING",(0,0),(-1,-1),0),("LEFTPADDING",(0,0),(-1,-1),0),("RIGHTPADDING",(0,0),(-1,-1),0)]))
@@ -566,21 +1169,31 @@ def export_pdf():
     return send_file(buf, mimetype="application/pdf",
         as_attachment=True, download_name=f"{team_name.lower().replace(' ','-')}-roster.pdf")
 
+# ---------------------------------------------------------------------------
+# API: Restart
+# ---------------------------------------------------------------------------
 @app.route("/api/restart", methods=["POST"])
 def restart():
     def do_restart():
         time.sleep(0.5)
         _remove_lock()
         subprocess.Popen([sys.executable] + sys.argv, cwd=BASE,
-                         creationflags=subprocess.CREATE_NEW_CONSOLE if sys.platform == "win32" else 0)
+                         creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if sys.platform == "win32" else 0)
         os._exit(0)
     threading.Thread(target=do_restart, daemon=True).start()
     return jsonify({"ok": True})
 
+# ---------------------------------------------------------------------------
+# Health endpoint
+# ---------------------------------------------------------------------------
 @app.route("/health")
 def health():
-    return jsonify({"status": "ok", "model": load_config()["model"], "version": FORGE_VERSION})
+    model = config.get("model") or config.get("default_model", "llama3.2")
+    return jsonify({"status": "ok", "model": model, "version": FORGE_VERSION})
 
+# ---------------------------------------------------------------------------
+# Port & Flask helpers
+# ---------------------------------------------------------------------------
 def find_free_port(preferred=7432):
     s = socket.socket()
     try:
@@ -594,6 +1207,9 @@ def run_flask(port, host="127.0.0.1"):
     logging.getLogger("werkzeug").setLevel(logging.ERROR)
     app.run(host=host, port=port, debug=False, use_reloader=False, threaded=True)
 
+# ---------------------------------------------------------------------------
+# Main entry point
+# ---------------------------------------------------------------------------
 if __name__ == "__main__":
     existing = _existing_instance()
     if existing:
@@ -618,14 +1234,8 @@ if __name__ == "__main__":
     _write_lock()
     atexit.register(_remove_lock)
 
-    # Persistent secret key for sessions
-    cfg = load_config()
-    if not cfg.get("secret_key"):
-        save_config({"secret_key": base64.b64encode(os.urandom(24)).decode()})
-        cfg = load_config()
-    app.secret_key = base64.b64decode(cfg["secret_key"])
-
     # Bind host based on remote_enabled
+    cfg = load_config()
     flask_host = "0.0.0.0" if cfg.get("remote_enabled") else "127.0.0.1"
 
     print("\n  Starting Ollama...")
@@ -637,15 +1247,18 @@ if __name__ == "__main__":
     flask_thread = threading.Thread(target=run_flask, args=(port, flask_host), daemon=True)
     flask_thread.start()
     for _ in range(20):
-        try: urllib.request.urlopen(f"{url}/health", timeout=1); break
-        except Exception: time.sleep(0.3)
+        try:
+            requests.get(f"{url}/health", timeout=1)
+            break
+        except Exception:
+            time.sleep(0.3)
     print(f"\n  Superhero Forge v{FORGE_VERSION} ready at {url}")
 
     # Auto-update check (background)
     def _bg_update_check():
         has_update, local, remote = check_for_updates()
         if has_update:
-            print(f"  Update available: {local} → {remote} (open app to update)")
+            print(f"  Update available: {local} \u2192 {remote} (open app to update)")
     threading.Thread(target=_bg_update_check, daemon=True).start()
 
     # Remote access
