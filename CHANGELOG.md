@@ -2,6 +2,22 @@
 
 All notable changes to Superhero Forge will be documented here.
 
+## [1.2.1] - 2025-05-19
+
+### Security
+- **Path traversal fix** — all CRUD endpoints (characters, teams, stories) now sanitize filenames via `_safe_name()`, preventing `../` attacks that could read/write/delete arbitrary files
+- **PIN guard bypass fix** — `/api/images` (no trailing slash) was not exempted from remote PIN lock; now correctly whitelisted alongside `/api/images/`
+- **`.gitignore` encoding fix** — file was UTF-16 LE with BOM, making git unable to read patterns; converted to UTF-8. Added `data/`, `images/`, `.claude/`
+- **`config.json` removed from git tracking** — contained live `secret_key`; now excluded via `.gitignore`. Added `config.json.example` as safe template
+
+### Changed
+- **Unified `model`/`default_model`** — removed confusing dual-key sync logic. Single `model` key with `llama3.2` default. All fallback chains simplified to `config.get("model", "llama3.2")`
+- **Version bumped** — `FORGE_VERSION` 1.1 → 1.2.0
+- **`save_character`/`save_team`/`save_story`** no longer return `path` in response (was leaking server paths)
+
+### Fixed
+- `/api/status` and `/health` now use consistent `config.get("model", "llama3.2")` fallback
+
 ## [1.2.0] - 2025-05-19
 
 ### Added

@@ -1,6 +1,6 @@
 # Superhero Forge — Desktop App
 ### Nocturnal Knights Character System
-### Powered by Ollama · Local or Remote API · Runs 100% locally
+### v1.2.0 · Powered by Ollama · Local or Remote API · Runs 100% locally
 
 ---
 
@@ -142,7 +142,14 @@ ollama pull mistral
 ### Data Persistence
 - Characters, teams, and stories saved as JSON in `data/` directories
 - Image uploads stored in `images/`
-- Config persisted in `config.json` (includes model, API settings, secrets)
+- Config persisted in `config.json` (auto-created on first run, excluded from git)
+
+### Security
+- Path traversal protection on all CRUD endpoints (filenames sanitized via `_safe_name()`)
+- Remote API keys redacted from `/api/config` responses
+- Flask `secret_key` auto-generated and stored in `config.json` (never committed)
+- PIN guard for remote access with session-based verification
+- Single-instance lock (`.forge.lock`) with PID-safe cleanup
 
 ### PDF Export
 - Generate styled dossier PDFs with covers, stats, powers, origins, DNA, and character images
@@ -164,21 +171,21 @@ ollama pull mistral
 
 ```
 forge-desktop/
-├── app.py              ← Main application (Flask server + all API endpoints)
-├── setup.py            ← Run once to set up
-├── requirements.txt    ← Python dependencies
-├── config.json         ← Created on first run (model, API, tunnel settings)
-├── CHANGELOG.md        ← Version history
-├── run.bat             ← Windows launcher
-├── run.sh              ← Mac/Linux launcher
+├── app.py                ← Main application (Flask server + all API endpoints)
+├── setup.py              ← Run once to set up
+├── requirements.txt      ← Python dependencies
+├── config.json.example   ← Template for config (config.json auto-created, gitignored)
+├── CHANGELOG.md          ← Version history
+├── run.bat               ← Windows launcher
+├── run.sh                ← Mac/Linux launcher
 ├── data/
-│   ├── characters/     ← Saved hero/villain JSON files
-│   ├── teams/          ← Saved team JSON files
-│   └── stories/        ← Saved story JSON files
-├── images/             ← Uploaded character portraits
+│   ├── characters/       ← Saved hero/villain JSON files
+│   ├── teams/             ← Saved team JSON files
+│   └── stories/           ← Saved story JSON files
+├── images/               ← Uploaded character portraits
 ├── static/
-│   └── index.html      ← The full Superhero Forge UI (React createElement)
-└── vendor/             ← Created by setup.py
+│   └── index.html          ← The full Superhero Forge UI (React createElement)
+└── vendor/               ← Created by setup.py
     ├── react.js
     └── react-dom.js
 ```
