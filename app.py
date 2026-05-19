@@ -23,7 +23,7 @@ STORIES_DIR = os.path.join(DATA_DIR, "stories")
 IMAGES_DIR  = os.path.join(BASE, "images")
 LOCK_FILE   = os.path.join(BASE, ".forge.lock")
 
-FORGE_VERSION = "1.1"
+FORGE_VERSION = "1.2.0"
 
 TUNNEL_URL   = None
 _TUNNEL_PROC = None
@@ -33,7 +33,6 @@ _TUNNEL_PROC = None
 # ---------------------------------------------------------------------------
 DEFAULTS = {
     "model": "llama3.2",
-    "default_model": "llama3.2",
     "ollama_url": "http://localhost:11434",
     "ollama_api_key": "",
     "port": 7432,
@@ -84,6 +83,17 @@ def _headers():
     if key:
         hdrs["Authorization"] = f"Bearer {key}"
     return hdrs
+
+def _safe_name(name: str, ext: str = ".json") -> str:
+    """Sanitize a user-supplied filename to prevent path traversal.
+    Strips directory components, rejects '..' and path separators,
+    and enforces the given extension."""
+    name = os.path.basename(name).strip()
+    if not name or ".." in name or "/" in name or "\\" in name:
+        return ""
+    if ext and not name.endswith(ext):
+        name += ext
+    return name
 
 # ---------------------------------------------------------------------------
 # Ollama API helpers
@@ -380,7 +390,8 @@ def _pin_guard():
     if session.get("pin_ok"):
         return
     if request.path in ("/forge-pin", "/api/verify-pin") or \
-       request.path.startswith(("/vendor/", "/api/images/")):
+       request.path.startswith(("/vendor/", "/api/images/")) or \
+       request.path == "/api/images":
         return
     if request.path.startswith("/api/"):
         return jsonify({"error": "pin_required"}), 401
@@ -462,17 +473,13 @@ def update_config():
     data = request.get_json() or {}
     if "model" in data:
         config["model"] = data["model"]
-        config["default_model"] = data["model"]  # keep in sync
-    if "default_model" in data:
-        config["default_model"] = data["default_model"]
-        config["model"] = data["default_model"]  # keep in sync
     if "ollama_url" in data:
         config["ollama_url"] = data["ollama_url"].rstrip("/")
     if "ollama_api_key" in data:
         config["ollama_api_key"] = data["ollama_api_key"]
     # Allow other keys through
     for k, v in data.items():
-        if k not in ("model", "default_model", "ollama_url", "ollama_api_key"):
+        if k not in ("model", "ollama_url", "ollama_api_key"):
             config[k] = v
     save_config(config)
     return jsonify({"ok": True, "mode": "remote" if _is_remote() else "local"})
@@ -483,7 +490,7 @@ def update_config():
 @app.route("/api/status")
 def status():
     running = ollama_is_running()
-    model = config.get("model") or config.get("default_model", "llama3.2")
+    model = config.get("model", "llama3.2")
     models = ollama_models()
     ollama_url = config.get("ollama_url", "http://localhost:11434")
     return jsonify({
@@ -516,14 +523,20 @@ def list_characters():
 def save_character():
     char = request.json
     name = char.get("name", "unknown").replace(" ", "_").lower()
-    path = os.path.join(CHARACTERS_DIR, f"{name}.json")
+    safe = _safe_name(name)
+    if not safe:
+        return jsonify({"ok": False, "error": "invalid name"}), 400
+    path = os.path.join(CHARACTERS_DIR, safe)
     with open(path, "w") as f:
         json.dump(char, f, indent=2)
-    return jsonify({"ok": True, "path": path})
+    return jsonify({"ok": True})
 
 @app.route("/api/characters/<name>", methods=["DELETE"])
 def delete_character(name):
-    path = os.path.join(CHARACTERS_DIR, f"{name}.json")
+    safe = _safe_name(name)
+    if not safe:
+        return jsonify({"ok": False, "error": "invalid name"}), 400
+    path = os.path.join(CHARACTERS_DIR, safe)
     if os.path.exists(path):
         os.remove(path)
         return jsonify({"ok": True})
@@ -545,14 +558,20 @@ def list_teams():
 def save_team():
     team = request.json
     name = team.get("name", "unknown").replace(" ", "_").lower()
-    path = os.path.join(TEAMS_DIR, f"{name}.json")
+    safe = _safe_name(name)
+    if not safe:
+        return jsonify({"ok": False, "error": "invalid name"}), 400
+    path = os.path.join(TEAMS_DIR, safe)
     with open(path, "w") as f:
         json.dump(team, f, indent=2)
-    return jsonify({"ok": True, "path": path})
+    return jsonify({"ok": True})
 
 @app.route("/api/teams/<name>", methods=["DELETE"])
 def delete_team(name):
-    path = os.path.join(TEAMS_DIR, f"{name}.json")
+    safe = _safe_name(name)
+    if not safe:
+        return jsonify({"ok": False, "error": "invalid name"}), 400
+    path = os.path.join(TEAMS_DIR, safe)
     if os.path.exists(path):
         os.remove(path)
         return jsonify({"ok": True})
@@ -575,14 +594,20 @@ def save_story():
     story = request.json
     name = story.get("title", "untitled").replace(" ", "_").lower()
     ts = int(time.time())
-    path = os.path.join(STORIES_DIR, f"{name}_{ts}.json")
+    safe = _safe_name(f"{name}_{ts}")
+    if not safe:
+        return jsonify({"ok": False, "error": "invalid title"}), 400
+    path = os.path.join(STORIES_DIR, safe)
     with open(path, "w") as f:
         json.dump(story, f, indent=2)
-    return jsonify({"ok": True, "path": path})
+    return jsonify({"ok": True})
 
 @app.route("/api/stories/<name>", methods=["DELETE"])
 def delete_story(name):
-    path = os.path.join(STORIES_DIR, name)
+    safe = _safe_name(name)
+    if not safe:
+        return jsonify({"ok": False, "error": "invalid name"}), 400
+    path = os.path.join(STORIES_DIR, safe)
     if os.path.exists(path):
         os.remove(path)
         return jsonify({"ok": True})
@@ -596,7 +621,7 @@ def pull_model():
     data = request.get_json() or {}
     model = data.get("model", "")
     if not model:
-        model = config.get("model") or config.get("default_model", "llama3.2")
+        model = config.get("model", "llama3.2")
     if _is_remote():
         return jsonify({"error": "Pull not available for remote API"}), 400
 
@@ -687,7 +712,7 @@ def delete_image(img_id):
 # ---------------------------------------------------------------------------
 def _get_model(data):
     """Resolve model from request data or config."""
-    return data.get("model") or config.get("model") or config.get("default_model", "llama3.2")
+    return data.get("model") or config.get("model", "llama3.2")
 
 @app.route("/api/generate/hero", methods=["POST"])
 def generate_hero():
@@ -703,7 +728,8 @@ def generate_hero():
             return jsonify({"error": char["error"], "raw": char.get("raw", raw)}), 422
         char["source_model"] = model
         name = char.get("name", "unknown").replace(" ", "_").lower()
-        path = os.path.join(CHARACTERS_DIR, f"{name}.json")
+        safe = _safe_name(name) or _safe_name("unknown")
+        path = os.path.join(CHARACTERS_DIR, safe)
         with open(path, "w") as f:
             json.dump(char, f, indent=2)
         return jsonify(char)
@@ -736,7 +762,8 @@ def generate_villain():
             return jsonify({"error": char["error"], "raw": char.get("raw", raw)}), 422
         char["source_model"] = model
         name = char.get("name", "unknown").replace(" ", "_").lower()
-        path = os.path.join(CHARACTERS_DIR, f"{name}.json")
+        safe = _safe_name(name) or _safe_name("unknown")
+        path = os.path.join(CHARACTERS_DIR, safe)
         with open(path, "w") as f:
             json.dump(char, f, indent=2)
         return jsonify(char)
@@ -810,7 +837,8 @@ def generate_story():
         # Auto-save
         ts = int(time.time())
         safe_title = story["title"].replace(" ", "_").lower()[:40]
-        path = os.path.join(STORIES_DIR, f"{safe_title}_{ts}.json")
+        safe = _safe_name(f"{safe_title}_{ts}") or _safe_name(f"story_{ts}")
+        path = os.path.join(STORIES_DIR, safe)
         with open(path, "w") as f:
             json.dump(story, f, indent=2)
         return jsonify(story)
@@ -1188,7 +1216,7 @@ def restart():
 # ---------------------------------------------------------------------------
 @app.route("/health")
 def health():
-    model = config.get("model") or config.get("default_model", "llama3.2")
+    model = config.get("model", "llama3.2")
     return jsonify({"status": "ok", "model": model, "version": FORGE_VERSION})
 
 # ---------------------------------------------------------------------------
