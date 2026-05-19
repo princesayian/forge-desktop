@@ -11,7 +11,6 @@ VENDOR = os.path.join(BASE, "vendor")
 VENDOR_FILES = [
     ("react.js",     "https://unpkg.com/react@18/umd/react.production.min.js"),
     ("react-dom.js", "https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"),
-    ("babel.js",     "https://unpkg.com/@babel/standalone/babel.min.js"),
 ]
 
 def step(msg): print(f"\n  ▸ {msg}")
