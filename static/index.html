@@ -74,7 +74,7 @@ const{useState,useRef,useEffect,useCallback,useMemo}=React;
 const G="#D4AF37";
 
 // ── Team constants ────────────────────────────────────────────────────────────
-const NK_TEAM={id:"nocturnal-knights",name:"Nocturnal Knights",abbr:"NK",color:"#534AB7",colorLight:"#AFA9EC",type:"street",nkAlignment:"base",isDefault:true,description:"Dark urban anti-heroes operating in the shadows between crime and justice.",motto:"We are the dark between the lights.",origin:"Founded by Kareem Carter after surviving a government black-site experiment. The Knights exist because the organization responsible is still operating — and no legitimate hero was stopping them."};
+const NK_TEAM={id:"nocturnal-knights",name:"Nocturnal Knights",abbr:"NK",color:"#534AB7",colorLight:"#AFA9EC",type:"global",nkAlignment:"base",isDefault:true,description:"Dark urban anti-heroes operating in the shadows between crime and justice.",motto:"We are the dark between the lights.",origin:"Founded by Kareem Carter after surviving a government black-site experiment. The Knights exist because the organization responsible is still operating — and no legitimate hero was stopping them."};
 
 const TEAM_COLORS=[
   {id:"violet",label:"Void Violet",hex:"#534AB7"},{id:"teal",label:"Cipher Teal",hex:"#0F6E56"},
@@ -86,7 +86,11 @@ const TEAM_COLORS=[
 ];
 
 const TEAM_TYPES=[
-  {id:"street",label:"Street Level"},{id:"cosmic",label:"Cosmic / Supernatural"},
+  {id:"street",label:"Street Level"},
+  {id:"urban",label:"Urban / City Scale"},
+  {id:"regional",label:"Regional / National"},
+  {id:"global",label:"Global Threat"},
+  {id:"cosmic",label:"Cosmic / Supernatural"},
   {id:"government",label:"Government Agency"},{id:"underground",label:"Underground"},
   {id:"legacy",label:"Legacy Heroes"},{id:"tech",label:"Tech / Corporate"},
   {id:"international",label:"International"},{id:"vigilante",label:"Vigilante Network"},
@@ -346,24 +350,24 @@ function TeamCard({team,isActive,memberCount,onSelect,onEdit,onDelete}){
     <div style={{fontSize:11,color:"var(--text2)",lineHeight:1.5,marginBottom:10,minHeight:32}}>{(team.description||"").slice(0,80)}{(team.description||"").length>80?"...":""}</div>
     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
       {team.isDefault?<span style={{fontSize:9,padding:"2px 9px",background:`${team.color}18`,border:`1px solid ${team.color}44`,borderRadius:20,color:team.color}}>Base Team</span>:<AlignmentBadge alignment={team.nkAlignment}/>}
-      {!team.isDefault&&<div style={{display:"flex",gap:6}}>
+      <div style={{display:"flex",gap:6}}>
         <button onClick={e=>{e.stopPropagation();onEdit();}} style={{fontSize:9,padding:"2px 8px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:6,cursor:"pointer",color:"var(--text2)",fontFamily:"monospace"}}>Edit</button>
-        <button onClick={e=>{e.stopPropagation();onDelete();}} style={{fontSize:9,padding:"2px 8px",background:"rgba(163,45,45,0.1)",border:"1px solid rgba(163,45,45,0.28)",borderRadius:6,cursor:"pointer",color:"#e74c3c",fontFamily:"monospace"}}>Delete</button>
-      </div>}
+        {!team.isDefault&&<button onClick={e=>{e.stopPropagation();onDelete();}} style={{fontSize:9,padding:"2px 8px",background:"rgba(163,45,45,0.1)",border:"1px solid rgba(163,45,45,0.28)",borderRadius:6,cursor:"pointer",color:"#e74c3c",fontFamily:"monospace"}}>Delete</button>}
+      </div>
     </div>
   </div>);
 }
 
-function TeamCreator({teams,onSave,onCancel,callAI,ollamaOk}){
+function TeamCreator({teams,onSave,onCancel,callAI,ollamaOk,initialData}){
   const[step,setStep]=useState(1);
-  const[name,setName]=useState("");
-  const[abbr,setAbbr]=useState("");
-  const[color,setColor]=useState("#534AB7");
-  const[type,setType]=useState("street");
-  const[align,setAlign]=useState("neutral");
-  const[desc,setDesc]=useState("");
-  const[motto,setMotto]=useState("");
-  const[origin,setOrigin]=useState("");
+  const[name,setName]=useState(initialData?.name||"");
+  const[abbr,setAbbr]=useState(initialData?.abbr||"");
+  const[color,setColor]=useState(initialData?.color||"#534AB7");
+  const[type,setType]=useState(initialData?.type||"street");
+  const[align,setAlign]=useState(initialData?.nkAlignment||"neutral");
+  const[desc,setDesc]=useState(initialData?.description||"");
+  const[motto,setMotto]=useState(initialData?.motto||"");
+  const[origin,setOrigin]=useState(initialData?.origin||"");
   const[genLoading,setGenLoading]=useState(false);
   const autoAbbr=n=>n.split(" ").map(w=>w[0]||"").join("").toUpperCase().slice(0,3)||"??";
   const handleName=n=>{setName(n);if(!abbr||abbr===autoAbbr(name))setAbbr(autoAbbr(n));};
@@ -382,7 +386,7 @@ function TeamCreator({teams,onSave,onCancel,callAI,ollamaOk}){
     onSave({id:`team-${Date.now()}`,name:name.trim(),abbr:abbr.trim()||autoAbbr(name),color,colorLight:color+"CC",type,nkAlignment:align,description:desc,motto,origin,isDefault:false,createdAt:Date.now()});
   };
   const s2={padding:"12px 16px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:10};
-  const lbl={fontSize:9,letterSpacing:"0.18em",color:"rgba(212,175,55,0.45)",textTransform:"uppercase",marginBottom:8,display:"block"};
+  const lbl={fontSize:9,letterSpacing:"0.18em",color:"rgba(212,175,55,0.75)",textTransform:"uppercase",marginBottom:8,display:"block"};
   const chip=(a,c=G)=>({padding:"6px 12px",background:a?`${c}16`:"var(--bg3)",border:`1px solid ${a?c:"var(--border2)"}`,borderRadius:20,cursor:"pointer",fontSize:10.5,color:a?c:"var(--text3)",fontFamily:"monospace",fontWeight:a?"bold":"normal"});
   return(<div style={{background:"var(--bg-card2, #07070E)",border:"1px solid rgba(212,175,55,0.2)",borderRadius:14,overflow:"hidden"}}>
     <div style={{background:"rgba(212,175,55,0.06)",borderBottom:"1px solid rgba(212,175,55,0.15)",padding:"14px 20px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
@@ -405,8 +409,8 @@ function TeamCreator({teams,onSave,onCancel,callAI,ollamaOk}){
         <span style={lbl}>NK Alignment</span>
         <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:14}}>
           {NK_ALIGNMENTS.map(a=><button key={a.id} onClick={()=>setAlign(a.id)} style={{padding:"10px 14px",background:align===a.id?`${a.color}14`:"var(--bg3)",border:`1px solid ${align===a.id?a.color:"var(--border2)"}`,borderRadius:9,cursor:"pointer",textAlign:"left",fontFamily:"monospace"}}>
-            <div style={{fontSize:12,color:align===a.id?"var(--text-primary)":"var(--text2)",fontWeight:align===a.id?"bold":"normal"}}>{a.label}</div>
-            <div style={{fontSize:10,color:"var(--text3)",marginTop:2}}>{a.desc}</div>
+            <div style={{fontSize:12,color:"var(--text-primary)",fontWeight:align===a.id?"bold":"normal"}}>{a.label}</div>
+            <div style={{fontSize:10,color:"var(--text2)",marginTop:2}}>{a.desc}</div>
           </button>)}
         </div>
         <div style={{display:"flex",gap:10}}>
@@ -634,7 +638,7 @@ function App(){
   // ── Persistence ──────────────────────────────────────────────────────────
   useEffect(()=>{
     (async()=>{
-      try{const d=await window.storage.get("forge-teams");const saved=JSON.parse(d.value);if(saved&&saved.length)setTeams([NK_TEAM,...saved.filter(t=>!t.isDefault)]);}catch(e){}
+      try{const d=await window.storage.get("forge-teams");const saved=JSON.parse(d.value);if(saved&&saved.length){const savedNK=saved.find(t=>t.id==="nocturnal-knights");setTeams([savedNK?{...NK_TEAM,...savedNK}:NK_TEAM,...saved.filter(t=>!t.isDefault&&t.id!=="nocturnal-knights")]);}}catch(e){}
       try{const d=await window.storage.get("forge-rosters");setTeamRosters(JSON.parse(d.value)||{});}catch(e){}
       try{const d=await window.storage.get("forge-edits");setSharedEdits(JSON.parse(d.value)||{});}catch(e){
         // backward compat: check old key
@@ -681,7 +685,7 @@ function App(){
       ?teams.map(t=>t.id===editingTeamData.id?{...t,...teamData}:t)
       :[...teams,teamData];
     setTeams(newTeams);
-    persist("forge-teams",newTeams.filter(t=>!t.isDefault));
+    persist("forge-teams",newTeams.filter(t=>!t.isDefault||t.id==="nocturnal-knights"));
     setShowTeamCreator(false);setEditingTeamData(null);
   },[teams,editingTeamData,persist]);
 
@@ -1022,6 +1026,7 @@ function App(){
             onCancel={()=>{setShowTeamCreator(false);setEditingTeamData(null);}}
             callAI={callAI}
             ollamaOk={ollamaOk}
+            initialData={editingTeamData}
           />
         ):(
           <>
