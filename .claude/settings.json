@@ -2,7 +2,13 @@
   "permissions": {
     "allow": [
       "PowerShell([System.IO.File]::ReadAllBytes\\(\"C:\\\\Users\\\\princ\\\\Desktop\\\\forge-desktop\\\\.gitignore\"\\) | ForEach-Object { \"{0:X2}\" -f $_ } | Join-String -Separator \" \" | Select-String -Pattern \"\" | ForEach-Object { $_.Line })",
-      "PowerShell($bytes = [System.IO.File]::ReadAllBytes\\(\"C:\\\\Users\\\\princ\\\\Desktop\\\\forge-desktop\\\\.gitignore\"\\); \\($bytes | ForEach-Object { \"{0:X2}\" -f $_ }\\) -join \" \")"
+      "PowerShell($bytes = [System.IO.File]::ReadAllBytes\\(\"C:\\\\Users\\\\princ\\\\Desktop\\\\forge-desktop\\\\.gitignore\"\\); \\($bytes | ForEach-Object { \"{0:X2}\" -f $_ }\\) -join \" \")",
+      "Bash(git -C \"C:\\\\Users\\\\princ\\\\Desktop\\\\forge-desktop\" status)",
+      "Bash(git -C \"C:\\\\Users\\\\princ\\\\Desktop\\\\forge-desktop\" diff --stat HEAD)",
+      "Bash(git -C \"C:\\\\Users\\\\princ\\\\Desktop\\\\forge-desktop\" log --oneline -10)",
+      "Bash(git -C \"C:\\\\Users\\\\princ\\\\Desktop\\\\forge-desktop\" diff .claude/settings.json)",
+      "Bash(git -C \"C:\\\\Users\\\\princ\\\\Desktop\\\\forge-desktop\" check-ignore -v .forge.lock)",
+      "Bash(git -C \"C:\\\\Users\\\\princ\\\\Desktop\\\\forge-desktop\" log --oneline -15)"
     ]
   }
 }
