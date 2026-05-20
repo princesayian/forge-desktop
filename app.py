@@ -662,9 +662,11 @@ if __name__ == "__main__":
     try:
         import webview
         print("  Opening native window...\n")
+        _storage = os.path.join(BASE, "webview-data")
+        os.makedirs(_storage, exist_ok=True)
         webview.create_window("Superhero Forge", url, width=1280, height=900,
             min_size=(960, 680), background_color="#09090F")
-        webview.start(debug=False)
+        webview.start(debug=False, private_mode=False, storage_path=_storage)
     except ImportError:
         import webbrowser
         print("  PyWebView not found — opening in browser.\n")
