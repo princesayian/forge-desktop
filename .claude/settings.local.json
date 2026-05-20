@@ -17,7 +17,8 @@
       "Bash(python3 -c \"import playwright; print\\('ok'\\)\")",
       "Bash(/usr/local/bin/pip3 install *)",
       "Bash(/usr/local/bin/python3 -m playwright install chromium)",
-      "Bash(/usr/local/bin/python3 generate_docs.py)"
+      "Bash(/usr/local/bin/python3 generate_docs.py)",
+      "Bash(git rebase *)"
     ]
   }
 }
