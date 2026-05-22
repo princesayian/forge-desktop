@@ -178,6 +178,14 @@ const TONES=[{id:"intense",label:"Intense"},{id:"dark",label:"Dark & Gritty"},{i
 const ART_STYLES=[{id:"comic",label:"Comic Art",text:"cinematic comic book character art, flat color with sharp ink lines, Marvel/DC quality"},{id:"rendered",label:"3D Render",text:"hyper-realistic CGI character render, cinematic lighting"},{id:"anime",label:"Anime",text:"high-quality anime illustration, dynamic shading, Shonen Jump style"},{id:"statue",label:"Statue",text:"collectible resin statue render, museum-quality painted figurine"}];
 const ACCENT_COLORS=[{id:"crimson",label:"Crimson",hex:"#A32D2D"},{id:"jade",label:"Jade",hex:"#1D9E75"},{id:"amber",label:"Amber",hex:"#BA7517"},{id:"silver",label:"Silver",hex:"#888780"},{id:"indigo",label:"Indigo",hex:"#4A3FA0"},{id:"copper",label:"Copper",hex:"#8B4513"},{id:"frost",label:"Frost",hex:"#378ADD"},{id:"violet",label:"Violet",hex:"#8B2FC9"}];
 
+// ── Name Randomizer ───────────────────────────────────────────────────────────
+const _NP=["Iron","Shadow","Void","Crimson","Onyx","Silver","Neon","Apex","Titan","Nova","Obsidian","Midnight","Scarlet","Ghost","Forge","Static","Prism","Storm","Cipher","Null","Relic","Vex","Sable","Chrome","Dusk"];
+const _NC=["Hawk","Strike","Claw","Edge","Fist","Bolt","Veil","Surge","Shade","Blade","Gate","Prime","Shift","Arc","Pulse","Drift","Wraith","Rift","Crest","Fang","Lance","Reign","Tempest","Mark","Coil"];
+const _TS=["Covenant","Legion","Vanguard","Order","Collective","Guard","Division","Syndicate","Brigade","Alliance","Phalanx","Corps","Council","Squadron","Force","Crew","Conclave","Unit","Compact","Watch"];
+const _rp=a=>a[Math.floor(Math.random()*a.length)];
+const randTeamName=()=>`${_rp(_NP)} ${_rp(_TS)}`;
+const randHeroName=()=>{const r=Math.random();if(r<0.55)return _rp(_NP)+_rp(_NC);if(r<0.78)return _rp(_NP);return _rp(_NC);};
+
 // ── Deep Lore Quiz ────────────────────────────────────────────────────────────
 const DEEP_LORE_PHASES=[
   { id:"comicDNA", phase:1, title:"Comic DNA", subtitle:"Where does your hero come from?",
@@ -395,7 +403,7 @@ function TeamCreator({teams,onSave,onCancel,callAI,ollamaOk,initialData}){
     </div>
     <div style={{padding:"20px"}}>
       {step===1&&(<>
-        <div style={{marginBottom:14}}><span style={lbl}>Team Name</span><input type="text" placeholder="e.g. The Iron Covenant" value={name} onChange={e=>handleName(e.target.value)}/></div>
+        <div style={{marginBottom:14}}><span style={lbl}>Team Name</span><div style={{display:"flex",gap:6}}><input type="text" placeholder="e.g. The Iron Covenant" value={name} onChange={e=>handleName(e.target.value)} style={{flex:1}}/><button onClick={()=>handleName(randTeamName())} title="Random name" style={{padding:"0 12px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:16,flexShrink:0}}>⚄</button></div></div>
         <div style={{marginBottom:16}}><span style={lbl}>Abbreviation</span><input type="text" placeholder="e.g. TIC" value={abbr} onChange={e=>setAbbr(e.target.value.toUpperCase().slice(0,4))} style={{maxWidth:120}}/></div>
         <span style={lbl}>Team Color</span>
         <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:6}}>
@@ -585,7 +593,7 @@ function App(){
   // ── Recruit ─────────────────────────────────────────────────────────────
   // ── Recruit / Deep Forge ─────────────────────────────────────────────────
   const[rStep,setRStep]=useState(0);const[rAnswers,setRAnswers]=useState({});
-  const[rName,setRName]=useState("");const[rAccent,setRAccent]=useState("crimson");
+  const[rName,setRName]=useState("");const[rHeroName,setRHeroName]=useState("");const[rAccent,setRAccent]=useState("crimson");
   const[rNkAlign,setRNkAlign]=useState("neutral");
   const[rGender,setRGender]=useState("Male");
   const[rAge,setRAge]=useState("");
@@ -780,7 +788,7 @@ function App(){
     const answers=RECRUIT_QUIZ.map(q=>{const opt=q.options.find(o=>o.id===rAnswers[q.id]);return`${q.question}: ${opt?.value||""}`;}).join("\n");
     const existingNames=activeRoster.map(m=>m.heroName).join(", ");
     try{
-      const p=await callAI(`Create a ${activeTeam.name} team hero. JSON only.\n\nReal name: ${rName||"Unknown"}\nGender: ${rGender}\nAge: ${rAge||"Unknown"}\nRace/Ethnicity: ${rRace||"Unspecified"}\nSpecies: ${rSpecies||"Human"}\nTeam: ${activeTeam.name} (${teamType})\nAccent color: ${hex}\nNK alignment of this character: ${rNkAlign}\nExisting names (pick different): ${existingNames||"none yet"}\nQuiz:\n${answers}\n\nIMPORTANT: Use correct pronouns (${pronounOf(rGender)}/${pronounOf(rGender)==="they"?"them":pronounOf(rGender)==="she"?"her":"him"}) for this character throughout.\n\n{"heroName":"2-word dark name","tagline":"one punchy sentence","role":"Role · Descriptor","origin":"2-3 sentences connected to the team and their world","powers":[{"name":"Name","desc":"visual desc"},{"name":"Name","desc":"visual desc"},{"name":"Name","desc":"visual desc"},{"name":"Name","desc":"visual desc"}],"stats":{"Power":75,"Speed":70,"Tech":60,"Intellect":80,"Will":85},"costumeDesc":"costume in team aesthetic with ${hex} accent","powerFX":"visible effects using ${hex}","consistencyNotes":"design lock rules","dna":["Inspiration 1","Inspiration 2"]}`);
+      const p=await callAI(`Create a ${activeTeam.name} team hero. JSON only.\n\nReal name: ${rName||"Unknown"}\nGender: ${rGender}\nAge: ${rAge||"Unknown"}\nRace/Ethnicity: ${rRace||"Unspecified"}\nSpecies: ${rSpecies||"Human"}\nTeam: ${activeTeam.name} (${teamType})\nAccent color: ${hex}\nNK alignment of this character: ${rNkAlign}\nExisting names (pick different): ${existingNames||"none yet"}\n${rHeroName?`Hero name: ${rHeroName} (use exactly this name)`:"Hero name: (choose a fitting dark name)"}\nQuiz:\n${answers}\n\nIMPORTANT: Use correct pronouns (${pronounOf(rGender)}/${pronounOf(rGender)==="they"?"them":pronounOf(rGender)==="she"?"her":"him"}) for this character throughout.\n\n{"heroName":"${rHeroName||"2-word dark name"}","tagline":"one punchy sentence","role":"Role · Descriptor","origin":"2-3 sentences connected to the team and their world","powers":[{"name":"Name","desc":"visual desc"},{"name":"Name","desc":"visual desc"},{"name":"Name","desc":"visual desc"},{"name":"Name","desc":"visual desc"}],"stats":{"Power":75,"Speed":70,"Tech":60,"Intellect":80,"Will":85},"costumeDesc":"costume in team aesthetic with ${hex} accent","powerFX":"visible effects using ${hex}","consistencyNotes":"design lock rules","dna":["Inspiration 1","Inspiration 2"]}`);
       const num=String(activeRoster.length+1).padStart(2,"0");
       setRResult({id:`char-${Date.now()}`,teamId:activeTeamId,realName:rName||"Unknown",gender:rGender,age:rAge,race:rRace,species:rSpecies||"Human",color:hex,colorLight:hex+"CC",initials:rName?rName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",number:num,isCustom:true,nkAlignment:rNkAlign,...p});
     }catch(e){setRResult({error:true,msg:e.message});}
@@ -792,7 +800,7 @@ function App(){
     const newRosters={...teamRosters,[activeTeamId]:[...(teamRosters[activeTeamId]||[]),rResult]};
     setTeamRosters(newRosters);
     persist("forge-rosters",newRosters);
-    setRResult(null);setRAnswers({});setRName("");setRStep(0);setRNkAlign("neutral");setRGender("Male");setRAge("");setRRace("");setRSpecies("");setDeepAnswers({});setDeepPhase(0);setTab("roster");
+    setRResult(null);setRAnswers({});setRName("");setRHeroName("");setRStep(0);setRNkAlign("neutral");setRGender("Male");setRAge("");setRRace("");setRSpecies("");setDeepAnswers({});setDeepPhase(0);setTab("roster");
   };
 
   const generateDeepRecruit=async()=>{
@@ -808,7 +816,7 @@ function App(){
     }).filter(Boolean).join("\n");
     const freeText=[deepAnswers.visualRef,deepAnswers.mustHave].filter(Boolean).join(". ");
     try{
-      const p=await callAI(`Create a deeply developed ${activeTeam.name} hero using rich comic book lore. JSON only.\n\nReal name: ${rName||"Unknown"}\nGender: ${rGender}\nAge: ${rAge||"Unknown"}\nRace/Ethnicity: ${rRace||"Unspecified"}\nSpecies: ${rSpecies||"Human"}\nAccent color: ${hex}\nNK alignment: ${rNkAlign}\nExisting names (must be different): ${existingNames||"none"}\nTeam: ${activeTeam.name}\nIMPORTANT: Use correct pronouns (${pronounOf(rGender)}/${pronounOf(rGender)==="they"?"them":pronounOf(rGender)==="she"?"her":"him"}) for this character throughout.\n\nLore profile:\n${loreContext}${freeText?"\nVisual references: "+freeText:""}\n\nUse this lore to create a hero that feels authentic to these inspirations. JSON:\n{"heroName":"2-word hero name, distinct and fitting the lore profile","tagline":"one piercing sentence that captures their essence","role":"Role · Descriptor","origin":"3-4 sentences backstory that directly reflects the lore answers — specific, not generic","powers":[{"name":"Power name matching their visual style","desc":"2-sentence visual description of exactly how this looks in action"},{"name":"Power name","desc":"visual desc"},{"name":"Power name","desc":"visual desc"},{"name":"Power name","desc":"visual desc"}],"stats":{"Power":75,"Speed":70,"Tech":60,"Intellect":80,"Will":85},"costumeDesc":"Detailed costume description using ${hex} accent, reflecting their costume philosophy answer","powerFX":"Exact visual description of power effects using ${hex}, matching their FX style answer","consistencyNotes":"2-3 specific design lock rules based on their visual choices","dna":["3 specific character inspirations drawn from their answers"]}`);
+      const p=await callAI(`Create a deeply developed ${activeTeam.name} hero using rich comic book lore. JSON only.\n\nReal name: ${rName||"Unknown"}\nGender: ${rGender}\nAge: ${rAge||"Unknown"}\nRace/Ethnicity: ${rRace||"Unspecified"}\nSpecies: ${rSpecies||"Human"}\nAccent color: ${hex}\nNK alignment: ${rNkAlign}\nExisting names (must be different): ${existingNames||"none"}\n${rHeroName?`Hero name: ${rHeroName} (use exactly this name)`:"Hero name: (choose a distinct name fitting the lore profile)"}\nTeam: ${activeTeam.name}\nIMPORTANT: Use correct pronouns (${pronounOf(rGender)}/${pronounOf(rGender)==="they"?"them":pronounOf(rGender)==="she"?"her":"him"}) for this character throughout.\n\nLore profile:\n${loreContext}${freeText?"\nVisual references: "+freeText:""}\n\nUse this lore to create a hero that feels authentic to these inspirations. JSON:\n{"heroName":"${rHeroName||"2-word hero name, distinct and fitting the lore profile"}","tagline":"one piercing sentence that captures their essence","role":"Role · Descriptor","origin":"3-4 sentences backstory that directly reflects the lore answers — specific, not generic","powers":[{"name":"Power name matching their visual style","desc":"2-sentence visual description of exactly how this looks in action"},{"name":"Power name","desc":"visual desc"},{"name":"Power name","desc":"visual desc"},{"name":"Power name","desc":"visual desc"}],"stats":{"Power":75,"Speed":70,"Tech":60,"Intellect":80,"Will":85},"costumeDesc":"Detailed costume description using ${hex} accent, reflecting their costume philosophy answer","powerFX":"Exact visual description of power effects using ${hex}, matching their FX style answer","consistencyNotes":"2-3 specific design lock rules based on their visual choices","dna":["3 specific character inspirations drawn from their answers"]}`);
       const num=String(activeRoster.length+1).padStart(2,"0");
       setRResult({id:`char-${Date.now()}`,teamId:activeTeamId,realName:rName||"Unknown",gender:rGender,age:rAge,race:rRace,species:rSpecies||"Human",color:hex,colorLight:hex+"CC",initials:rName?rName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",number:num,isCustom:true,nkAlignment:rNkAlign,deepLore:deepAnswers,...p});
     }catch(e){setRResult({error:true,msg:e.message});}
@@ -1309,6 +1317,8 @@ function App(){
         {/* ── Step 0: Identity (both modes) ── */}
         {!rResult&&((!deepMode&&rStep===0)||(deepMode&&deepPhase===0))&&(<div style={s.card}>
           <div style={{fontSize:15,fontWeight:"bold",color:"var(--text-primary)",marginBottom:14}}>Who is this recruit?</div>
+          <span style={s.lbl}>Hero Name (optional — AI will use this if provided)</span>
+          <div style={{display:"flex",gap:6,marginBottom:14}}><input type="text" placeholder="e.g. Ironhawk" value={rHeroName} onChange={e=>setRHeroName(e.target.value)} style={{flex:1}}/><button onClick={()=>setRHeroName(randHeroName())} title="Random hero name" style={{padding:"0 12px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:16,flexShrink:0}}>⚄</button></div>
           <span style={s.lbl}>Real Name (optional)</span>
           <input type="text" placeholder="e.g. Devon Marshall" value={rName} onChange={e=>setRName(e.target.value)} style={{marginBottom:14}}/>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:14}}>
