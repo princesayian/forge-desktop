@@ -525,7 +525,7 @@ function RemotePanel({remoteInfo,setRemoteInfo,onClose,G,s}){
   };
   return(<div style={{background:"var(--bg2)",borderBottom:"1px solid var(--border)",padding:"14px 22px"}}>
     <div style={{maxWidth:960,margin:"0 auto"}}>
-      <div style={{fontSize:9,letterSpacing:"0.18em",color:"#5EB1FF88",textTransform:"uppercase",marginBottom:12}}>Remote Access & Settings — Superhero Forge v1.23</div>
+      <div style={{fontSize:9,letterSpacing:"0.18em",color:"#5EB1FF88",textTransform:"uppercase",marginBottom:12}}>Remote Access & Settings — Superhero Forge {forgeVersion?`v${forgeVersion}`:""}</div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))",gap:12}}>
         <div style={{padding:"12px 14px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:8}}>
           <div style={{fontSize:10,fontWeight:"bold",color:"#5EB1FF",marginBottom:8}}>Cloudflared Tunnel</div>
@@ -579,6 +579,7 @@ function App(){
   const[arcResult,setArcResult]=useState(null);
   const[tierOverrides,setTierOverrides]=useState(()=>{try{return JSON.parse(localStorage.getItem("forge-tiers")||"{}");}catch{return {};}});
   const[switchingMember,setSwitchingMember]=useState(null);
+  const[sharingMember,setSharingMember]=useState(null);
   const[redeemingVillain,setRedeemingVillain]=useState(null);
   const[updateInfo,setUpdateInfo]=useState(null);
   const[remoteInfo,setRemoteInfo]=useState(null);
@@ -588,6 +589,7 @@ function App(){
   const[villainPool,setVillainPool]=useState([]);
   // ── Ollama ──────────────────────────────────────────────────────────────
   const[ollamaOk,setOllamaOk]=useState(null);
+  const[forgeVersion,setForgeVersion]=useState("");
   const[models,setModels]=useState([]);
   const[currentModel,setCurrentModel]=useState("llama3.2");
   // ── Recruit ─────────────────────────────────────────────────────────────
@@ -639,7 +641,7 @@ function App(){
 
   // ── Ollama check ─────────────────────────────────────────────────────────
   const checkOllama=useCallback(()=>{
-    fetch("/api/status").then(r=>r.json()).then(d=>{setOllamaOk(d.ollama);setModels(d.models||[]);setCurrentModel(d.current_model||"llama3.2");}).catch(()=>setOllamaOk(false));
+    fetch("/api/status").then(r=>r.json()).then(d=>{setOllamaOk(d.ollama);setModels(d.models||[]);setCurrentModel(d.current_model||"llama3.2");if(d.version)setForgeVersion(d.version);}).catch(()=>setOllamaOk(false));
   },[]);
   useEffect(()=>{checkOllama();const t=setInterval(checkOllama,10000);return()=>clearInterval(t);},[checkOllama]);
 
@@ -684,6 +686,15 @@ function App(){
   const activeRoster=useMemo(()=>getTeamRoster(activeTeamId),[getTeamRoster,activeTeamId]);
 
   const allCharacters=useMemo(()=>teams.flatMap(t=>getTeamRoster(t.id)),[teams,getTeamRoster]);
+
+  const memberTeamMap=useMemo(()=>{
+    const map={};
+    DEFAULT_NK.forEach(m=>{map[m.id]=["nocturnal-knights"];});
+    Object.entries(teamRosters).forEach(([tid,members])=>{
+      members.forEach(m=>{if(!map[m.id])map[m.id]=[];if(!map[m.id].includes(tid))map[m.id].push(tid);});
+    });
+    return map;
+  },[teamRosters]);
 
   const getTeamMemberCount=useCallback((teamId)=>getTeamRoster(teamId).length,[getTeamRoster]);
 
@@ -736,6 +747,12 @@ function App(){
       setTeamRosters(newRosters);persist("forge-rosters",newRosters);
     }
   },[removedMembers,teamRosters,persist]);
+
+  const addToTeam=useCallback((member,targetTeamId)=>{
+    if((teamRosters[targetTeamId]||[]).some(m=>m.id===member.id))return;
+    const nr={...teamRosters,[targetTeamId]:[...(teamRosters[targetTeamId]||[]),{...member,teamId:targetTeamId,isCore:false,isShared:true,primaryTeamId:member.primaryTeamId||member.teamId||activeTeamId}]};
+    setTeamRosters(nr);persist("forge-rosters",nr);setSharingMember(null);
+  },[teamRosters,activeTeamId,persist]);
 
   const switchMemberTeam=useCallback((member,targetTeamId)=>{
     let nr={...teamRosters};
@@ -981,7 +998,7 @@ function App(){
           <div style={{fontSize:9,letterSpacing:"0.22em",color:G,textTransform:"uppercase"}}>Multi-Team System</div>
           <div style={{display:"flex",alignItems:"baseline",gap:8}}>
             <div style={{fontSize:19,fontWeight:"bold",letterSpacing:"0.05em",color:"var(--text-primary)"}}>SUPERHERO FORGE</div>
-            <div style={{fontSize:9,color:"var(--text4)",letterSpacing:"0.1em"}}>v1.23</div>
+            <div style={{fontSize:9,color:"var(--text4)",letterSpacing:"0.1em"}}>{forgeVersion?`v${forgeVersion}`:""}</div>
           </div>
         </div>
         {/* Active team indicator */}
@@ -1151,13 +1168,15 @@ function App(){
                   <span style={{fontSize:13,fontWeight:"bold",color:"var(--text-primary)"}}>{m.heroName}</span>
                   {m.isCustom&&<span style={{fontSize:8,background:`${G}22`,border:`1px solid ${G}44`,color:G,padding:"1px 6px",borderRadius:8}}>NEW</span>}
                   {sharedEdits[m.id]&&<span style={{fontSize:8,background:"rgba(15,110,86,0.15)",border:"1px solid rgba(15,110,86,0.3)",color:"#5DCAA5",padding:"1px 6px",borderRadius:8}}>Edited</span>}
+                  {(memberTeamMap[m.id]||[]).filter(t=>t!==activeTeamId).map(tid=>{const ot=teams.find(x=>x.id===tid);return ot?<span key={tid} style={{fontSize:8,background:`${ot.color}18`,border:`1px solid ${ot.color}44`,color:ot.color,padding:"1px 6px",borderRadius:8}}>+{ot.abbr||ot.name.split(" ").map(w=>w[0]).join("").slice(0,3).toUpperCase()}</span>:null;})}
                   {m.nkAlignment&&m.nkAlignment!=="base"&&<AlignmentBadge alignment={m.nkAlignment}/>}
                 </div>
                 <div style={{fontSize:10,color:"var(--text3)",marginTop:1}}>{m.role}</div>
               </div>
               <div style={{display:"flex",gap:6,alignItems:"center"}}>
                 <button onClick={e=>{e.stopPropagation();setEditingChar(p=>({...p,[m.id]:!p[m.id]}));setExpanded(p=>({...p,[m.id]:false}));}} style={{fontSize:9,padding:"3px 9px",background:editingChar[m.id]?`${m.color}22`:"var(--bg3)",border:`1px solid ${editingChar[m.id]?m.color:"var(--border)"}`,borderRadius:6,cursor:"pointer",color:editingChar[m.id]?m.color:"var(--text3)",fontFamily:"monospace"}}>{editingChar[m.id]?"Close":"Edit"}</button>
-                <button onClick={e=>{e.stopPropagation();setSwitchingMember(switchingMember===m.id?null:m.id);}} style={{fontSize:9,padding:"3px 9px",background:switchingMember===m.id?`${m.color}22`:"var(--bg3)",border:`1px solid ${switchingMember===m.id?m.color:"var(--border)"}`,borderRadius:6,cursor:"pointer",color:switchingMember===m.id?m.color:"var(--text3)",fontFamily:"monospace"}}>Switch</button>
+                <button onClick={e=>{e.stopPropagation();setSwitchingMember(switchingMember===m.id?null:m.id);setSharingMember(null);}} style={{fontSize:9,padding:"3px 9px",background:switchingMember===m.id?`${m.color}22`:"var(--bg3)",border:`1px solid ${switchingMember===m.id?m.color:"var(--border)"}`,borderRadius:6,cursor:"pointer",color:switchingMember===m.id?m.color:"var(--text3)",fontFamily:"monospace"}}>Move</button>
+                <button onClick={e=>{e.stopPropagation();setSharingMember(sharingMember===m.id?null:m.id);setSwitchingMember(null);}} style={{fontSize:9,padding:"3px 9px",background:sharingMember===m.id?`${m.color}22`:"var(--bg3)",border:`1px solid ${sharingMember===m.id?m.color:"var(--border)"}`,borderRadius:6,cursor:"pointer",color:sharingMember===m.id?m.color:"var(--text3)",fontFamily:"monospace"}}>+Team</button>
                 <button onClick={e=>{e.stopPropagation();removeMember(activeTeamId,m);}} style={{fontSize:9,padding:"3px 9px",background:"rgba(163,45,45,0.1)",border:"1px solid rgba(163,45,45,0.28)",borderRadius:6,cursor:"pointer",color:"#e74c3c",fontFamily:"monospace"}}>Remove</button>
                 {images[m.id]&&<button onClick={e=>{e.stopPropagation();generateTripo3D(m);}} style={{fontSize:9,padding:"3px 9px",background:"rgba(15,110,86,0.1)",border:"1px solid rgba(15,110,86,0.3)",borderRadius:6,cursor:"pointer",color:"#5DCAA5",fontFamily:"monospace",whiteSpace:"nowrap"}}>{tripo3DLoading&&tripo3DTarget===m.id?"...":"⬡ Tripo3D"}</button>}
                 <div style={{fontSize:11,color:`${m.color}88`,minWidth:16}} onClick={()=>toggle(m.id)}>{expanded[m.id]?"▲":"▼"}</div>
@@ -1169,8 +1188,21 @@ function App(){
               <button onClick={()=>flipToVillain(m)} style={{fontSize:9,padding:"3px 10px",background:"rgba(139,26,26,0.12)",border:"1px solid rgba(139,26,26,0.35)",borderRadius:20,cursor:"pointer",color:"#e74c3c",fontFamily:"monospace"}}>⚠ Go Villain</button>
               <button onClick={()=>setSwitchingMember(null)} style={{fontSize:9,padding:"3px 8px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:20,cursor:"pointer",color:"var(--text4)",fontFamily:"monospace",marginLeft:4}}>Cancel</button>
             </div>)}
+            {sharingMember===m.id&&(()=>{
+              const alreadyOn=(memberTeamMap[m.id]||[]);
+              const eligible=teams.filter(t=>t.id!==activeTeamId&&!alreadyOn.includes(t.id));
+              return(<div style={{display:"flex",flexWrap:"wrap",gap:6,padding:"10px 16px",background:`${m.color}08`,border:`1px solid ${m.color}33`,borderTop:"none",borderRadius:"0 0 8px 8px",alignItems:"center"}}>
+                <span style={{fontSize:9,color:"var(--text4)",letterSpacing:"0.1em",marginRight:4}}>ALSO ADD TO:</span>
+                {eligible.length===0
+                  ?<span style={{fontSize:9,color:"var(--text4)",fontStyle:"italic"}}>Already on all teams</span>
+                  :eligible.map(t=><button key={t.id} onClick={()=>addToTeam(m,t.id)} style={{fontSize:9,padding:"3px 10px",background:`${t.color}14`,border:`1px solid ${t.color}44`,borderRadius:20,cursor:"pointer",color:t.color,fontFamily:"monospace"}}>{t.name}</button>)
+                }
+                {alreadyOn.filter(t=>t!==activeTeamId).length>0&&<span style={{fontSize:9,color:"var(--text3)",marginLeft:4}}>· On: {alreadyOn.filter(t=>t!==activeTeamId).map(t=>teams.find(x=>x.id===t)?.name||t).join(", ")}</span>}
+                <button onClick={()=>setSharingMember(null)} style={{fontSize:9,padding:"3px 8px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:20,cursor:"pointer",color:"var(--text4)",fontFamily:"monospace",marginLeft:4}}>Cancel</button>
+              </div>);
+            })()}
             {editingChar[m.id]&&<EditPanel member={m} onSave={d=>saveCharEdit(m.id,d)} onCancel={()=>setEditingChar(p=>({...p,[m.id]:false}))}/>}
-            {expanded[m.id]&&!editingChar[m.id]&&!switchingMember&&(<div style={{border:`1px solid ${m.color}44`,borderTop:"none",borderRadius:"0 0 10px 10px",overflow:"hidden"}}><CharacterPage member={m} imageUrl={images[m.id]||null} teamName={activeTeam.name} teamColor={activeTeam.color}/></div>)}
+            {expanded[m.id]&&!editingChar[m.id]&&!switchingMember&&!sharingMember&&(<div style={{border:`1px solid ${m.color}44`,borderTop:"none",borderRadius:"0 0 10px 10px",overflow:"hidden"}}><CharacterPage member={m} imageUrl={images[m.id]||null} teamName={activeTeam.name} teamColor={activeTeam.color}/></div>)}
           </div>))}
         </div>
       </>)}

@@ -132,7 +132,17 @@ def ensure_ollama():
             pass
     return False
 
-FORGE_VERSION = "1.23"
+def _compute_version():
+    try:
+        count = subprocess.check_output(
+            ["git", "rev-list", "--count", "HEAD"],
+            cwd=BASE, stderr=subprocess.DEVNULL, text=True
+        ).strip()
+        return f"1.{count}"
+    except Exception:
+        return "1.0"
+
+FORGE_VERSION = _compute_version()
 
 app = Flask(__name__, static_folder=STATIC)
 app.config["JSON_SORT_KEYS"] = False
