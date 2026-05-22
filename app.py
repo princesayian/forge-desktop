@@ -132,7 +132,7 @@ def ensure_ollama():
             pass
     return False
 
-FORGE_VERSION = "1.1"
+FORGE_VERSION = "1.23"
 
 app = Flask(__name__, static_folder=STATIC)
 app.config["JSON_SORT_KEYS"] = False
