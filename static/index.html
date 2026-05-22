@@ -60,10 +60,10 @@
 <div id="root"></div>
 <script>
 window.storage={
-  get:async k=>{const v=localStorage.getItem(k);if(v===null)throw new Error("Key not found");return{key:k,value:v};},
-  set:async(k,v)=>{const s=typeof v==="string"?v:JSON.stringify(v);localStorage.setItem(k,s);return{key:k,value:s};},
-  delete:async k=>{localStorage.removeItem(k);return{key:k,deleted:true};},
-  list:async p=>({keys:Object.keys(localStorage).filter(k=>!p||k.startsWith(p))})
+  get:async k=>{const r=await fetch(`/api/store/${encodeURIComponent(k)}`);if(!r.ok)throw new Error("Key not found");return r.json();},
+  set:async(k,v)=>{const s=typeof v==="string"?v:JSON.stringify(v);const r=await fetch(`/api/store/${encodeURIComponent(k)}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({value:s})});return r.json();},
+  delete:async k=>{const r=await fetch(`/api/store/${encodeURIComponent(k)}`,{method:"DELETE"});return r.json();},
+  list:async p=>{const r=await fetch(`/api/store${p?`?prefix=${encodeURIComponent(p)}`:""}`);const d=await r.json();return d;}
 };
 </script>
 <script src="/vendor/react.js"></script>
@@ -648,6 +648,8 @@ function App(){
   // ── Persistence ──────────────────────────────────────────────────────────
   useEffect(()=>{
     (async()=>{
+      const MIGRATE_KEYS=["forge-teams","forge-rosters","forge-edits","forge-villains","forge-removed","forge-meta-ai-pref","nk-edits","nk-villain","nk-recruits"];
+      for(const k of MIGRATE_KEYS){const lv=localStorage.getItem(k);if(lv!=null){try{const ex=await fetch(`/api/store/${encodeURIComponent(k)}`);if(!ex.ok){await window.storage.set(k,lv);}}catch(e){await window.storage.set(k,lv);}localStorage.removeItem(k);}}
       try{const d=await window.storage.get("forge-teams");const saved=JSON.parse(d.value);if(saved&&saved.length){const savedNK=saved.find(t=>t.id==="nocturnal-knights");setTeams([savedNK?{...NK_TEAM,...savedNK}:NK_TEAM,...saved.filter(t=>!t.isDefault&&t.id!=="nocturnal-knights")]);}}catch(e){}
       try{const d=await window.storage.get("forge-rosters");setTeamRosters(JSON.parse(d.value)||{});}catch(e){}
       try{const d=await window.storage.get("forge-edits");setSharedEdits(JSON.parse(d.value)||{});}catch(e){

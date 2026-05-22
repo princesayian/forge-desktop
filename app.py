@@ -10,10 +10,22 @@ from flask import Flask, request, jsonify, send_from_directory, send_file, sessi
 BASE       = os.path.dirname(os.path.abspath(__file__))
 STATIC     = os.path.join(BASE, "static")
 VENDOR     = os.path.join(BASE, "vendor")
-CONFIG_FILE= os.path.join(BASE, "config.json")
-IMAGES_DIR = os.path.join(BASE, "images")
-LOCK_FILE  = os.path.join(BASE, ".forge.lock")
+CONFIG_FILE  = os.path.join(BASE, "config.json")
+IMAGES_DIR   = os.path.join(BASE, "images")
+LOCK_FILE    = os.path.join(BASE, ".forge.lock")
+STORAGE_FILE = os.path.join(BASE, "forge-data.json")
 os.makedirs(IMAGES_DIR, exist_ok=True)
+
+def _load_store():
+    try:
+        with open(STORAGE_FILE, "r") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+def _save_store(data):
+    with open(STORAGE_FILE, "w") as f:
+        json.dump(data, f)
 
 TUNNEL_URL   = None
 _TUNNEL_PROC = None
@@ -223,15 +235,45 @@ def status():
         with urllib.request.urlopen(f"{cfg['ollama_url']}/api/tags", timeout=2) as resp:
             data = json.loads(resp.read())
         models = [m["name"] for m in data.get("models", [])]
-        return jsonify({"ollama": True, "models": models, "current_model": cfg["model"], "ollama_url": cfg["ollama_url"]})
+        return jsonify({"ollama": True, "models": models, "current_model": cfg["model"], "ollama_url": cfg["ollama_url"], "version": FORGE_VERSION})
     except Exception:
-        return jsonify({"ollama": False, "models": [], "current_model": cfg["model"], "ollama_url": cfg["ollama_url"]})
+        return jsonify({"ollama": False, "models": [], "current_model": cfg["model"], "ollama_url": cfg["ollama_url"], "version": FORGE_VERSION})
 
 @app.route("/api/config", methods=["GET", "POST"])
 def config_route():
     if request.method == "POST":
         return jsonify(save_config(request.get_json() or {}))
     return jsonify(load_config())
+
+@app.route("/api/store", methods=["GET"])
+def store_list():
+    store = _load_store()
+    prefix = request.args.get("prefix", "")
+    keys = [k for k in store if k.startswith(prefix)] if prefix else list(store.keys())
+    return jsonify({"keys": keys})
+
+@app.route("/api/store/<key>", methods=["GET"])
+def store_get(key):
+    store = _load_store()
+    if key not in store:
+        return jsonify({"error": "not found"}), 404
+    return jsonify({"key": key, "value": store[key]})
+
+@app.route("/api/store/<key>", methods=["POST"])
+def store_set(key):
+    body = request.get_json(silent=True) or {}
+    value = body.get("value", "")
+    store = _load_store()
+    store[key] = value
+    _save_store(store)
+    return jsonify({"key": key, "value": value})
+
+@app.route("/api/store/<key>", methods=["DELETE"])
+def store_delete(key):
+    store = _load_store()
+    store.pop(key, None)
+    _save_store(store)
+    return jsonify({"key": key, "deleted": True})
 
 @app.route("/api/images", methods=["GET"])
 def list_images():
