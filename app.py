@@ -129,12 +129,23 @@ def ensure_ollama():
         return True
     except Exception:
         pass
-    ollama_bin = shutil.which("ollama") or "/usr/local/bin/ollama"
-    if not os.path.exists(ollama_bin):
+    ollama_bin = shutil.which("ollama")
+    if not ollama_bin:
+        if sys.platform == "win32":
+            win_path = os.path.expanduser(r"~\AppData\Local\Programs\Ollama\ollama.exe")
+            if os.path.exists(win_path):
+                ollama_bin = win_path
+        else:
+            if os.path.exists("/usr/local/bin/ollama"):
+                ollama_bin = "/usr/local/bin/ollama"
+    if not ollama_bin:
         return False
-    subprocess.Popen([ollama_bin, "serve"],
-                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                     start_new_session=True)
+    kwargs = {"stdout": subprocess.DEVNULL, "stderr": subprocess.DEVNULL}
+    if sys.platform == "win32":
+        kwargs["creationflags"] = subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
+    else:
+        kwargs["start_new_session"] = True
+    subprocess.Popen([ollama_bin, "serve"], **kwargs)
     for _ in range(40):
         time.sleep(0.5)
         try:
