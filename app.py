@@ -84,6 +84,60 @@ def duckdns_loop(token, domain):
             pass
         time.sleep(300)
 
+# ── LAN discovery ─────────────────────────────────────────────────────────────
+DISCOVERY_PORT = 7433
+
+def get_local_ip():
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        return "127.0.0.1"
+
+def start_discovery_listener(flask_port):
+    """Respond to UDP discovery broadcasts so other machines can find us."""
+    def _listen():
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        try:
+            sock.bind(("", DISCOVERY_PORT))
+        except OSError:
+            return
+        while True:
+            try:
+                data, addr = sock.recvfrom(64)
+                if data == b"forge:discover":
+                    ip = get_local_ip()
+                    sock.sendto(f"forge:here:{ip}:{flask_port}".encode(), addr)
+            except Exception:
+                pass
+    threading.Thread(target=_listen, daemon=True).start()
+
+def find_network_instance():
+    """Broadcast on the LAN to find a running Forge. Returns URL string or None."""
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        sock.settimeout(1.5)
+        for addr in ("<broadcast>", "255.255.255.255"):
+            try:
+                sock.sendto(b"forge:discover", (addr, DISCOVERY_PORT))
+            except Exception:
+                pass
+        data, _ = sock.recvfrom(128)
+        sock.close()
+        parts = data.decode().split(":")
+        if len(parts) == 4 and parts[0] == "forge" and parts[1] == "here":
+            return f"http://{parts[2]}:{parts[3]}"
+    except socket.timeout:
+        pass
+    except Exception:
+        pass
+    return None
+
 def _existing_instance():
     if not os.path.exists(LOCK_FILE):
         return None
@@ -658,6 +712,7 @@ def run_flask(port, host="127.0.0.1"):
     app.run(host=host, port=port, debug=False, use_reloader=False, threaded=True)
 
 if __name__ == "__main__":
+    # ── Same-machine instance check ───────────────────────────────────────────
     existing = _existing_instance()
     if existing:
         import tkinter as tk
@@ -678,6 +733,26 @@ if __name__ == "__main__":
             except Exception: pass
         else:
             sys.exit(0)
+
+    # ── Network instance check (LAN) ──────────────────────────────────────────
+    network_url = find_network_instance()
+    if network_url:
+        import tkinter as tk
+        from tkinter import messagebox
+        import webbrowser as _wb
+        root = tk.Tk(); root.withdraw()
+        open_it = messagebox.askyesno(
+            "Superhero Forge Already Running on Network",
+            f"Superhero Forge is already running on your network:\n\n"
+            f"  {network_url}\n\n"
+            f"Open it in your browser? (No = launch a new instance here)",
+            icon="warning"
+        )
+        root.destroy()
+        if open_it:
+            _wb.open(network_url)
+            sys.exit(0)
+
     _write_lock()
     atexit.register(_remove_lock)
 
@@ -688,21 +763,24 @@ if __name__ == "__main__":
         cfg = load_config()
     app.secret_key = base64.b64decode(cfg["secret_key"])
 
-    # Bind host based on remote_enabled
-    flask_host = "0.0.0.0" if cfg.get("remote_enabled") else "127.0.0.1"
-
     print("\n  Starting Ollama...")
     ollama_ok = ensure_ollama()
     print(f"  Ollama {'ready' if ollama_ok else 'not found — AI features disabled'}")
 
     port = find_free_port()
     url  = f"http://127.0.0.1:{port}"
-    flask_thread = threading.Thread(target=run_flask, args=(port, flask_host), daemon=True)
+    flask_thread = threading.Thread(target=run_flask, args=(port, "0.0.0.0"), daemon=True)
     flask_thread.start()
     for _ in range(20):
         try: urllib.request.urlopen(f"{url}/health", timeout=1); break
         except Exception: time.sleep(0.3)
-    print(f"\n  Superhero Forge v{FORGE_VERSION} ready at {url}")
+    lan_ip  = get_local_ip()
+    lan_url = f"http://{lan_ip}:{port}"
+    print(f"\n  Superhero Forge v{FORGE_VERSION} ready")
+    print(f"  Local:   {url}")
+    print(f"  Network: {lan_url}  ← open from any device on this network")
+
+    start_discovery_listener(port)
 
     # Auto-update check (background)
     def _bg_update_check():
