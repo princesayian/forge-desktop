@@ -815,12 +815,17 @@ if __name__ == "__main__":
         threading.Thread(target=_start_remote, daemon=True).start()
     try:
         import webview
-        print("  Opening native window...\n")
+        import webbrowser
+        print("  Opening native window (minimized) + browser tab...\n")
         _storage = os.path.join(BASE, "webview-data")
         os.makedirs(_storage, exist_ok=True)
-        webview.create_window("Superhero Forge", url, width=1280, height=900,
+        _win = webview.create_window("Superhero Forge", url, width=1280, height=900,
             min_size=(960, 680), background_color="#09090F")
-        webview.start(debug=False, private_mode=False, storage_path=_storage)
+        def _on_started():
+            try: _win.minimize()
+            except Exception: pass
+            webbrowser.open(url)
+        webview.start(debug=False, private_mode=False, storage_path=_storage, func=_on_started)
     except ImportError:
         import webbrowser
         print("  PyWebView not found — opening in browser.\n")
