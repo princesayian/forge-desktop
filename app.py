@@ -31,10 +31,22 @@ TUNNEL_URL   = None
 _TUNNEL_PROC = None
 
 # ── Update helpers ────────────────────────────────────────────────────────────
+def _git_env():
+    """Return an env dict that ensures SSH key auth works outside a terminal session."""
+    env = os.environ.copy()
+    key = os.path.expanduser("~/.ssh/id_ed25519")
+    if os.path.exists(key):
+        env["GIT_SSH_COMMAND"] = (
+            f"ssh -i {key} -o StrictHostKeyChecking=no "
+            "-o BatchMode=yes -o UseKeychain=yes"
+        )
+    return env
+
 def check_for_updates():
     try:
+        env = _git_env()
         r = subprocess.run(["git", "fetch", "origin", "--quiet"],
-                           cwd=BASE, capture_output=True, timeout=15)
+                           cwd=BASE, capture_output=True, timeout=20, env=env)
         if r.returncode != 0:
             return False, None, None
         local  = subprocess.run(["git", "rev-parse", "HEAD"], cwd=BASE,
@@ -48,7 +60,8 @@ def check_for_updates():
 def pull_update():
     try:
         r = subprocess.run(["git", "pull", "origin", "main", "--rebase"],
-                           cwd=BASE, capture_output=True, text=True, timeout=60)
+                           cwd=BASE, capture_output=True, text=True, timeout=60,
+                           env=_git_env())
         return r.returncode == 0, (r.stdout + r.stderr).strip()
     except Exception as e:
         return False, str(e)
