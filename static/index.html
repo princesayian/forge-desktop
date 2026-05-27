@@ -63,6 +63,25 @@
   .t-secondary{color:var(--text-secondary)!important;}
   .t-muted{color:var(--text-muted)!important;}
   .t-faint{color:var(--text-faint)!important;}
+  /* ── Mobile ──────────────────────────────────────────────────────── */
+  @media (max-width:640px){
+    .fhdr{height:auto!important;padding:8px 12px!important;min-height:50px;}
+    .fhdr-right{gap:5px!important;flex-wrap:wrap!important;}
+    .fhdr-model,.fhdr-refresh,.fhdr-restart{display:none!important;}
+    .fmain{padding:14px 12px!important;}
+    .ftabs{padding:0 4px!important;}
+    .ftab{padding:8px 10px!important;font-size:9.5px!important;}
+    .fimage-grid{grid-template-columns:repeat(2,1fr)!important;}
+    .froster-row{flex-wrap:wrap!important;padding:8px 10px!important;gap:8px!important;}
+    .froster-actions{width:100%!important;flex-wrap:wrap!important;padding-top:5px!important;border-top:1px solid var(--border2)!important;}
+    .fchar-grid{grid-template-columns:1fr!important;min-height:auto!important;}
+    .fpowers-grid{grid-template-columns:1fr!important;}
+    .fstats-grid{grid-template-columns:1fr 1fr!important;}
+    .fchar-name{font-size:20px!important;}
+    .fbattle-grid{grid-template-columns:1fr!important;}
+    .fscenario-grid{grid-template-columns:repeat(2,1fr)!important;}
+    input[type=text],input[type=number],textarea,select{font-size:16px!important;}
+  }
 </style>
 </head>
 <body>
@@ -330,12 +349,12 @@ function CharacterPage({member,imageUrl,isVillain=false,teamName,teamColor}){
 
     {/* Name block */}
     <div style={{padding:"14px 20px 10px",borderBottom:`3px solid ${c}`}}>
-      <div style={{fontSize:28,fontWeight:900,textTransform:"uppercase",letterSpacing:"0.04em",color:"var(--text-primary)",lineHeight:1,marginBottom:3,fontFamily:"sans-serif"}}>{member.heroName}</div>
+      <div className="fchar-name" style={{fontSize:28,fontWeight:900,textTransform:"uppercase",letterSpacing:"0.04em",color:"var(--text-primary)",lineHeight:1,marginBottom:3,fontFamily:"sans-serif"}}>{member.heroName}</div>
       <div style={{fontSize:11,fontStyle:"italic",color:"var(--text2)"}}>{[member.realName,member.role].filter(Boolean).join("  ·  ")}</div>
     </div>
 
     {/* Two-column: image + right panel */}
-    <div style={{display:"grid",gridTemplateColumns:"1.05fr 1fr",minHeight:330}}>
+    <div className="fchar-grid" style={{display:"grid",gridTemplateColumns:"1.05fr 1fr",minHeight:330}}>
       {/* LEFT — image with callout annotations */}
       <div style={{position:"relative",overflow:"hidden",background:`${c}05`}}>
         {imageUrl
@@ -377,7 +396,7 @@ function CharacterPage({member,imageUrl,isVillain=false,teamName,teamColor}){
 
     {/* Powers — feature sections (FLIGHT AND FIGHT style) */}
     <div style={{padding:"14px 18px 12px",borderTop:`1px solid ${c}18`,borderBottom:`1px solid ${c}18`}}>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"14px 24px"}}>
+      <div className="fpowers-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"14px 24px"}}>
         {(member.powers||[]).map((p,i)=>(
           <div key={i}>
             <div style={{fontSize:9.5,fontWeight:900,textTransform:"uppercase",letterSpacing:"0.13em",color:cl,marginBottom:5,paddingBottom:3,borderBottom:`1px solid ${c}30`}}>{p.name}</div>
@@ -477,6 +496,7 @@ function EditPanel({member,onSave,onCancel,callAI,teamName}){
   const[race,setRace]=useState(member.race||null);
   const[age,setAge]=useState(member.age||"");
   const[birthYear,setBirthYear]=useState(member.birthYear||"");
+  const[storyDir,setStoryDir]=useState("");
   const[regenLoading,setRegenLoading]=useState(false);
   const c=member.color;
   async function regenOrigin(){
@@ -485,7 +505,7 @@ function EditPanel({member,onSave,onCancel,callAI,teamName}){
     try{
       const rl=raceLabel(race);
       const rc=raceLore(race);
-      const p=await callAI(`Regenerate the origin story for this character based on their race. JSON only, key "origin".\n\nCharacter: ${member.heroName} (${member.realName})\nRole: ${member.role||"Hero"}\nTeam: ${teamName||"Unknown"}\nRace: ${rl||"Unspecified"}\nRace lore: ${rc||"No special racial traits"}\nPowers: ${(member.powers||[]).map(pw=>pw.name).join(", ")}\nCurrent origin: ${o}\n\nWrite a new origin (2-3 sentences) that is specifically rooted in their racial biology and history. Keep their core identity but reshape the backstory through their race.\n{"origin":"new origin here"}`);
+      const p=await callAI(`Regenerate the origin story for this character. JSON only, key "origin".\n\nCharacter: ${member.heroName} (${member.realName})\nRole: ${member.role||"Hero"}\nTeam: ${teamName||"Unknown"}\nRace: ${rl||"Unspecified"}\nRace lore: ${rc||"No special racial traits"}\nPowers: ${(member.powers||[]).map(pw=>pw.name).join(", ")}\nCurrent origin: ${o}\n${storyDir.trim()?`Story direction (shape the new origin around this): ${storyDir.trim()}\n`:""}\nWrite a new origin (2-3 sentences) rooted in their racial biology and history${storyDir.trim()?" and the story direction given":""}.${!storyDir.trim()?" Keep their core identity but reshape the backstory through their race.":""}\n{"origin":"new origin here"}`);
       if(p?.origin) setO(p.origin);
     }catch(e){}
     setRegenLoading(false);
@@ -517,6 +537,10 @@ function EditPanel({member,onSave,onCancel,callAI,teamName}){
     </div>
     <div style={{fontSize:9,letterSpacing:"0.18em",color:`${c}88`,textTransform:"uppercase",marginBottom:6}}>Tagline</div>
     <input type="text" value={t} onChange={e=>setT(e.target.value)} style={{marginBottom:14}}/>
+    {callAI&&<div style={{marginBottom:10}}>
+      <div style={{fontSize:9,letterSpacing:"0.12em",color:`${c}88`,textTransform:"uppercase",marginBottom:5}}>Story Direction <span style={{opacity:0.55}}>(optional)</span></div>
+      <input type="text" placeholder="e.g. Betrayed by their mentor · Found faith after losing everything" value={storyDir} onChange={e=>setStoryDir(e.target.value)} style={{padding:"6px 10px",fontSize:10.5}}/>
+    </div>}
     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
       <div style={{fontSize:9,letterSpacing:"0.18em",color:`${c}88`,textTransform:"uppercase"}}>Origin</div>
       {callAI&&<button onClick={regenOrigin} disabled={regenLoading} style={{fontSize:8.5,padding:"2px 10px",background:`${c}14`,border:`1px solid ${c}55`,borderRadius:12,cursor:"pointer",color:c,fontFamily:"monospace",opacity:regenLoading?0.6:1}}>
@@ -529,7 +553,7 @@ function EditPanel({member,onSave,onCancel,callAI,teamName}){
       {[{id:"base",label:"NK Member"},...NK_ALIGNMENTS].map(a=><button key={a.id} onClick={()=>setAlign(a.id)} style={{fontSize:9,padding:"3px 10px",background:align===a.id?`${(ALIGN_META[a.id]||{color:G}).color}22`:"var(--bg3)",border:`1px solid ${align===a.id?(ALIGN_META[a.id]||{color:G}).color:"var(--border2)"}`,borderRadius:20,cursor:"pointer",color:align===a.id?(ALIGN_META[a.id]||{color:G}).color:"var(--text2)",fontFamily:"monospace"}}>{a.label}</button>)}
     </div>
     <div style={{fontSize:9,letterSpacing:"0.18em",color:`${c}88`,textTransform:"uppercase",marginBottom:8}}>Stats</div>
-    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:14}}>{Object.entries(stats).map(([k,v])=>(<div key={k}><div style={{fontSize:9,color:"var(--text2)",marginBottom:4,textTransform:"uppercase"}}>{k}</div><input type="number" min="1" max="100" value={v} onChange={e=>setStats(p=>({...p,[k]:Math.min(100,Math.max(1,+e.target.value))}))} style={{padding:"6px 10px"}}/></div>))}</div>
+    <div className="fstats-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:14}}>{Object.entries(stats).map(([k,v])=>(<div key={k}><div style={{fontSize:9,color:"var(--text2)",marginBottom:4,textTransform:"uppercase"}}>{k}</div><input type="number" min="1" max="100" value={v} onChange={e=>setStats(p=>({...p,[k]:Math.min(100,Math.max(1,+e.target.value))}))} style={{padding:"6px 10px"}}/></div>))}</div>
     <div style={{fontSize:9,letterSpacing:"0.18em",color:`${c}88`,textTransform:"uppercase",marginBottom:8}}>Powers</div>
     {powers.map((p,i)=>(<div key={i} style={{marginBottom:10}}><input type="text" placeholder="Power name" value={p.name} onChange={e=>setPowers(pw=>pw.map((x,j)=>j===i?{...x,name:e.target.value}:x))} style={{marginBottom:4}}/><input type="text" placeholder="Description" value={p.desc} onChange={e=>setPowers(pw=>pw.map((x,j)=>j===i?{...x,desc:e.target.value}:x))}/></div>))}
     <div style={{display:"flex",gap:10,marginTop:16}}>
@@ -593,6 +617,7 @@ function TeamCreator({teams,members=[],onSave,onCancel,callAI,ollamaOk,initialDa
   const[motto,setMotto]=useState(initialData?.motto||"");
   const[origin,setOrigin]=useState(initialData?.origin||"");
   const[genLoading,setGenLoading]=useState(false);
+  const[genError,setGenError]=useState("");
   const[logoSeed,setLogoSeed]=useState(initialData?.logoSeed??Math.floor(Math.random()*8));
   const[relatedTeams,setRelatedTeams]=useState([]);
   const[relatedMembers,setRelatedMembers]=useState([]);
@@ -600,7 +625,7 @@ function TeamCreator({teams,members=[],onSave,onCancel,callAI,ollamaOk,initialDa
   const autoAbbr=n=>n.split(" ").map(w=>w[0]||"").join("").toUpperCase().slice(0,3)||"??";
   const handleName=n=>{setName(n);if(!abbr||abbr===autoAbbr(name))setAbbr(autoAbbr(n));};
   const generateLore=async()=>{
-    setGenLoading(true);
+    setGenLoading(true);setGenError("");
     try{
       const relTeamNames=relatedTeams.map(id=>teams.find(t=>t.id===id)?.name).filter(Boolean);
       const relMemberNames=relatedMembers.map(id=>members.find(m=>m.id===id)?.heroName).filter(Boolean);
@@ -610,10 +635,10 @@ function TeamCreator({teams,members=[],onSave,onCancel,callAI,ollamaOk,initialDa
         loreHint.trim()&&`Story direction: ${loreHint.trim()}`,
       ].filter(Boolean).join("\n");
       const p=await callAI(`Create lore for a superhero team in the Nocturnal Knights universe. JSON only, keys "description", "motto", "origin".\n\nTeam name: ${name}\nType: ${type}\nNK alignment: ${align}\n${ctx?ctx+"\n":""}\nWeave any connections and story direction naturally into the origin. Keep the tone dark, grounded, and personal.\n\n{"description":"1 sentence team description","motto":"short team motto","origin":"2-3 sentence origin story"}`);
-      if(p.description)setDesc(p.description);
-      if(p.motto)setMotto(p.motto);
-      if(p.origin)setOrigin(p.origin);
-    }catch(e){}
+      if(p?.description)setDesc(p.description);
+      if(p?.motto)setMotto(p.motto);
+      if(p?.origin)setOrigin(p.origin);
+    }catch(e){setGenError(e.message||"Generation failed");}
     setGenLoading(false);
   };
   const handleSave=()=>{
@@ -684,7 +709,8 @@ function TeamCreator({teams,members=[],onSave,onCancel,callAI,ollamaOk,initialDa
           <span style={lbl}>Story Direction</span>
           <textarea style={{height:56,fontSize:11}} placeholder={`E.g. "Splinter group after Wakháŋ's disappearance" · "Built to counter Null/Void's tech" · "Allied through a shared enemy"`} value={loreHint} onChange={e=>setLoreHint(e.target.value)}/>
         </div>
-        {ollamaOk&&<button onClick={generateLore} disabled={genLoading} style={{width:"100%",padding:"10px",background:genLoading?"var(--bg3)":`${G}0E`,border:`1px solid ${genLoading?"var(--border)":`${G}55`}`,borderRadius:8,cursor:genLoading?"not-allowed":"pointer",color:genLoading?"var(--text3)":G,fontSize:10.5,fontFamily:"monospace",marginBottom:14,letterSpacing:"0.08em"}}>{genLoading?"Generating lore...":"✦ Generate lore with AI"}</button>}
+        {ollamaOk&&<button onClick={generateLore} disabled={genLoading} style={{width:"100%",padding:"10px",background:genLoading?"var(--bg3)":`${G}0E`,border:`1px solid ${genLoading?"var(--border)":`${G}55`}`,borderRadius:8,cursor:genLoading?"not-allowed":"pointer",color:genLoading?"var(--text3)":G,fontSize:10.5,fontFamily:"monospace",marginBottom:genError?6:14,letterSpacing:"0.08em"}}>{genLoading?"Generating lore...":"✦ Generate lore with AI"}</button>}
+        {genError&&<div style={{fontSize:10,color:"#E07070",background:"rgba(139,26,26,0.12)",border:"1px solid rgba(139,26,26,0.3)",borderRadius:7,padding:"6px 10px",marginBottom:14,fontFamily:"monospace"}}>{genError}</div>}
         {/* Editable lore output */}
         <div style={{marginBottom:12}}><span style={lbl}>Description</span><input type="text" placeholder="One sentence about this team" value={desc} onChange={e=>setDesc(e.target.value)}/></div>
         <div style={{marginBottom:12}}><span style={lbl}>Motto</span><input type="text" placeholder="Team motto or battle cry" value={motto} onChange={e=>setMotto(e.target.value)}/></div>
@@ -859,6 +885,7 @@ function App(){
   const[rAge,setRAge]=useState("");
   const[rBirthYear,setRBirthYear]=useState("");
   const[rRace,setRRace]=useState(null);
+  const[rStoryDir,setRStoryDir]=useState("");
   const[rLoading,setRLoading]=useState(false);const[rResult,setRResult]=useState(null);
   const[deepMode,setDeepMode]=useState(false);
   const[deepPhase,setDeepPhase]=useState(0);
@@ -1067,7 +1094,7 @@ function App(){
     try{
       const raceStr=raceLabel(rRace);
       const raceLoreStr=raceLore(rRace);
-      const p=await callAI(`Create a ${activeTeam.name} team hero. JSON only.\n\nReal name: ${rName||"Unknown"}\nGender: ${rGender}\nAge: ${rAge||(rBirthYear?String(2026-parseInt(rBirthYear)):"Unknown")}\n${rBirthYear?`Birth year: ${rBirthYear}\n`:""}Race: ${raceStr||"Unspecified"}\n${raceLoreStr?`Race lore (bake into origin): ${raceLoreStr}\n`:""}Team: ${activeTeam.name} (${teamType})\nAccent color: ${hex}\nNK alignment of this character: ${rNkAlign}\nExisting names (pick different): ${existingNames||"none yet"}\n${rHeroName?`Hero name: ${rHeroName} (use exactly this name)`:"Hero name: (choose a fitting dark name)"}\nQuiz:\n${answers}\n\nIMPORTANT: Use correct pronouns (${pronounOf(rGender)}/${pronounOf(rGender)==="they"?"them":pronounOf(rGender)==="she"?"her":"him"}) for this character throughout.\nIMPORTANT: Pick 2-3 specific comic or anime characters as DNA for this hero based on the quiz answers. Bake these invisibly into every output field — power names shaped by their style, tagline capturing their essence, origin echoing their arc. Never name-drop them; only list in the dna array.\n\n{"heroName":"${rHeroName||"2-word dark name"}","tagline":"one punchy sentence","role":"Role · Descriptor","origin":"2-3 sentences connected to the team and their world — reflect their race biology and birth year context if provided","powers":[{"name":"Name","desc":"visual desc"},{"name":"Name","desc":"visual desc"},{"name":"Name","desc":"visual desc"},{"name":"Name","desc":"visual desc"}],"stats":{"Power":75,"Speed":70,"Tech":60,"Intellect":80,"Will":85},"costumeDesc":"costume in team aesthetic with ${hex} accent","powerFX":"visible effects using ${hex}","consistencyNotes":"design lock rules","dna":["Character whose energy shapes this hero's powers — e.g. Vegeta","Character whose arc or personality informs their story"]}`);
+      const p=await callAI(`Create a ${activeTeam.name} team hero. JSON only.\n\nReal name: ${rName||"Unknown"}\nGender: ${rGender}\nAge: ${rAge||(rBirthYear?String(2026-parseInt(rBirthYear)):"Unknown")}\n${rBirthYear?`Birth year: ${rBirthYear}\n`:""}Race: ${raceStr||"Unspecified"}\n${raceLoreStr?`Race lore (bake into origin): ${raceLoreStr}\n`:""}${rStoryDir.trim()?`Story direction (shape the origin around this): ${rStoryDir.trim()}\n`:""}Team: ${activeTeam.name} (${teamType})\nAccent color: ${hex}\nNK alignment of this character: ${rNkAlign}\nExisting names (pick different): ${existingNames||"none yet"}\n${rHeroName?`Hero name: ${rHeroName} (use exactly this name)`:"Hero name: (choose a fitting dark name)"}\nQuiz:\n${answers}\n\nIMPORTANT: Use correct pronouns (${pronounOf(rGender)}/${pronounOf(rGender)==="they"?"them":pronounOf(rGender)==="she"?"her":"him"}) for this character throughout.\nIMPORTANT: Pick 2-3 specific comic or anime characters as DNA for this hero based on the quiz answers. Bake these invisibly into every output field — power names shaped by their style, tagline capturing their essence, origin echoing their arc. Never name-drop them; only list in the dna array.\n\n{"heroName":"${rHeroName||"2-word dark name"}","tagline":"one punchy sentence","role":"Role · Descriptor","origin":"2-3 sentences connected to the team and their world — reflect their race biology and birth year context if provided","powers":[{"name":"Name","desc":"visual desc"},{"name":"Name","desc":"visual desc"},{"name":"Name","desc":"visual desc"},{"name":"Name","desc":"visual desc"}],"stats":{"Power":75,"Speed":70,"Tech":60,"Intellect":80,"Will":85},"costumeDesc":"costume in team aesthetic with ${hex} accent","powerFX":"visible effects using ${hex}","consistencyNotes":"design lock rules","dna":["Character whose energy shapes this hero's powers — e.g. Vegeta","Character whose arc or personality informs their story"]}`);
       const num=String(activeRoster.length+1).padStart(2,"0");
       const computedAge=rAge||(rBirthYear?String(2026-parseInt(rBirthYear)):"");
       setRResult({id:`char-${Date.now()}`,teamId:activeTeamId,realName:rName||"Unknown",gender:rGender,age:computedAge,birthYear:rBirthYear||"",race:rRace,species:raceLabel(rRace)||"Human",color:hex,colorLight:hex+"CC",initials:rName?rName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",number:num,isCustom:true,nkAlignment:rNkAlign,...p});
@@ -1080,7 +1107,7 @@ function App(){
     const newRosters={...teamRosters,[activeTeamId]:[...(teamRosters[activeTeamId]||[]),rResult]};
     setTeamRosters(newRosters);
     persist("forge-rosters",newRosters);
-    setRResult(null);setRAnswers({});setRName("");setRHeroName("");setRStep(0);setRNkAlign("neutral");setRGender("Male");setRAge("");setRBirthYear("");setRRace(null);setDeepAnswers({});setDeepPhase(0);setTab("roster");
+    setRResult(null);setRAnswers({});setRName("");setRHeroName("");setRStep(0);setRNkAlign("neutral");setRGender("Male");setRAge("");setRBirthYear("");setRRace(null);setRStoryDir("");setDeepAnswers({});setDeepPhase(0);setTab("roster");
   };
 
   const generateDeepRecruit=async()=>{
@@ -1102,7 +1129,7 @@ function App(){
     try{
       const raceStr=raceLabel(rRace);
       const raceLoreStr=raceLore(rRace);
-      const p=await callAI(`Create a deeply developed ${activeTeam.name} hero using rich comic book lore. JSON only.\n\nReal name: ${rName||"Unknown"}\nGender: ${rGender}\nAge: ${rAge||(rBirthYear?String(2026-parseInt(rBirthYear)):"Unknown")}\n${rBirthYear?`Birth year: ${rBirthYear}\n`:""}Race: ${raceStr||"Unspecified"}\n${raceLoreStr?`Race lore (bake into origin): ${raceLoreStr}\n`:""}Accent color: ${hex}\nNK alignment: ${rNkAlign}\nExisting names (must be different): ${existingNames||"none"}\n${rHeroName?`Hero name: ${rHeroName} (use exactly this name)`:"Hero name: (choose a distinct name fitting the lore profile)"}\nTeam: ${activeTeam.name}\nIMPORTANT: Use correct pronouns (${pronounOf(rGender)}/${pronounOf(rGender)==="they"?"them":pronounOf(rGender)==="she"?"her":"him"}) for this character throughout.\n${dnaFoundation?`\nCHARACTER DNA FOUNDATION (bake these invisibly into every field — powers named/described through their aesthetic, origin reflecting their arc pattern, personality in the tagline — filter through the NK universe, never reference by name except in the dna array):\n${dnaFoundation}\n`:""}\nFull lore profile:\n${loreContext}${freeText?"\nVisual references: "+freeText:""}\n\nUse this lore to create a hero that feels authentic to these inspirations. JSON:\n{"heroName":"${rHeroName||"2-word hero name, distinct and fitting the lore profile"}","tagline":"one piercing sentence that captures their essence","role":"Role · Descriptor","origin":"3-4 sentences backstory that directly reflects the lore answers — specific and rooted in their race and birth year context","powers":[{"name":"Power name matching their visual style","desc":"2-sentence visual description of exactly how this looks in action"},{"name":"Power name","desc":"visual desc"},{"name":"Power name","desc":"visual desc"},{"name":"Power name","desc":"visual desc"}],"stats":{"Power":75,"Speed":70,"Tech":60,"Intellect":80,"Will":85},"costumeDesc":"Detailed costume description using ${hex} accent, reflecting their costume philosophy answer","powerFX":"Exact visual description of power effects using ${hex}, matching their FX style answer","consistencyNotes":"2-3 specific design lock rules based on their visual choices","dna":["Primary DNA — exact character name like Vegeta or Moon Knight","Secondary DNA — another specific character baked into this hero","Optional third DNA — only if genuinely applicable"]}`);
+      const p=await callAI(`Create a deeply developed ${activeTeam.name} hero using rich comic book lore. JSON only.\n\nReal name: ${rName||"Unknown"}\nGender: ${rGender}\nAge: ${rAge||(rBirthYear?String(2026-parseInt(rBirthYear)):"Unknown")}\n${rBirthYear?`Birth year: ${rBirthYear}\n`:""}Race: ${raceStr||"Unspecified"}\n${raceLoreStr?`Race lore (bake into origin): ${raceLoreStr}\n`:""}${rStoryDir.trim()?`Story direction (shape the origin around this): ${rStoryDir.trim()}\n`:""}Accent color: ${hex}\nNK alignment: ${rNkAlign}\nExisting names (must be different): ${existingNames||"none"}\n${rHeroName?`Hero name: ${rHeroName} (use exactly this name)`:"Hero name: (choose a distinct name fitting the lore profile)"}\nTeam: ${activeTeam.name}\nIMPORTANT: Use correct pronouns (${pronounOf(rGender)}/${pronounOf(rGender)==="they"?"them":pronounOf(rGender)==="she"?"her":"him"}) for this character throughout.\n${dnaFoundation?`\nCHARACTER DNA FOUNDATION (bake these invisibly into every field — powers named/described through their aesthetic, origin reflecting their arc pattern, personality in the tagline — filter through the NK universe, never reference by name except in the dna array):\n${dnaFoundation}\n`:""}\nFull lore profile:\n${loreContext}${freeText?"\nVisual references: "+freeText:""}\n\nUse this lore to create a hero that feels authentic to these inspirations. JSON:\n{"heroName":"${rHeroName||"2-word hero name, distinct and fitting the lore profile"}","tagline":"one piercing sentence that captures their essence","role":"Role · Descriptor","origin":"3-4 sentences backstory that directly reflects the lore answers — specific and rooted in their race and birth year context","powers":[{"name":"Power name matching their visual style","desc":"2-sentence visual description of exactly how this looks in action"},{"name":"Power name","desc":"visual desc"},{"name":"Power name","desc":"visual desc"},{"name":"Power name","desc":"visual desc"}],"stats":{"Power":75,"Speed":70,"Tech":60,"Intellect":80,"Will":85},"costumeDesc":"Detailed costume description using ${hex} accent, reflecting their costume philosophy answer","powerFX":"Exact visual description of power effects using ${hex}, matching their FX style answer","consistencyNotes":"2-3 specific design lock rules based on their visual choices","dna":["Primary DNA — exact character name like Vegeta or Moon Knight","Secondary DNA — another specific character baked into this hero","Optional third DNA — only if genuinely applicable"]}`);
       const num=String(activeRoster.length+1).padStart(2,"0");
       const computedAge=rAge||(rBirthYear?String(2026-parseInt(rBirthYear)):"");
       setRResult({id:`char-${Date.now()}`,teamId:activeTeamId,realName:rName||"Unknown",gender:rGender,age:computedAge,birthYear:rBirthYear||"",race:rRace,species:raceLabel(rRace)||"Human",color:hex,colorLight:hex+"CC",initials:rName?rName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",number:num,isCustom:true,nkAlignment:rNkAlign,deepLore:deepAnswers,...p});
@@ -1261,7 +1288,7 @@ function App(){
   return(<div style={{background:"var(--bg-base)",color:"var(--text-primary)",minHeight:"100vh",paddingBottom:60}}>
 
     {/* ── Header ─────────────────────────────────────────────────────────── */}
-    <div style={{borderBottom:"1px solid rgba(212,175,55,0.14)",padding:"0 22px",height:56,display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8,background:"var(--header-bg)",backdropFilter:"blur(12px)",position:"sticky",top:0,zIndex:50}}>
+    <div className="fhdr" style={{borderBottom:"1px solid rgba(212,175,55,0.14)",padding:"0 22px",height:56,display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8,background:"var(--header-bg)",backdropFilter:"blur(12px)",position:"sticky",top:0,zIndex:50}}>
       <div style={{display:"flex",alignItems:"center",gap:14}}>
 
         <div style={{display:"flex",alignItems:"center",gap:10}}>
@@ -1283,7 +1310,7 @@ function App(){
           <span style={{fontSize:10,color:activeTeam.color,fontFamily:"monospace",letterSpacing:"0.07em",fontWeight:"600"}}>{activeTeam.abbr} · {activeTeam.name}</span>
         </div>
       </div>
-      <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+      <div className="fhdr-right" style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
         {saved&&<div style={{fontSize:9,color:"#5DCAA5",padding:"3px 10px",background:"rgba(15,110,86,0.12)",border:"1px solid rgba(15,110,86,0.3)",borderRadius:20}}>✓ Saved</div>}
         {updateInfo?.has_update&&<div style={{display:"flex",alignItems:"center",gap:6,padding:"4px 11px",background:"rgba(212,175,55,0.12)",border:"1px solid rgba(212,175,55,0.4)",borderRadius:20,cursor:"pointer"}} onClick={async()=>{if(updatePulling)return;setUpdatePulling(true);const r=await fetch("/api/update/pull",{method:"POST"});const d=await r.json();setUpdatePulling(false);if(d.ok){setUpdateInfo(null);alert("Updated! Restart the app to apply changes.");}else{alert("Update failed:\n"+d.output);}}}>
           <div style={{width:6,height:6,borderRadius:"50%",background:G}}/>
@@ -1298,9 +1325,9 @@ function App(){
           <div style={{width:7,height:7,borderRadius:"50%",background:ollamaOk?"#5DCAA5":ollamaOk===false?"#E07070":"#888780"}}/>
           <span style={{fontSize:9,color:"var(--text2)"}}>{ollamaOk===null?"Checking...":ollamaOk?currentModel:"Ollama offline"}</span>
         </div>
-        {ollamaOk&&models.length>0&&<select value={currentModel} onChange={e=>{setCurrentModel(e.target.value);fetch("/api/config",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:e.target.value})});}} style={{background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:7,padding:"5px 10px",color:"var(--text-primary)",fontSize:10,cursor:"pointer"}}>{models.map(m=><option key={m} value={m}>{m}</option>)}</select>}
-        <button onClick={checkOllama} style={{padding:"5px 10px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:7,cursor:"pointer",color:"var(--text2)",fontSize:9,fontFamily:"monospace"}}>↻</button>
-        <button onClick={()=>{fetch("/api/restart",{method:"POST"}).then(()=>{setTimeout(()=>window.location.reload(),1800);});}} title="Restart Forge" style={{padding:"5px 10px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:7,cursor:"pointer",color:"var(--text2)",fontSize:9,fontFamily:"monospace"}}>⟳ Restart</button>
+        {ollamaOk&&models.length>0&&<select className="fhdr-model" value={currentModel} onChange={e=>{setCurrentModel(e.target.value);fetch("/api/config",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:e.target.value})});}} style={{background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:7,padding:"5px 10px",color:"var(--text-primary)",fontSize:10,cursor:"pointer"}}>{models.map(m=><option key={m} value={m}>{m}</option>)}</select>}
+        <button className="fhdr-refresh" onClick={checkOllama} style={{padding:"5px 10px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:7,cursor:"pointer",color:"var(--text2)",fontSize:9,fontFamily:"monospace"}}>↻</button>
+        <button className="fhdr-restart" onClick={()=>{fetch("/api/restart",{method:"POST"}).then(()=>{setTimeout(()=>window.location.reload(),1800);});}} title="Restart Forge" style={{padding:"5px 10px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:7,cursor:"pointer",color:"var(--text2)",fontSize:9,fontFamily:"monospace"}}>⟳ Restart</button>
         <button onClick={()=>setLightMode(p=>!p)} title={lightMode?"Switch to Dark Mode":"Switch to Light Mode"} style={{padding:"5px 11px",background:lightMode?"rgba(0,0,0,0.08)":"var(--bg2)",border:`1px solid ${lightMode?"rgba(0,0,0,0.15)":"var(--border)"}`,borderRadius:7,cursor:"pointer",fontSize:13,lineHeight:1,transition:"all 0.2s"}}>{lightMode?"🌙":"☀️"}</button>
       </div>
     </div>
@@ -1309,13 +1336,13 @@ function App(){
     {showRemotePanel&&<RemotePanel remoteInfo={remoteInfo} setRemoteInfo={setRemoteInfo} onClose={()=>setShowRemotePanel(false)} G={G} s={s}/>}
 
     {/* ── Tabs ───────────────────────────────────────────────────────────── */}
-    <div style={{display:"flex",borderBottom:"1px solid rgba(212,175,55,0.12)",padding:"0 16px",overflowX:"auto",background:"var(--bg-base)",gap:2}}>
+    <div className="ftabs" style={{display:"flex",borderBottom:"1px solid rgba(212,175,55,0.12)",padding:"0 16px",overflowX:"auto",background:"var(--bg-base)",gap:2}}>
       {[["teams","Teams"],["roster","Roster"],["team","Team"],["prompts","Prompts"],["recruit","+ Recruit"],["villains","Villains"],["story","Story"],["battle","⚡ Battle"],["arc","Arc"],["tiers","Tiers"],["universe","Universe"]].map(([id,label])=>(
-        <button key={id} style={s.tab(tab===id)} onClick={()=>setTab(id)}>{label}</button>
+        <button key={id} className="ftab" style={s.tab(tab===id)} onClick={()=>setTab(id)}>{label}</button>
       ))}
     </div>
 
-    <div style={{padding:"22px",maxWidth:960,margin:"0 auto"}}>
+    <div className="fmain" style={{padding:"22px",maxWidth:960,margin:"0 auto"}}>
       {ollamaOk===false&&<OllamaGuide/>}
 
       {/* ── TEAMS TAB ─────────────────────────────────────────────────── */}
@@ -1428,7 +1455,7 @@ function App(){
           <div style={{fontSize:12,marginBottom:6}}>No members yet</div>
           <button onClick={()=>setTab("recruit")} style={{fontSize:11,padding:"7px 16px",background:`${activeTeam.color}14`,border:`1px solid ${activeTeam.color}55`,borderRadius:20,cursor:"pointer",color:activeTeam.color,fontFamily:"monospace"}}>+ Add First Member</button>
         </div>)}
-        <div style={{display:"grid",gridTemplateColumns:`repeat(${Math.min(activeRoster.length,4)},1fr)`,gap:10,marginBottom:24}}>
+        <div className="fimage-grid" style={{display:"grid",gridTemplateColumns:`repeat(${Math.min(activeRoster.length,4)},1fr)`,gap:10,marginBottom:24}}>
           {activeRoster.map(m=>(<div key={m.id}>
             <input type="file" accept="image/*" style={{display:"none"}} ref={el=>fileRefs.current[m.id]=el} onChange={e=>handleImg(m.id,e.target.files[0])}/>
             <div onClick={()=>fileRefs.current[m.id]?.click()} style={{background:images[m.id]?"transparent":`${m.color}08`,border:`1.5px dashed ${images[m.id]?m.color+"66":m.color+"2E"}`,borderRadius:9,overflow:"hidden",cursor:"pointer",aspectRatio:"3/4",position:"relative",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:6}}>
@@ -1438,7 +1465,7 @@ function App(){
         </div>
         <div style={{display:"flex",flexDirection:"column",gap:8}}>
           {activeRoster.map(m=>(<div key={m.id}>
-            <div style={{display:"flex",alignItems:"center",gap:12,padding:"11px 16px",background:expanded[m.id]?`${m.color}0E`:"rgba(255,255,255,0.02)",border:`1px solid ${expanded[m.id]?m.color+"44":"rgba(255,255,255,0.06)"}`,borderRadius:editingChar[m.id]||expanded[m.id]?"10px 10px 0 0":10,cursor:"pointer"}}>
+            <div className="froster-row" style={{display:"flex",alignItems:"center",gap:12,padding:"11px 16px",background:expanded[m.id]?`${m.color}0E`:"rgba(255,255,255,0.02)",border:`1px solid ${expanded[m.id]?m.color+"44":"rgba(255,255,255,0.06)"}`,borderRadius:editingChar[m.id]||expanded[m.id]?"10px 10px 0 0":10,cursor:"pointer"}}>
               {images[m.id]?<img src={images[m.id]} alt="" style={{width:38,height:38,borderRadius:6,objectFit:"cover",objectPosition:"top",flexShrink:0}} onClick={()=>toggle(m.id)}/>:<div style={{width:38,height:38,borderRadius:6,background:`${m.color}14`,border:`1px dashed ${m.color}44`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:"bold",color:m.color,flexShrink:0}} onClick={()=>toggle(m.id)}>{m.initials}</div>}
               <div style={{flex:1}} onClick={()=>toggle(m.id)}>
                 <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
@@ -1450,7 +1477,7 @@ function App(){
                 </div>
                 <div style={{fontSize:10,color:"var(--text3)",marginTop:1}}>{m.role}</div>
               </div>
-              <div style={{display:"flex",gap:6,alignItems:"center"}}>
+              <div className="froster-actions" style={{display:"flex",gap:6,alignItems:"center"}}>
                 <button onClick={e=>{e.stopPropagation();setEditingChar(p=>({...p,[m.id]:!p[m.id]}));setExpanded(p=>({...p,[m.id]:false}));}} style={{fontSize:9,padding:"3px 9px",background:editingChar[m.id]?`${m.color}22`:"var(--bg3)",border:`1px solid ${editingChar[m.id]?m.color:"var(--border)"}`,borderRadius:6,cursor:"pointer",color:editingChar[m.id]?m.color:"var(--text3)",fontFamily:"monospace"}}>{editingChar[m.id]?"Close":"Edit"}</button>
                 <button onClick={e=>{e.stopPropagation();setSwitchingMember(switchingMember===m.id?null:m.id);setSharingMember(null);}} style={{fontSize:9,padding:"3px 9px",background:switchingMember===m.id?`${m.color}22`:"var(--bg3)",border:`1px solid ${switchingMember===m.id?m.color:"var(--border)"}`,borderRadius:6,cursor:"pointer",color:switchingMember===m.id?m.color:"var(--text3)",fontFamily:"monospace"}}>Move</button>
                 <button onClick={e=>{e.stopPropagation();setSharingMember(sharingMember===m.id?null:m.id);setSwitchingMember(null);}} style={{fontSize:9,padding:"3px 9px",background:sharingMember===m.id?`${m.color}22`:"var(--bg3)",border:`1px solid ${sharingMember===m.id?m.color:"var(--border)"}`,borderRadius:6,cursor:"pointer",color:sharingMember===m.id?m.color:"var(--text3)",fontFamily:"monospace"}}>+Team</button>
@@ -1650,6 +1677,10 @@ function App(){
             </div>
           </div>
           <div style={{marginBottom:14}}>
+            <span style={s.lbl}>Story Direction (optional)</span>
+            <textarea style={{height:52,fontSize:11,marginTop:4}} placeholder={`e.g. "Was exiled from their homeworld" · "Lost their powers once and had to earn them back" · "Reluctant hero who fights for one person, not the mission"`} value={rStoryDir} onChange={e=>setRStoryDir(e.target.value)}/>
+          </div>
+          <div style={{marginBottom:14}}>
             <span style={s.lbl}>Race (optional)</span>
             <div style={{marginTop:6}}>
               <RaceSelector value={rRace} onChange={setRRace} color={ACCENT_COLORS.find(a=>a.id===rAccent)?.hex||G}/>
@@ -1843,7 +1874,7 @@ function App(){
             </div>
           )}
           <span style={s.lbl}>Scenario</span>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:18}}>
+          <div className="fscenario-grid" style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:18}}>
             {SCENARIOS.map(sc=><button key={sc.id} onClick={()=>setSScenario(sc.id)} style={{...s.chip(sScenario===sc.id),padding:"9px 11px",textAlign:"left",borderRadius:9,display:"flex",flexDirection:"column",gap:2}}><span style={{fontSize:14}}>{sc.icon}</span><span style={{fontSize:11,fontWeight:"bold"}}>{sc.label}</span><span style={{fontSize:9,opacity:0.55}}>{sc.desc}</span></button>)}
           </div>
           <span style={s.lbl}>Tone</span>
@@ -1862,7 +1893,7 @@ function App(){
         const battlePool=[...allCharacters,...villainPool.map(v=>({...v,isVillain:true}))];
         return(<>
           <div style={{fontSize:9,letterSpacing:"0.2em",color:`${G}77`,textTransform:"uppercase",marginBottom:16}}>Battle Simulator — Select Two Fighters</div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 44px 1fr",gap:10,alignItems:"start",marginBottom:16}}>
+          <div className="fbattle-grid" style={{display:"grid",gridTemplateColumns:"1fr 44px 1fr",gap:10,alignItems:"start",marginBottom:16}}>
             <div>
               <div style={{fontSize:9,color:"var(--text4)",marginBottom:8,letterSpacing:"0.1em"}}>FIGHTER A</div>
               <select value={battleA?.id||""} onChange={e=>{setBattleA(battlePool.find(m=>m.id===e.target.value)||null);setBattleResult(null);}} style={{width:"100%",background:"var(--bg3)",border:`1px solid ${battleA?battleA.color+"55":"var(--border)"}`,borderRadius:8,padding:"10px 12px",color:"var(--text-primary)",fontSize:11,cursor:"pointer",marginBottom:8}}>
