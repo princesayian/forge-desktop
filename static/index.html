@@ -242,6 +242,21 @@ const VILLAIN_QUIZ=[
 
 const SCENARIOS=[{id:"ambush",label:"Ambush",icon:"⚡",desc:"Caught off-guard"},{id:"infiltration",label:"Infiltration",icon:"👁",desc:"Stealth mission"},{id:"rescue",label:"Rescue",icon:"🔗",desc:"One hero captured"},{id:"confrontation",label:"Confrontation",icon:"💥",desc:"Direct face-off"},{id:"revelation",label:"Revelation",icon:"📁",desc:"Dark truth surfaces"},{id:"heist",label:"Heist",icon:"🎯",desc:"Extract a target"},{id:"crossover",label:"Crossover",icon:"🌐",desc:"Two teams collide"}];
 const TONES=[{id:"intense",label:"Intense"},{id:"dark",label:"Dark & Gritty"},{id:"triumphant",label:"Triumphant"},{id:"desperate",label:"Desperate"}];
+const FAMILY_RELATIONS=[
+  {id:"parent",label:"Parent",inverse:"Child"},
+  {id:"child",label:"Child",inverse:"Parent"},
+  {id:"sibling",label:"Sibling",inverse:"Sibling"},
+  {id:"twin",label:"Twin",inverse:"Twin"},
+  {id:"spouse",label:"Spouse",inverse:"Spouse"},
+  {id:"grandparent",label:"Grandparent",inverse:"Grandchild"},
+  {id:"grandchild",label:"Grandchild",inverse:"Grandparent"},
+  {id:"aunt-uncle",label:"Aunt / Uncle",inverse:"Niece / Nephew"},
+  {id:"niece-nephew",label:"Niece / Nephew",inverse:"Aunt / Uncle"},
+  {id:"cousin",label:"Cousin",inverse:"Cousin"},
+  {id:"adopted-parent",label:"Adoptive Parent",inverse:"Adopted Child"},
+  {id:"adopted-child",label:"Adopted Child",inverse:"Adoptive Parent"},
+  {id:"clone",label:"Clone of",inverse:"Original of"},
+];
 const ART_STYLES=[{id:"comic",label:"Comic Art",text:"cinematic comic book character art, flat color with sharp ink lines, Marvel/DC quality"},{id:"rendered",label:"3D Render",text:"hyper-realistic CGI character render, cinematic lighting"},{id:"anime",label:"Anime",text:"high-quality anime illustration, dynamic shading, Shonen Jump style"},{id:"statue",label:"Statue",text:"collectible resin statue render, museum-quality painted figurine"}];
 const ACCENT_COLORS=[{id:"crimson",label:"Crimson",hex:"#A32D2D"},{id:"jade",label:"Jade",hex:"#1D9E75"},{id:"amber",label:"Amber",hex:"#BA7517"},{id:"silver",label:"Silver",hex:"#888780"},{id:"indigo",label:"Indigo",hex:"#4A3FA0"},{id:"copper",label:"Copper",hex:"#8B4513"},{id:"frost",label:"Frost",hex:"#378ADD"},{id:"violet",label:"Violet",hex:"#8B2FC9"}];
 
@@ -914,6 +929,12 @@ function App(){
   const[pLoading,setPLoading]=useState(false);const[pResult,setPResult]=useState(null);
   // ── Dynamics ─────────────────────────────────────────────────────────────
   const[dynActive,setDynActive]=useState(null);
+  // ── Family Tree ──────────────────────────────────────────────────────────
+  const[familyLinks,setFamilyLinks]=useState([]);
+  const[ftAddA,setFtAddA]=useState("");
+  const[ftAddB,setFtAddB]=useState("");
+  const[ftAddRelation,setFtAddRelation]=useState("parent");
+  const[ftActiveNode,setFtActiveNode]=useState(null);
   // ── UI ───────────────────────────────────────────────────────────────────
   const[tab,setTab]=useState("teams");
   const[saved,setSaved]=useState(false);
@@ -950,6 +971,7 @@ function App(){
       // old NK recruits backward compat
       try{const d=await window.storage.get("nk-recruits");const rec=JSON.parse(d.value)||[];if(rec.length){setTeamRosters(p=>({...p,"nocturnal-knights":[...(p["nocturnal-knights"]||[]),...rec.map(r=>({...r,teamId:"nocturnal-knights"}))]}))};}catch(e){}
       try{const d=await window.storage.get("forge-meta-ai-pref");if(d)setHasMetaAI(JSON.parse(d.value));}catch(e){}
+      try{const d=await window.storage.get("nk-family");setFamilyLinks(JSON.parse(d.value)||[]);}catch(e){}
       try{const d=await window.storage.get("forge-removed");setRemovedMembers(JSON.parse(d.value)||{});}catch(e){}
       try{const r=await fetch("/api/images");const ids=await r.json();const loaded={};const t=Date.now();ids.forEach(id=>{loaded[id]=`/api/images/${id}?t=${t}`;});if(Object.keys(loaded).length)setImages(loaded);}catch(e){}
       try{const r=await fetch("/api/update/check");setUpdateInfo(await r.json());}catch(e){}
@@ -960,6 +982,27 @@ function App(){
   const persist=useCallback(async(key,data)=>{
     try{await window.storage.set(key,JSON.stringify(data));setSaved(true);setTimeout(()=>setSaved(false),2000);}catch(e){}
   },[]);
+
+  const addFamilyLink=useCallback(()=>{
+    if(!ftAddA||!ftAddB||ftAddA===ftAddB)return;
+    const rel=FAMILY_RELATIONS.find(r=>r.id===ftAddRelation);
+    if(!rel)return;
+    setFamilyLinks(prev=>{
+      if(prev.find(l=>(l.a===ftAddA&&l.b===ftAddB)||(l.a===ftAddB&&l.b===ftAddA)))return prev;
+      const updated=[...prev,{id:`fl-${Date.now()}`,a:ftAddA,b:ftAddB,aRelation:rel.label,bRelation:rel.inverse}];
+      persist("nk-family",updated);
+      return updated;
+    });
+    setFtAddA("");setFtAddB("");setFtAddRelation("parent");
+  },[ftAddA,ftAddB,ftAddRelation,persist]);
+
+  const removeFamilyLink=useCallback(id=>{
+    setFamilyLinks(prev=>{
+      const updated=prev.filter(l=>l.id!==id);
+      persist("nk-family",updated);
+      return updated;
+    });
+  },[persist]);
 
   // ── Computed ─────────────────────────────────────────────────────────────
   const activeTeam=useMemo(()=>teams.find(t=>t.id===activeTeamId)||NK_TEAM,[teams,activeTeamId]);
@@ -1079,25 +1122,34 @@ function App(){
 
   // ── AI ────────────────────────────────────────────────────────────────────
   const callAI=useCallback(async(prompt,onToken)=>{
-    const res=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:currentModel,max_tokens:1200,messages:[{role:"user",content:prompt}]})});
-    if(!res.body)throw new Error("No response stream");
-    const reader=res.body.getReader();
-    const dec=new TextDecoder();
-    let buf="",full="";
-    while(true){
-      const{done,value}=await reader.read();
-      if(done)break;
-      buf+=dec.decode(value,{stream:true});
-      const lines=buf.split("\n");buf=lines.pop()||"";
-      for(const line of lines){
-        if(!line.trim())continue;
-        let chunk;try{chunk=JSON.parse(line);}catch{continue;}
-        if(chunk.e)throw new Error(chunk.e);
-        if(chunk.t){full+=chunk.t;if(onToken)onToken(full);}
+    const controller=new AbortController();
+    const tid=setTimeout(()=>controller.abort(),90000);
+    try{
+      const res=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:currentModel,max_tokens:1200,messages:[{role:"user",content:prompt}]}),signal:controller.signal});
+      if(!res.body)throw new Error("No response stream");
+      const reader=res.body.getReader();
+      const dec=new TextDecoder();
+      let buf="",full="";
+      while(true){
+        const{done,value}=await reader.read();
+        if(done)break;
+        buf+=dec.decode(value,{stream:true});
+        const lines=buf.split("\n");buf=lines.pop()||"";
+        for(const line of lines){
+          if(!line.trim())continue;
+          let chunk;try{chunk=JSON.parse(line);}catch{continue;}
+          if(chunk.e)throw new Error(chunk.e);
+          if(chunk.t){full+=chunk.t;if(onToken)onToken(full);}
+        }
       }
+      clearTimeout(tid);
+      const clean=full.replace(/```json\n?/g,"").replace(/```\n?/g,"").trim();
+      try{return JSON.parse(clean);}catch{const m=clean.match(/\{[\s\S]*\}/);if(m)return JSON.parse(m[0]);throw new Error("Response was not valid JSON");}
+    }catch(e){
+      clearTimeout(tid);
+      if(e.name==="AbortError")throw new Error("Generation timed out — Ollama took too long. Try restarting Ollama or switching models.");
+      throw e;
     }
-    const clean=full.replace(/```json\n?/g,"").replace(/```\n?/g,"").trim();
-    try{return JSON.parse(clean);}catch{const m=clean.match(/\{[\s\S]*\}/);if(m)return JSON.parse(m[0]);throw new Error("Response was not valid JSON");}
   },[currentModel]);
 
   // ── Recruit ───────────────────────────────────────────────────────────────
@@ -1353,7 +1405,7 @@ function App(){
 
     {/* ── Tabs ───────────────────────────────────────────────────────────── */}
     <div className="ftabs" style={{display:"flex",borderBottom:"1px solid rgba(212,175,55,0.12)",padding:"0 16px",overflowX:"auto",background:"var(--bg-base)",gap:2}}>
-      {[["teams","Teams"],["roster","Roster"],["team","Team"],["prompts","Prompts"],["recruit","+ Recruit"],["villains","Villains"],["story","Story"],["battle","⚡ Battle"],["arc","Arc"],["tiers","Tiers"],["universe","Universe"]].map(([id,label])=>(
+      {[["teams","Teams"],["roster","Roster"],["team","Team"],["family","Family"],["prompts","Prompts"],["recruit","+ Recruit"],["villains","Villains"],["story","Story"],["battle","⚡ Battle"],["arc","Arc"],["tiers","Tiers"],["universe","Universe"]].map(([id,label])=>(
         <button key={id} className="ftab" style={s.tab(tab===id)} onClick={()=>setTab(id)}>{label}</button>
       ))}
     </div>
@@ -2054,6 +2106,234 @@ function App(){
             </div>);
           })}
           <div style={{marginTop:8,fontSize:9,color:"var(--text4)",textAlign:"center"}}>Click any character to cycle tier · Auto-ranked by average stats · Overrides saved locally</div>
+        </>);
+      })()}
+
+      {/* ── FAMILY TREE TAB ───────────────────────────────────────────── */}
+      {tab==="family"&&(()=>{
+        // Gather all characters across active team + all villains
+        const allChars=[...getTeamRoster(activeTeamId),...villainPool];
+        const getChar=id=>allChars.find(c=>c.id===id);
+
+        // Build hierarchy from parent-type links for layout
+        const PARENT_RELS=new Set(["Parent","Grandparent","Adoptive Parent"]);
+        const childrenOf={},parentsOf={};
+        familyLinks.forEach(link=>{
+          const aIsParent=PARENT_RELS.has(link.aRelation);
+          const bIsParent=PARENT_RELS.has(link.bRelation);
+          if(aIsParent){
+            childrenOf[link.a]=[...(childrenOf[link.a]||[]),link.b];
+            parentsOf[link.b]=[...(parentsOf[link.b]||[]),link.a];
+          } else if(bIsParent){
+            childrenOf[link.b]=[...(childrenOf[link.b]||[]),link.a];
+            parentsOf[link.a]=[...(parentsOf[link.a]||[]),link.b];
+          }
+        });
+
+        const charIds=[...new Set(familyLinks.flatMap(l=>[l.a,l.b]))];
+
+        // BFS to assign generation level (0=oldest)
+        const gen={};
+        const assignGen=(id,level,visited=new Set())=>{
+          if(visited.has(id))return;
+          visited.add(id);
+          if(gen[id]===undefined||gen[id]>level)gen[id]=level;
+          (childrenOf[id]||[]).forEach(cid=>assignGen(cid,level+1,new Set(visited)));
+        };
+        charIds.filter(id=>!(parentsOf[id]?.length)).forEach(id=>assignGen(id,0));
+        charIds.filter(id=>gen[id]===undefined).forEach(id=>{gen[id]=0;});
+
+        const maxGen=charIds.length?Math.max(...charIds.map(id=>gen[id]||0)):0;
+        const byGen={};
+        for(let g=0;g<=maxGen;g++)byGen[g]=charIds.filter(id=>(gen[id]||0)===g);
+
+        // Layout
+        const W=760,nodeR=26,HGAP=68,VGAP=110;
+        const pos={};
+        Object.entries(byGen).forEach(([gStr,ids])=>{
+          const g=parseInt(gStr);
+          const totalW=ids.length*(nodeR*2)+(ids.length-1)*HGAP;
+          const startX=(W-totalW)/2+nodeR;
+          ids.forEach((id,i)=>{pos[id]={x:startX+i*(nodeR*2+HGAP),y:52+g*VGAP};});
+        });
+        const svgH=Math.max(200,(maxGen+1)*VGAP+90);
+
+        // Relation colors
+        const REL_COLOR={"Parent":"#D4AF37","Child":"#D4AF37","Grandparent":"#BA7517","Grandchild":"#BA7517","Sibling":"#5BA3D4","Twin":"#378ADD","Spouse":"#E07070","Aunt / Uncle":"#8B5CF6","Niece / Nephew":"#8B5CF6","Cousin":"#1D9E75","Adoptive Parent":"#F0997B","Adopted Child":"#F0997B","Clone of":"#888780","Original of":"#888780"};
+        const relColor=rel=>REL_COLOR[rel]||"#777";
+        const isHierarchical=rel=>PARENT_RELS.has(rel)||rel==="Child"||rel==="Grandchild"||rel==="Adopted Child";
+
+        return(<>
+          <div style={{fontSize:9,letterSpacing:"0.2em",color:`${G}77`,textTransform:"uppercase",marginBottom:14}}>Family Tree</div>
+
+          {/* SVG Tree */}
+          {charIds.length>0?(
+            <div style={{background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:12,overflow:"hidden",marginBottom:20}}>
+              <svg viewBox={`0 0 ${W} ${svgH}`} style={{width:"100%",display:"block"}}>
+                {/* Links */}
+                {familyLinks.map(link=>{
+                  const pa=pos[link.a],pb=pos[link.b];
+                  if(!pa||!pb)return null;
+                  const color=relColor(link.aRelation);
+                  const mx=(pa.x+pb.x)/2,my=(pa.y+pb.y)/2;
+                  const hier=isHierarchical(link.aRelation)||isHierarchical(link.bRelation);
+                  const top=pa.y<pb.y?pa:pb,bot=pa.y<pb.y?pb:pa;
+                  return(
+                    <g key={link.id}>
+                      {hier?(
+                        <path d={`M${top.x},${top.y+nodeR} C${top.x},${my} ${bot.x},${my} ${bot.x},${bot.y-nodeR}`}
+                          fill="none" stroke={color} strokeWidth={1.8} strokeOpacity={0.65}/>
+                      ):(
+                        <line x1={pa.x} y1={pa.y} x2={pb.x} y2={pb.y}
+                          stroke={color} strokeWidth={1.6} strokeOpacity={0.55}
+                          strokeDasharray={link.aRelation==="Sibling"||link.aRelation==="Twin"?"none":"5,3"}/>
+                      )}
+                      <rect x={mx-24} y={my-8} width={48} height={14} rx={4} fill="var(--bg)" opacity={0.8}/>
+                      <text x={mx} y={my+4} textAnchor="middle" fontSize="7" fill={color} fontFamily="monospace" fontWeight="bold">{link.aRelation}</text>
+                    </g>
+                  );
+                })}
+                {/* Nodes */}
+                {charIds.map(id=>{
+                  const p=pos[id];if(!p)return null;
+                  const char=getChar(id);if(!char)return null;
+                  const color=char.color||G;
+                  const isActive=ftActiveNode===id;
+                  return(
+                    <g key={id} style={{cursor:"pointer"}} onClick={()=>setFtActiveNode(ftActiveNode===id?null:id)}>
+                      {isActive&&<circle cx={p.x} cy={p.y} r={nodeR+6} fill={`${color}22`} stroke={color} strokeWidth={1.5} strokeOpacity={0.8}/>}
+                      {images[id]?(
+                        <>
+                          <defs><clipPath id={`ft-c-${id}`}><circle cx={p.x} cy={p.y} r={nodeR}/></clipPath></defs>
+                          <image href={images[id]} x={p.x-nodeR} y={p.y-nodeR} width={nodeR*2} height={nodeR*2} clipPath={`url(#ft-c-${id})`} preserveAspectRatio="xMidYMin slice"/>
+                          <circle cx={p.x} cy={p.y} r={nodeR} fill="none" stroke={color} strokeWidth={isActive?2:1.5} strokeOpacity={0.85}/>
+                        </>
+                      ):(
+                        <>
+                          <circle cx={p.x} cy={p.y} r={nodeR} fill={`${color}18`} stroke={color} strokeWidth={isActive?2:1.5}/>
+                          <text x={p.x} y={p.y+5} textAnchor="middle" fontSize="12" fontWeight="bold" fill={color} fontFamily="monospace">{char.initials}</text>
+                        </>
+                      )}
+                      <text x={p.x} y={p.y+nodeR+14} textAnchor="middle" fontSize="8.5" fill="var(--text-primary)" fontFamily="monospace" fontWeight="bold">{char.heroName}</text>
+                      {char.isVillain&&<text x={p.x} y={p.y+nodeR+25} textAnchor="middle" fontSize="7" fill="#E07070" fontFamily="monospace">VILLAIN</text>}
+                    </g>
+                  );
+                })}
+              </svg>
+              {/* Legend */}
+              <div style={{display:"flex",flexWrap:"wrap",gap:10,padding:"8px 14px 12px",borderTop:"1px solid var(--border)"}}>
+                {[["#D4AF37","Parent / Child"],["#5BA3D4","Sibling / Twin"],["#E07070","Spouse"],["#8B5CF6","Aunt / Uncle"],["#1D9E75","Cousin"],["#F0997B","Adoptive"],["#BA7517","Grandparent"]].map(([color,label])=>(
+                  <div key={label} style={{display:"flex",alignItems:"center",gap:5}}>
+                    <div style={{width:18,height:2,background:color,borderRadius:1}}/>
+                    <span style={{fontSize:8.5,color:"var(--text3)",fontFamily:"monospace"}}>{label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ):(
+            <div style={{textAlign:"center",padding:"36px 0",color:"var(--text3)",marginBottom:20,border:"1px dashed var(--border)",borderRadius:12}}>
+              <div style={{fontSize:14,marginBottom:6,color:"var(--text-secondary)"}}>No family connections yet</div>
+              <div style={{fontSize:10}}>Link two characters below to start building the family tree.</div>
+            </div>
+          )}
+
+          {/* Active node detail */}
+          {ftActiveNode&&(()=>{
+            const char=getChar(ftActiveNode);
+            if(!char)return null;
+            const links=familyLinks.filter(l=>l.a===ftActiveNode||l.b===ftActiveNode);
+            return(
+              <div style={{marginBottom:20,padding:"14px 16px",background:`${char.color||G}0C`,border:`1px solid ${char.color||G}33`,borderRadius:10}}>
+                <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
+                  {images[ftActiveNode]&&<img src={images[ftActiveNode]} style={{width:36,height:36,borderRadius:"50%",objectFit:"cover",objectPosition:"top"}} alt=""/>}
+                  <div>
+                    <div style={{fontSize:14,fontWeight:"bold",color:"var(--text-primary)"}}>{char.heroName}</div>
+                    <div style={{fontSize:10,color:char.color||G}}>{char.realName}</div>
+                  </div>
+                </div>
+                {links.length>0&&(
+                  <div style={{display:"flex",flexDirection:"column",gap:5}}>
+                    {links.map(link=>{
+                      const otherId=link.a===ftActiveNode?link.b:link.a;
+                      const rel=link.a===ftActiveNode?link.aRelation:link.bRelation;
+                      const other=getChar(otherId);
+                      const color=relColor(rel);
+                      return(
+                        <div key={link.id} style={{fontSize:10,color:"var(--text2)",display:"flex",alignItems:"center",gap:6}}>
+                          <span style={{color,fontWeight:"bold"}}>{rel} of</span>
+                          <span style={{color:"var(--text-primary)"}}>{other?.heroName||otherId}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* Add connection form */}
+          <div style={{background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:10,padding:"16px 18px",marginBottom:20}}>
+            <div style={{fontSize:9,letterSpacing:"0.18em",color:`${G}88`,textTransform:"uppercase",marginBottom:12}}>Add Family Connection</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
+              <div>
+                <div style={{fontSize:9,color:"var(--text3)",marginBottom:5,letterSpacing:"0.1em",textTransform:"uppercase"}}>Character A</div>
+                <select value={ftAddA} onChange={e=>setFtAddA(e.target.value)} style={{width:"100%",padding:"8px 10px",background:"var(--bg-card)",border:"1px solid var(--border)",borderRadius:7,color:"var(--text-primary)",fontFamily:"monospace",fontSize:11}}>
+                  <option value="">Select character…</option>
+                  {allChars.map(c=><option key={c.id} value={c.id}>{c.heroName}{c.isVillain?" ⚠":""}</option>)}
+                </select>
+              </div>
+              <div>
+                <div style={{fontSize:9,color:"var(--text3)",marginBottom:5,letterSpacing:"0.1em",textTransform:"uppercase"}}>Character B</div>
+                <select value={ftAddB} onChange={e=>setFtAddB(e.target.value)} style={{width:"100%",padding:"8px 10px",background:"var(--bg-card)",border:"1px solid var(--border)",borderRadius:7,color:"var(--text-primary)",fontFamily:"monospace",fontSize:11}}>
+                  <option value="">Select character…</option>
+                  {allChars.filter(c=>c.id!==ftAddA).map(c=><option key={c.id} value={c.id}>{c.heroName}{c.isVillain?" ⚠":""}</option>)}
+                </select>
+              </div>
+            </div>
+            <div style={{marginBottom:12}}>
+              <div style={{fontSize:9,color:"var(--text3)",marginBottom:7,letterSpacing:"0.1em",textTransform:"uppercase"}}>A is B's…</div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                {FAMILY_RELATIONS.map(r=>(
+                  <button key={r.id} onClick={()=>setFtAddRelation(r.id)}
+                    style={{padding:"5px 11px",background:ftAddRelation===r.id?`${G}18`:"var(--bg-card)",border:`1px solid ${ftAddRelation===r.id?G:"var(--border)"}`,borderRadius:16,cursor:"pointer",fontSize:10,color:ftAddRelation===r.id?G:"var(--text3)",fontFamily:"monospace",transition:"all 0.1s"}}>
+                    {r.label}
+                  </button>
+                ))}
+              </div>
+              {ftAddA&&ftAddB&&(()=>{
+                const rel=FAMILY_RELATIONS.find(r=>r.id===ftAddRelation);
+                const cA=getChar(ftAddA),cB=getChar(ftAddB);
+                if(!rel||!cA||!cB)return null;
+                return<div style={{marginTop:9,fontSize:10,color:"var(--text3)",fontStyle:"italic"}}>{cA.heroName} is {cB.heroName}'s <span style={{color:relColor(rel.label),fontWeight:"bold"}}>{rel.label}</span> · {cB.heroName} is {cA.heroName}'s <span style={{color:relColor(rel.inverse),fontWeight:"bold"}}>{rel.inverse}</span></div>;
+              })()}
+            </div>
+            <button onClick={addFamilyLink} disabled={!ftAddA||!ftAddB||ftAddA===ftAddB}
+              style={{width:"100%",padding:"11px",background:(!ftAddA||!ftAddB||ftAddA===ftAddB)?"var(--bg-card)":`${G}14`,border:`1px solid ${(!ftAddA||!ftAddB||ftAddA===ftAddB)?"var(--border)":G}`,borderRadius:8,cursor:(!ftAddA||!ftAddB||ftAddA===ftAddB)?"not-allowed":"pointer",color:(!ftAddA||!ftAddB||ftAddA===ftAddB)?"var(--text3)":G,fontSize:10.5,letterSpacing:"0.12em",textTransform:"uppercase",fontFamily:"monospace"}}>
+              Add Connection →
+            </button>
+          </div>
+
+          {/* Connection list */}
+          {familyLinks.length>0&&(<>
+            <div style={{fontSize:9,letterSpacing:"0.18em",color:`${G}88`,textTransform:"uppercase",marginBottom:10}}>All Connections ({familyLinks.length})</div>
+            <div style={{display:"flex",flexDirection:"column",gap:6}}>
+              {familyLinks.map(link=>{
+                const cA=getChar(link.a),cB=getChar(link.b);
+                const color=relColor(link.aRelation);
+                return(
+                  <div key={link.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:9}}>
+                    <div style={{width:8,height:8,borderRadius:"50%",background:color,flexShrink:0}}/>
+                    <div style={{flex:1,fontSize:11}}>
+                      <span style={{color:"var(--text-primary)",fontWeight:"bold"}}>{cA?.heroName||link.a}</span>
+                      <span style={{color:color,margin:"0 7px"}}>is {link.aRelation} of</span>
+                      <span style={{color:"var(--text-primary)",fontWeight:"bold"}}>{cB?.heroName||link.b}</span>
+                    </div>
+                    <button onClick={()=>removeFamilyLink(link.id)} style={{padding:"3px 9px",background:"rgba(163,45,45,0.1)",border:"1px solid rgba(163,45,45,0.25)",borderRadius:6,cursor:"pointer",color:"#e74c3c",fontSize:9,fontFamily:"monospace",flexShrink:0}}>Remove</button>
+                  </div>
+                );
+              })}
+            </div>
+          </>)}
         </>);
       })()}
 
