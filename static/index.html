@@ -122,22 +122,22 @@ const ALIGN_META={
 
 // ── Race tree ─────────────────────────────────────────────────────────────────
 const RACE_TREE={
-  human:{label:"Human",subs:[
+  human:{label:"Human",hint:"Standard biological human. No innate powers — ability comes from training, gear, or external modification.",subs:[
     {id:"human",label:"Human",lore:"No biological enhancements — power comes entirely from discipline, skill, and will."},
     {id:"enhanced_human",label:"Enhanced Human",lore:"Biologically modified — serum, experiment, or gene therapy unlocked their abilities. Their humanity is intact but upgraded."},
     {id:"cybernetic_human",label:"Cybernetic Human",lore:"Technology fused into the body — part machine, part human, navigating identity between both worlds."},
   ]},
-  mutate:{label:"Mutate",subs:[
+  mutate:{label:"Mutate",hint:"Human with a genetic mutation as the power source. The mutation may be inherited, triggered, or forced — but it defines who they are.",subs:[
     {id:"a_gene_mutate",label:"A-Gene Mutate",lore:"Born with a dormant aggression gene that activated — power is in the blood, not earned. They never asked for this."},
     {id:"experiment_mutate",label:"Experiment Mutate",lore:"Deliberately altered by outside forces — a test subject who survived and turned the results into identity."},
     {id:"accident_mutate",label:"Accident Mutate",lore:"An unplanned event rewrote their biology — disaster became origin, mutation became purpose."},
   ]},
-  alien:{label:"Alien",subs:[
-    {id:"zyrenian",label:"Zyrenian",lore:"Battle-bred warrior race — power scales with combat experience, pride is genetic, and losing is not in their vocabulary. War is culture."},
-    {id:"auranthi",label:"Auranthi",lore:"Solar-absorbing species from a dead world — immense power drawn from starlight, haunted by a lost civilization they carry alone."},
-    {id:"dravosi",label:"Dravosi",lore:"Apex-predator empire builders — genetically superior conquering species driven by dominance, legacy, and the belief that strength is the only truth."},
+  alien:{label:"Alien",hint:"Not of this world. Power comes from biology, not modification. Three distinct species — each with a different relationship to strength, civilization, and purpose.",subs:[
+    {id:"zyrenian",label:"Zyrenian",lore:"Battle-bred warrior race — power scales with combat experience, pride is genetic, and losing is not in their vocabulary. War is culture. (Think: Saiyan)"},
+    {id:"auranthi",label:"Auranthi",lore:"Solar-absorbing species from a dead world — immense power drawn from starlight, haunted by a lost civilization they carry alone. (Think: Kryptonian)"},
+    {id:"dravosi",label:"Dravosi",lore:"Apex-predator empire builders — genetically superior conquering species driven by dominance, legacy, and the belief that strength is the only truth. (Think: Viltrumite)"},
   ]},
-  hybrid:{label:"Hybrid",subs:[]},
+  hybrid:{label:"Hybrid",hint:"Mixed heritage of two races. Choose both bloodlines — biology and history from each side shape who they are. The combination creates something entirely new.",subs:[]},
 };
 function raceLabel(r){
   if(!r)return"";
@@ -367,7 +367,7 @@ function CharacterPage({member,imageUrl,isVillain=false,teamName,teamColor}){
           <div style={{padding:"8px 10px",display:"flex",flexDirection:"column",gap:4}}>
             <div><span style={{fontSize:8.5,fontWeight:"bold",color:cl,letterSpacing:"0.04em"}}>AFFILIATION: </span><span style={{fontSize:8.5,color:"var(--text2)"}}>{affiliationLine}</span></div>
             <div><span style={{fontSize:8.5,fontWeight:"bold",color:cl,letterSpacing:"0.04em"}}>KEY STRENGTHS: </span><span style={{fontSize:8.5,color:"var(--text2)"}}>{keyStrengths}</span></div>
-            {(member.sex||member.gender||member.species)&&<div><span style={{fontSize:8.5,fontWeight:"bold",color:cl,letterSpacing:"0.04em"}}>PROFILE: </span><span style={{fontSize:8.5,color:"var(--text2)"}}>{[member.sex&&`Sex: ${member.sex}`,member.gender&&member.gender!==member.sex&&`Gender: ${member.gender}`,member.age&&`Age ${member.age}`,member.birthYear&&`b. ${member.birthYear}`,member.species].filter(Boolean).join(" · ")}</span></div>}
+            {(member.gender||member.species)&&<div><span style={{fontSize:8.5,fontWeight:"bold",color:cl,letterSpacing:"0.04em"}}>PROFILE: </span><span style={{fontSize:8.5,color:"var(--text2)"}}>{[member.gender,member.age&&`Age ${member.age}`,member.birthYear&&`b. ${member.birthYear}`,member.species].filter(Boolean).join(" · ")}</span></div>}
             {member.race&&<div><span style={{fontSize:8.5,fontWeight:"bold",color:cl,letterSpacing:"0.04em"}}>RACE: </span><span style={{fontSize:8.5,color:"var(--text2)"}}>{raceLabel(member.race)}</span></div>}
             <div><span style={{fontSize:8.5,fontWeight:"bold",color:cl,letterSpacing:"0.04em"}}>STATUS: </span><span style={{fontSize:8.5,color:isVillain?"#E07070":"var(--text2)"}}>{isVillain?"HIGH PRIORITY THREAT":member.nkAlignment==="base"?"NK OPERATIVE":"ASSOCIATE"}</span></div>
           </div>
@@ -428,13 +428,13 @@ function RaceSelector({value,onChange,color}){
     <div>
       <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:6}}>
         {Object.entries(RACE_TREE).map(([id,r])=>(
-          <button key={id} style={bs(main===id)} onClick={()=>{setMain(id);setSub(null);setH([{main:null,sub:null},{main:null,sub:null}]);}}>{r.label}</button>
+          <button key={id} title={r.hint||""} style={bs(main===id)} onClick={()=>{setMain(id);setSub(null);setH([{main:null,sub:null},{main:null,sub:null}]);}}>{r.label}</button>
         ))}
       </div>
       {main&&main!=="hybrid"&&(
         <div style={{display:"flex",flexWrap:"wrap",gap:5,paddingLeft:8,borderLeft:`2px solid ${c}30`,marginBottom:4}}>
           {RACE_TREE[main].subs.map(s=>(
-            <button key={s.id} style={bs(sub===s.id)} onClick={()=>setSub(s.id)}>{s.label}</button>
+            <button key={s.id} title={s.lore||""} style={bs(sub===s.id)} onClick={()=>setSub(s.id)}>{s.label}</button>
           ))}
         </div>
       )}
@@ -447,13 +447,13 @@ function RaceSelector({value,onChange,color}){
                 <div style={{fontSize:7.5,color:"var(--text4)",letterSpacing:"0.1em",marginBottom:4}}>{i===0?"FIRST RACE":"SECOND RACE"}</div>
                 <div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:4}}>
                   {Object.entries(RACE_TREE).filter(([id])=>id!=="hybrid").map(([id,r])=>(
-                    <button key={id} style={bs(hv.main===id)} onClick={()=>setH(prev=>prev.map((x,j)=>j===i?{main:id,sub:null}:x))}>{r.label}</button>
+                    <button key={id} title={r.hint||""} style={bs(hv.main===id)} onClick={()=>setH(prev=>prev.map((x,j)=>j===i?{main:id,sub:null}:x))}>{r.label}</button>
                   ))}
                 </div>
                 {hv.main&&(
                   <div style={{display:"flex",flexWrap:"wrap",gap:4,paddingLeft:6,borderLeft:`1px solid ${c}20`}}>
                     {RACE_TREE[hv.main].subs.map(s=>(
-                      <button key={s.id} style={bs(hv.sub===s.id)} onClick={()=>setH(prev=>prev.map((x,j)=>j===i?{...x,sub:s.id}:x))}>{s.label}</button>
+                      <button key={s.id} title={s.lore||""} style={bs(hv.sub===s.id)} onClick={()=>setH(prev=>prev.map((x,j)=>j===i?{...x,sub:s.id}:x))}>{s.label}</button>
                     ))}
                   </div>
                 )}
@@ -475,7 +475,6 @@ function EditPanel({member,onSave,onCancel,callAI,teamName}){
   const[align,setAlign]=useState(member.nkAlignment||"neutral");
   const[gender,setGender]=useState(member.gender||"");
   const[race,setRace]=useState(member.race||null);
-  const[sex,setSex]=useState(member.sex||"");
   const[age,setAge]=useState(member.age||"");
   const[birthYear,setBirthYear]=useState(member.birthYear||"");
   const[species,setSpecies]=useState(member.species||"");
@@ -494,15 +493,6 @@ function EditPanel({member,onSave,onCancel,callAI,teamName}){
   }
   return(<div style={{padding:"18px 20px",background:"var(--bg-card2, #07070E)",border:`1px solid ${c}33`,borderRadius:"0 0 12px 12px"}}>
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:14}}>
-      <div>
-        <div style={{fontSize:9,letterSpacing:"0.12em",color:`${c}88`,textTransform:"uppercase",marginBottom:5}}>Sex</div>
-        <select value={sex} onChange={e=>setSex(e.target.value)} style={{width:"100%",padding:"7px 10px",background:"var(--bg2)",border:"1px solid var(--border2)",borderRadius:7,color:"var(--text-primary)",fontSize:11}}>
-          <option value="">— unset —</option>
-          <option value="Male">Male</option>
-          <option value="Female">Female</option>
-          <option value="Other">Other</option>
-        </select>
-      </div>
       <div>
         <div style={{fontSize:9,letterSpacing:"0.12em",color:`${c}88`,textTransform:"uppercase",marginBottom:5}}>Gender</div>
         <select value={gender} onChange={e=>setGender(e.target.value)} style={{width:"100%",padding:"7px 10px",background:"var(--bg2)",border:"1px solid var(--border2)",borderRadius:7,color:"var(--text-primary)",fontSize:11}}>
@@ -549,7 +539,7 @@ function EditPanel({member,onSave,onCancel,callAI,teamName}){
     {powers.map((p,i)=>(<div key={i} style={{marginBottom:10}}><input type="text" placeholder="Power name" value={p.name} onChange={e=>setPowers(pw=>pw.map((x,j)=>j===i?{...x,name:e.target.value}:x))} style={{marginBottom:4}}/><input type="text" placeholder="Description" value={p.desc} onChange={e=>setPowers(pw=>pw.map((x,j)=>j===i?{...x,desc:e.target.value}:x))}/></div>))}
     <div style={{display:"flex",gap:10,marginTop:16}}>
       <button onClick={onCancel} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:11}}>Cancel</button>
-      <button onClick={()=>onSave({tagline:t,origin:o,stats,powers,nkAlignment:align,gender,sex,age,birthYear,race,species})} style={{flex:2,padding:"10px",background:`${c}18`,border:`1px solid ${c}`,borderRadius:8,cursor:"pointer",color:c,fontSize:11,letterSpacing:"0.1em",textTransform:"uppercase"}}>Save Changes</button>
+      <button onClick={()=>onSave({tagline:t,origin:o,stats,powers,nkAlignment:align,gender,age,birthYear,race,species})} style={{flex:2,padding:"10px",background:`${c}18`,border:`1px solid ${c}`,borderRadius:8,cursor:"pointer",color:c,fontSize:11,letterSpacing:"0.1em",textTransform:"uppercase"}}>Save Changes</button>
     </div>
   </div>);
 }
@@ -871,7 +861,6 @@ function App(){
   const[rName,setRName]=useState("");const[rHeroName,setRHeroName]=useState("");const[rAccent,setRAccent]=useState("crimson");
   const[rNkAlign,setRNkAlign]=useState("neutral");
   const[rGender,setRGender]=useState("Male");
-  const[rSex,setRSex]=useState("Male");
   const[rAge,setRAge]=useState("");
   const[rBirthYear,setRBirthYear]=useState("");
   const[rRace,setRRace]=useState(null);
@@ -1084,10 +1073,10 @@ function App(){
     try{
       const raceStr=raceLabel(rRace);
       const raceLoreStr=raceLore(rRace);
-      const p=await callAI(`Create a ${activeTeam.name} team hero. JSON only.\n\nReal name: ${rName||"Unknown"}\nSex: ${rSex}\nGender: ${rGender}\nAge: ${rAge||(rBirthYear?String(2026-parseInt(rBirthYear)):"Unknown")}\n${rBirthYear?`Birth year: ${rBirthYear}\n`:""}Race: ${raceStr||"Unspecified"}\n${raceLoreStr?`Race lore (bake into origin): ${raceLoreStr}\n`:""}Species: ${rSpecies||"Human"}\nTeam: ${activeTeam.name} (${teamType})\nAccent color: ${hex}\nNK alignment of this character: ${rNkAlign}\nExisting names (pick different): ${existingNames||"none yet"}\n${rHeroName?`Hero name: ${rHeroName} (use exactly this name)`:"Hero name: (choose a fitting dark name)"}\nQuiz:\n${answers}\n\nIMPORTANT: Use correct pronouns (${pronounOf(rGender)}/${pronounOf(rGender)==="they"?"them":pronounOf(rGender)==="she"?"her":"him"}) for this character throughout.\nIMPORTANT: Pick 2-3 specific comic or anime characters as DNA for this hero based on the quiz answers. Bake these invisibly into every output field — power names shaped by their style, tagline capturing their essence, origin echoing their arc. Never name-drop them; only list in the dna array.\n\n{"heroName":"${rHeroName||"2-word dark name"}","tagline":"one punchy sentence","role":"Role · Descriptor","origin":"2-3 sentences connected to the team and their world — reflect their race biology and birth year context if provided","powers":[{"name":"Name","desc":"visual desc"},{"name":"Name","desc":"visual desc"},{"name":"Name","desc":"visual desc"},{"name":"Name","desc":"visual desc"}],"stats":{"Power":75,"Speed":70,"Tech":60,"Intellect":80,"Will":85},"costumeDesc":"costume in team aesthetic with ${hex} accent","powerFX":"visible effects using ${hex}","consistencyNotes":"design lock rules","dna":["Character whose energy shapes this hero's powers — e.g. Vegeta","Character whose arc or personality informs their story"]}`);
+      const p=await callAI(`Create a ${activeTeam.name} team hero. JSON only.\n\nReal name: ${rName||"Unknown"}\nGender: ${rGender}\nAge: ${rAge||(rBirthYear?String(2026-parseInt(rBirthYear)):"Unknown")}\n${rBirthYear?`Birth year: ${rBirthYear}\n`:""}Race: ${raceStr||"Unspecified"}\n${raceLoreStr?`Race lore (bake into origin): ${raceLoreStr}\n`:""}Species: ${rSpecies||"Human"}\nTeam: ${activeTeam.name} (${teamType})\nAccent color: ${hex}\nNK alignment of this character: ${rNkAlign}\nExisting names (pick different): ${existingNames||"none yet"}\n${rHeroName?`Hero name: ${rHeroName} (use exactly this name)`:"Hero name: (choose a fitting dark name)"}\nQuiz:\n${answers}\n\nIMPORTANT: Use correct pronouns (${pronounOf(rGender)}/${pronounOf(rGender)==="they"?"them":pronounOf(rGender)==="she"?"her":"him"}) for this character throughout.\nIMPORTANT: Pick 2-3 specific comic or anime characters as DNA for this hero based on the quiz answers. Bake these invisibly into every output field — power names shaped by their style, tagline capturing their essence, origin echoing their arc. Never name-drop them; only list in the dna array.\n\n{"heroName":"${rHeroName||"2-word dark name"}","tagline":"one punchy sentence","role":"Role · Descriptor","origin":"2-3 sentences connected to the team and their world — reflect their race biology and birth year context if provided","powers":[{"name":"Name","desc":"visual desc"},{"name":"Name","desc":"visual desc"},{"name":"Name","desc":"visual desc"},{"name":"Name","desc":"visual desc"}],"stats":{"Power":75,"Speed":70,"Tech":60,"Intellect":80,"Will":85},"costumeDesc":"costume in team aesthetic with ${hex} accent","powerFX":"visible effects using ${hex}","consistencyNotes":"design lock rules","dna":["Character whose energy shapes this hero's powers — e.g. Vegeta","Character whose arc or personality informs their story"]}`);
       const num=String(activeRoster.length+1).padStart(2,"0");
       const computedAge=rAge||(rBirthYear?String(2026-parseInt(rBirthYear)):"");
-      setRResult({id:`char-${Date.now()}`,teamId:activeTeamId,realName:rName||"Unknown",sex:rSex,gender:rGender,age:computedAge,birthYear:rBirthYear||"",race:rRace,species:rSpecies||"Human",color:hex,colorLight:hex+"CC",initials:rName?rName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",number:num,isCustom:true,nkAlignment:rNkAlign,...p});
+      setRResult({id:`char-${Date.now()}`,teamId:activeTeamId,realName:rName||"Unknown",gender:rGender,age:computedAge,birthYear:rBirthYear||"",race:rRace,species:rSpecies||"Human",color:hex,colorLight:hex+"CC",initials:rName?rName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",number:num,isCustom:true,nkAlignment:rNkAlign,...p});
     }catch(e){setRResult({error:true,msg:e.message});}
     setRLoading(false);
   };
@@ -1097,7 +1086,7 @@ function App(){
     const newRosters={...teamRosters,[activeTeamId]:[...(teamRosters[activeTeamId]||[]),rResult]};
     setTeamRosters(newRosters);
     persist("forge-rosters",newRosters);
-    setRResult(null);setRAnswers({});setRName("");setRHeroName("");setRStep(0);setRNkAlign("neutral");setRGender("Male");setRSex("Male");setRAge("");setRBirthYear("");setRRace(null);setRSpecies("");setDeepAnswers({});setDeepPhase(0);setTab("roster");
+    setRResult(null);setRAnswers({});setRName("");setRHeroName("");setRStep(0);setRNkAlign("neutral");setRGender("Male");setRAge("");setRBirthYear("");setRRace(null);setRSpecies("");setDeepAnswers({});setDeepPhase(0);setTab("roster");
   };
 
   const generateDeepRecruit=async()=>{
@@ -1119,10 +1108,10 @@ function App(){
     try{
       const raceStr=raceLabel(rRace);
       const raceLoreStr=raceLore(rRace);
-      const p=await callAI(`Create a deeply developed ${activeTeam.name} hero using rich comic book lore. JSON only.\n\nReal name: ${rName||"Unknown"}\nSex: ${rSex}\nGender: ${rGender}\nAge: ${rAge||(rBirthYear?String(2026-parseInt(rBirthYear)):"Unknown")}\n${rBirthYear?`Birth year: ${rBirthYear}\n`:""}Race: ${raceStr||"Unspecified"}\n${raceLoreStr?`Race lore (bake into origin): ${raceLoreStr}\n`:""}Species: ${rSpecies||"Human"}\nAccent color: ${hex}\nNK alignment: ${rNkAlign}\nExisting names (must be different): ${existingNames||"none"}\n${rHeroName?`Hero name: ${rHeroName} (use exactly this name)`:"Hero name: (choose a distinct name fitting the lore profile)"}\nTeam: ${activeTeam.name}\nIMPORTANT: Use correct pronouns (${pronounOf(rGender)}/${pronounOf(rGender)==="they"?"them":pronounOf(rGender)==="she"?"her":"him"}) for this character throughout.\n${dnaFoundation?`\nCHARACTER DNA FOUNDATION (bake these invisibly into every field — powers named/described through their aesthetic, origin reflecting their arc pattern, personality in the tagline — filter through the NK universe, never reference by name except in the dna array):\n${dnaFoundation}\n`:""}\nFull lore profile:\n${loreContext}${freeText?"\nVisual references: "+freeText:""}\n\nUse this lore to create a hero that feels authentic to these inspirations. JSON:\n{"heroName":"${rHeroName||"2-word hero name, distinct and fitting the lore profile"}","tagline":"one piercing sentence that captures their essence","role":"Role · Descriptor","origin":"3-4 sentences backstory that directly reflects the lore answers — specific and rooted in their race and birth year context","powers":[{"name":"Power name matching their visual style","desc":"2-sentence visual description of exactly how this looks in action"},{"name":"Power name","desc":"visual desc"},{"name":"Power name","desc":"visual desc"},{"name":"Power name","desc":"visual desc"}],"stats":{"Power":75,"Speed":70,"Tech":60,"Intellect":80,"Will":85},"costumeDesc":"Detailed costume description using ${hex} accent, reflecting their costume philosophy answer","powerFX":"Exact visual description of power effects using ${hex}, matching their FX style answer","consistencyNotes":"2-3 specific design lock rules based on their visual choices","dna":["Primary DNA — exact character name like Vegeta or Moon Knight","Secondary DNA — another specific character baked into this hero","Optional third DNA — only if genuinely applicable"]}`);
+      const p=await callAI(`Create a deeply developed ${activeTeam.name} hero using rich comic book lore. JSON only.\n\nReal name: ${rName||"Unknown"}\nGender: ${rGender}\nAge: ${rAge||(rBirthYear?String(2026-parseInt(rBirthYear)):"Unknown")}\n${rBirthYear?`Birth year: ${rBirthYear}\n`:""}Race: ${raceStr||"Unspecified"}\n${raceLoreStr?`Race lore (bake into origin): ${raceLoreStr}\n`:""}Species: ${rSpecies||"Human"}\nAccent color: ${hex}\nNK alignment: ${rNkAlign}\nExisting names (must be different): ${existingNames||"none"}\n${rHeroName?`Hero name: ${rHeroName} (use exactly this name)`:"Hero name: (choose a distinct name fitting the lore profile)"}\nTeam: ${activeTeam.name}\nIMPORTANT: Use correct pronouns (${pronounOf(rGender)}/${pronounOf(rGender)==="they"?"them":pronounOf(rGender)==="she"?"her":"him"}) for this character throughout.\n${dnaFoundation?`\nCHARACTER DNA FOUNDATION (bake these invisibly into every field — powers named/described through their aesthetic, origin reflecting their arc pattern, personality in the tagline — filter through the NK universe, never reference by name except in the dna array):\n${dnaFoundation}\n`:""}\nFull lore profile:\n${loreContext}${freeText?"\nVisual references: "+freeText:""}\n\nUse this lore to create a hero that feels authentic to these inspirations. JSON:\n{"heroName":"${rHeroName||"2-word hero name, distinct and fitting the lore profile"}","tagline":"one piercing sentence that captures their essence","role":"Role · Descriptor","origin":"3-4 sentences backstory that directly reflects the lore answers — specific and rooted in their race and birth year context","powers":[{"name":"Power name matching their visual style","desc":"2-sentence visual description of exactly how this looks in action"},{"name":"Power name","desc":"visual desc"},{"name":"Power name","desc":"visual desc"},{"name":"Power name","desc":"visual desc"}],"stats":{"Power":75,"Speed":70,"Tech":60,"Intellect":80,"Will":85},"costumeDesc":"Detailed costume description using ${hex} accent, reflecting their costume philosophy answer","powerFX":"Exact visual description of power effects using ${hex}, matching their FX style answer","consistencyNotes":"2-3 specific design lock rules based on their visual choices","dna":["Primary DNA — exact character name like Vegeta or Moon Knight","Secondary DNA — another specific character baked into this hero","Optional third DNA — only if genuinely applicable"]}`);
       const num=String(activeRoster.length+1).padStart(2,"0");
       const computedAge=rAge||(rBirthYear?String(2026-parseInt(rBirthYear)):"");
-      setRResult({id:`char-${Date.now()}`,teamId:activeTeamId,realName:rName||"Unknown",sex:rSex,gender:rGender,age:computedAge,birthYear:rBirthYear||"",race:rRace,species:rSpecies||"Human",color:hex,colorLight:hex+"CC",initials:rName?rName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",number:num,isCustom:true,nkAlignment:rNkAlign,deepLore:deepAnswers,...p});
+      setRResult({id:`char-${Date.now()}`,teamId:activeTeamId,realName:rName||"Unknown",gender:rGender,age:computedAge,birthYear:rBirthYear||"",race:rRace,species:rSpecies||"Human",color:hex,colorLight:hex+"CC",initials:rName?rName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",number:num,isCustom:true,nkAlignment:rNkAlign,deepLore:deepAnswers,...p});
     }catch(e){setRResult({error:true,msg:e.message});}
     setRLoading(false);
   };
@@ -1648,14 +1637,6 @@ function App(){
           <span style={s.lbl}>Real Name (optional)</span>
           <input type="text" placeholder="e.g. Devon Marshall" value={rName} onChange={e=>setRName(e.target.value)} style={{marginBottom:14}}/>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:14}}>
-            <div>
-              <span style={s.lbl}>Sex</span>
-              <select value={rSex} onChange={e=>setRSex(e.target.value)} style={{width:"100%",padding:"8px 10px",background:"var(--bg2)",border:"1px solid var(--border2)",borderRadius:7,color:"var(--text-primary)",fontSize:11,marginTop:4}}>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-                <option value="Other">Other</option>
-              </select>
-            </div>
             <div>
               <span style={s.lbl}>Gender</span>
               <select value={rGender} onChange={e=>setRGender(e.target.value)} style={{width:"100%",padding:"8px 10px",background:"var(--bg2)",border:"1px solid var(--border2)",borderRadius:7,color:"var(--text-primary)",fontSize:11,marginTop:4}}>
