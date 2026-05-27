@@ -355,13 +355,36 @@ function EditPanel({member,onSave,onCancel}){
   </div>);
 }
 
+function TeamLogo({team,size=40,style:extra={}}){
+  const c=team.color||G;
+  const seed=team.logoSeed!=null?team.logoSeed:Math.abs((team.id||'').split('').reduce((a,ch)=>((a<<5)-a)+ch.charCodeAt(0)|0,0));
+  const t=seed%8;
+  const sw=size<30?0.9:1.3;
+  const d=Math.round(size*0.72);
+  const shapes=[
+    <g key="s"><polygon points="16,3 26,8 26,18 16,28 6,18 6,8" fill={`${c}30`} stroke={c} strokeWidth={sw}/><polygon points="16,9 21,12 21,18 16,23 11,18 11,12" fill={c} opacity="0.5"/></g>,
+    <g key="s"><polygon points="16,3 26.5,9 26.5,23 16,29 5.5,23 5.5,9" fill="none" stroke={c} strokeWidth={sw}/><polygon points="16,8 21.5,11.25 21.5,20.75 16,24 10.5,20.75 10.5,11.25" fill={c} opacity="0.4"/></g>,
+    <g key="s"><polygon points="20,2 8,18 15,18 12,30 24,14 17,14" fill={c} opacity="0.9"/></g>,
+    <g key="s"><rect x="9" y="9" width="14" height="14" transform="rotate(45,16,16)" fill={`${c}25`} stroke={c} strokeWidth={sw}/><line x1="16" y1="2" x2="16" y2="11" stroke={c} strokeWidth={sw*0.8} opacity="0.5"/><line x1="16" y1="21" x2="16" y2="30" stroke={c} strokeWidth={sw*0.8} opacity="0.5"/><line x1="2" y1="16" x2="11" y2="16" stroke={c} strokeWidth={sw*0.8} opacity="0.5"/><line x1="21" y1="16" x2="30" y2="16" stroke={c} strokeWidth={sw*0.8} opacity="0.5"/><circle cx="16" cy="16" r="3.5" fill={c}/></g>,
+    <g key="s"><path d="M16 2 L18.5 13.5 L30 16 L18.5 18.5 L16 30 L13.5 18.5 L2 16 L13.5 13.5 Z" fill={c} opacity="0.85"/></g>,
+    <g key="s"><polyline points="5,22 16,8 27,22" fill="none" stroke={c} strokeWidth={sw*1.7} strokeLinejoin="round" strokeLinecap="round"/><polyline points="7,27 16,14 25,27" fill="none" stroke={c} strokeWidth={sw*1.3} strokeLinejoin="round" strokeLinecap="round" opacity="0.42"/></g>,
+    <g key="s"><circle cx="16" cy="16" r="3.5" fill={c}/><ellipse cx="16" cy="16" rx="13" ry="5.5" fill="none" stroke={c} strokeWidth={sw*0.9} opacity="0.65"/><ellipse cx="16" cy="16" rx="13" ry="5.5" fill="none" stroke={c} strokeWidth={sw*0.9} opacity="0.65" transform="rotate(60,16,16)"/><ellipse cx="16" cy="16" rx="13" ry="5.5" fill="none" stroke={c} strokeWidth={sw*0.9} opacity="0.65" transform="rotate(120,16,16)"/></g>,
+    <g key="s"><polygon points="16,4 29,27 3,27" fill="none" stroke={c} strokeWidth={sw}/><polygon points="16,11 23.5,25 8.5,25" fill={c} opacity="0.42"/></g>,
+  ];
+  return(
+    <div style={{width:size,height:size,borderRadius:Math.round(size*0.22),background:`${c}12`,border:`1px solid ${c}33`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,overflow:"hidden",boxShadow:`0 0 10px ${c}18`,...extra}}>
+      <svg width={d} height={d} viewBox="0 0 32 32">{shapes[t]}</svg>
+    </div>
+  );
+}
+
 function TeamCard({team,isActive,memberCount,onSelect,onEdit,onDelete}){
   const am=ALIGN_META[team.nkAlignment]||ALIGN_META.neutral;
   const type=TEAM_TYPES.find(t=>t.id===team.type);
   return(<div onClick={onSelect} style={{background:isActive?`${team.color}12`:"var(--bg3)",border:`2px solid ${isActive?team.color+"88":"var(--border2)"}`,borderRadius:12,padding:"16px 18px",cursor:"pointer",transition:"all 0.15s",position:"relative"}}>
     {isActive&&<div style={{position:"absolute",top:10,right:10,width:8,height:8,borderRadius:"50%",background:team.color}}/>}
     <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
-      <div style={{width:40,height:40,borderRadius:8,background:`${team.color}22`,border:`1px solid ${team.color}55`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:"bold",color:team.color,flexShrink:0,letterSpacing:"0.05em"}}>{team.abbr}</div>
+      <TeamLogo team={team} size={40}/>
       <div style={{flex:1,minWidth:0}}><div style={{fontSize:14,fontWeight:"bold",color:"var(--text-primary)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{team.name}</div><div style={{fontSize:9,color:"var(--text3)",marginTop:1}}>{memberCount} member{memberCount!==1?"s":""} · {type?.label||team.type}</div></div>
     </div>
     <div style={{fontSize:11,color:"var(--text2)",lineHeight:1.5,marginBottom:10,minHeight:32}}>{(team.description||"").slice(0,80)}{(team.description||"").length>80?"...":""}</div>
@@ -386,6 +409,7 @@ function TeamCreator({teams,onSave,onCancel,callAI,ollamaOk,initialData}){
   const[motto,setMotto]=useState(initialData?.motto||"");
   const[origin,setOrigin]=useState(initialData?.origin||"");
   const[genLoading,setGenLoading]=useState(false);
+  const[logoSeed,setLogoSeed]=useState(initialData?.logoSeed??Math.floor(Math.random()*8));
   const autoAbbr=n=>n.split(" ").map(w=>w[0]||"").join("").toUpperCase().slice(0,3)||"??";
   const handleName=n=>{setName(n);if(!abbr||abbr===autoAbbr(name))setAbbr(autoAbbr(n));};
   const generateLore=async()=>{
@@ -400,7 +424,7 @@ function TeamCreator({teams,onSave,onCancel,callAI,ollamaOk,initialData}){
   };
   const handleSave=()=>{
     if(!name.trim())return;
-    onSave({id:`team-${Date.now()}`,name:name.trim(),abbr:abbr.trim()||autoAbbr(name),color,colorLight:color+"CC",type,nkAlignment:align,description:desc,motto,origin,isDefault:false,createdAt:Date.now()});
+    onSave({id:`team-${Date.now()}`,name:name.trim(),abbr:abbr.trim()||autoAbbr(name),color,colorLight:color+"CC",type,nkAlignment:align,description:desc,motto,origin,logoSeed,isDefault:false,createdAt:Date.now()});
   };
   const s2={padding:"12px 16px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:10};
   const lbl={fontSize:9,letterSpacing:"0.18em",color:"rgba(212,175,55,0.75)",textTransform:"uppercase",marginBottom:8,display:"block"};
@@ -417,6 +441,19 @@ function TeamCreator({teams,onSave,onCancel,callAI,ollamaOk,initialData}){
         <span style={lbl}>Team Color</span>
         <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:6}}>
           {TEAM_COLORS.map(tc=><button key={tc.id} onClick={()=>setColor(tc.hex)} style={{display:"flex",alignItems:"center",gap:6,padding:"6px 12px",background:color===tc.hex?`${tc.hex}18`:"var(--bg3)",border:`1px solid ${color===tc.hex?tc.hex:"var(--border2)"}`,borderRadius:20,cursor:"pointer",fontFamily:"monospace",fontSize:10.5,color:color===tc.hex?"var(--text-primary)":"var(--text3)"}}><div style={{width:10,height:10,borderRadius:"50%",background:tc.hex,flexShrink:0}}/>{tc.label}</button>)}
+        </div>
+        <div style={{marginTop:16,marginBottom:4}}>
+          <span style={lbl}>Team Logo</span>
+          <div style={{display:"flex",alignItems:"center",gap:14,padding:"12px 14px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:9}}>
+            <TeamLogo team={{id:`preview-${logoSeed}`,color,logoSeed}} size={56}/>
+            <div style={{flex:1}}>
+              <div style={{fontSize:10,color:"var(--text2)",marginBottom:8,fontFamily:"monospace"}}>Style {logoSeed+1} of 8 · updates with your color</div>
+              <div style={{display:"flex",gap:7}}>
+                <button onClick={()=>setLogoSeed(s=>(s+7)%8)} style={{padding:"4px 11px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:6,cursor:"pointer",color:"var(--text2)",fontSize:10,fontFamily:"monospace"}}>← Prev</button>
+                <button onClick={()=>setLogoSeed(s=>(s+1)%8)} style={{padding:"4px 11px",background:`${color}14`,border:`1px solid ${color}55`,borderRadius:6,cursor:"pointer",color,fontSize:10,fontFamily:"monospace"}}>Next →</button>
+              </div>
+            </div>
+          </div>
         </div>
         <button disabled={!name.trim()} onClick={()=>setStep(2)} style={{width:"100%",padding:"12px",background:name.trim()?`${G}14`:"var(--bg3)",border:`1px solid ${name.trim()?G:"var(--border2)"}`,borderRadius:8,cursor:name.trim()?"pointer":"not-allowed",color:name.trim()?G:"var(--text4)",fontSize:10.5,letterSpacing:"0.12em",textTransform:"uppercase",fontFamily:"monospace",marginTop:14}}>Next →</button>
       </>)}
@@ -1099,7 +1136,7 @@ function App(){
                     const pw=getTeamPower(t.id);
                     return(<div key={t.id}>
                       <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
-                        <div style={{width:24,height:24,borderRadius:4,background:`${t.color}22`,border:`1px solid ${t.color}55`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:"bold",color:t.color}}>{t.abbr}</div>
+                        <TeamLogo team={t} size={24}/>
                         <span style={{fontSize:11,fontWeight:"bold",color:"var(--text-primary)"}}>{t.name}</span>
                       </div>
                       <div style={{marginBottom:6}}>
