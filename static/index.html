@@ -161,7 +161,7 @@ function raceLore(r){
 
 // ── Default NK members ────────────────────────────────────────────────────────
 const DEFAULT_NK=[
-  {id:"darkstar",teamId:"nocturnal-knights",heroName:"Wakháŋ",realName:"Kareem Carter",gender:"Male",species:"Human (Enhanced)",role:"Leader · Powerhouse",color:"#534AB7",colorLight:"#AFA9EC",initials:"KC",number:"01",isCore:true,nkAlignment:"base",
+  {id:"darkstar",teamId:"nocturnal-knights",heroName:"Wakháŋ",realName:"Kareem Carter",gender:"Male",species:"Human (Enhanced)",race:{main:"human",sub:"enhanced_human"},role:"Leader · Powerhouse",color:"#534AB7",colorLight:"#AFA9EC",initials:"KC",number:"01",isCore:true,nkAlignment:"base",
    tagline:"The night bends to his will.",
    powers:[{name:"Dark Ki Projection",desc:"Concentrated void-violet energy blasts that crack the air on release."},{name:"Shadow Threading",desc:"Dark energy tendrils for grappling, binding, and high-speed traversal."},{name:"Gravity Surge",desc:"Overrides gravity — flight, aerial combat, concussive ground launches."},{name:"Final Surge",desc:"Full aura release multiplying strength and speed. Visible cost when it fades."}],
    origin:"Former Division I athlete and physics prodigy. Survived a government black-site dark energy experiment that killed every other subject. He didn't form the Knights out of heroism — he formed them because the organization was still operating and no one was stopping them.",
@@ -169,7 +169,7 @@ const DEFAULT_NK=[
    costumeDesc:"sleek void-black bodysuit with deep violet (#534AB7) glowing circuit lines on chest and forearms, NK crest",
    powerFX:"void-violet aura radiating from both hands and faintly from eyes, floating 2 feet off the ground",
    consistencyNotes:"Suit ALWAYS void-black with violet accent lines only. Faint violet eye glow. No capes. No wings."},
-  {id:"phantom-edge",teamId:"nocturnal-knights",heroName:"Null/Void",realName:"Jon Bethea",gender:"Male",species:"Human",role:"Second in Command · Tech Striker",color:"#0F6E56",colorLight:"#5DCAA5",initials:"JB",number:"02",isCore:true,nkAlignment:"base",
+  {id:"phantom-edge",teamId:"nocturnal-knights",heroName:"Null/Void",realName:"Jon Bethea",gender:"Male",species:"Human",race:{main:"human",sub:"human"},role:"Second in Command · Tech Striker",color:"#0F6E56",colorLight:"#5DCAA5",initials:"JB",number:"02",isCore:true,nkAlignment:"base",
    tagline:"Every battle is already solved before it starts.",
    powers:[{name:"Chrono Blade",desc:"Vibranium-alloy energy sword that phases through non-organic matter. Trails teal afterimages."},{name:"Adaptive Nanosuit",desc:"Reconfigures in real-time — absorbs damage, shifts to offense, deploys micro-drones mid-combat."},{name:"Elastic Form",desc:"Limbs stretch, coil, and rebound for unpredictable strikes and instant distance closing."},{name:"Battlefield IQ",desc:"Visor HUD analyzes enemy patterns in seconds and feeds tactical data to the whole team."}],
    origin:"Top engineering graduate who discovered his employer was a front for the same organization that experimented on Kareem. He walked into their server room alone, copied everything, burned the rest, and rebuilt his tech from scratch.",
@@ -177,7 +177,7 @@ const DEFAULT_NK=[
    costumeDesc:"adaptive nanosuit in void-black with glowing teal (#0F6E56) circuit lines, full helmet with data visor",
    powerFX:"teal energy sword with afterimage trail, one arm elastically stretched, HUD data visible inside visor",
    consistencyNotes:"Helmet ALWAYS on with teal visor glow. No bare face in armored mode."},
-  {id:"chimera",teamId:"nocturnal-knights",heroName:"Catalix",realName:'Jesus "Omar" Fernandez',gender:"Male",species:"Human (Genetically Modified)",role:"Scientist · Genetic Brawler",color:"#993C1D",colorLight:"#F0997B",initials:"JF",number:"03",isCore:true,nkAlignment:"base",
+  {id:"chimera",teamId:"nocturnal-knights",heroName:"Catalix",realName:'Jesus "Omar" Fernandez',gender:"Male",species:"Human (Genetically Modified)",race:{main:"mutate",sub:"experiment_mutate"},role:"Scientist · Genetic Brawler",color:"#993C1D",colorLight:"#F0997B",initials:"JF",number:"03",isCore:true,nkAlignment:"base",
    tagline:"He rewrote the rules of his own biology.",
    powers:[{name:"Live Gene-Shift",desc:"Rewrites his own DNA on the fly — bone plating, razor claws, enhanced senses on demand."},{name:"Catalyst Spheres",desc:"Self-guided orbs that detonate, emit EMP bursts, or form reactive barriers."},{name:"Precision Strike",desc:"Baseball-honed reflexes plus enhanced genetics — lethal throwing accuracy at any range."},{name:"Beast Intellect",desc:"Monstrous physical form doesn't dull the mind. Processes combat and science simultaneously."}],
    origin:"A geneticist whose research was stolen and weaponized without his knowledge. He administered his own prototype to himself. The process was supposed to be reversible. Most of it was.",
@@ -185,7 +185,7 @@ const DEFAULT_NK=[
    costumeDesc:"tactical void-black bodysuit with torn sleeves revealing reinforced dark bone plating on arms, NK crest",
    powerFX:"razor bone claws on one hand, rust-orange (#993C1D) catalyst orb mid-throw, second orb orbiting shoulder",
    consistencyNotes:"Arms always show bone plating. Rust-orange ONLY accent color."},
-  {id:"paladin",teamId:"nocturnal-knights",heroName:"Bastion Prime",realName:"Mario Richardson",gender:"Male",species:"Human",role:"Heart of the Team · Clutch Factor",color:"#185FA5",colorLight:"#85B7EB",initials:"MR",number:"04",isCore:true,nkAlignment:"base",
+  {id:"paladin",teamId:"nocturnal-knights",heroName:"Bastion Prime",realName:"Mario Richardson",gender:"Male",species:"Human",race:{main:"human",sub:"human"},role:"Heart of the Team · Clutch Factor",color:"#185FA5",colorLight:"#85B7EB",initials:"MR",number:"04",isCore:true,nkAlignment:"base",
    tagline:"He doesn't have the most power. He has the most heart.",
    powers:[{name:"Resolve Shield",desc:"Nearly unbreakable energy barrier fueled by pure willpower. Glows brighter as odds stack higher."},{name:"Rally Aura",desc:"Pulse that restores focus and stamina to downed teammates. The team fights harder near him."},{name:"Last Stand Surge",desc:"Strength and durability spike dramatically when the mission is truly on the brink."},{name:"Unbreakable Will",desc:"Immune to mental attacks, fear, and manipulation. His calm steadies everyone around him."}],
    origin:"No experiment. No accident. Mario stood beside Kareem when everyone else backed away. His power has no scientific explanation — a will so unbreakable it bends physics slightly.",
@@ -311,7 +311,7 @@ function CharacterPage({member,imageUrl,isVillain=false,teamName,teamColor}){
   const calloutPool=(member.costumeDesc||"").split(/[,.]/).map(s=>s.trim()).filter(s=>s.length>8&&s.length<62);
   const labels=calloutPool.length>=2?calloutPool.slice(0,3):[
     member.role||"Operative",
-    member.species&&member.species!=="Human"?member.species:"Enhanced Operative",
+    (()=>{const s=raceLabel(member.race)||member.species||"";return s&&s!=="Human"?s:"Enhanced Operative";})(),
     member.powerFX?(member.powerFX.split(/[,.]/).map(s=>s.trim()).find(s=>s.length>6&&s.length<55)||"Power active"):null
   ].filter(Boolean).slice(0,3);
 
@@ -367,7 +367,7 @@ function CharacterPage({member,imageUrl,isVillain=false,teamName,teamColor}){
           <div style={{padding:"8px 10px",display:"flex",flexDirection:"column",gap:4}}>
             <div><span style={{fontSize:8.5,fontWeight:"bold",color:cl,letterSpacing:"0.04em"}}>AFFILIATION: </span><span style={{fontSize:8.5,color:"var(--text2)"}}>{affiliationLine}</span></div>
             <div><span style={{fontSize:8.5,fontWeight:"bold",color:cl,letterSpacing:"0.04em"}}>KEY STRENGTHS: </span><span style={{fontSize:8.5,color:"var(--text2)"}}>{keyStrengths}</span></div>
-            {(member.gender||member.species)&&<div><span style={{fontSize:8.5,fontWeight:"bold",color:cl,letterSpacing:"0.04em"}}>PROFILE: </span><span style={{fontSize:8.5,color:"var(--text2)"}}>{[member.gender,member.age&&`Age ${member.age}`,member.birthYear&&`b. ${member.birthYear}`,member.species].filter(Boolean).join(" · ")}</span></div>}
+            {(member.gender||member.age||member.birthYear)&&<div><span style={{fontSize:8.5,fontWeight:"bold",color:cl,letterSpacing:"0.04em"}}>PROFILE: </span><span style={{fontSize:8.5,color:"var(--text2)"}}>{[member.gender,member.age&&`Age ${member.age}`,member.birthYear&&`b. ${member.birthYear}`].filter(Boolean).join(" · ")}</span></div>}
             {member.race&&<div><span style={{fontSize:8.5,fontWeight:"bold",color:cl,letterSpacing:"0.04em"}}>RACE: </span><span style={{fontSize:8.5,color:"var(--text2)"}}>{raceLabel(member.race)}</span></div>}
             <div><span style={{fontSize:8.5,fontWeight:"bold",color:cl,letterSpacing:"0.04em"}}>STATUS: </span><span style={{fontSize:8.5,color:isVillain?"#E07070":"var(--text2)"}}>{isVillain?"HIGH PRIORITY THREAT":member.nkAlignment==="base"?"NK OPERATIVE":"ASSOCIATE"}</span></div>
           </div>
@@ -477,7 +477,6 @@ function EditPanel({member,onSave,onCancel,callAI,teamName}){
   const[race,setRace]=useState(member.race||null);
   const[age,setAge]=useState(member.age||"");
   const[birthYear,setBirthYear]=useState(member.birthYear||"");
-  const[species,setSpecies]=useState(member.species||"");
   const[regenLoading,setRegenLoading]=useState(false);
   const c=member.color;
   async function regenOrigin(){
@@ -511,10 +510,6 @@ function EditPanel({member,onSave,onCancel,callAI,teamName}){
         <div style={{fontSize:9,letterSpacing:"0.12em",color:`${c}88`,textTransform:"uppercase",marginBottom:5}}>Age {birthYear&&age?`(${age} yrs)`:""}</div>
         <input type="text" placeholder="e.g. 28 or Unknown" value={age} onChange={e=>setAge(e.target.value)} style={{padding:"7px 10px"}}/>
       </div>
-      <div>
-        <div style={{fontSize:9,letterSpacing:"0.12em",color:`${c}88`,textTransform:"uppercase",marginBottom:5}}>Species</div>
-        <input type="text" placeholder="Human" value={species} onChange={e=>setSpecies(e.target.value)} style={{padding:"7px 10px"}}/>
-      </div>
     </div>
     <div style={{marginBottom:14}}>
       <div style={{fontSize:9,letterSpacing:"0.12em",color:`${c}88`,textTransform:"uppercase",marginBottom:8}}>Race</div>
@@ -539,7 +534,7 @@ function EditPanel({member,onSave,onCancel,callAI,teamName}){
     {powers.map((p,i)=>(<div key={i} style={{marginBottom:10}}><input type="text" placeholder="Power name" value={p.name} onChange={e=>setPowers(pw=>pw.map((x,j)=>j===i?{...x,name:e.target.value}:x))} style={{marginBottom:4}}/><input type="text" placeholder="Description" value={p.desc} onChange={e=>setPowers(pw=>pw.map((x,j)=>j===i?{...x,desc:e.target.value}:x))}/></div>))}
     <div style={{display:"flex",gap:10,marginTop:16}}>
       <button onClick={onCancel} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:11}}>Cancel</button>
-      <button onClick={()=>onSave({tagline:t,origin:o,stats,powers,nkAlignment:align,gender,age,birthYear,race,species})} style={{flex:2,padding:"10px",background:`${c}18`,border:`1px solid ${c}`,borderRadius:8,cursor:"pointer",color:c,fontSize:11,letterSpacing:"0.1em",textTransform:"uppercase"}}>Save Changes</button>
+      <button onClick={()=>onSave({tagline:t,origin:o,stats,powers,nkAlignment:align,gender,age,birthYear,race,species:raceLabel(race)||member.species||""})} style={{flex:2,padding:"10px",background:`${c}18`,border:`1px solid ${c}`,borderRadius:8,cursor:"pointer",color:c,fontSize:11,letterSpacing:"0.1em",textTransform:"uppercase"}}>Save Changes</button>
     </div>
   </div>);
 }
@@ -864,7 +859,6 @@ function App(){
   const[rAge,setRAge]=useState("");
   const[rBirthYear,setRBirthYear]=useState("");
   const[rRace,setRRace]=useState(null);
-  const[rSpecies,setRSpecies]=useState("");
   const[rLoading,setRLoading]=useState(false);const[rResult,setRResult]=useState(null);
   const[deepMode,setDeepMode]=useState(false);
   const[deepPhase,setDeepPhase]=useState(0);
@@ -1073,10 +1067,10 @@ function App(){
     try{
       const raceStr=raceLabel(rRace);
       const raceLoreStr=raceLore(rRace);
-      const p=await callAI(`Create a ${activeTeam.name} team hero. JSON only.\n\nReal name: ${rName||"Unknown"}\nGender: ${rGender}\nAge: ${rAge||(rBirthYear?String(2026-parseInt(rBirthYear)):"Unknown")}\n${rBirthYear?`Birth year: ${rBirthYear}\n`:""}Race: ${raceStr||"Unspecified"}\n${raceLoreStr?`Race lore (bake into origin): ${raceLoreStr}\n`:""}Species: ${rSpecies||"Human"}\nTeam: ${activeTeam.name} (${teamType})\nAccent color: ${hex}\nNK alignment of this character: ${rNkAlign}\nExisting names (pick different): ${existingNames||"none yet"}\n${rHeroName?`Hero name: ${rHeroName} (use exactly this name)`:"Hero name: (choose a fitting dark name)"}\nQuiz:\n${answers}\n\nIMPORTANT: Use correct pronouns (${pronounOf(rGender)}/${pronounOf(rGender)==="they"?"them":pronounOf(rGender)==="she"?"her":"him"}) for this character throughout.\nIMPORTANT: Pick 2-3 specific comic or anime characters as DNA for this hero based on the quiz answers. Bake these invisibly into every output field — power names shaped by their style, tagline capturing their essence, origin echoing their arc. Never name-drop them; only list in the dna array.\n\n{"heroName":"${rHeroName||"2-word dark name"}","tagline":"one punchy sentence","role":"Role · Descriptor","origin":"2-3 sentences connected to the team and their world — reflect their race biology and birth year context if provided","powers":[{"name":"Name","desc":"visual desc"},{"name":"Name","desc":"visual desc"},{"name":"Name","desc":"visual desc"},{"name":"Name","desc":"visual desc"}],"stats":{"Power":75,"Speed":70,"Tech":60,"Intellect":80,"Will":85},"costumeDesc":"costume in team aesthetic with ${hex} accent","powerFX":"visible effects using ${hex}","consistencyNotes":"design lock rules","dna":["Character whose energy shapes this hero's powers — e.g. Vegeta","Character whose arc or personality informs their story"]}`);
+      const p=await callAI(`Create a ${activeTeam.name} team hero. JSON only.\n\nReal name: ${rName||"Unknown"}\nGender: ${rGender}\nAge: ${rAge||(rBirthYear?String(2026-parseInt(rBirthYear)):"Unknown")}\n${rBirthYear?`Birth year: ${rBirthYear}\n`:""}Race: ${raceStr||"Unspecified"}\n${raceLoreStr?`Race lore (bake into origin): ${raceLoreStr}\n`:""}Team: ${activeTeam.name} (${teamType})\nAccent color: ${hex}\nNK alignment of this character: ${rNkAlign}\nExisting names (pick different): ${existingNames||"none yet"}\n${rHeroName?`Hero name: ${rHeroName} (use exactly this name)`:"Hero name: (choose a fitting dark name)"}\nQuiz:\n${answers}\n\nIMPORTANT: Use correct pronouns (${pronounOf(rGender)}/${pronounOf(rGender)==="they"?"them":pronounOf(rGender)==="she"?"her":"him"}) for this character throughout.\nIMPORTANT: Pick 2-3 specific comic or anime characters as DNA for this hero based on the quiz answers. Bake these invisibly into every output field — power names shaped by their style, tagline capturing their essence, origin echoing their arc. Never name-drop them; only list in the dna array.\n\n{"heroName":"${rHeroName||"2-word dark name"}","tagline":"one punchy sentence","role":"Role · Descriptor","origin":"2-3 sentences connected to the team and their world — reflect their race biology and birth year context if provided","powers":[{"name":"Name","desc":"visual desc"},{"name":"Name","desc":"visual desc"},{"name":"Name","desc":"visual desc"},{"name":"Name","desc":"visual desc"}],"stats":{"Power":75,"Speed":70,"Tech":60,"Intellect":80,"Will":85},"costumeDesc":"costume in team aesthetic with ${hex} accent","powerFX":"visible effects using ${hex}","consistencyNotes":"design lock rules","dna":["Character whose energy shapes this hero's powers — e.g. Vegeta","Character whose arc or personality informs their story"]}`);
       const num=String(activeRoster.length+1).padStart(2,"0");
       const computedAge=rAge||(rBirthYear?String(2026-parseInt(rBirthYear)):"");
-      setRResult({id:`char-${Date.now()}`,teamId:activeTeamId,realName:rName||"Unknown",gender:rGender,age:computedAge,birthYear:rBirthYear||"",race:rRace,species:rSpecies||"Human",color:hex,colorLight:hex+"CC",initials:rName?rName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",number:num,isCustom:true,nkAlignment:rNkAlign,...p});
+      setRResult({id:`char-${Date.now()}`,teamId:activeTeamId,realName:rName||"Unknown",gender:rGender,age:computedAge,birthYear:rBirthYear||"",race:rRace,species:raceLabel(rRace)||"Human",color:hex,colorLight:hex+"CC",initials:rName?rName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",number:num,isCustom:true,nkAlignment:rNkAlign,...p});
     }catch(e){setRResult({error:true,msg:e.message});}
     setRLoading(false);
   };
@@ -1086,7 +1080,7 @@ function App(){
     const newRosters={...teamRosters,[activeTeamId]:[...(teamRosters[activeTeamId]||[]),rResult]};
     setTeamRosters(newRosters);
     persist("forge-rosters",newRosters);
-    setRResult(null);setRAnswers({});setRName("");setRHeroName("");setRStep(0);setRNkAlign("neutral");setRGender("Male");setRAge("");setRBirthYear("");setRRace(null);setRSpecies("");setDeepAnswers({});setDeepPhase(0);setTab("roster");
+    setRResult(null);setRAnswers({});setRName("");setRHeroName("");setRStep(0);setRNkAlign("neutral");setRGender("Male");setRAge("");setRBirthYear("");setRRace(null);setDeepAnswers({});setDeepPhase(0);setTab("roster");
   };
 
   const generateDeepRecruit=async()=>{
@@ -1108,10 +1102,10 @@ function App(){
     try{
       const raceStr=raceLabel(rRace);
       const raceLoreStr=raceLore(rRace);
-      const p=await callAI(`Create a deeply developed ${activeTeam.name} hero using rich comic book lore. JSON only.\n\nReal name: ${rName||"Unknown"}\nGender: ${rGender}\nAge: ${rAge||(rBirthYear?String(2026-parseInt(rBirthYear)):"Unknown")}\n${rBirthYear?`Birth year: ${rBirthYear}\n`:""}Race: ${raceStr||"Unspecified"}\n${raceLoreStr?`Race lore (bake into origin): ${raceLoreStr}\n`:""}Species: ${rSpecies||"Human"}\nAccent color: ${hex}\nNK alignment: ${rNkAlign}\nExisting names (must be different): ${existingNames||"none"}\n${rHeroName?`Hero name: ${rHeroName} (use exactly this name)`:"Hero name: (choose a distinct name fitting the lore profile)"}\nTeam: ${activeTeam.name}\nIMPORTANT: Use correct pronouns (${pronounOf(rGender)}/${pronounOf(rGender)==="they"?"them":pronounOf(rGender)==="she"?"her":"him"}) for this character throughout.\n${dnaFoundation?`\nCHARACTER DNA FOUNDATION (bake these invisibly into every field — powers named/described through their aesthetic, origin reflecting their arc pattern, personality in the tagline — filter through the NK universe, never reference by name except in the dna array):\n${dnaFoundation}\n`:""}\nFull lore profile:\n${loreContext}${freeText?"\nVisual references: "+freeText:""}\n\nUse this lore to create a hero that feels authentic to these inspirations. JSON:\n{"heroName":"${rHeroName||"2-word hero name, distinct and fitting the lore profile"}","tagline":"one piercing sentence that captures their essence","role":"Role · Descriptor","origin":"3-4 sentences backstory that directly reflects the lore answers — specific and rooted in their race and birth year context","powers":[{"name":"Power name matching their visual style","desc":"2-sentence visual description of exactly how this looks in action"},{"name":"Power name","desc":"visual desc"},{"name":"Power name","desc":"visual desc"},{"name":"Power name","desc":"visual desc"}],"stats":{"Power":75,"Speed":70,"Tech":60,"Intellect":80,"Will":85},"costumeDesc":"Detailed costume description using ${hex} accent, reflecting their costume philosophy answer","powerFX":"Exact visual description of power effects using ${hex}, matching their FX style answer","consistencyNotes":"2-3 specific design lock rules based on their visual choices","dna":["Primary DNA — exact character name like Vegeta or Moon Knight","Secondary DNA — another specific character baked into this hero","Optional third DNA — only if genuinely applicable"]}`);
+      const p=await callAI(`Create a deeply developed ${activeTeam.name} hero using rich comic book lore. JSON only.\n\nReal name: ${rName||"Unknown"}\nGender: ${rGender}\nAge: ${rAge||(rBirthYear?String(2026-parseInt(rBirthYear)):"Unknown")}\n${rBirthYear?`Birth year: ${rBirthYear}\n`:""}Race: ${raceStr||"Unspecified"}\n${raceLoreStr?`Race lore (bake into origin): ${raceLoreStr}\n`:""}Accent color: ${hex}\nNK alignment: ${rNkAlign}\nExisting names (must be different): ${existingNames||"none"}\n${rHeroName?`Hero name: ${rHeroName} (use exactly this name)`:"Hero name: (choose a distinct name fitting the lore profile)"}\nTeam: ${activeTeam.name}\nIMPORTANT: Use correct pronouns (${pronounOf(rGender)}/${pronounOf(rGender)==="they"?"them":pronounOf(rGender)==="she"?"her":"him"}) for this character throughout.\n${dnaFoundation?`\nCHARACTER DNA FOUNDATION (bake these invisibly into every field — powers named/described through their aesthetic, origin reflecting their arc pattern, personality in the tagline — filter through the NK universe, never reference by name except in the dna array):\n${dnaFoundation}\n`:""}\nFull lore profile:\n${loreContext}${freeText?"\nVisual references: "+freeText:""}\n\nUse this lore to create a hero that feels authentic to these inspirations. JSON:\n{"heroName":"${rHeroName||"2-word hero name, distinct and fitting the lore profile"}","tagline":"one piercing sentence that captures their essence","role":"Role · Descriptor","origin":"3-4 sentences backstory that directly reflects the lore answers — specific and rooted in their race and birth year context","powers":[{"name":"Power name matching their visual style","desc":"2-sentence visual description of exactly how this looks in action"},{"name":"Power name","desc":"visual desc"},{"name":"Power name","desc":"visual desc"},{"name":"Power name","desc":"visual desc"}],"stats":{"Power":75,"Speed":70,"Tech":60,"Intellect":80,"Will":85},"costumeDesc":"Detailed costume description using ${hex} accent, reflecting their costume philosophy answer","powerFX":"Exact visual description of power effects using ${hex}, matching their FX style answer","consistencyNotes":"2-3 specific design lock rules based on their visual choices","dna":["Primary DNA — exact character name like Vegeta or Moon Knight","Secondary DNA — another specific character baked into this hero","Optional third DNA — only if genuinely applicable"]}`);
       const num=String(activeRoster.length+1).padStart(2,"0");
       const computedAge=rAge||(rBirthYear?String(2026-parseInt(rBirthYear)):"");
-      setRResult({id:`char-${Date.now()}`,teamId:activeTeamId,realName:rName||"Unknown",gender:rGender,age:computedAge,birthYear:rBirthYear||"",race:rRace,species:rSpecies||"Human",color:hex,colorLight:hex+"CC",initials:rName?rName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",number:num,isCustom:true,nkAlignment:rNkAlign,deepLore:deepAnswers,...p});
+      setRResult({id:`char-${Date.now()}`,teamId:activeTeamId,realName:rName||"Unknown",gender:rGender,age:computedAge,birthYear:rBirthYear||"",race:rRace,species:raceLabel(rRace)||"Human",color:hex,colorLight:hex+"CC",initials:rName?rName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",number:num,isCustom:true,nkAlignment:rNkAlign,deepLore:deepAnswers,...p});
     }catch(e){setRResult({error:true,msg:e.message});}
     setRLoading(false);
   };
@@ -1171,7 +1165,7 @@ function App(){
     const refNote=hasRef?"Start the metaAI prompt with: \"Maintaining exact character design from reference image — same face, same costume, same color scheme, same power effects. Do not redesign.\"":"";
     try{
       const mPronoun=pronounOf(member.gender||"");
-      const p=await callAI(`Generate image prompts for this hero. JSON only, keys "metaAI" and "tripo3D".\n\n${refNote}\nCharacter: ${member.heroName} (${member.realName})\nGender: ${member.gender||"Unknown"} — use pronouns ${mPronoun}/${mPronoun==="they"?"them":mPronoun==="she"?"her":"him"}\nSpecies: ${member.species||"Human"}\n${member.age?"Age: "+member.age+"\n":""}${member.race?`Race: ${raceLabel(member.race)}\n`:""}Team: ${activeTeam.name}\nCostume: ${member.costumeDesc||"dramatic suit"}\nPower FX: ${member.powerFX||member.color+" energy"}\nDesign rules: ${member.consistencyNotes||"consistent accent color"}\nStyle: ${style}\n\n{"metaAI":"3-4 sentence full-body portrait. IMPORTANT: character is ${member.gender||"a hero"} — use correct visual gender cues. Exact costume and FX. Nighttime urban background. End: Full body visible, portrait orientation.","tripo3D":"1 sentence FDM mesh prompt with separate color regions."}`);
+      const p=await callAI(`Generate image prompts for this hero. JSON only, keys "metaAI" and "tripo3D".\n\n${refNote}\nCharacter: ${member.heroName} (${member.realName})\nGender: ${member.gender||"Unknown"} — use pronouns ${mPronoun}/${mPronoun==="they"?"them":mPronoun==="she"?"her":"him"}\nSpecies: ${raceLabel(member.race)||member.species||"Human"}\n${member.age?"Age: "+member.age+"\n":""}Team: ${activeTeam.name}\nCostume: ${member.costumeDesc||"dramatic suit"}\nPower FX: ${member.powerFX||member.color+" energy"}\nDesign rules: ${member.consistencyNotes||"consistent accent color"}\nStyle: ${style}\n\n{"metaAI":"3-4 sentence full-body portrait. IMPORTANT: character is ${member.gender||"a hero"} — use correct visual gender cues. Exact costume and FX. Nighttime urban background. End: Full body visible, portrait orientation.","tripo3D":"1 sentence FDM mesh prompt with separate color regions."}`);
       setPResult({member,...p});
     }catch(e){setPResult({error:true,msg:e.message});}
     setPLoading(false);
@@ -1181,7 +1175,7 @@ function App(){
     setPSelected("group");setPLoading(true);setPResult(null);
     const style=ART_STYLES.find(a=>a.id===pStyle)?.text||"";
     try{
-      const p=await callAI(`Group shot Meta AI prompt for ${activeTeam.name}. JSON only, key "metaAI".\n\nStyle: ${style}\nMembers: ${activeRoster.map(m=>`${m.heroName} (${m.gender||"Unknown gender"}, ${m.species||"Human"}): ${m.costumeDesc||"dramatic suit"}, ${m.powerFX||m.color+" energy"}`).join("; ")}\nSetting: dramatic nighttime urban location.\nIMPORTANT: Use correct visual gender representation for each character.\n\n{"metaAI":"3-4 sentence group shot. All members visible with their exact looks and correct gender presentation. End: Wide cinematic format, all characters fully visible."}`);
+      const p=await callAI(`Group shot Meta AI prompt for ${activeTeam.name}. JSON only, key "metaAI".\n\nStyle: ${style}\nMembers: ${activeRoster.map(m=>`${m.heroName} (${m.gender||"Unknown gender"}, ${raceLabel(m.race)||m.species||"Human"}): ${m.costumeDesc||"dramatic suit"}, ${m.powerFX||m.color+" energy"}`).join("; ")}\nSetting: dramatic nighttime urban location.\nIMPORTANT: Use correct visual gender representation for each character.\n\n{"metaAI":"3-4 sentence group shot. All members visible with their exact looks and correct gender presentation. End: Wide cinematic format, all characters fully visible."}`);
       setPResult({group:true,teamName:activeTeam.name,metaAI:p.metaAI});
     }catch(e){setPResult({error:true,msg:e.message});}
     setPLoading(false);
@@ -1653,10 +1647,6 @@ function App(){
             <div>
               <span style={s.lbl}>Age {rBirthYear&&rAge?`(${rAge} yrs)`:""} (optional)</span>
               <input type="text" placeholder="e.g. 25" value={rAge} onChange={e=>setRAge(e.target.value)} style={{marginTop:4,padding:"8px 10px"}}/>
-            </div>
-            <div>
-              <span style={s.lbl}>Species (optional)</span>
-              <input type="text" placeholder="Human" value={rSpecies} onChange={e=>setRSpecies(e.target.value)} style={{marginTop:4,padding:"8px 10px"}}/>
             </div>
           </div>
           <div style={{marginBottom:14}}>
