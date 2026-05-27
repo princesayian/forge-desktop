@@ -5,7 +5,7 @@ Local AI powered by Ollama. No API keys. No subscriptions.
 
 import os, sys, json, threading, time, socket, base64, io, subprocess, shutil, signal, atexit
 import urllib.request, urllib.error
-from flask import Flask, request, jsonify, send_from_directory, send_file, session, redirect
+from flask import Flask, request, jsonify, send_from_directory, send_file, session, redirect, Response, stream_with_context
 
 BASE       = os.path.dirname(os.path.abspath(__file__))
 STATIC     = os.path.join(BASE, "static")
@@ -422,25 +422,37 @@ def chat():
         )}] + messages
 
     ollama_body = {
-        "model": cfg["model"], "messages": messages, "stream": False,
+        "model": cfg["model"], "messages": messages, "stream": True,
         "options": {"temperature": 0.8, "num_predict": body.get("max_tokens", 1200), "top_p": 0.9}
     }
     if needs_json:
         ollama_body["format"] = "json"
 
-    try:
-        data = json.dumps(ollama_body).encode()
-        req = urllib.request.Request(f"{cfg['ollama_url']}/api/chat", data=data,
-            headers={"Content-Type": "application/json"}, method="POST")
-        with urllib.request.urlopen(req, timeout=120) as resp:
-            result = json.loads(resp.read())
-        text = result.get("message", {}).get("content", "")
-        return jsonify({"content": [{"type": "text", "text": text}]})
-    except urllib.error.URLError:
-        return jsonify({"error": {"type": "connection_error",
-            "message": "Ollama is not running. Start Ollama and try again."}}), 503
-    except Exception as e:
-        return jsonify({"error": {"type": "error", "message": str(e)}}), 500
+    def generate():
+        try:
+            data = json.dumps(ollama_body).encode()
+            req = urllib.request.Request(f"{cfg['ollama_url']}/api/chat", data=data,
+                headers={"Content-Type": "application/json"}, method="POST")
+            with urllib.request.urlopen(req, timeout=360) as resp:
+                for line in resp:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        chunk = json.loads(line)
+                    except Exception:
+                        continue
+                    token = chunk.get("message", {}).get("content", "")
+                    done = chunk.get("done", False)
+                    yield json.dumps({"t": token, "d": done}) + "\n"
+        except urllib.error.URLError:
+            yield json.dumps({"e": "Ollama is not running. Start Ollama and try again."}) + "\n"
+        except Exception as ex:
+            yield json.dumps({"e": str(ex)}) + "\n"
+
+    return Response(stream_with_context(generate()),
+                    mimetype="application/x-ndjson",
+                    headers={"X-Accel-Buffering": "no", "Cache-Control": "no-cache"})
 
 # ── PDF Export ────────────────────────────────────────────────────────────────
 @app.route("/api/export-pdf", methods=["POST"])
