@@ -398,7 +398,7 @@ function TeamCard({team,isActive,memberCount,onSelect,onEdit,onDelete}){
   </div>);
 }
 
-function TeamCreator({teams,onSave,onCancel,callAI,ollamaOk,initialData}){
+function TeamCreator({teams,members=[],onSave,onCancel,callAI,ollamaOk,initialData}){
   const[step,setStep]=useState(1);
   const[name,setName]=useState(initialData?.name||"");
   const[abbr,setAbbr]=useState(initialData?.abbr||"");
@@ -410,12 +410,22 @@ function TeamCreator({teams,onSave,onCancel,callAI,ollamaOk,initialData}){
   const[origin,setOrigin]=useState(initialData?.origin||"");
   const[genLoading,setGenLoading]=useState(false);
   const[logoSeed,setLogoSeed]=useState(initialData?.logoSeed??Math.floor(Math.random()*8));
+  const[relatedTeams,setRelatedTeams]=useState([]);
+  const[relatedMembers,setRelatedMembers]=useState([]);
+  const[loreHint,setLoreHint]=useState("");
   const autoAbbr=n=>n.split(" ").map(w=>w[0]||"").join("").toUpperCase().slice(0,3)||"??";
   const handleName=n=>{setName(n);if(!abbr||abbr===autoAbbr(name))setAbbr(autoAbbr(n));};
   const generateLore=async()=>{
     setGenLoading(true);
     try{
-      const p=await callAI(`Create lore for a superhero team. JSON only, keys "description", "motto", "origin".\n\nTeam name: ${name}\nType: ${type}\nNK alignment: ${align}\n\n{"description":"1 sentence team description","motto":"short team motto","origin":"2-3 sentence origin story"}`);
+      const relTeamNames=relatedTeams.map(id=>teams.find(t=>t.id===id)?.name).filter(Boolean);
+      const relMemberNames=relatedMembers.map(id=>members.find(m=>m.id===id)?.heroName).filter(Boolean);
+      const ctx=[
+        relTeamNames.length&&`Connected teams: ${relTeamNames.join(", ")}`,
+        relMemberNames.length&&`Key characters involved: ${relMemberNames.join(", ")}`,
+        loreHint.trim()&&`Story direction: ${loreHint.trim()}`,
+      ].filter(Boolean).join("\n");
+      const p=await callAI(`Create lore for a superhero team in the Nocturnal Knights universe. JSON only, keys "description", "motto", "origin".\n\nTeam name: ${name}\nType: ${type}\nNK alignment: ${align}\n${ctx?ctx+"\n":""}\nWeave any connections and story direction naturally into the origin. Keep the tone dark, grounded, and personal.\n\n{"description":"1 sentence team description","motto":"short team motto","origin":"2-3 sentence origin story"}`);
       if(p.description)setDesc(p.description);
       if(p.motto)setMotto(p.motto);
       if(p.origin)setOrigin(p.origin);
@@ -473,10 +483,28 @@ function TeamCreator({teams,onSave,onCancel,callAI,ollamaOk,initialData}){
         </div>
       </>)}
       {step===3&&(<>
-        <div style={{marginBottom:12}}><span style={lbl}>Description (optional)</span><input type="text" placeholder="One sentence about this team" value={desc} onChange={e=>setDesc(e.target.value)}/></div>
-        <div style={{marginBottom:12}}><span style={lbl}>Motto (optional)</span><input type="text" placeholder="Team motto or battle cry" value={motto} onChange={e=>setMotto(e.target.value)}/></div>
-        <div style={{marginBottom:16}}><span style={lbl}>Origin (optional)</span><textarea style={{height:70}} placeholder="Team backstory..." value={origin} onChange={e=>setOrigin(e.target.value)}/></div>
-        {ollamaOk&&<button onClick={generateLore} disabled={genLoading} style={{width:"100%",padding:"10px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:8,cursor:genLoading?"not-allowed":"pointer",color:"var(--text2)",fontSize:10.5,fontFamily:"monospace",marginBottom:14}}>{genLoading?"Generating lore...":"✦ Auto-generate lore with AI"}</button>}
+        {/* AI Context section */}
+        <div style={{background:"rgba(212,175,55,0.04)",border:"1px solid rgba(212,175,55,0.12)",borderRadius:10,padding:"14px",marginBottom:16}}>
+          <div style={{fontSize:9,letterSpacing:"0.18em",color:`${G}88`,textTransform:"uppercase",marginBottom:12,fontFamily:"monospace"}}>AI Context — optional</div>
+          {teams.length>0&&(<>
+            <span style={lbl}>Relates to — Teams</span>
+            <div style={{display:"flex",flexWrap:"wrap",gap:7,marginBottom:14}}>
+              {teams.map(t=>{const sel=relatedTeams.includes(t.id);return(<button key={t.id} onClick={()=>setRelatedTeams(p=>sel?p.filter(x=>x!==t.id):[...p,t.id])} style={{display:"flex",alignItems:"center",gap:6,...chip(sel,t.color)}}><TeamLogo team={t} size={16} style={{borderRadius:3}}/>{t.name}</button>);})}
+            </div>
+          </>)}
+          {members.length>0&&(<>
+            <span style={lbl}>Relates to — Characters</span>
+            <div style={{display:"flex",flexWrap:"wrap",gap:7,marginBottom:14}}>
+              {members.map(m=>{const sel=relatedMembers.includes(m.id);const mc=m.color||color;return(<button key={m.id} onClick={()=>setRelatedMembers(p=>sel?p.filter(x=>x!==m.id):[...p,m.id])} style={{display:"flex",alignItems:"center",gap:5,...chip(sel,mc)}}><div style={{width:6,height:6,borderRadius:"50%",background:mc,flexShrink:0}}/>{m.heroName}</button>);})}</div>
+          </>)}
+          <span style={lbl}>Story Direction</span>
+          <textarea style={{height:56,fontSize:11}} placeholder={`E.g. "Splinter group after Wakháŋ's disappearance" · "Built to counter Null/Void's tech" · "Allied through a shared enemy"`} value={loreHint} onChange={e=>setLoreHint(e.target.value)}/>
+        </div>
+        {ollamaOk&&<button onClick={generateLore} disabled={genLoading} style={{width:"100%",padding:"10px",background:genLoading?"var(--bg3)":`${G}0E`,border:`1px solid ${genLoading?"var(--border)":`${G}55`}`,borderRadius:8,cursor:genLoading?"not-allowed":"pointer",color:genLoading?"var(--text3)":G,fontSize:10.5,fontFamily:"monospace",marginBottom:14,letterSpacing:"0.08em"}}>{genLoading?"Generating lore...":"✦ Generate lore with AI"}</button>}
+        {/* Editable lore output */}
+        <div style={{marginBottom:12}}><span style={lbl}>Description</span><input type="text" placeholder="One sentence about this team" value={desc} onChange={e=>setDesc(e.target.value)}/></div>
+        <div style={{marginBottom:12}}><span style={lbl}>Motto</span><input type="text" placeholder="Team motto or battle cry" value={motto} onChange={e=>setMotto(e.target.value)}/></div>
+        <div style={{marginBottom:16}}><span style={lbl}>Origin</span><textarea style={{height:80}} placeholder="Team backstory — or generate above and edit here..." value={origin} onChange={e=>setOrigin(e.target.value)}/></div>
         <div style={{display:"flex",gap:10}}>
           <button onClick={()=>setStep(2)} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text3)",fontSize:10.5,fontFamily:"monospace"}}>← Back</button>
           <button onClick={handleSave} style={{flex:2,padding:"10px",background:`${color}18`,border:`1px solid ${color}`,borderRadius:8,cursor:"pointer",color,fontSize:10.5,letterSpacing:"0.1em",textTransform:"uppercase",fontFamily:"monospace"}}>Create Team →</button>
@@ -1101,6 +1129,7 @@ function App(){
         {showTeamCreator||editingTeamData?(
           <TeamCreator
             teams={teams}
+            members={Object.values(teamRosters).flat().filter((m,i,a)=>a.findIndex(x=>x.id===m.id)===i)}
             onSave={saveTeam}
             onCancel={()=>{setShowTeamCreator(false);setEditingTeamData(null);}}
             callAI={callAI}
