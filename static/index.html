@@ -944,6 +944,9 @@ function App(){
   const[pStyle,setPStyle]=useState("comic");
   const[pSelected,setPSelected]=useState(null);
   const[pLoading,setPLoading]=useState(false);const[pResult,setPResult]=useState(null);const[sheetLoading,setSheetLoading]=useState(false);
+  const[duoA,setDuoA]=useState("");const[duoB,setDuoB]=useState("");
+  const pResultRef=useRef(null);
+  useEffect(()=>{if(pResult&&pResultRef.current)setTimeout(()=>pResultRef.current?.scrollIntoView({behavior:"smooth",block:"nearest"}),80);},[pResult]);
   // ── Dynamics ─────────────────────────────────────────────────────────────
   const[dynActive,setDynActive]=useState(null);
   // ── Family Tree ──────────────────────────────────────────────────────────
@@ -1294,7 +1297,7 @@ function App(){
     const refNote=hasRef?"Start the metaAI prompt with: \"Maintaining exact character design from reference image — same face, same costume, same color scheme, same power effects. Do not redesign.\"":"";
     try{
       const mPronoun=pronounOf(member.gender||"");
-      const p=await callAI(`Generate image prompts for this hero. JSON only, keys "metaAI" and "tripo3D".\n\n${refNote}\nCharacter: ${member.heroName} (${member.realName})\nGender: ${member.gender||"Unknown"} — use pronouns ${mPronoun}/${mPronoun==="they"?"them":mPronoun==="she"?"her":"him"}\nSpecies: ${raceLabel(member.race)||member.species||"Human"}\n${member.age?"Age: "+member.age+"\n":""}Team: ${activeTeam.name}\nCostume: ${member.costumeDesc||"dramatic suit"}\nPower FX: ${member.powerFX||member.color+" energy"}\nDesign rules: ${member.consistencyNotes||"consistent accent color"}\nStyle: ${style}\n\n{"metaAI":"3-4 sentence full-body portrait. IMPORTANT: character is ${member.gender||"a hero"} — use correct visual gender cues. Exact costume and FX. Nighttime urban background. End: Full body visible, portrait orientation.","tripo3D":"1 sentence FDM mesh prompt with separate color regions."}`);
+      const p=await callAI(`JSON only. Reply with exactly this format, no other text:\n{"metaAI":"...","tripo3D":"..."}\n\n${refNote}Character: ${member.heroName} (${member.realName}), ${member.gender||"Unknown"} ${raceLabel(member.race)||member.species||"Human"}${member.age?", age "+member.age:""}.\nTeam: ${activeTeam.name}. Style: ${style}.\nCostume: ${member.costumeDesc||"dramatic suit"}. Color: ${member.color}. Power FX: ${member.powerFX||member.color+" energy"}.\nDesign rules: ${member.consistencyNotes||"consistent accent color"}.\nPronouns: ${mPronoun}.\n\nmetaAI = 3-4 sentence full-body portrait. Correct ${member.gender||"hero"} visual cues. Exact costume and FX. Nighttime urban background. Full body visible, portrait orientation.\ntripo3D = 1 sentence FDM mesh prompt with separate color regions.\n\n{"metaAI":"...","tripo3D":"..."}`,null,500);
       setPResult({member,...p});
     }catch(e){setPResult({error:true,msg:e.message});}
     setPLoading(false);
@@ -1311,14 +1314,28 @@ function App(){
     setPLoading(false);
   };
 
-  const downloadTeamSheet=async()=>{
-    if(!activeRoster.length)return;
+  const generateDuoPrompt=async()=>{
+    const a=activeRoster.find(m=>m.id===duoA),b=activeRoster.find(m=>m.id===duoB);
+    if(!a||!b)return;
+    setPSelected("duo");setPLoading(true);setPResult(null);
+    const style=ART_STYLES.find(x=>x.id===pStyle)?.text||"";
+    try{
+      const charLines=[a,b].map(m=>`${m.heroName}: ${m.gender||"unknown"} ${raceLabel(m.race)||m.species||"Human"}. Costume: ${(m.costumeDesc||"").slice(0,80)}. Color: ${m.color}. FX: ${(m.powerFX||m.color+" energy").slice(0,60)}.`).join("\n");
+      const p=await callAI(`JSON only. Reply with exactly this format, no other text:\n{"metaAI":"..."}\n\nDuo shot prompt for ${a.heroName} and ${b.heroName} from ${activeTeam.name}. User uploads a reference sheet — preserve every character's look exactly. Style: ${style}.\n\nCast:\n${charLines}\n\nPrompt rules: open with "Referencing the uploaded character sheet strictly —", describe both characters with exact looks and dynamic poses that play off each other, close with "Both characters match the reference exactly. No redesigns. Portrait or square format, both heroes fully visible."\n\n{"metaAI":"..."}`,null,400);
+      setPResult({duo:true,heroA:a,heroB:b,metaAI:p.metaAI});
+    }catch(e){setPResult({error:true,msg:e.message});}
+    setPLoading(false);
+  };
+
+  const downloadTeamSheet=async(members)=>{
+    const roster=members||activeRoster;
+    if(!roster.length)return;
     setSheetLoading(true);
     try{
-      const COLS=Math.min(activeRoster.length,4);
+      const COLS=Math.min(roster.length,4);
       const CARD_W=240,IMG_H=270,INFO_H=98,CARD_H=IMG_H+INFO_H;
       const HEADER_H=52,GAP=10,SIDE=14;
-      const ROWS=Math.ceil(activeRoster.length/COLS);
+      const ROWS=Math.ceil(roster.length/COLS);
       const W=SIDE*2+COLS*CARD_W+(COLS-1)*GAP;
       const H=HEADER_H+8+ROWS*(CARD_H+GAP)+14;
       const canvas=document.createElement("canvas");
@@ -1333,8 +1350,8 @@ function App(){
       ctx.fillStyle="rgba(255,255,255,0.55)";ctx.font="9px monospace";ctx.textAlign="right";
       ctx.fillText("CHARACTER REFERENCE — UPLOAD WITH GROUP SHOT PROMPT",W-SIDE,34);
       const loadImg=src=>new Promise(res=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>res(null);i.src=src;});
-      for(let i=0;i<activeRoster.length;i++){
-        const m=activeRoster[i];
+      for(let i=0;i<roster.length;i++){
+        const m=roster[i];
         const col=i%COLS,row=Math.floor(i/COLS);
         const cx=SIDE+col*(CARD_W+GAP);
         const cy=HEADER_H+8+row*(CARD_H+GAP);
@@ -1800,12 +1817,27 @@ function App(){
             {pLoading&&pSelected===m.id&&<div style={{marginTop:7,fontSize:9,color:G}}>Generating...</div>}
           </div>))}
         </div>
+        {activeRoster.length>=2&&<div style={{...s.card,marginBottom:12}}>
+          <div style={{fontSize:10,fontWeight:"bold",color:"var(--text3)",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:10}}>Duo Shot · Pick 2 Heroes</div>
+          <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:10}}>
+            <select value={duoA} onChange={e=>setDuoA(e.target.value)} style={{flex:1,padding:"7px 10px",background:"var(--bg2)",border:`1px solid ${duoA?(activeRoster.find(m=>m.id===duoA)?.color+"55")||"rgba(255,255,255,0.15)":"rgba(255,255,255,0.08)"}`,borderRadius:6,color:"var(--text-primary)",fontSize:11,fontFamily:"monospace",cursor:"pointer"}}>
+              <option value="">— Hero A —</option>
+              {activeRoster.map(m=><option key={m.id} value={m.id}>{m.heroName}</option>)}
+            </select>
+            <span style={{color:"var(--text3)",fontSize:13,flexShrink:0}}>+</span>
+            <select value={duoB} onChange={e=>setDuoB(e.target.value)} style={{flex:1,padding:"7px 10px",background:"var(--bg2)",border:`1px solid ${duoB?(activeRoster.find(m=>m.id===duoB)?.color+"55")||"rgba(255,255,255,0.15)":"rgba(255,255,255,0.08)"}`,borderRadius:6,color:"var(--text-primary)",fontSize:11,fontFamily:"monospace",cursor:"pointer"}}>
+              <option value="">— Hero B —</option>
+              {activeRoster.filter(m=>m.id!==duoA).map(m=><option key={m.id} value={m.id}>{m.heroName}</option>)}
+            </select>
+          </div>
+          <button style={s.bigBtn(!duoA||!duoB||pLoading)} onClick={generateDuoPrompt} disabled={!duoA||!duoB||pLoading}>{pLoading&&pSelected==="duo"?"Building duo shot...":"Generate Duo Shot"}</button>
+        </div>}
         {activeRoster.length>1&&<button style={s.bigBtn(pLoading)} onClick={generateGroupPrompt} disabled={pLoading}>{pLoading&&pSelected==="group"?"Building group shot...":"Generate Full Team Group Shot"}</button>}
-        {pResult&&!pResult.error&&(<div style={{...s.card,marginTop:16}}>
-          <div style={{fontSize:12,fontWeight:"bold",color:pResult.group?G:pResult.member?.color||G,marginBottom:10}}>{pResult.group?`Group Shot — ${pResult.teamName||activeTeam.name}`:`${pResult.member?.heroName} · Image Prompts`}</div>
+        {pResult&&!pResult.error&&(<div ref={pResultRef} style={{...s.card,marginTop:16}}>
+          <div style={{fontSize:12,fontWeight:"bold",color:pResult.group||pResult.duo?G:pResult.member?.color||G,marginBottom:10}}>{pResult.group?`Group Shot — ${pResult.teamName||activeTeam.name}`:pResult.duo?`Duo Shot — ${pResult.heroA?.heroName} + ${pResult.heroB?.heroName}`:`${pResult.member?.heroName} · Image Prompts`}</div>
           {pResult.metaAI&&<><span style={s.lbl}>Meta AI Image Prompt</span><div style={s.pBox}>{pResult.metaAI}</div>{hasMetaAI?<MetaAILauncher prompt={pResult.metaAI} label="Meta AI" copied={copied.pmeta} onCopy={()=>copy("pmeta",pResult.metaAI)}/>:<div style={{display:"flex",justifyContent:"flex-end",marginTop:6,marginBottom:12}}><button style={s.cpyBtn(copied.pmeta)} onClick={()=>copy("pmeta",pResult.metaAI)}>{copied.pmeta?"Copied!":"Copy"}</button></div>}</>}
-          {pResult.group&&<div style={{marginTop:12}}>
-            <button style={{...s.bigBtn(sheetLoading),background:sheetLoading?"var(--bg3)":"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.15)"}} onClick={downloadTeamSheet} disabled={sheetLoading}>{sheetLoading?"Building reference sheet…":"📎 Download Reference Sheet"}</button>
+          {(pResult.group||pResult.duo)&&<div style={{marginTop:12}}>
+            <button style={{...s.bigBtn(sheetLoading),background:sheetLoading?"var(--bg3)":"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.15)"}} onClick={()=>downloadTeamSheet(pResult.duo?[pResult.heroA,pResult.heroB]:undefined)} disabled={sheetLoading}>{sheetLoading?"Building reference sheet…":"📎 Download Reference Sheet"}</button>
             <div style={{fontSize:9,color:"var(--text3)",textAlign:"center",marginTop:6}}>Upload this image alongside the prompt in Meta AI for best accuracy</div>
           </div>}
           {pResult.tripo3D&&<><span style={s.lbl}>Tripo3D Model Prompt</span><div style={s.pBox}>{pResult.tripo3D}</div><Tripo3DLauncher prompt={pResult.tripo3D} copied={copied.ptripo} onCopy={()=>copy("ptripo",pResult.tripo3D)}/></>}
