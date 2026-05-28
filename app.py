@@ -3,7 +3,7 @@ Superhero Forge — Desktop App
 Local AI powered by Ollama. No API keys. No subscriptions.
 """
 
-import os, sys, json, threading, time, socket, base64, io, subprocess, shutil, signal, atexit
+import os, sys, json, threading, time, socket, base64, io, subprocess, shutil, signal, atexit, queue
 import urllib.request, urllib.error
 from flask import Flask, request, jsonify, send_from_directory, send_file, session, redirect, Response, stream_with_context
 
@@ -431,31 +431,51 @@ def chat():
     }
 
     def generate():
-        # Yield immediately so Flask flushes HTTP headers to the browser before
-        # waiting for Ollama. Without this, the browser receives nothing until
-        # the first token arrives, which can take 30-180s on large prompts —
-        # long enough for Chrome to report "Failed to fetch".
+        # Run Ollama in a background thread and drain tokens via a queue.
+        # The main generator yields a heartbeat every 3 s while waiting so
+        # WKWebView / Safari never time out during long prompt-prefill phases.
+        token_queue = queue.Queue()
+
+        def ollama_worker():
+            try:
+                data = json.dumps(ollama_body).encode()
+                req = urllib.request.Request(f"{cfg['ollama_url']}/api/chat", data=data,
+                    headers={"Content-Type": "application/json"}, method="POST")
+                with urllib.request.urlopen(req, timeout=None) as resp:
+                    for line in resp:
+                        line = line.strip()
+                        if not line:
+                            continue
+                        try:
+                            chunk = json.loads(line)
+                        except Exception:
+                            continue
+                        token = chunk.get("message", {}).get("content", "")
+                        done  = chunk.get("done", False)
+                        token_queue.put({"t": token, "d": done})
+                        if done:
+                            break
+            except urllib.error.URLError:
+                token_queue.put({"e": "Ollama is not running. Start Ollama and try again."})
+            except Exception as ex:
+                token_queue.put({"e": str(ex)})
+            finally:
+                token_queue.put(None)  # sentinel — always signals end
+
+        threading.Thread(target=ollama_worker, daemon=True).start()
+
         yield json.dumps({"hb": 1}) + "\n"
-        try:
-            data = json.dumps(ollama_body).encode()
-            req = urllib.request.Request(f"{cfg['ollama_url']}/api/chat", data=data,
-                headers={"Content-Type": "application/json"}, method="POST")
-            with urllib.request.urlopen(req, timeout=None) as resp:
-                for line in resp:
-                    line = line.strip()
-                    if not line:
-                        continue
-                    try:
-                        chunk = json.loads(line)
-                    except Exception:
-                        continue
-                    token = chunk.get("message", {}).get("content", "")
-                    done = chunk.get("done", False)
-                    yield json.dumps({"t": token, "d": done}) + "\n"
-        except urllib.error.URLError:
-            yield json.dumps({"e": "Ollama is not running. Start Ollama and try again."}) + "\n"
-        except Exception as ex:
-            yield json.dumps({"e": str(ex)}) + "\n"
+        while True:
+            try:
+                item = token_queue.get(timeout=3)
+            except queue.Empty:
+                yield json.dumps({"hb": 1}) + "\n"  # keep connection alive
+                continue
+            if item is None:
+                break
+            yield json.dumps(item) + "\n"
+            if item.get("d") or "e" in item:
+                break
 
     return Response(stream_with_context(generate()),
                     mimetype="application/x-ndjson",
