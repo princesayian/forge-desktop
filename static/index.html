@@ -899,6 +899,7 @@ function App(){
   const[rStep,setRStep]=useState(0);const[rAnswers,setRAnswers]=useState({});
   const[rName,setRName]=useState("");const[rHeroName,setRHeroName]=useState("");const[rAccent,setRAccent]=useState("crimson");
   const[rNkAlign,setRNkAlign]=useState("neutral");
+  const[rFamilyCharId,setRFamilyCharId]=useState("");const[rFamilyRelation,setRFamilyRelation]=useState("parent");
   const[rGender,setRGender]=useState("Male");
   const[rAge,setRAge]=useState("");
   const[rBirthYear,setRBirthYear]=useState("");
@@ -918,6 +919,7 @@ function App(){
   const[vName,setVName]=useState("");const[vTargetTeams,setVTargetTeams]=useState([]);
   const[vGender,setVGender]=useState("Male");
   const[vLoading,setVLoading]=useState(false);const[vResult,setVResult]=useState(null);
+  const[aiStreamText,setAiStreamText]=useState("");
   // ── Story ────────────────────────────────────────────────────────────────
   const[sCast,setSCast]=useState([]);const[sScenario,setSScenario]=useState("ambush");
   const[sTone,setSTone]=useState("intense");
@@ -1123,7 +1125,7 @@ function App(){
   // ── AI ────────────────────────────────────────────────────────────────────
   const callAI=useCallback(async(prompt,onToken)=>{
     const controller=new AbortController();
-    const tid=setTimeout(()=>controller.abort(),240000);
+    const tid=setTimeout(()=>controller.abort(),360000);
     try{
       const res=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:currentModel,max_tokens:1200,messages:[{role:"user",content:prompt}]}),signal:controller.signal});
       if(!res.body)throw new Error("No response stream");
@@ -1154,7 +1156,7 @@ function App(){
 
   // ── Recruit ───────────────────────────────────────────────────────────────
   const generateRecruit=async()=>{
-    setRLoading(true);setRResult(null);
+    setRLoading(true);setRResult(null);setAiStreamText("");
     const hex=ACCENT_COLORS.find(a=>a.id===rAccent)?.hex||"#A32D2D";
     const teamType=TEAM_TYPES.find(t=>t.id===activeTeam.type)?.label||activeTeam.type;
     const answers=RECRUIT_QUIZ.map(q=>{const opt=q.options.find(o=>o.id===rAnswers[q.id]);return`${q.question}: ${opt?.value||""}`;}).join("\n");
@@ -1162,7 +1164,7 @@ function App(){
     try{
       const raceStr=raceLabel(rRace);
       const raceLoreStr=raceLore(rRace);
-      const p=await callAI(`Create a ${activeTeam.name} team hero. JSON only.\n\nReal name: ${rName||"Unknown"}\nGender: ${rGender}\nAge: ${rAge||(rBirthYear?String(2026-parseInt(rBirthYear)):"Unknown")}\n${rBirthYear?`Birth year: ${rBirthYear}\n`:""}Race: ${raceStr||"Unspecified"}\n${raceLoreStr?`Race lore (bake into origin): ${raceLoreStr}\n`:""}${rStoryDir.trim()?`Story direction (shape the origin around this): ${rStoryDir.trim()}\n`:""}Team: ${activeTeam.name} (${teamType})\nAccent color: ${hex}\nNK alignment of this character: ${rNkAlign}\nExisting names (pick different): ${existingNames||"none yet"}\n${rHeroName?`Hero name: ${rHeroName} (use exactly this name)`:"Hero name: (choose a fitting dark name)"}\nQuiz:\n${answers}\n\nIMPORTANT: Use correct pronouns (${pronounOf(rGender)}/${pronounOf(rGender)==="they"?"them":pronounOf(rGender)==="she"?"her":"him"}) for this character throughout.\nIMPORTANT: Pick 2-3 specific comic or anime characters as DNA for this hero based on the quiz answers. Bake these invisibly into every output field — power names shaped by their style, tagline capturing their essence, origin echoing their arc. Never name-drop them; only list in the dna array.\n\n{"heroName":"${rHeroName||"2-word dark name"}","tagline":"one punchy sentence","role":"Role · Descriptor","origin":"2-3 sentences connected to the team and their world — reflect their race biology and birth year context if provided","powers":[{"name":"Name","desc":"visual desc"},{"name":"Name","desc":"visual desc"},{"name":"Name","desc":"visual desc"},{"name":"Name","desc":"visual desc"}],"stats":{"Power":75,"Speed":70,"Tech":60,"Intellect":80,"Will":85},"costumeDesc":"costume in team aesthetic with ${hex} accent","powerFX":"visible effects using ${hex}","consistencyNotes":"design lock rules","dna":["Character whose energy shapes this hero's powers — e.g. Vegeta","Character whose arc or personality informs their story"]}`);
+      const p=await callAI(`Create a ${activeTeam.name} team hero. JSON only.\n\nReal name: ${rName||"Unknown"}\nGender: ${rGender}\nAge: ${rAge||(rBirthYear?String(2026-parseInt(rBirthYear)):"Unknown")}\n${rBirthYear?`Birth year: ${rBirthYear}\n`:""}Race: ${raceStr||"Unspecified"}\n${raceLoreStr?`Race lore (bake into origin): ${raceLoreStr}\n`:""}${rStoryDir.trim()?`Story direction (shape the origin around this): ${rStoryDir.trim()}\n`:""}Team: ${activeTeam.name} (${teamType})\nAccent color: ${hex}\nNK alignment of this character: ${rNkAlign}\nExisting names (pick different): ${existingNames||"none yet"}\n${rHeroName?`Hero name: ${rHeroName} (use exactly this name)`:"Hero name: (choose a fitting dark name)"}\nQuiz:\n${answers}\n\nIMPORTANT: Use correct pronouns (${pronounOf(rGender)}/${pronounOf(rGender)==="they"?"them":pronounOf(rGender)==="she"?"her":"him"}) for this character throughout.\nIMPORTANT: Pick 2-3 specific comic or anime characters as DNA for this hero based on the quiz answers. Bake these invisibly into every output field — power names shaped by their style, tagline capturing their essence, origin echoing their arc. Never name-drop them; only list in the dna array.\n\n{"heroName":"${rHeroName||"2-word dark name"}","tagline":"one punchy sentence","role":"Role · Descriptor","origin":"2-3 sentences connected to the team and their world — reflect their race biology and birth year context if provided","powers":[{"name":"Name","desc":"visual desc"},{"name":"Name","desc":"visual desc"},{"name":"Name","desc":"visual desc"},{"name":"Name","desc":"visual desc"}],"stats":{"Power":75,"Speed":70,"Tech":60,"Intellect":80,"Will":85},"costumeDesc":"costume in team aesthetic with ${hex} accent","powerFX":"visible effects using ${hex}","consistencyNotes":"design lock rules","dna":["Character whose energy shapes this hero's powers — e.g. Vegeta","Character whose arc or personality informs their story"]}`,t=>setAiStreamText(t));
       const num=String(activeRoster.length+1).padStart(2,"0");
       const computedAge=rAge||(rBirthYear?String(2026-parseInt(rBirthYear)):"");
       setRResult({id:`char-${Date.now()}`,teamId:activeTeamId,realName:rName||"Unknown",gender:rGender,age:computedAge,birthYear:rBirthYear||"",race:rRace,species:raceLabel(rRace)||"Human",color:hex,colorLight:hex+"CC",initials:rName?rName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",number:num,isCustom:true,nkAlignment:rNkAlign,...p});
@@ -1175,11 +1177,20 @@ function App(){
     const newRosters={...teamRosters,[activeTeamId]:[...(teamRosters[activeTeamId]||[]),rResult]};
     setTeamRosters(newRosters);
     persist("forge-rosters",newRosters);
-    setRResult(null);setRAnswers({});setRName("");setRHeroName("");setRStep(0);setRNkAlign("neutral");setRGender("Male");setRAge("");setRBirthYear("");setRRace(null);setRStoryDir("");setDeepAnswers({});setDeepPhase(0);setTab("roster");
+    if(rFamilyCharId){
+      const rel=FAMILY_RELATIONS.find(r=>r.id===rFamilyRelation);
+      if(rel){
+        const newLink={id:`fl-${Date.now()}`,a:rResult.id,b:rFamilyCharId,aRelation:rel.label,bRelation:rel.inverse};
+        const updatedLinks=[...familyLinks,newLink];
+        setFamilyLinks(updatedLinks);
+        persist("nk-family",updatedLinks);
+      }
+    }
+    setRResult(null);setRAnswers({});setRName("");setRHeroName("");setRStep(0);setRNkAlign("neutral");setRGender("Male");setRAge("");setRBirthYear("");setRRace(null);setRStoryDir("");setDeepAnswers({});setDeepPhase(0);setRFamilyCharId("");setRFamilyRelation("parent");setTab("roster");
   };
 
   const generateDeepRecruit=async()=>{
-    setRLoading(true);setRResult(null);
+    setRLoading(true);setRResult(null);setAiStreamText("");
     const hex=ACCENT_COLORS.find(a=>a.id===rAccent)?.hex||"#A32D2D";
     const existingNames=activeRoster.map(m=>m.heroName).join(", ");
     // Build rich context from deep lore answers
@@ -1197,7 +1208,7 @@ function App(){
     try{
       const raceStr=raceLabel(rRace);
       const raceLoreStr=raceLore(rRace);
-      const p=await callAI(`Create a deeply developed ${activeTeam.name} hero using rich comic book lore. JSON only.\n\nReal name: ${rName||"Unknown"}\nGender: ${rGender}\nAge: ${rAge||(rBirthYear?String(2026-parseInt(rBirthYear)):"Unknown")}\n${rBirthYear?`Birth year: ${rBirthYear}\n`:""}Race: ${raceStr||"Unspecified"}\n${raceLoreStr?`Race lore (bake into origin): ${raceLoreStr}\n`:""}${rStoryDir.trim()?`Story direction (shape the origin around this): ${rStoryDir.trim()}\n`:""}Accent color: ${hex}\nNK alignment: ${rNkAlign}\nExisting names (must be different): ${existingNames||"none"}\n${rHeroName?`Hero name: ${rHeroName} (use exactly this name)`:"Hero name: (choose a distinct name fitting the lore profile)"}\nTeam: ${activeTeam.name}\nIMPORTANT: Use correct pronouns (${pronounOf(rGender)}/${pronounOf(rGender)==="they"?"them":pronounOf(rGender)==="she"?"her":"him"}) for this character throughout.\n${dnaFoundation?`\nCHARACTER DNA FOUNDATION (bake these invisibly into every field — powers named/described through their aesthetic, origin reflecting their arc pattern, personality in the tagline — filter through the NK universe, never reference by name except in the dna array):\n${dnaFoundation}\n`:""}\nFull lore profile:\n${loreContext}${freeText?"\nVisual references: "+freeText:""}\n\nUse this lore to create a hero that feels authentic to these inspirations. JSON:\n{"heroName":"${rHeroName||"2-word hero name, distinct and fitting the lore profile"}","tagline":"one piercing sentence that captures their essence","role":"Role · Descriptor","origin":"3-4 sentences backstory that directly reflects the lore answers — specific and rooted in their race and birth year context","powers":[{"name":"Power name matching their visual style","desc":"2-sentence visual description of exactly how this looks in action"},{"name":"Power name","desc":"visual desc"},{"name":"Power name","desc":"visual desc"},{"name":"Power name","desc":"visual desc"}],"stats":{"Power":75,"Speed":70,"Tech":60,"Intellect":80,"Will":85},"costumeDesc":"Detailed costume description using ${hex} accent, reflecting their costume philosophy answer","powerFX":"Exact visual description of power effects using ${hex}, matching their FX style answer","consistencyNotes":"2-3 specific design lock rules based on their visual choices","dna":["Primary DNA — exact character name like Vegeta or Moon Knight","Secondary DNA — another specific character baked into this hero","Optional third DNA — only if genuinely applicable"]}`);
+      const p=await callAI(`Create a deeply developed ${activeTeam.name} hero using rich comic book lore. JSON only.\n\nReal name: ${rName||"Unknown"}\nGender: ${rGender}\nAge: ${rAge||(rBirthYear?String(2026-parseInt(rBirthYear)):"Unknown")}\n${rBirthYear?`Birth year: ${rBirthYear}\n`:""}Race: ${raceStr||"Unspecified"}\n${raceLoreStr?`Race lore (bake into origin): ${raceLoreStr}\n`:""}${rStoryDir.trim()?`Story direction (shape the origin around this): ${rStoryDir.trim()}\n`:""}Accent color: ${hex}\nNK alignment: ${rNkAlign}\nExisting names (must be different): ${existingNames||"none"}\n${rHeroName?`Hero name: ${rHeroName} (use exactly this name)`:"Hero name: (choose a distinct name fitting the lore profile)"}\nTeam: ${activeTeam.name}\nIMPORTANT: Use correct pronouns (${pronounOf(rGender)}/${pronounOf(rGender)==="they"?"them":pronounOf(rGender)==="she"?"her":"him"}) for this character throughout.\n${dnaFoundation?`\nCHARACTER DNA FOUNDATION (bake these invisibly into every field — powers named/described through their aesthetic, origin reflecting their arc pattern, personality in the tagline — filter through the NK universe, never reference by name except in the dna array):\n${dnaFoundation}\n`:""}\nFull lore profile:\n${loreContext}${freeText?"\nVisual references: "+freeText:""}\n\nUse this lore to create a hero that feels authentic to these inspirations. JSON:\n{"heroName":"${rHeroName||"2-word hero name, distinct and fitting the lore profile"}","tagline":"one piercing sentence that captures their essence","role":"Role · Descriptor","origin":"3-4 sentences backstory that directly reflects the lore answers — specific and rooted in their race and birth year context","powers":[{"name":"Power name matching their visual style","desc":"2-sentence visual description of exactly how this looks in action"},{"name":"Power name","desc":"visual desc"},{"name":"Power name","desc":"visual desc"},{"name":"Power name","desc":"visual desc"}],"stats":{"Power":75,"Speed":70,"Tech":60,"Intellect":80,"Will":85},"costumeDesc":"Detailed costume description using ${hex} accent, reflecting their costume philosophy answer","powerFX":"Exact visual description of power effects using ${hex}, matching their FX style answer","consistencyNotes":"2-3 specific design lock rules based on their visual choices","dna":["Primary DNA — exact character name like Vegeta or Moon Knight","Secondary DNA — another specific character baked into this hero","Optional third DNA — only if genuinely applicable"]}`,t=>setAiStreamText(t));
       const num=String(activeRoster.length+1).padStart(2,"0");
       const computedAge=rAge||(rBirthYear?String(2026-parseInt(rBirthYear)):"");
       setRResult({id:`char-${Date.now()}`,teamId:activeTeamId,realName:rName||"Unknown",gender:rGender,age:computedAge,birthYear:rBirthYear||"",race:rRace,species:raceLabel(rRace)||"Human",color:hex,colorLight:hex+"CC",initials:rName?rName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",number:num,isCustom:true,nkAlignment:rNkAlign,deepLore:deepAnswers,...p});
@@ -1216,11 +1227,11 @@ function App(){
 
   // ── Villain pool ──────────────────────────────────────────────────────────
   const generateVillain=async()=>{
-    setVLoading(true);setVResult(null);
+    setVLoading(true);setVResult(null);setAiStreamText("");
     const answers=VILLAIN_QUIZ.map(q=>{const opt=q.options.find(o=>o.id===vAnswers[q.id]);return`${q.question}: ${opt?.value||""}`;}).join("\n");
     const targetNames=vTargetTeams.map(id=>teams.find(t=>t.id===id)?.name||id).join(", ")||"The Nocturnal Knights";
     try{
-      const p=await callAI(`Create a villain who threatens: ${targetNames}. JSON only — keys: heroName, tagline, role, origin, powers, stats, dna.\n\nName: ${vName||"Unknown"}\nGender: ${vGender}\nIMPORTANT: Use correct pronouns (${pronounOf(vGender)}/${pronounOf(vGender)==="they"?"them":pronounOf(vGender)==="she"?"her":"him"}) throughout.\nTarget teams: ${targetNames}\nQuiz:\n${answers}\n\n{"heroName":"villain codename","tagline":"one chilling sentence","role":"Threat · Descriptor","origin":"3-4 sentences deeply tied to the target teams","powers":[{"name":"Name","desc":"desc, mirror or counter to a hero ability"},{"name":"Name","desc":"desc"},{"name":"Name","desc":"desc"},{"name":"Name","desc":"desc"}],"stats":{"Power":88,"Speed":78,"Tech":82,"Intellect":90,"Will":88},"dna":["Villain Inspiration 1","Villain Inspiration 2"]}`);
+      const p=await callAI(`Create a villain who threatens: ${targetNames}. JSON only — keys: heroName, tagline, role, origin, powers, stats, dna.\n\nName: ${vName||"Unknown"}\nGender: ${vGender}\nIMPORTANT: Use correct pronouns (${pronounOf(vGender)}/${pronounOf(vGender)==="they"?"them":pronounOf(vGender)==="she"?"her":"him"}) throughout.\nTarget teams: ${targetNames}\nQuiz:\n${answers}\n\n{"heroName":"villain codename","tagline":"one chilling sentence","role":"Threat · Descriptor","origin":"3-4 sentences deeply tied to the target teams","powers":[{"name":"Name","desc":"desc, mirror or counter to a hero ability"},{"name":"Name","desc":"desc"},{"name":"Name","desc":"desc"},{"name":"Name","desc":"desc"}],"stats":{"Power":88,"Speed":78,"Tech":82,"Intellect":90,"Will":88},"dna":["Villain Inspiration 1","Villain Inspiration 2"]}`,t=>setAiStreamText(t));
       setVResult({id:`villain-${Date.now()}`,realName:vName||"Unknown",gender:vGender,color:"#8B1A1A",colorLight:"#E07070",initials:vName?vName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",isVillain:true,targetTeams:vTargetTeams.length?vTargetTeams:["nocturnal-knights"],...p});
     }catch(e){setVResult({error:true,msg:e.message});}
     setVLoading(false);
@@ -1755,21 +1766,42 @@ function App(){
             </div>
           </div>
           <span style={s.lbl}>Accent Color</span>
-          <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:deepMode?18:0}}>
+          <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:14}}>
             {ACCENT_COLORS.map(ac=><button key={ac.id} onClick={()=>setRAccent(ac.id)} style={{display:"flex",alignItems:"center",gap:7,padding:"7px 12px",background:rAccent===ac.id?`${ac.hex}18`:"var(--bg3)",border:`1px solid ${rAccent===ac.id?ac.hex:"var(--border2)"}`,borderRadius:20,cursor:"pointer",fontFamily:"monospace",fontSize:11,color:rAccent===ac.id?"var(--text-primary)":"var(--text2)"}}><div style={{width:10,height:10,borderRadius:"50%",background:ac.hex,flexShrink:0}}/>{ac.label}</button>)}
           </div>
           {deepMode&&(<>
-            <span style={{...s.lbl,marginTop:14}}>Visual References (optional)</span>
+            <span style={{...s.lbl,marginTop:0}}>Visual References (optional)</span>
             <input type="text" placeholder="e.g. Batman's silhouette, Vegeta's stance, Trunks' sword" value={deepAnswers.visualRef||""} onChange={e=>setDeepAnswers(p=>({...p,visualRef:e.target.value}))} style={{marginBottom:12}}/>
             <span style={s.lbl}>Must-Have Visual Elements (optional)</span>
-            <input type="text" placeholder="e.g. always has a hood, scar on right eye, mechanical left arm" value={deepAnswers.mustHave||""} onChange={e=>setDeepAnswers(p=>({...p,mustHave:e.target.value}))}/>
+            <input type="text" placeholder="e.g. always has a hood, scar on right eye, mechanical left arm" value={deepAnswers.mustHave||""} onChange={e=>setDeepAnswers(p=>({...p,mustHave:e.target.value}))} style={{marginBottom:14}}/>
           </>)}
           {activeTeamId!=="nocturnal-knights"&&(<>
-            <span style={{...s.lbl,marginTop:14}}>NK Alignment</span>
-            <div style={{display:"flex",flexWrap:"wrap",gap:7,marginBottom:6}}>
+            <span style={{...s.lbl,marginTop:0}}>NK Alignment</span>
+            <div style={{display:"flex",flexWrap:"wrap",gap:7,marginBottom:14}}>
               {NK_ALIGNMENTS.map(a=><button key={a.id} onClick={()=>setRNkAlign(a.id)} style={{fontSize:9,padding:"4px 11px",background:rNkAlign===a.id?`${a.color}18`:"var(--bg3)",border:`1px solid ${rNkAlign===a.id?a.color:"var(--border2)"}`,borderRadius:20,cursor:"pointer",color:rNkAlign===a.id?a.color:"var(--text2)",fontFamily:"monospace"}}>{a.label}</button>)}
             </div>
           </>)}
+          {(()=>{
+            const recruitAllChars=[...Object.values(teamRosters||{}).flat(),...DEFAULT_NK,...villainPool];
+            const uniqueChars=Object.values(Object.fromEntries(recruitAllChars.map(c=>[c.id,c])));
+            const selChar=uniqueChars.find(c=>c.id===rFamilyCharId);
+            const selRel=FAMILY_RELATIONS.find(r=>r.id===rFamilyRelation);
+            return(
+              <div style={{marginBottom:14}}>
+                <span style={s.lbl}>Family Connection (optional)</span>
+                <select value={rFamilyCharId} onChange={e=>setRFamilyCharId(e.target.value)} style={{width:"100%",padding:"8px 10px",background:"var(--bg2)",border:"1px solid var(--border2)",borderRadius:7,color:"var(--text-primary)",fontFamily:"monospace",fontSize:11,marginTop:6,marginBottom:rFamilyCharId?8:0}}>
+                  <option value="">— No family connection —</option>
+                  {uniqueChars.map(c=><option key={c.id} value={c.id}>{c.heroName}{c.isVillain?" ⚠":""} ({c.realName||"?"})</option>)}
+                </select>
+                {rFamilyCharId&&(<>
+                  <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:6}}>
+                    {FAMILY_RELATIONS.map(r=><button key={r.id} onClick={()=>setRFamilyRelation(r.id)} style={{padding:"4px 10px",background:rFamilyRelation===r.id?`${activeTeam.color}18`:"var(--bg3)",border:`1px solid ${rFamilyRelation===r.id?activeTeam.color:"var(--border2)"}`,borderRadius:14,cursor:"pointer",fontSize:9,color:rFamilyRelation===r.id?activeTeam.color:"var(--text2)",fontFamily:"monospace"}}>{r.label}</button>)}
+                  </div>
+                  {selChar&&selRel&&<div style={{fontSize:9,color:"var(--text3)",fontStyle:"italic"}}>{rHeroName||"New hero"} is {selChar.heroName}'s <strong style={{color:activeTeam.color}}>{selRel.label}</strong> · {selChar.heroName} is their <strong style={{color:activeTeam.color}}>{selRel.inverse}</strong></div>}
+                </>)}
+              </div>
+            );
+          })()}
           {(!rHeroName.trim()||!rName.trim()||!rRace)&&<div style={{fontSize:10,color:"#E07070",marginBottom:8,fontFamily:"monospace"}}>* Hero Name, Real Name, and Race are required</div>}
           <button style={s.bigBtn(!rHeroName.trim()||!rName.trim()||!rRace,activeTeam.color)} disabled={!rHeroName.trim()||!rName.trim()||!rRace} onClick={()=>deepMode?setDeepPhase(1):setRStep(1)}>
             {deepMode?"Begin Deep Forge →":"Begin Assessment →"}
@@ -1804,6 +1836,8 @@ function App(){
             </div>
           </>);
         })()}
+
+        {rLoading&&aiStreamText&&<div style={{padding:"10px 12px",background:"var(--bg2)",border:"1px solid var(--border2)",borderRadius:8,fontFamily:"monospace",fontSize:9,color:"var(--text3)",maxHeight:72,overflowY:"auto",whiteSpace:"pre-wrap",wordBreak:"break-all",lineHeight:1.5,marginBottom:10}}>{aiStreamText}</div>}
 
         {/* ── Result (both modes) ── */}
         {rResult&&!rResult.error&&(<>
@@ -1845,6 +1879,7 @@ function App(){
               {vStep===VILLAIN_QUIZ.length&&vAnswers[vCurrentQ.id]&&<button onClick={generateVillain} disabled={vLoading} style={{flex:2,...s.bigBtn(vLoading,"#8B1A1A"),marginTop:0}}>{vLoading?"Forging threat...":"Generate Villain →"}</button>}
             </div>
           </div>)}
+          {vLoading&&aiStreamText&&<div style={{padding:"10px 12px",background:"var(--bg2)",border:"1px solid rgba(139,26,26,0.3)",borderRadius:8,fontFamily:"monospace",fontSize:9,color:"var(--text3)",maxHeight:72,overflowY:"auto",whiteSpace:"pre-wrap",wordBreak:"break-all",lineHeight:1.5,marginBottom:10}}>{aiStreamText}</div>}
           {vResult&&!vResult.error&&(<>
             <CharacterPage member={vResult} imageUrl={null} isVillain={true}/>
             <div style={{display:"flex",gap:10,marginTop:14,marginBottom:20}}>
