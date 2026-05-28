@@ -1161,7 +1161,15 @@ function App(){
       }
       genControllerRef.current=null;
       const clean=full.replace(/```json\n?/g,"").replace(/```\n?/g,"").trim().replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g,ch=>'\\u'+ch.charCodeAt(0).toString(16).padStart(4,'0'));
-      try{return JSON.parse(clean);}catch{const m=clean.match(/\{[\s\S]*\}/);if(m)return JSON.parse(m[0]);throw new Error("Response was not valid JSON");}
+      try{return JSON.parse(clean);}catch{
+        // Try greedy {…} extraction
+        const m=clean.match(/\{[\s\S]*\}/);
+        if(m){try{return JSON.parse(m[0]);}catch{}}
+        // Last resort: find the first { and try everything from there
+        const start=clean.indexOf("{");
+        if(start>0){try{return JSON.parse(clean.slice(start));}catch{}}
+        throw new Error("Response was not valid JSON");
+      }
     }catch(e){
       genControllerRef.current=null;
       if(e.name==="AbortError")throw new Error("Generation cancelled.");
@@ -1301,7 +1309,7 @@ function App(){
         const pronoun=pronounOf(m.gender||"Unknown");
         return `CHARACTER ${i+1} — ${m.heroName} (${m.realName}): ${m.gender||"Unknown"} ${raceStr}. EXACT COSTUME: ${m.costumeDesc||"dramatic hero suit"}. SIGNATURE COLOR: ${m.color}. POWER FX: ${m.powerFX||m.color+" energy"}. DESIGN LOCK: ${m.consistencyNotes||"maintain accent color throughout"}. Pronouns: ${pronoun}.`;
       }).join("\n");
-      const p=await callAI(`You are writing a Meta AI image prompt for a ${activeRoster.length}-hero group shot. The user will UPLOAD a character reference sheet image alongside this prompt. Your absolute priority is character preservation — every hero must look EXACTLY as shown in the reference, with zero redesigns.\n\nStyle: ${style}\nTeam: ${activeTeam.name}\n\n${charLines}\n\nSetting: Dramatic nighttime urban environment — rooftop edge or city street — with power-effect glows and low atmospheric lighting.\n\nWrite the prompt following these exact rules:\n1. Open with: "Referencing the uploaded character sheet strictly —"\n2. Name each character individually; call out their exact costume colors, specific power effects, and visual identity\n3. Specify each character's position and pose — who stands where, what posture reflects their role in the team\n4. Close with: "Every character matches the reference exactly — same face, same costume, same colors, same power effects. No redesigns. Wide cinematic format, all heroes fully visible."\n5. 5-7 sentences total. Be specific about each character. Do not lump them together.\n\nJSON only, key "metaAI".\n{"metaAI":"..."}`);
+      const p=await callAI(`JSON only. No explanation. Respond with exactly:\n{"metaAI":"<your prompt here>"}\n\nWrite a Meta AI image prompt for a ${activeRoster.length}-hero group shot of ${activeTeam.name}. A character reference sheet will be uploaded alongside this prompt — preserve every character's look exactly.\n\nStyle: ${style}\n\n${charLines}\n\nThe metaAI value must:\n- Open with: "Referencing the uploaded character sheet strictly —"\n- Name each character by name with their exact costume, colors, power effects, and position/pose\n- Close with: "Every character matches the reference exactly — same face, same costume, same colors, same power effects. No redesigns. Wide cinematic format, all heroes fully visible."\n- Setting: dramatic nighttime urban, power-effect lighting\n- 5-7 sentences total\n\n{"metaAI":"..."}`);
       setPResult({group:true,teamName:activeTeam.name,metaAI:p.metaAI});
     }catch(e){setPResult({error:true,msg:e.message});}
     setPLoading(false);
