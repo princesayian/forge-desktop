@@ -1,5 +1,5 @@
 {
-  "model": "llama3.2:latest",
+  "model": "llama-3.3-70b-versatile",
   "ollama_url": "http://localhost:11434",
   "port": 7432,
   "secret_key": "LcHtGOnDUOADBWzsIZkZ+2auKyeP33La",
