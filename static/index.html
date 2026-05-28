@@ -1296,7 +1296,12 @@ function App(){
     setPSelected("group");setPLoading(true);setPResult(null);
     const style=ART_STYLES.find(a=>a.id===pStyle)?.text||"";
     try{
-      const p=await callAI(`Group shot Meta AI prompt for ${activeTeam.name}. JSON only, key "metaAI".\n\nStyle: ${style}\nMembers: ${activeRoster.map(m=>`${m.heroName} (${m.gender||"Unknown gender"}, ${raceLabel(m.race)||m.species||"Human"}): ${m.costumeDesc||"dramatic suit"}, ${m.powerFX||m.color+" energy"}`).join("; ")}\nSetting: dramatic nighttime urban location.\nIMPORTANT: Use correct visual gender representation for each character.\n\n{"metaAI":"3-4 sentence group shot. All members visible with their exact looks and correct gender presentation. End: Wide cinematic format, all characters fully visible."}`);
+      const charLines=activeRoster.map((m,i)=>{
+        const raceStr=raceLabel(m.race)||m.species||"Human";
+        const pronoun=pronounOf(m.gender||"Unknown");
+        return `CHARACTER ${i+1} — ${m.heroName} (${m.realName}): ${m.gender||"Unknown"} ${raceStr}. EXACT COSTUME: ${m.costumeDesc||"dramatic hero suit"}. SIGNATURE COLOR: ${m.color}. POWER FX: ${m.powerFX||m.color+" energy"}. DESIGN LOCK: ${m.consistencyNotes||"maintain accent color throughout"}. Pronouns: ${pronoun}.`;
+      }).join("\n");
+      const p=await callAI(`You are writing a Meta AI image prompt for a ${activeRoster.length}-hero group shot. The user will UPLOAD a character reference sheet image alongside this prompt. Your absolute priority is character preservation — every hero must look EXACTLY as shown in the reference, with zero redesigns.\n\nStyle: ${style}\nTeam: ${activeTeam.name}\n\n${charLines}\n\nSetting: Dramatic nighttime urban environment — rooftop edge or city street — with power-effect glows and low atmospheric lighting.\n\nWrite the prompt following these exact rules:\n1. Open with: "Referencing the uploaded character sheet strictly —"\n2. Name each character individually; call out their exact costume colors, specific power effects, and visual identity\n3. Specify each character's position and pose — who stands where, what posture reflects their role in the team\n4. Close with: "Every character matches the reference exactly — same face, same costume, same colors, same power effects. No redesigns. Wide cinematic format, all heroes fully visible."\n5. 5-7 sentences total. Be specific about each character. Do not lump them together.\n\nJSON only, key "metaAI".\n{"metaAI":"..."}`);
       setPResult({group:true,teamName:activeTeam.name,metaAI:p.metaAI});
     }catch(e){setPResult({error:true,msg:e.message});}
     setPLoading(false);
@@ -1306,47 +1311,93 @@ function App(){
     if(!activeRoster.length)return;
     setSheetLoading(true);
     try{
-      const COLS=Math.min(activeRoster.length,3);
-      const W=960,SIDE=20,GAP=12,CARD_H=110,HEADER_H=56,TOP_PAD=12,BOT_PAD=20;
-      const CARD_W=Math.floor((W-SIDE*2-GAP*(COLS-1))/COLS);
+      const COLS=Math.min(activeRoster.length,4);
+      const CARD_W=240,IMG_H=270,INFO_H=98,CARD_H=IMG_H+INFO_H;
+      const HEADER_H=52,GAP=10,SIDE=14;
       const ROWS=Math.ceil(activeRoster.length/COLS);
-      const H=HEADER_H+TOP_PAD+ROWS*(CARD_H+GAP)-GAP+BOT_PAD;
+      const W=SIDE*2+COLS*CARD_W+(COLS-1)*GAP;
+      const H=HEADER_H+8+ROWS*(CARD_H+GAP)+14;
       const canvas=document.createElement("canvas");
       canvas.width=W;canvas.height=H;
       const ctx=canvas.getContext("2d");
-      ctx.fillStyle="#09090F";ctx.fillRect(0,0,W,H);
+      ctx.fillStyle="#07070F";ctx.fillRect(0,0,W,H);
       const hg=ctx.createLinearGradient(0,0,W,0);
-      hg.addColorStop(0,activeTeam.color);hg.addColorStop(1,activeTeam.color+"88");
+      hg.addColorStop(0,activeTeam.color);hg.addColorStop(1,activeTeam.color+"44");
       ctx.fillStyle=hg;ctx.fillRect(0,0,W,HEADER_H);
-      ctx.fillStyle="#FFFFFF";ctx.font="bold 20px monospace";ctx.textAlign="left";
-      ctx.fillText(activeTeam.name.toUpperCase(),SIDE,36);
-      ctx.fillStyle="rgba(255,255,255,0.5)";ctx.font="10px monospace";ctx.textAlign="right";
-      ctx.fillText("TEAM REFERENCE SHEET",W-SIDE,36);
+      ctx.fillStyle="#FFFFFF";ctx.font="bold 18px monospace";ctx.textAlign="left";
+      ctx.fillText(activeTeam.name.toUpperCase(),SIDE,34);
+      ctx.fillStyle="rgba(255,255,255,0.55)";ctx.font="9px monospace";ctx.textAlign="right";
+      ctx.fillText("CHARACTER REFERENCE — UPLOAD WITH GROUP SHOT PROMPT",W-SIDE,34);
       const loadImg=src=>new Promise(res=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>res(null);i.src=src;});
-      const clip=(t,mw,f)=>{ctx.font=f;if(!t||ctx.measureText(t).width<=mw)return t||"";let s=t;while(s.length>1&&ctx.measureText(s+"…").width>mw)s=s.slice(0,-1);return s.length<t.length?s+"…":s;};
       for(let i=0;i<activeRoster.length;i++){
         const m=activeRoster[i];
         const col=i%COLS,row=Math.floor(i/COLS);
-        const cx=SIDE+col*(CARD_W+GAP),cy=HEADER_H+TOP_PAD+row*(CARD_H+GAP);
-        ctx.fillStyle="#12121A";ctx.fillRect(cx,cy,CARD_W,CARD_H);
-        ctx.strokeStyle=m.color+"44";ctx.lineWidth=1;ctx.strokeRect(cx+0.5,cy+0.5,CARD_W-1,CARD_H-1);
-        ctx.fillStyle=m.color;ctx.fillRect(cx,cy,5,CARD_H);
-        const PSIZ=56,px=cx+16,py=cy+(CARD_H-PSIZ)/2;
-        let drew=false;
+        const cx=SIDE+col*(CARD_W+GAP);
+        const cy=HEADER_H+8+row*(CARD_H+GAP);
+        // Card background
+        ctx.fillStyle="#0D0D1C";ctx.fillRect(cx,cy,CARD_W,CARD_H);
+        // Portrait image — cover crop filling the top portion
         const imgSrc=images[m.id];
-        if(imgSrc){const img=await loadImg(imgSrc);if(img){ctx.save();ctx.beginPath();ctx.arc(px+PSIZ/2,py+PSIZ/2,PSIZ/2,0,Math.PI*2);ctx.clip();ctx.drawImage(img,px,py,PSIZ,PSIZ);ctx.restore();ctx.strokeStyle=m.color;ctx.lineWidth=2;ctx.beginPath();ctx.arc(px+PSIZ/2,py+PSIZ/2,PSIZ/2,0,Math.PI*2);ctx.stroke();drew=true;}}
-        if(!drew){ctx.fillStyle=m.color+"22";ctx.beginPath();ctx.arc(px+PSIZ/2,py+PSIZ/2,PSIZ/2,0,Math.PI*2);ctx.fill();ctx.strokeStyle=m.color+"66";ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(px+PSIZ/2,py+PSIZ/2,PSIZ/2,0,Math.PI*2);ctx.stroke();ctx.fillStyle=m.color;ctx.font="bold 17px monospace";ctx.textAlign="center";ctx.fillText(m.initials||"??",px+PSIZ/2,py+PSIZ/2+6);}
-        const tx=cx+16+PSIZ+12,maxW=CARD_W-(16+PSIZ+12+8);
+        if(imgSrc){
+          const img=await loadImg(imgSrc);
+          if(img){
+            ctx.save();
+            ctx.beginPath();ctx.rect(cx,cy,CARD_W,IMG_H);ctx.clip();
+            // CSS object-fit: cover — scale to fill, center (top-biased for faces)
+            const iAspect=img.width/img.height,cAspect=CARD_W/IMG_H;
+            let dw,dh,dx,dy;
+            if(iAspect>cAspect){dh=IMG_H;dw=dh*iAspect;dx=cx+(CARD_W-dw)/2;dy=cy;}
+            else{dw=CARD_W;dh=dw/iAspect;dx=cx;dy=cy;}  // top-aligned: shows head/face first
+            ctx.drawImage(img,dx,dy,dw,dh);
+            ctx.restore();
+            // Fade bottom edge into info panel
+            const fade=ctx.createLinearGradient(cx,cy+IMG_H-65,cx,cy+IMG_H);
+            fade.addColorStop(0,"transparent");fade.addColorStop(1,"#0D0D1C");
+            ctx.fillStyle=fade;ctx.fillRect(cx,cy+IMG_H-65,CARD_W,65);
+          }
+        } else {
+          // No image: large initials placeholder
+          ctx.fillStyle=m.color+"18";ctx.fillRect(cx,cy,CARD_W,IMG_H);
+          ctx.fillStyle=m.color+"55";ctx.font="bold 60px monospace";ctx.textAlign="center";
+          ctx.fillText(m.initials||"??",cx+CARD_W/2,cy+IMG_H/2+22);
+        }
+        // Color accent bar (left edge of whole card)
+        ctx.fillStyle=m.color;ctx.fillRect(cx,cy,3,CARD_H);
+        // Card border
+        ctx.strokeStyle=m.color+"77";ctx.lineWidth=1;ctx.strokeRect(cx+0.5,cy+0.5,CARD_W-1,CARD_H-1);
+        // Hero name overlaid at bottom of image (floats over the fade)
         ctx.textAlign="left";
-        ctx.fillStyle="#FFFFFF";ctx.fillText(clip(m.heroName||"Unknown",maxW,"bold 14px monospace"),tx,cy+26);
-        ctx.fillStyle=m.color;ctx.fillText(clip(m.realName||"",maxW,"11px monospace"),tx,cy+41);
-        ctx.fillStyle="rgba(255,255,255,0.45)";ctx.fillText(clip(m.role||"",maxW,"10px monospace"),tx,cy+55);
-        const pwrs=(m.powers||[]).slice(0,2).map(p=>p.name).join("  ·  ");
-        ctx.fillStyle="rgba(255,255,255,0.25)";ctx.font="9px monospace";ctx.fillText(clip(pwrs,maxW,"9px monospace"),tx,cy+69);
-        ctx.fillStyle=m.color;ctx.fillRect(tx,cy+CARD_H-18,36,5);
-        ctx.fillStyle="rgba(255,255,255,0.2)";ctx.font="8px monospace";ctx.fillText(m.color,tx+42,cy+CARD_H-13);
-        const rk=TEAM_RANKS.find(r=>r.id===m.teamRank);
-        if(rk&&rk.icon){ctx.fillStyle=rk.color+"22";ctx.fillRect(cx+CARD_W-70,cy+8,62,16);ctx.fillStyle=rk.color;ctx.font="8px monospace";ctx.textAlign="right";ctx.fillText(rk.icon+" "+rk.label,cx+CARD_W-8,cy+20);}
+        ctx.fillStyle="#FFFFFF";ctx.font="bold 13px monospace";
+        ctx.fillText(m.heroName||"Unknown",cx+10,cy+IMG_H-16);
+        ctx.fillStyle=m.color;ctx.font="10px monospace";
+        ctx.fillText(m.realName||"",cx+10,cy+IMG_H-4);
+        // "CHARACTER REF" badge top-right corner
+        ctx.fillStyle="rgba(0,0,0,0.65)";ctx.fillRect(cx+CARD_W-82,cy+4,78,16);
+        ctx.fillStyle=m.color;ctx.font="7px monospace";ctx.textAlign="right";
+        ctx.fillText("CHARACTER REF",cx+CARD_W-6,cy+14);
+        // Info panel
+        const ip=cy+IMG_H+10;
+        ctx.textAlign="left";
+        // Costume desc — word-wrap to 2 lines
+        ctx.fillStyle="rgba(255,255,255,0.5)";ctx.font="8.5px monospace";
+        const maxTW=CARD_W-16,words=(m.costumeDesc||"").split(" ");
+        let cL1="",cL2="",onL2=false;
+        for(const w of words){
+          if(!onL2){const t=cL1+(cL1?" ":"")+w;if(ctx.measureText(t).width<=maxTW)cL1=t;else{onL2=true;cL2=w;}}
+          else cL2+=(cL2?" ":"")+w;
+        }
+        if(ctx.measureText(cL2).width>maxTW){let s=cL2;while(s.length>1&&ctx.measureText(s+"…").width>maxTW)s=s.slice(0,-1);cL2=s+"…";}
+        ctx.fillText(cL1,cx+10,ip+12);
+        if(cL2)ctx.fillText(cL2,cx+10,ip+24);
+        // Color swatch + hex
+        ctx.fillStyle=m.color;ctx.fillRect(cx+10,ip+33,16,10);
+        ctx.strokeStyle="rgba(255,255,255,0.12)";ctx.lineWidth=0.5;ctx.strokeRect(cx+10,ip+33,16,10);
+        ctx.fillStyle="rgba(255,255,255,0.4)";ctx.font="8px monospace";
+        ctx.fillText(m.color,cx+32,ip+42);
+        // Power FX
+        ctx.fillStyle="rgba(255,255,255,0.3)";ctx.font="8px monospace";
+        const fx=(m.powerFX||"").slice(0,50);
+        ctx.fillText("FX: "+fx+(m.powerFX?.length>50?"…":""),cx+10,ip+58);
       }
       await new Promise(res=>canvas.toBlob(blob=>{if(!blob){res();return;}const u=URL.createObjectURL(blob);const a=document.createElement("a");a.href=u;a.download=`${activeTeam.name.toLowerCase().replace(/\s+/g,"-")}-reference.png`;document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(()=>URL.revokeObjectURL(u),1000);res();},"image/png"));
     }catch(e){console.error("Sheet failed:",e);}
