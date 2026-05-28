@@ -1123,7 +1123,7 @@ function App(){
   // ── AI ────────────────────────────────────────────────────────────────────
   const callAI=useCallback(async(prompt,onToken)=>{
     const controller=new AbortController();
-    const tid=setTimeout(()=>controller.abort(),90000);
+    const tid=setTimeout(()=>controller.abort(),240000);
     try{
       const res=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:currentModel,max_tokens:1200,messages:[{role:"user",content:prompt}]}),signal:controller.signal});
       if(!res.body)throw new Error("No response stream");
