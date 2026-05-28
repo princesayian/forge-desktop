@@ -425,6 +425,11 @@ def chat():
     }
 
     def generate():
+        # Yield immediately so Flask flushes HTTP headers to the browser before
+        # waiting for Ollama. Without this, the browser receives nothing until
+        # the first token arrives, which can take 30-180s on large prompts —
+        # long enough for Chrome to report "Failed to fetch".
+        yield json.dumps({"hb": 1}) + "\n"
         try:
             data = json.dumps(ollama_body).encode()
             req = urllib.request.Request(f"{cfg['ollama_url']}/api/chat", data=data,
