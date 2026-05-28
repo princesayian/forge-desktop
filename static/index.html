@@ -509,8 +509,8 @@ function EditPanel({member,onSave,onCancel,callAI,teamName}){
   const[align,setAlign]=useState(member.nkAlignment||"neutral");
   const[gender,setGender]=useState(member.gender||"");
   const[race,setRace]=useState(member.race||null);
-  const[age,setAge]=useState(member.age||"");
   const[birthYear,setBirthYear]=useState(member.birthYear||"");
+  const[age,setAge]=useState(member.birthYear?String(2026-parseInt(member.birthYear)):(member.age||""));
   const[storyDir,setStoryDir]=useState("");
   const[regenLoading,setRegenLoading]=useState(false);
   const c=member.color;
@@ -539,7 +539,7 @@ function EditPanel({member,onSave,onCancel,callAI,teamName}){
       </div>
       <div>
         <div style={{fontSize:9,letterSpacing:"0.12em",color:`${c}88`,textTransform:"uppercase",marginBottom:5}}>Birth Year</div>
-        <input type="number" min="1900" max="2025" placeholder="e.g. 1995" value={birthYear} onChange={e=>{setBirthYear(e.target.value);if(e.target.value)setAge(String(2026-parseInt(e.target.value)));}} style={{padding:"7px 10px"}}/>
+        <input type="number" placeholder="e.g. 1995" value={birthYear} onChange={e=>{setBirthYear(e.target.value);setAge(e.target.value?String(2026-parseInt(e.target.value)):"");}} style={{padding:"7px 10px"}}/>
       </div>
       <div>
         <div style={{fontSize:9,letterSpacing:"0.12em",color:`${c}88`,textTransform:"uppercase",marginBottom:5}}>Age {birthYear&&age?`(${age} yrs)`:""}</div>
@@ -1721,10 +1721,10 @@ function App(){
         {/* ── Step 0: Identity (both modes) ── */}
         {!rResult&&((!deepMode&&rStep===0)||(deepMode&&deepPhase===0))&&(<div style={s.card}>
           <div style={{fontSize:15,fontWeight:"bold",color:"var(--text-primary)",marginBottom:14}}>Who is this recruit?</div>
-          <span style={s.lbl}>Hero Name (optional — AI will use this if provided)</span>
-          <div style={{display:"flex",gap:6,marginBottom:14}}><input type="text" placeholder="e.g. Ironhawk" value={rHeroName} onChange={e=>setRHeroName(e.target.value)} style={{flex:1}}/><button onClick={()=>setRHeroName(randHeroName())} title="Random hero name" style={{padding:"0 12px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:16,flexShrink:0}}>⚄</button></div>
-          <span style={s.lbl}>Real Name (optional)</span>
-          <input type="text" placeholder="e.g. Devon Marshall" value={rName} onChange={e=>setRName(e.target.value)} style={{marginBottom:14}}/>
+          <span style={s.lbl}>Hero Name <span style={{color:"#E07070"}}>*</span></span>
+          <div style={{display:"flex",gap:6,marginBottom:14}}><input type="text" placeholder="e.g. Ironhawk" value={rHeroName} onChange={e=>setRHeroName(e.target.value)} style={{flex:1,borderColor:!rHeroName.trim()?"rgba(224,112,112,0.5)":undefined}}/><button onClick={()=>setRHeroName(randHeroName())} title="Random hero name" style={{padding:"0 12px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:16,flexShrink:0}}>⚄</button></div>
+          <span style={s.lbl}>Real Name <span style={{color:"#E07070"}}>*</span></span>
+          <input type="text" placeholder="e.g. Devon Marshall" value={rName} onChange={e=>setRName(e.target.value)} style={{marginBottom:14,borderColor:!rName.trim()?"rgba(224,112,112,0.5)":undefined}}/>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:14}}>
             <div>
               <span style={s.lbl}>Gender</span>
@@ -1737,7 +1737,7 @@ function App(){
             </div>
             <div>
               <span style={s.lbl}>Birth Year (optional)</span>
-              <input type="number" min="1900" max="2025" placeholder="e.g. 1995" value={rBirthYear} onChange={e=>{setRBirthYear(e.target.value);if(e.target.value&&!rAge)setRAge(String(2026-parseInt(e.target.value)));}} style={{marginTop:4,padding:"8px 10px"}}/>
+              <input type="number" placeholder="e.g. 1995" value={rBirthYear} onChange={e=>{setRBirthYear(e.target.value);setRAge(e.target.value?String(2026-parseInt(e.target.value)):"");}} style={{marginTop:4,padding:"8px 10px"}}/>
             </div>
             <div>
               <span style={s.lbl}>Age {rBirthYear&&rAge?`(${rAge} yrs)`:""} (optional)</span>
@@ -1749,8 +1749,8 @@ function App(){
             <textarea style={{height:52,fontSize:11,marginTop:4}} placeholder={`e.g. "Was exiled from their homeworld" · "Lost their powers once and had to earn them back" · "Reluctant hero who fights for one person, not the mission"`} value={rStoryDir} onChange={e=>setRStoryDir(e.target.value)}/>
           </div>
           <div style={{marginBottom:14}}>
-            <span style={s.lbl}>Race (optional)</span>
-            <div style={{marginTop:6}}>
+            <span style={s.lbl}>Race <span style={{color:"#E07070"}}>*</span></span>
+            <div style={{marginTop:6,outline:!rRace?"1px solid rgba(224,112,112,0.4)":undefined,borderRadius:8}}>
               <RaceSelector value={rRace} onChange={setRRace} color={ACCENT_COLORS.find(a=>a.id===rAccent)?.hex||G}/>
             </div>
           </div>
@@ -1767,10 +1767,11 @@ function App(){
           {activeTeamId!=="nocturnal-knights"&&(<>
             <span style={{...s.lbl,marginTop:14}}>NK Alignment</span>
             <div style={{display:"flex",flexWrap:"wrap",gap:7,marginBottom:6}}>
-              {[{id:"neutral",label:"Neutral",color:"#888780"},...NK_ALIGNMENTS].map(a=><button key={a.id} onClick={()=>setRNkAlign(a.id)} style={{fontSize:9,padding:"4px 11px",background:rNkAlign===a.id?`${a.color}18`:"var(--bg3)",border:`1px solid ${rNkAlign===a.id?a.color:"var(--border2)"}`,borderRadius:20,cursor:"pointer",color:rNkAlign===a.id?a.color:"var(--text2)",fontFamily:"monospace"}}>{a.label}</button>)}
+              {NK_ALIGNMENTS.map(a=><button key={a.id} onClick={()=>setRNkAlign(a.id)} style={{fontSize:9,padding:"4px 11px",background:rNkAlign===a.id?`${a.color}18`:"var(--bg3)",border:`1px solid ${rNkAlign===a.id?a.color:"var(--border2)"}`,borderRadius:20,cursor:"pointer",color:rNkAlign===a.id?a.color:"var(--text2)",fontFamily:"monospace"}}>{a.label}</button>)}
             </div>
           </>)}
-          <button style={s.bigBtn(false,activeTeam.color)} onClick={()=>deepMode?setDeepPhase(1):setRStep(1)}>
+          {(!rHeroName.trim()||!rName.trim()||!rRace)&&<div style={{fontSize:10,color:"#E07070",marginBottom:8,fontFamily:"monospace"}}>* Hero Name, Real Name, and Race are required</div>}
+          <button style={s.bigBtn(!rHeroName.trim()||!rName.trim()||!rRace,activeTeam.color)} disabled={!rHeroName.trim()||!rName.trim()||!rRace} onClick={()=>deepMode?setDeepPhase(1):setRStep(1)}>
             {deepMode?"Begin Deep Forge →":"Begin Assessment →"}
           </button>
         </div>)}
