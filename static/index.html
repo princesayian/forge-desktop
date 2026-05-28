@@ -943,7 +943,7 @@ function App(){
   // ── Prompts ──────────────────────────────────────────────────────────────
   const[pStyle,setPStyle]=useState("comic");
   const[pSelected,setPSelected]=useState(null);
-  const[pLoading,setPLoading]=useState(false);const[pResult,setPResult]=useState(null);
+  const[pLoading,setPLoading]=useState(false);const[pResult,setPResult]=useState(null);const[sheetLoading,setSheetLoading]=useState(false);
   // ── Dynamics ─────────────────────────────────────────────────────────────
   const[dynActive,setDynActive]=useState(null);
   // ── Family Tree ──────────────────────────────────────────────────────────
@@ -1142,7 +1142,7 @@ function App(){
     const controller=new AbortController();
     genControllerRef.current=controller;
     try{
-      const res=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:currentModel,max_tokens:700,messages:[{role:"user",content:prompt}]}),signal:controller.signal});
+      const res=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:currentModel,max_tokens:1500,messages:[{role:"user",content:prompt}]}),signal:controller.signal});
       if(!res.body)throw new Error("No response stream");
       const reader=res.body.getReader();
       const dec=new TextDecoder();
@@ -1300,6 +1300,57 @@ function App(){
       setPResult({group:true,teamName:activeTeam.name,metaAI:p.metaAI});
     }catch(e){setPResult({error:true,msg:e.message});}
     setPLoading(false);
+  };
+
+  const downloadTeamSheet=async()=>{
+    if(!activeRoster.length)return;
+    setSheetLoading(true);
+    try{
+      const COLS=Math.min(activeRoster.length,3);
+      const W=960,SIDE=20,GAP=12,CARD_H=110,HEADER_H=56,TOP_PAD=12,BOT_PAD=20;
+      const CARD_W=Math.floor((W-SIDE*2-GAP*(COLS-1))/COLS);
+      const ROWS=Math.ceil(activeRoster.length/COLS);
+      const H=HEADER_H+TOP_PAD+ROWS*(CARD_H+GAP)-GAP+BOT_PAD;
+      const canvas=document.createElement("canvas");
+      canvas.width=W;canvas.height=H;
+      const ctx=canvas.getContext("2d");
+      ctx.fillStyle="#09090F";ctx.fillRect(0,0,W,H);
+      const hg=ctx.createLinearGradient(0,0,W,0);
+      hg.addColorStop(0,activeTeam.color);hg.addColorStop(1,activeTeam.color+"88");
+      ctx.fillStyle=hg;ctx.fillRect(0,0,W,HEADER_H);
+      ctx.fillStyle="#FFFFFF";ctx.font="bold 20px monospace";ctx.textAlign="left";
+      ctx.fillText(activeTeam.name.toUpperCase(),SIDE,36);
+      ctx.fillStyle="rgba(255,255,255,0.5)";ctx.font="10px monospace";ctx.textAlign="right";
+      ctx.fillText("TEAM REFERENCE SHEET",W-SIDE,36);
+      const loadImg=src=>new Promise(res=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>res(null);i.src=src;});
+      const clip=(t,mw,f)=>{ctx.font=f;if(!t||ctx.measureText(t).width<=mw)return t||"";let s=t;while(s.length>1&&ctx.measureText(s+"…").width>mw)s=s.slice(0,-1);return s.length<t.length?s+"…":s;};
+      for(let i=0;i<activeRoster.length;i++){
+        const m=activeRoster[i];
+        const col=i%COLS,row=Math.floor(i/COLS);
+        const cx=SIDE+col*(CARD_W+GAP),cy=HEADER_H+TOP_PAD+row*(CARD_H+GAP);
+        ctx.fillStyle="#12121A";ctx.fillRect(cx,cy,CARD_W,CARD_H);
+        ctx.strokeStyle=m.color+"44";ctx.lineWidth=1;ctx.strokeRect(cx+0.5,cy+0.5,CARD_W-1,CARD_H-1);
+        ctx.fillStyle=m.color;ctx.fillRect(cx,cy,5,CARD_H);
+        const PSIZ=56,px=cx+16,py=cy+(CARD_H-PSIZ)/2;
+        let drew=false;
+        const imgSrc=images[m.id];
+        if(imgSrc){const img=await loadImg(imgSrc);if(img){ctx.save();ctx.beginPath();ctx.arc(px+PSIZ/2,py+PSIZ/2,PSIZ/2,0,Math.PI*2);ctx.clip();ctx.drawImage(img,px,py,PSIZ,PSIZ);ctx.restore();ctx.strokeStyle=m.color;ctx.lineWidth=2;ctx.beginPath();ctx.arc(px+PSIZ/2,py+PSIZ/2,PSIZ/2,0,Math.PI*2);ctx.stroke();drew=true;}}
+        if(!drew){ctx.fillStyle=m.color+"22";ctx.beginPath();ctx.arc(px+PSIZ/2,py+PSIZ/2,PSIZ/2,0,Math.PI*2);ctx.fill();ctx.strokeStyle=m.color+"66";ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(px+PSIZ/2,py+PSIZ/2,PSIZ/2,0,Math.PI*2);ctx.stroke();ctx.fillStyle=m.color;ctx.font="bold 17px monospace";ctx.textAlign="center";ctx.fillText(m.initials||"??",px+PSIZ/2,py+PSIZ/2+6);}
+        const tx=cx+16+PSIZ+12,maxW=CARD_W-(16+PSIZ+12+8);
+        ctx.textAlign="left";
+        ctx.fillStyle="#FFFFFF";ctx.fillText(clip(m.heroName||"Unknown",maxW,"bold 14px monospace"),tx,cy+26);
+        ctx.fillStyle=m.color;ctx.fillText(clip(m.realName||"",maxW,"11px monospace"),tx,cy+41);
+        ctx.fillStyle="rgba(255,255,255,0.45)";ctx.fillText(clip(m.role||"",maxW,"10px monospace"),tx,cy+55);
+        const pwrs=(m.powers||[]).slice(0,2).map(p=>p.name).join("  ·  ");
+        ctx.fillStyle="rgba(255,255,255,0.25)";ctx.font="9px monospace";ctx.fillText(clip(pwrs,maxW,"9px monospace"),tx,cy+69);
+        ctx.fillStyle=m.color;ctx.fillRect(tx,cy+CARD_H-18,36,5);
+        ctx.fillStyle="rgba(255,255,255,0.2)";ctx.font="8px monospace";ctx.fillText(m.color,tx+42,cy+CARD_H-13);
+        const rk=TEAM_RANKS.find(r=>r.id===m.teamRank);
+        if(rk&&rk.icon){ctx.fillStyle=rk.color+"22";ctx.fillRect(cx+CARD_W-70,cy+8,62,16);ctx.fillStyle=rk.color;ctx.font="8px monospace";ctx.textAlign="right";ctx.fillText(rk.icon+" "+rk.label,cx+CARD_W-8,cy+20);}
+      }
+      await new Promise(res=>canvas.toBlob(blob=>{if(!blob){res();return;}const u=URL.createObjectURL(blob);const a=document.createElement("a");a.href=u;a.download=`${activeTeam.name.toLowerCase().replace(/\s+/g,"-")}-reference.png`;document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(()=>URL.revokeObjectURL(u),1000);res();},"image/png"));
+    }catch(e){console.error("Sheet failed:",e);}
+    setSheetLoading(false);
   };
 
   const generateBattle=async()=>{
@@ -1698,6 +1749,10 @@ function App(){
         {pResult&&!pResult.error&&(<div style={{...s.card,marginTop:16}}>
           <div style={{fontSize:12,fontWeight:"bold",color:pResult.group?G:pResult.member?.color||G,marginBottom:10}}>{pResult.group?`Group Shot — ${pResult.teamName||activeTeam.name}`:`${pResult.member?.heroName} · Image Prompts`}</div>
           {pResult.metaAI&&<><span style={s.lbl}>Meta AI Image Prompt</span><div style={s.pBox}>{pResult.metaAI}</div>{hasMetaAI?<MetaAILauncher prompt={pResult.metaAI} label="Meta AI" copied={copied.pmeta} onCopy={()=>copy("pmeta",pResult.metaAI)}/>:<div style={{display:"flex",justifyContent:"flex-end",marginTop:6,marginBottom:12}}><button style={s.cpyBtn(copied.pmeta)} onClick={()=>copy("pmeta",pResult.metaAI)}>{copied.pmeta?"Copied!":"Copy"}</button></div>}</>}
+          {pResult.group&&<div style={{marginTop:12}}>
+            <button style={{...s.bigBtn(sheetLoading),background:sheetLoading?"var(--bg3)":"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.15)"}} onClick={downloadTeamSheet} disabled={sheetLoading}>{sheetLoading?"Building reference sheet…":"📎 Download Reference Sheet"}</button>
+            <div style={{fontSize:9,color:"var(--text3)",textAlign:"center",marginTop:6}}>Upload this image alongside the prompt in Meta AI for best accuracy</div>
+          </div>}
           {pResult.tripo3D&&<><span style={s.lbl}>Tripo3D Model Prompt</span><div style={s.pBox}>{pResult.tripo3D}</div><Tripo3DLauncher prompt={pResult.tripo3D} copied={copied.ptripo} onCopy={()=>copy("ptripo",pResult.tripo3D)}/></>}
         </div>)}
         {pResult?.error&&<div style={{marginTop:12,padding:"12px",background:"rgba(192,57,43,0.1)",border:"1px solid rgba(192,57,43,0.28)",borderRadius:8,fontSize:11,color:"#e74c3c"}}>Failed: {pResult.msg}</div>}
