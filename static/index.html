@@ -180,7 +180,7 @@ function raceLore(r){
 
 // ── Default NK members ────────────────────────────────────────────────────────
 const DEFAULT_NK=[
-  {id:"darkstar",teamId:"nocturnal-knights",heroName:"Wakháŋ",realName:"Kareem Carter",gender:"Male",species:"Human (Enhanced)",race:{main:"human",sub:"enhanced_human"},role:"Leader · Powerhouse",color:"#534AB7",colorLight:"#AFA9EC",initials:"KC",number:"01",isCore:true,nkAlignment:"base",
+  {id:"darkstar",teamId:"nocturnal-knights",heroName:"Wakháŋ",realName:"Kareem Carter",gender:"Male",species:"Human (Enhanced)",race:{main:"human",sub:"enhanced_human"},role:"Leader · Powerhouse",color:"#534AB7",colorLight:"#AFA9EC",initials:"KC",number:"01",isCore:true,nkAlignment:"base",teamRank:"leader",
    tagline:"The night bends to his will.",
    powers:[{name:"Dark Ki Projection",desc:"Concentrated void-violet energy blasts that crack the air on release."},{name:"Shadow Threading",desc:"Dark energy tendrils for grappling, binding, and high-speed traversal."},{name:"Gravity Surge",desc:"Overrides gravity — flight, aerial combat, concussive ground launches."},{name:"Final Surge",desc:"Full aura release multiplying strength and speed. Visible cost when it fades."}],
    origin:"Former Division I athlete and physics prodigy. Survived a government black-site dark energy experiment that killed every other subject. He didn't form the Knights out of heroism — he formed them because the organization was still operating and no one was stopping them.",
@@ -188,7 +188,7 @@ const DEFAULT_NK=[
    costumeDesc:"sleek void-black bodysuit with deep violet (#534AB7) glowing circuit lines on chest and forearms, NK crest",
    powerFX:"void-violet aura radiating from both hands and faintly from eyes, floating 2 feet off the ground",
    consistencyNotes:"Suit ALWAYS void-black with violet accent lines only. Faint violet eye glow. No capes. No wings."},
-  {id:"phantom-edge",teamId:"nocturnal-knights",heroName:"Null/Void",realName:"Jon Bethea",gender:"Male",species:"Human",race:{main:"human",sub:"human"},role:"Second in Command · Tech Striker",color:"#0F6E56",colorLight:"#5DCAA5",initials:"JB",number:"02",isCore:true,nkAlignment:"base",
+  {id:"phantom-edge",teamId:"nocturnal-knights",heroName:"Null/Void",realName:"Jon Bethea",gender:"Male",species:"Human",race:{main:"human",sub:"human"},role:"Second in Command · Tech Striker",color:"#0F6E56",colorLight:"#5DCAA5",initials:"JB",number:"02",isCore:true,nkAlignment:"base",teamRank:"second",
    tagline:"Every battle is already solved before it starts.",
    powers:[{name:"Chrono Blade",desc:"Vibranium-alloy energy sword that phases through non-organic matter. Trails teal afterimages."},{name:"Adaptive Nanosuit",desc:"Reconfigures in real-time — absorbs damage, shifts to offense, deploys micro-drones mid-combat."},{name:"Elastic Form",desc:"Limbs stretch, coil, and rebound for unpredictable strikes and instant distance closing."},{name:"Battlefield IQ",desc:"Visor HUD analyzes enemy patterns in seconds and feeds tactical data to the whole team."}],
    origin:"Top engineering graduate who discovered his employer was a front for the same organization that experimented on Kareem. He walked into their server room alone, copied everything, burned the rest, and rebuilt his tech from scratch.",
@@ -242,6 +242,13 @@ const VILLAIN_QUIZ=[
 
 const SCENARIOS=[{id:"ambush",label:"Ambush",icon:"⚡",desc:"Caught off-guard"},{id:"infiltration",label:"Infiltration",icon:"👁",desc:"Stealth mission"},{id:"rescue",label:"Rescue",icon:"🔗",desc:"One hero captured"},{id:"confrontation",label:"Confrontation",icon:"💥",desc:"Direct face-off"},{id:"revelation",label:"Revelation",icon:"📁",desc:"Dark truth surfaces"},{id:"heist",label:"Heist",icon:"🎯",desc:"Extract a target"},{id:"crossover",label:"Crossover",icon:"🌐",desc:"Two teams collide"}];
 const TONES=[{id:"intense",label:"Intense"},{id:"dark",label:"Dark & Gritty"},{id:"triumphant",label:"Triumphant"},{id:"desperate",label:"Desperate"}];
+const TEAM_RANKS=[
+  {id:"leader",label:"Leader",icon:"★",color:"#D4AF37"},
+  {id:"second",label:"Second in Command",icon:"◆",color:"#AFA9EC"},
+  {id:"vanguard",label:"Vanguard",icon:"▲",color:"#5DCAA5"},
+  {id:"operative",label:"Operative",icon:null,color:"#888780"},
+];
+
 const FAMILY_RELATIONS=[
   {id:"parent",label:"Parent",inverse:"Child"},
   {id:"child",label:"Child",inverse:"Parent"},
@@ -357,6 +364,7 @@ function CharacterPage({member,imageUrl,isVillain=false,teamName,teamColor}){
     <div style={{background:isVillain?"rgba(163,45,45,0.18)":`${c}12`,padding:"7px 18px",display:"flex",justifyContent:"space-between",alignItems:"center",borderBottom:`1px solid ${c}20`}}>
       <div style={{fontSize:7.5,letterSpacing:"0.26em",color:cl,textTransform:"uppercase",fontFamily:"monospace"}}>{isVillain?"CLASSIFIED THREAT":tName.toUpperCase()}</div>
       <div style={{display:"flex",gap:8,alignItems:"center"}}>
+        {(()=>{const rk=TEAM_RANKS.find(r=>r.id===member.teamRank);return rk&&rk.icon?<span style={{fontSize:9,padding:"2px 9px",background:`${rk.color}18`,border:`1px solid ${rk.color}55`,borderRadius:20,color:rk.color,fontFamily:"monospace",whiteSpace:"nowrap",fontWeight:"bold"}}>{rk.icon} {rk.label}</span>:null;})()}
         {member.nkAlignment&&member.nkAlignment!=="base"&&<AlignmentBadge alignment={member.nkAlignment}/>}
         {member.number&&<div style={{fontSize:9.5,color:`${c}66`,fontFamily:"monospace"}}>No.{member.number}</div>}
       </div>
@@ -507,6 +515,7 @@ function EditPanel({member,onSave,onCancel,callAI,teamName}){
   const[stats,setStats]=useState({...member.stats});
   const[powers,setPowers]=useState(member.powers.map(p=>({...p})));
   const[align,setAlign]=useState(member.nkAlignment||"neutral");
+  const[teamRank,setTeamRank]=useState(member.teamRank||"operative");
   const[gender,setGender]=useState(member.gender||"");
   const[race,setRace]=useState(member.race||null);
   const[birthYear,setBirthYear]=useState(member.birthYear||"");
@@ -563,6 +572,10 @@ function EditPanel({member,onSave,onCancel,callAI,teamName}){
       </button>}
     </div>
     <textarea value={o} onChange={e=>setO(e.target.value)} style={{height:80,marginBottom:14}}/>
+    <div style={{fontSize:9,letterSpacing:"0.18em",color:`${c}88`,textTransform:"uppercase",marginBottom:8}}>Team Rank</div>
+    <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:14}}>
+      {TEAM_RANKS.map(r=><button key={r.id} onClick={()=>setTeamRank(r.id)} style={{fontSize:9,padding:"3px 10px",background:teamRank===r.id?`${r.color||G}22`:"var(--bg3)",border:`1px solid ${teamRank===r.id?(r.color||G):"var(--border2)"}`,borderRadius:20,cursor:"pointer",color:teamRank===r.id?(r.color||G):"var(--text2)",fontFamily:"monospace"}}>{r.icon?`${r.icon} `:""}{r.label}</button>)}
+    </div>
     <div style={{fontSize:9,letterSpacing:"0.18em",color:`${c}88`,textTransform:"uppercase",marginBottom:8}}>NK Alignment</div>
     <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:14}}>
       {[{id:"base",label:"NK Member"},...NK_ALIGNMENTS].map(a=><button key={a.id} onClick={()=>setAlign(a.id)} style={{fontSize:9,padding:"3px 10px",background:align===a.id?`${(ALIGN_META[a.id]||{color:G}).color}22`:"var(--bg3)",border:`1px solid ${align===a.id?(ALIGN_META[a.id]||{color:G}).color:"var(--border2)"}`,borderRadius:20,cursor:"pointer",color:align===a.id?(ALIGN_META[a.id]||{color:G}).color:"var(--text2)",fontFamily:"monospace"}}>{a.label}</button>)}
@@ -573,7 +586,7 @@ function EditPanel({member,onSave,onCancel,callAI,teamName}){
     {powers.map((p,i)=>(<div key={i} style={{marginBottom:10}}><input type="text" placeholder="Power name" value={p.name} onChange={e=>setPowers(pw=>pw.map((x,j)=>j===i?{...x,name:e.target.value}:x))} style={{marginBottom:4}}/><input type="text" placeholder="Description" value={p.desc} onChange={e=>setPowers(pw=>pw.map((x,j)=>j===i?{...x,desc:e.target.value}:x))}/></div>))}
     <div style={{display:"flex",gap:10,marginTop:16}}>
       <button onClick={onCancel} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:11}}>Cancel</button>
-      <button onClick={()=>onSave({tagline:t,origin:o,stats,powers,nkAlignment:align,gender,age,birthYear,race,species:raceLabel(race)||member.species||""})} style={{flex:2,padding:"10px",background:`${c}18`,border:`1px solid ${c}`,borderRadius:8,cursor:"pointer",color:c,fontSize:11,letterSpacing:"0.1em",textTransform:"uppercase"}}>Save Changes</button>
+      <button onClick={()=>onSave({tagline:t,origin:o,stats,powers,nkAlignment:align,teamRank,gender,age,birthYear,race,species:raceLabel(race)||member.species||""})} style={{flex:2,padding:"10px",background:`${c}18`,border:`1px solid ${c}`,borderRadius:8,cursor:"pointer",color:c,fontSize:11,letterSpacing:"0.1em",textTransform:"uppercase"}}>Save Changes</button>
     </div>
   </div>);
 }
@@ -899,6 +912,7 @@ function App(){
   const[rStep,setRStep]=useState(0);const[rAnswers,setRAnswers]=useState({});
   const[rName,setRName]=useState("");const[rHeroName,setRHeroName]=useState("");const[rAccent,setRAccent]=useState("crimson");
   const[rNkAlign,setRNkAlign]=useState("neutral");
+  const[rTeamRank,setRTeamRank]=useState("operative");
   const[rFamilyCharId,setRFamilyCharId]=useState("");const[rFamilyRelation,setRFamilyRelation]=useState("parent");
   const[rGender,setRGender]=useState("Male");
   const[rAge,setRAge]=useState("");
@@ -1168,7 +1182,7 @@ function App(){
       const p=await callAI(`Create a ${activeTeam.name} team hero. JSON only.\n\nReal name: ${rName||"Unknown"}\nGender: ${rGender}\nAge: ${rAge||(rBirthYear?String(2026-parseInt(rBirthYear)):"Unknown")}\n${rBirthYear?`Birth year: ${rBirthYear}\n`:""}Race: ${raceStr||"Unspecified"}\n${raceLoreStr?`Race lore (bake into origin): ${raceLoreStr}\n`:""}${rStoryDir.trim()?`Story direction (shape the origin around this): ${rStoryDir.trim()}\n`:""}Team: ${activeTeam.name} (${teamType})\nAccent color: ${hex}\nNK alignment of this character: ${rNkAlign}\nExisting names (pick different): ${existingNames||"none yet"}\n${rHeroName?`Hero name: ${rHeroName} (use exactly this name)`:"Hero name: (choose a fitting dark name)"}\nQuiz:\n${answers}\n\nIMPORTANT: Use correct pronouns (${pronounOf(rGender)}/${pronounOf(rGender)==="they"?"them":pronounOf(rGender)==="she"?"her":"him"}) for this character throughout.\nIMPORTANT: Pick 2-3 specific comic or anime characters as DNA for this hero based on the quiz answers. Bake these invisibly into every output field — power names shaped by their style, tagline capturing their essence, origin echoing their arc. Never name-drop them; only list in the dna array.\n\n{"heroName":"${rHeroName||"2-word dark name"}","tagline":"one punchy sentence","role":"Role · Descriptor","origin":"2-3 sentences connected to the team and their world — reflect their race biology and birth year context if provided","powers":[{"name":"Name","desc":"visual desc"},{"name":"Name","desc":"visual desc"},{"name":"Name","desc":"visual desc"},{"name":"Name","desc":"visual desc"}],"stats":{"Power":75,"Speed":70,"Tech":60,"Intellect":80,"Will":85},"costumeDesc":"costume in team aesthetic with ${hex} accent","powerFX":"visible effects using ${hex}","consistencyNotes":"design lock rules","dna":["Character whose energy shapes this hero's powers — e.g. Vegeta","Character whose arc or personality informs their story"]}`,t=>setAiStreamText(t));
       const num=String(activeRoster.length+1).padStart(2,"0");
       const computedAge=rAge||(rBirthYear?String(2026-parseInt(rBirthYear)):"");
-      setRResult({id:`char-${Date.now()}`,teamId:activeTeamId,realName:rName||"Unknown",gender:rGender,age:computedAge,birthYear:rBirthYear||"",race:rRace,species:raceLabel(rRace)||"Human",color:hex,colorLight:hex+"CC",initials:rName?rName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",number:num,isCustom:true,nkAlignment:rNkAlign,...p});
+      setRResult({id:`char-${Date.now()}`,teamId:activeTeamId,realName:rName||"Unknown",gender:rGender,age:computedAge,birthYear:rBirthYear||"",race:rRace,species:raceLabel(rRace)||"Human",color:hex,colorLight:hex+"CC",initials:rName?rName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",number:num,isCustom:true,nkAlignment:rNkAlign,teamRank:rTeamRank,...p});
     }catch(e){if(e.message==="Generation cancelled.")setRResult(null);else setRResult({error:true,msg:e.message});}
     setRLoading(false);setAiStreamText("");
   };
@@ -1187,7 +1201,7 @@ function App(){
         persist("nk-family",updatedLinks);
       }
     }
-    setRResult(null);setRAnswers({});setRName("");setRHeroName("");setRStep(0);setRNkAlign("neutral");setRGender("Male");setRAge("");setRBirthYear("");setRRace(null);setRStoryDir("");setDeepAnswers({});setDeepPhase(0);setRFamilyCharId("");setRFamilyRelation("parent");setTab("roster");
+    setRResult(null);setRAnswers({});setRName("");setRHeroName("");setRStep(0);setRNkAlign("neutral");setRTeamRank("operative");setRGender("Male");setRAge("");setRBirthYear("");setRRace(null);setRStoryDir("");setDeepAnswers({});setDeepPhase(0);setRFamilyCharId("");setRFamilyRelation("parent");setTab("roster");
   };
 
   const generateDeepRecruit=async()=>{
@@ -1212,7 +1226,7 @@ function App(){
       const p=await callAI(`Create a deeply developed ${activeTeam.name} hero using rich comic book lore. JSON only.\n\nReal name: ${rName||"Unknown"}\nGender: ${rGender}\nAge: ${rAge||(rBirthYear?String(2026-parseInt(rBirthYear)):"Unknown")}\n${rBirthYear?`Birth year: ${rBirthYear}\n`:""}Race: ${raceStr||"Unspecified"}\n${raceLoreStr?`Race lore (bake into origin): ${raceLoreStr}\n`:""}${rStoryDir.trim()?`Story direction (shape the origin around this): ${rStoryDir.trim()}\n`:""}Accent color: ${hex}\nNK alignment: ${rNkAlign}\nExisting names (must be different): ${existingNames||"none"}\n${rHeroName?`Hero name: ${rHeroName} (use exactly this name)`:"Hero name: (choose a distinct name fitting the lore profile)"}\nTeam: ${activeTeam.name}\nIMPORTANT: Use correct pronouns (${pronounOf(rGender)}/${pronounOf(rGender)==="they"?"them":pronounOf(rGender)==="she"?"her":"him"}) for this character throughout.\n${dnaFoundation?`\nCHARACTER DNA FOUNDATION (bake these invisibly into every field — powers named/described through their aesthetic, origin reflecting their arc pattern, personality in the tagline — filter through the NK universe, never reference by name except in the dna array):\n${dnaFoundation}\n`:""}\nFull lore profile:\n${loreContext}${freeText?"\nVisual references: "+freeText:""}\n\nUse this lore to create a hero that feels authentic to these inspirations. JSON:\n{"heroName":"${rHeroName||"2-word hero name, distinct and fitting the lore profile"}","tagline":"one piercing sentence that captures their essence","role":"Role · Descriptor","origin":"3-4 sentences backstory that directly reflects the lore answers — specific and rooted in their race and birth year context","powers":[{"name":"Power name matching their visual style","desc":"2-sentence visual description of exactly how this looks in action"},{"name":"Power name","desc":"visual desc"},{"name":"Power name","desc":"visual desc"},{"name":"Power name","desc":"visual desc"}],"stats":{"Power":75,"Speed":70,"Tech":60,"Intellect":80,"Will":85},"costumeDesc":"Detailed costume description using ${hex} accent, reflecting their costume philosophy answer","powerFX":"Exact visual description of power effects using ${hex}, matching their FX style answer","consistencyNotes":"2-3 specific design lock rules based on their visual choices","dna":["Primary DNA — exact character name like Vegeta or Moon Knight","Secondary DNA — another specific character baked into this hero","Optional third DNA — only if genuinely applicable"]}`,t=>setAiStreamText(t));
       const num=String(activeRoster.length+1).padStart(2,"0");
       const computedAge=rAge||(rBirthYear?String(2026-parseInt(rBirthYear)):"");
-      setRResult({id:`char-${Date.now()}`,teamId:activeTeamId,realName:rName||"Unknown",gender:rGender,age:computedAge,birthYear:rBirthYear||"",race:rRace,species:raceLabel(rRace)||"Human",color:hex,colorLight:hex+"CC",initials:rName?rName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",number:num,isCustom:true,nkAlignment:rNkAlign,deepLore:deepAnswers,...p});
+      setRResult({id:`char-${Date.now()}`,teamId:activeTeamId,realName:rName||"Unknown",gender:rGender,age:computedAge,birthYear:rBirthYear||"",race:rRace,species:raceLabel(rRace)||"Human",color:hex,colorLight:hex+"CC",initials:rName?rName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",number:num,isCustom:true,nkAlignment:rNkAlign,teamRank:rTeamRank,deepLore:deepAnswers,...p});
     }catch(e){if(e.message==="Generation cancelled.")setRResult(null);else setRResult({error:true,msg:e.message});}
     setRLoading(false);setAiStreamText("");
   };
@@ -1776,6 +1790,10 @@ function App(){
             <span style={s.lbl}>Must-Have Visual Elements (optional)</span>
             <input type="text" placeholder="e.g. always has a hood, scar on right eye, mechanical left arm" value={deepAnswers.mustHave||""} onChange={e=>setDeepAnswers(p=>({...p,mustHave:e.target.value}))} style={{marginBottom:14}}/>
           </>)}
+          <span style={{...s.lbl,marginTop:0}}>Team Rank</span>
+          <div style={{display:"flex",flexWrap:"wrap",gap:7,marginBottom:14}}>
+            {TEAM_RANKS.map(r=><button key={r.id} onClick={()=>setRTeamRank(r.id)} style={{fontSize:9,padding:"4px 11px",background:rTeamRank===r.id?`${r.color||G}18`:"var(--bg3)",border:`1px solid ${rTeamRank===r.id?(r.color||G):"var(--border2)"}`,borderRadius:20,cursor:"pointer",color:rTeamRank===r.id?(r.color||G):"var(--text2)",fontFamily:"monospace"}}>{r.icon?`${r.icon} `:""}{r.label}</button>)}
+          </div>
           {activeTeamId!=="nocturnal-knights"&&(<>
             <span style={{...s.lbl,marginTop:0}}>NK Alignment</span>
             <div style={{display:"flex",flexWrap:"wrap",gap:7,marginBottom:14}}>
