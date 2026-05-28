@@ -411,8 +411,6 @@ def chat():
     cfg = load_config()
     body = request.get_json() or {}
     messages = body.get("messages", [])
-    all_content = " ".join(str(m.get("content","")) for m in messages if isinstance(m.get("content"), str))
-    needs_json = "JSON only" in all_content or '"prompt"' in all_content or "keys:" in all_content
 
     if not any(m.get("role") == "system" for m in messages):
         messages = [{"role": "system", "content": (
@@ -425,15 +423,13 @@ def chat():
         "model": cfg["model"], "messages": messages, "stream": True,
         "options": {"temperature": 0.8, "num_predict": body.get("max_tokens", 1200), "top_p": 0.9}
     }
-    if needs_json:
-        ollama_body["format"] = "json"
 
     def generate():
         try:
             data = json.dumps(ollama_body).encode()
             req = urllib.request.Request(f"{cfg['ollama_url']}/api/chat", data=data,
                 headers={"Content-Type": "application/json"}, method="POST")
-            with urllib.request.urlopen(req, timeout=360) as resp:
+            with urllib.request.urlopen(req, timeout=None) as resp:
                 for line in resp:
                     line = line.strip()
                     if not line:

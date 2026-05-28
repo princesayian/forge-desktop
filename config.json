@@ -1,5 +1,5 @@
 {
-  "model": "mistral:latest",
+  "model": "llama3.1:8b",
   "ollama_url": "http://localhost:11434",
   "port": 7432,
   "secret_key": "LcHtGOnDUOADBWzsIZkZ+2auKyeP33La",
