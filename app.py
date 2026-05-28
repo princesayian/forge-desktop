@@ -463,7 +463,8 @@ def chat():
                 "https://api.groq.com/openai/v1/chat/completions",
                 data=groq_body,
                 headers={"Content-Type": "application/json",
-                         "Authorization": f"Bearer {GROQ_KEY}"},
+                         "Authorization": f"Bearer {GROQ_KEY}",
+                         "User-Agent": "SuperheroForge/1.0"},
                 method="POST",
             )
             yield json.dumps({"hb": 1}) + "\n"
