@@ -1138,11 +1138,11 @@ function App(){
   },[]);
 
   // ── AI ────────────────────────────────────────────────────────────────────
-  const callAI=useCallback(async(prompt,onToken)=>{
+  const callAI=useCallback(async(prompt,onToken,maxTokens=1500)=>{
     const controller=new AbortController();
     genControllerRef.current=controller;
     try{
-      const res=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:currentModel,max_tokens:1500,messages:[{role:"user",content:prompt}]}),signal:controller.signal});
+      const res=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:currentModel,max_tokens:maxTokens,messages:[{role:"user",content:prompt}]}),signal:controller.signal});
       if(!res.body)throw new Error("No response stream");
       const reader=res.body.getReader();
       const dec=new TextDecoder();
@@ -1304,12 +1304,8 @@ function App(){
     setPSelected("group");setPLoading(true);setPResult(null);
     const style=ART_STYLES.find(a=>a.id===pStyle)?.text||"";
     try{
-      const charLines=activeRoster.map((m,i)=>{
-        const raceStr=raceLabel(m.race)||m.species||"Human";
-        const pronoun=pronounOf(m.gender||"Unknown");
-        return `CHARACTER ${i+1} — ${m.heroName} (${m.realName}): ${m.gender||"Unknown"} ${raceStr}. EXACT COSTUME: ${m.costumeDesc||"dramatic hero suit"}. SIGNATURE COLOR: ${m.color}. POWER FX: ${m.powerFX||m.color+" energy"}. DESIGN LOCK: ${m.consistencyNotes||"maintain accent color throughout"}. Pronouns: ${pronoun}.`;
-      }).join("\n");
-      const p=await callAI(`JSON only. No explanation. Respond with exactly:\n{"metaAI":"<your prompt here>"}\n\nWrite a Meta AI image prompt for a ${activeRoster.length}-hero group shot of ${activeTeam.name}. A character reference sheet will be uploaded alongside this prompt — preserve every character's look exactly.\n\nStyle: ${style}\n\n${charLines}\n\nThe metaAI value must:\n- Open with: "Referencing the uploaded character sheet strictly —"\n- Name each character by name with their exact costume, colors, power effects, and position/pose\n- Close with: "Every character matches the reference exactly — same face, same costume, same colors, same power effects. No redesigns. Wide cinematic format, all heroes fully visible."\n- Setting: dramatic nighttime urban, power-effect lighting\n- 5-7 sentences total\n\n{"metaAI":"..."}`);
+      const charLines=activeRoster.map((m,i)=>`${m.heroName}: ${m.gender||"unknown gender"}, ${raceLabel(m.race)||m.species||"Human"}. Costume: ${(m.costumeDesc||"").slice(0,80)}. Color: ${m.color}. FX: ${(m.powerFX||m.color+" energy").slice(0,60)}.`).join("\n");
+      const p=await callAI(`JSON only. Reply with exactly this format, no other text:\n{"metaAI":"..."}\n\nGroup shot prompt for ${activeTeam.name} (${activeRoster.length} heroes). User uploads a reference sheet — preserve every character's look exactly. Style: ${style}.\n\nCast:\n${charLines}\n\nPrompt rules: open with "Referencing the uploaded character sheet strictly —", name each character with exact look and pose, close with "All characters match the reference exactly. No redesigns. Wide cinematic format."\n\n{"metaAI":"..."}`,null,400);
       setPResult({group:true,teamName:activeTeam.name,metaAI:p.metaAI});
     }catch(e){setPResult({error:true,msg:e.message});}
     setPLoading(false);
