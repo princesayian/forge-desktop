@@ -427,7 +427,7 @@ def chat():
 
     ollama_body = {
         "model": cfg["model"], "messages": messages, "stream": True,
-        "options": {"temperature": 0.8, "num_predict": body.get("max_tokens", 1200), "top_p": 0.9, "num_ctx": 2048}
+        "options": {"temperature": 0.8, "num_predict": body.get("max_tokens", 1200), "top_p": 0.9, "num_ctx": 4096}
     }
 
     def generate():
