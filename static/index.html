@@ -1160,7 +1160,7 @@ function App(){
         }
       }
       genControllerRef.current=null;
-      const clean=full.replace(/```json\n?/g,"").replace(/```\n?/g,"").trim();
+      const clean=full.replace(/```json\n?/g,"").replace(/```\n?/g,"").trim().replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g,ch=>'\\u'+ch.charCodeAt(0).toString(16).padStart(4,'0'));
       try{return JSON.parse(clean);}catch{const m=clean.match(/\{[\s\S]*\}/);if(m)return JSON.parse(m[0]);throw new Error("Response was not valid JSON");}
     }catch(e){
       genControllerRef.current=null;
