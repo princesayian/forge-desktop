@@ -17,15 +17,21 @@ STORAGE_FILE = os.path.join(BASE, "forge-data.json")
 os.makedirs(IMAGES_DIR, exist_ok=True)
 
 def _load_store():
-    try:
-        with open(STORAGE_FILE, "r") as f:
-            return json.load(f)
-    except Exception:
-        return {}
+    for path in (STORAGE_FILE, STORAGE_FILE + ".tmp"):
+        try:
+            with open(path, "r") as f:
+                return json.load(f)
+        except Exception:
+            continue
+    return {}
 
 def _save_store(data):
-    with open(STORAGE_FILE, "w") as f:
+    tmp = STORAGE_FILE + ".tmp"
+    with open(tmp, "w") as f:
         json.dump(data, f)
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tmp, STORAGE_FILE)
 
 TUNNEL_URL   = None
 _TUNNEL_PROC = None
