@@ -920,6 +920,7 @@ function App(){
   const[vGender,setVGender]=useState("Male");
   const[vLoading,setVLoading]=useState(false);const[vResult,setVResult]=useState(null);
   const[aiStreamText,setAiStreamText]=useState("");
+  const genControllerRef=useRef(null);
   // ── Story ────────────────────────────────────────────────────────────────
   const[sCast,setSCast]=useState([]);const[sScenario,setSScenario]=useState("ambush");
   const[sTone,setSTone]=useState("intense");
@@ -1125,7 +1126,7 @@ function App(){
   // ── AI ────────────────────────────────────────────────────────────────────
   const callAI=useCallback(async(prompt,onToken)=>{
     const controller=new AbortController();
-    const tid=setTimeout(()=>controller.abort(),360000);
+    genControllerRef.current=controller;
     try{
       const res=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:currentModel,max_tokens:1200,messages:[{role:"user",content:prompt}]}),signal:controller.signal});
       if(!res.body)throw new Error("No response stream");
@@ -1144,12 +1145,12 @@ function App(){
           if(chunk.t){full+=chunk.t;if(onToken)onToken(full);}
         }
       }
-      clearTimeout(tid);
+      genControllerRef.current=null;
       const clean=full.replace(/```json\n?/g,"").replace(/```\n?/g,"").trim();
       try{return JSON.parse(clean);}catch{const m=clean.match(/\{[\s\S]*\}/);if(m)return JSON.parse(m[0]);throw new Error("Response was not valid JSON");}
     }catch(e){
-      clearTimeout(tid);
-      if(e.name==="AbortError")throw new Error("Generation timed out — Ollama took too long. Try restarting Ollama or switching models.");
+      genControllerRef.current=null;
+      if(e.name==="AbortError")throw new Error("Generation cancelled.");
       throw e;
     }
   },[currentModel]);
@@ -1168,8 +1169,8 @@ function App(){
       const num=String(activeRoster.length+1).padStart(2,"0");
       const computedAge=rAge||(rBirthYear?String(2026-parseInt(rBirthYear)):"");
       setRResult({id:`char-${Date.now()}`,teamId:activeTeamId,realName:rName||"Unknown",gender:rGender,age:computedAge,birthYear:rBirthYear||"",race:rRace,species:raceLabel(rRace)||"Human",color:hex,colorLight:hex+"CC",initials:rName?rName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",number:num,isCustom:true,nkAlignment:rNkAlign,...p});
-    }catch(e){setRResult({error:true,msg:e.message});}
-    setRLoading(false);
+    }catch(e){if(e.message==="Generation cancelled.")setRResult(null);else setRResult({error:true,msg:e.message});}
+    setRLoading(false);setAiStreamText("");
   };
 
   const addRecruit=()=>{
@@ -1212,8 +1213,8 @@ function App(){
       const num=String(activeRoster.length+1).padStart(2,"0");
       const computedAge=rAge||(rBirthYear?String(2026-parseInt(rBirthYear)):"");
       setRResult({id:`char-${Date.now()}`,teamId:activeTeamId,realName:rName||"Unknown",gender:rGender,age:computedAge,birthYear:rBirthYear||"",race:rRace,species:raceLabel(rRace)||"Human",color:hex,colorLight:hex+"CC",initials:rName?rName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",number:num,isCustom:true,nkAlignment:rNkAlign,deepLore:deepAnswers,...p});
-    }catch(e){setRResult({error:true,msg:e.message});}
-    setRLoading(false);
+    }catch(e){if(e.message==="Generation cancelled.")setRResult(null);else setRResult({error:true,msg:e.message});}
+    setRLoading(false);setAiStreamText("");
   };
 
   const generateTripo3D=async(member)=>{
@@ -1233,8 +1234,8 @@ function App(){
     try{
       const p=await callAI(`Create a villain who threatens: ${targetNames}. JSON only — keys: heroName, tagline, role, origin, powers, stats, dna.\n\nName: ${vName||"Unknown"}\nGender: ${vGender}\nIMPORTANT: Use correct pronouns (${pronounOf(vGender)}/${pronounOf(vGender)==="they"?"them":pronounOf(vGender)==="she"?"her":"him"}) throughout.\nTarget teams: ${targetNames}\nQuiz:\n${answers}\n\n{"heroName":"villain codename","tagline":"one chilling sentence","role":"Threat · Descriptor","origin":"3-4 sentences deeply tied to the target teams","powers":[{"name":"Name","desc":"desc, mirror or counter to a hero ability"},{"name":"Name","desc":"desc"},{"name":"Name","desc":"desc"},{"name":"Name","desc":"desc"}],"stats":{"Power":88,"Speed":78,"Tech":82,"Intellect":90,"Will":88},"dna":["Villain Inspiration 1","Villain Inspiration 2"]}`,t=>setAiStreamText(t));
       setVResult({id:`villain-${Date.now()}`,realName:vName||"Unknown",gender:vGender,color:"#8B1A1A",colorLight:"#E07070",initials:vName?vName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",isVillain:true,targetTeams:vTargetTeams.length?vTargetTeams:["nocturnal-knights"],...p});
-    }catch(e){setVResult({error:true,msg:e.message});}
-    setVLoading(false);
+    }catch(e){if(e.message==="Generation cancelled.")setVResult(null);else setVResult({error:true,msg:e.message});}
+    setVLoading(false);setAiStreamText("");
   };
 
   const addVillain=()=>{
@@ -1837,7 +1838,11 @@ function App(){
           </>);
         })()}
 
-        {rLoading&&aiStreamText&&<div style={{padding:"10px 12px",background:"var(--bg2)",border:"1px solid var(--border2)",borderRadius:8,fontFamily:"monospace",fontSize:9,color:"var(--text3)",maxHeight:72,overflowY:"auto",whiteSpace:"pre-wrap",wordBreak:"break-all",lineHeight:1.5,marginBottom:10}}>{aiStreamText}</div>}
+        {rLoading&&<div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+          {aiStreamText&&<div style={{flex:1,padding:"10px 12px",background:"var(--bg2)",border:"1px solid var(--border2)",borderRadius:8,fontFamily:"monospace",fontSize:9,color:"var(--text3)",maxHeight:72,overflowY:"auto",whiteSpace:"pre-wrap",wordBreak:"break-all",lineHeight:1.5}}>{aiStreamText}</div>}
+          {!aiStreamText&&<div style={{flex:1,padding:"10px 12px",background:"var(--bg2)",border:"1px solid var(--border2)",borderRadius:8,fontSize:9,color:"var(--text3)",fontFamily:"monospace"}}>Waiting for model response…</div>}
+          <button onClick={()=>genControllerRef.current?.abort()} style={{flexShrink:0,padding:"8px 14px",background:"rgba(224,112,112,0.1)",border:"1px solid rgba(224,112,112,0.35)",borderRadius:8,cursor:"pointer",color:"#E07070",fontSize:9,fontFamily:"monospace",whiteSpace:"nowrap"}}>✕ Cancel</button>
+        </div>}
 
         {/* ── Result (both modes) ── */}
         {rResult&&!rResult.error&&(<>
@@ -1879,7 +1884,11 @@ function App(){
               {vStep===VILLAIN_QUIZ.length&&vAnswers[vCurrentQ.id]&&<button onClick={generateVillain} disabled={vLoading} style={{flex:2,...s.bigBtn(vLoading,"#8B1A1A"),marginTop:0}}>{vLoading?"Forging threat...":"Generate Villain →"}</button>}
             </div>
           </div>)}
-          {vLoading&&aiStreamText&&<div style={{padding:"10px 12px",background:"var(--bg2)",border:"1px solid rgba(139,26,26,0.3)",borderRadius:8,fontFamily:"monospace",fontSize:9,color:"var(--text3)",maxHeight:72,overflowY:"auto",whiteSpace:"pre-wrap",wordBreak:"break-all",lineHeight:1.5,marginBottom:10}}>{aiStreamText}</div>}
+          {vLoading&&<div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+            {aiStreamText&&<div style={{flex:1,padding:"10px 12px",background:"var(--bg2)",border:"1px solid rgba(139,26,26,0.3)",borderRadius:8,fontFamily:"monospace",fontSize:9,color:"var(--text3)",maxHeight:72,overflowY:"auto",whiteSpace:"pre-wrap",wordBreak:"break-all",lineHeight:1.5}}>{aiStreamText}</div>}
+            {!aiStreamText&&<div style={{flex:1,padding:"10px 12px",background:"var(--bg2)",border:"1px solid rgba(139,26,26,0.3)",borderRadius:8,fontSize:9,color:"var(--text3)",fontFamily:"monospace"}}>Waiting for model response…</div>}
+            <button onClick={()=>genControllerRef.current?.abort()} style={{flexShrink:0,padding:"8px 14px",background:"rgba(224,112,112,0.1)",border:"1px solid rgba(224,112,112,0.35)",borderRadius:8,cursor:"pointer",color:"#E07070",fontSize:9,fontFamily:"monospace",whiteSpace:"nowrap"}}>✕ Cancel</button>
+          </div>}
           {vResult&&!vResult.error&&(<>
             <CharacterPage member={vResult} imageUrl={null} isVillain={true}/>
             <div style={{display:"flex",gap:10,marginTop:14,marginBottom:20}}>
