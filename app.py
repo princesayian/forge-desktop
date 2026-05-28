@@ -16,6 +16,17 @@ LOCK_FILE    = os.path.join(BASE, ".forge.lock")
 STORAGE_FILE = os.path.join(BASE, "forge-data.json")
 os.makedirs(IMAGES_DIR, exist_ok=True)
 
+GROQ_KEY = ""
+GROQ_MODELS = ["llama-3.1-8b-instant", "llama-3.3-70b-versatile", "mixtral-8x7b-32768"]
+try:
+    with open(os.path.join(BASE, ".env")) as _ef:
+        for _line in _ef:
+            _line = _line.strip()
+            if _line.startswith("GROQ_API_KEY="):
+                GROQ_KEY = _line.split("=", 1)[1].strip().strip('"').strip("'")
+except FileNotFoundError:
+    pass
+
 def _load_store():
     for path in (STORAGE_FILE, STORAGE_FILE + ".tmp"):
         try:
@@ -315,13 +326,23 @@ def vendor(filename):
 @app.route("/api/status")
 def status():
     cfg = load_config()
+    if GROQ_KEY:
+        model = cfg.get("model", "llama-3.1-8b-instant")
+        if model not in GROQ_MODELS:
+            model = "llama-3.1-8b-instant"
+        return jsonify({"ollama": True, "groq": True, "models": GROQ_MODELS,
+                        "current_model": model, "version": FORGE_VERSION})
     try:
         with urllib.request.urlopen(f"{cfg['ollama_url']}/api/tags", timeout=2) as resp:
             data = json.loads(resp.read())
         models = [m["name"] for m in data.get("models", [])]
-        return jsonify({"ollama": True, "models": models, "current_model": cfg["model"], "ollama_url": cfg["ollama_url"], "version": FORGE_VERSION})
+        return jsonify({"ollama": True, "groq": False, "models": models,
+                        "current_model": cfg["model"], "ollama_url": cfg["ollama_url"],
+                        "version": FORGE_VERSION})
     except Exception:
-        return jsonify({"ollama": False, "models": [], "current_model": cfg["model"], "ollama_url": cfg["ollama_url"], "version": FORGE_VERSION})
+        return jsonify({"ollama": False, "groq": False, "models": [],
+                        "current_model": cfg["model"], "ollama_url": cfg["ollama_url"],
+                        "version": FORGE_VERSION})
 
 @app.route("/api/config", methods=["GET", "POST"])
 def config_route():
@@ -425,15 +446,43 @@ def chat():
             "no preamble, no explanation. The JSON must be complete and parseable."
         )}] + messages
 
-    ollama_body = {
-        "model": cfg["model"], "messages": messages, "stream": True,
-        "options": {"temperature": 0.8, "num_predict": body.get("max_tokens", 1200), "top_p": 0.9, "num_ctx": 4096}
-    }
-
     def generate():
-        # Run Ollama in a background thread and drain tokens via a queue.
-        # The main generator yields a heartbeat every 3 s while waiting so
-        # WKWebView / Safari never time out during long prompt-prefill phases.
+        if GROQ_KEY:
+            # ── Groq path ─────────────────────────────────────────────────────
+            model = body.get("model", cfg.get("model", "llama-3.1-8b-instant"))
+            if model not in GROQ_MODELS:
+                model = "llama-3.1-8b-instant"
+            groq_body = json.dumps({
+                "model": model,
+                "messages": messages,
+                "max_tokens": body.get("max_tokens", 1200),
+                "temperature": 0.8,
+                "stream": False,
+            }).encode()
+            req = urllib.request.Request(
+                "https://api.groq.com/openai/v1/chat/completions",
+                data=groq_body,
+                headers={"Content-Type": "application/json",
+                         "Authorization": f"Bearer {GROQ_KEY}"},
+                method="POST",
+            )
+            yield json.dumps({"hb": 1}) + "\n"
+            try:
+                with urllib.request.urlopen(req, timeout=30) as resp:
+                    data = json.loads(resp.read())
+                text = data["choices"][0]["message"]["content"]
+                yield json.dumps({"t": text, "d": False}) + "\n"
+                yield json.dumps({"t": "", "d": True}) + "\n"
+            except Exception as ex:
+                yield json.dumps({"e": str(ex)}) + "\n"
+            return
+
+        # ── Ollama fallback ───────────────────────────────────────────────────
+        ollama_body = {
+            "model": cfg["model"], "messages": messages, "stream": True,
+            "options": {"temperature": 0.8, "num_predict": body.get("max_tokens", 1200),
+                        "top_p": 0.9, "num_ctx": 4096}
+        }
         token_queue = queue.Queue()
 
         def ollama_worker():
@@ -460,7 +509,7 @@ def chat():
             except Exception as ex:
                 token_queue.put({"e": str(ex)})
             finally:
-                token_queue.put(None)  # sentinel — always signals end
+                token_queue.put(None)
 
         threading.Thread(target=ollama_worker, daemon=True).start()
 
@@ -469,7 +518,7 @@ def chat():
             try:
                 item = token_queue.get(timeout=3)
             except queue.Empty:
-                yield json.dumps({"hb": 1}) + "\n"  # keep connection alive
+                yield json.dumps({"hb": 1}) + "\n"
                 continue
             if item is None:
                 break
@@ -815,9 +864,12 @@ if __name__ == "__main__":
         cfg = load_config()
     app.secret_key = base64.b64decode(cfg["secret_key"])
 
-    print("\n  Starting Ollama...")
-    ollama_ok = ensure_ollama()
-    print(f"  Ollama {'ready' if ollama_ok else 'not found — AI features disabled'}")
+    if GROQ_KEY:
+        print("\n  Groq API key loaded — using Groq for AI generation.")
+    else:
+        print("\n  Starting Ollama...")
+        ollama_ok = ensure_ollama()
+        print(f"  Ollama {'ready' if ollama_ok else 'not found — AI features disabled'}")
 
     port = find_free_port()
     url  = f"http://127.0.0.1:{port}"

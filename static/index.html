@@ -903,7 +903,7 @@ function App(){
   // ── Villain pool ────────────────────────────────────────────────────────
   const[villainPool,setVillainPool]=useState([]);
   // ── Ollama ──────────────────────────────────────────────────────────────
-  const[ollamaOk,setOllamaOk]=useState(null);
+  const[ollamaOk,setOllamaOk]=useState(null);const[groqOk,setGroqOk]=useState(false);
   const[forgeVersion,setForgeVersion]=useState("");
   const[models,setModels]=useState([]);
   const[currentModel,setCurrentModel]=useState("llama3.2");
@@ -970,7 +970,7 @@ function App(){
 
   // ── Ollama check ─────────────────────────────────────────────────────────
   const checkOllama=useCallback(()=>{
-    fetch("/api/status").then(r=>r.json()).then(d=>{setOllamaOk(d.ollama);setModels(d.models||[]);setCurrentModel(d.current_model||"llama3.2");if(d.version)setForgeVersion(d.version);}).catch(()=>setOllamaOk(false));
+    fetch("/api/status").then(r=>r.json()).then(d=>{setOllamaOk(d.ollama);setGroqOk(d.groq||false);setModels(d.models||[]);setCurrentModel(d.current_model||(d.groq?"llama-3.1-8b-instant":"llama3.2"));if(d.version)setForgeVersion(d.version);}).catch(()=>setOllamaOk(false));
   },[]);
   useEffect(()=>{checkOllama();const t=setInterval(checkOllama,10000);return()=>clearInterval(t);},[checkOllama]);
 
@@ -1538,9 +1538,9 @@ function App(){
           <span style={{fontSize:9,color:"#5EB1FF",fontFamily:"monospace",maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{remoteInfo.url}</span>
         </div>}
         <button onClick={()=>setShowRemotePanel(p=>!p)} title="Remote Access & Settings" style={{padding:"5px 10px",background:showRemotePanel?"rgba(94,177,255,0.12)":"var(--bg3)",border:`1px solid ${showRemotePanel?"rgba(94,177,255,0.4)":"var(--border)"}`,borderRadius:7,cursor:"pointer",color:showRemotePanel?"#5EB1FF":"var(--text2)",fontSize:11}}>⚙</button>
-        <div style={{display:"flex",alignItems:"center",gap:6,padding:"5px 12px",background:"var(--bg3)",border:`1px solid ${ollamaOk?"rgba(15,110,86,0.3)":ollamaOk===false?"rgba(139,26,26,0.4)":"var(--border)"}`,borderRadius:20}}>
-          <div style={{width:7,height:7,borderRadius:"50%",background:ollamaOk?"#5DCAA5":ollamaOk===false?"#E07070":"#888780"}}/>
-          <span style={{fontSize:9,color:"var(--text2)"}}>{ollamaOk===null?"Checking...":ollamaOk?currentModel:"Ollama offline"}</span>
+        <div style={{display:"flex",alignItems:"center",gap:6,padding:"5px 12px",background:"var(--bg3)",border:`1px solid ${groqOk?"rgba(94,177,255,0.3)":ollamaOk?"rgba(15,110,86,0.3)":ollamaOk===false?"rgba(139,26,26,0.4)":"var(--border)"}`,borderRadius:20}}>
+          <div style={{width:7,height:7,borderRadius:"50%",background:groqOk?"#5EB1FF":ollamaOk?"#5DCAA5":ollamaOk===false?"#E07070":"#888780"}}/>
+          <span style={{fontSize:9,color:"var(--text2)"}}>{ollamaOk===null?"Checking...":groqOk?"Groq · "+currentModel:ollamaOk?currentModel:"Offline"}</span>
         </div>
         {ollamaOk&&models.length>0&&<select className="fhdr-model" value={currentModel} onChange={e=>{setCurrentModel(e.target.value);fetch("/api/config",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:e.target.value})});}} style={{background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:7,padding:"5px 10px",color:"var(--text-primary)",fontSize:10,cursor:"pointer"}}>{models.map(m=><option key={m} value={m}>{m}</option>)}</select>}
         <button className="fhdr-refresh" onClick={checkOllama} style={{padding:"5px 10px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:7,cursor:"pointer",color:"var(--text2)",fontSize:9,fontFamily:"monospace"}}>↻</button>
