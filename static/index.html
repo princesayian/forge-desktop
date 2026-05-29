@@ -1573,10 +1573,10 @@ function App(){
         <div style={{width:1,height:30,background:"var(--border)",flexShrink:0}}/>
 
         {/* Active team indicator */}
-        <div onClick={()=>setTab("teams")} style={{display:"flex",alignItems:"center",gap:7,padding:"5px 12px",background:`${activeTeam.color}10`,border:`1px solid ${activeTeam.color}33`,borderRadius:20,cursor:"pointer"}}>
+        {activeTeam&&<div onClick={()=>setTab("teams")} style={{display:"flex",alignItems:"center",gap:7,padding:"5px 12px",background:`${activeTeam.color}10`,border:`1px solid ${activeTeam.color}33`,borderRadius:20,cursor:"pointer"}}>
           <div style={{width:8,height:8,borderRadius:2,background:activeTeam.color,flexShrink:0,boxShadow:`0 0 6px ${activeTeam.color}88`}}/>
           <span style={{fontSize:10,color:activeTeam.color,fontFamily:"monospace",letterSpacing:"0.07em",fontWeight:"600"}}>{activeTeam.abbr} · {activeTeam.name}</span>
-        </div>
+        </div>}
       </div>
       <div className="fhdr-right" style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
         {saved&&<div style={{fontSize:9,color:"#5DCAA5",padding:"3px 10px",background:"rgba(15,110,86,0.12)",border:"1px solid rgba(15,110,86,0.3)",borderRadius:20}}>✓ Saved</div>}
