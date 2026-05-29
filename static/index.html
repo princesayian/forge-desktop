@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>Superhero Forge V2</title>
+<title>Nocturnal Inc Superhero Forge</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0;}
   :root{
@@ -101,8 +101,8 @@ window.storage={
 const{useState,useRef,useEffect,useCallback,useMemo}=React;
 const G="#D4AF37";
 
-// ── Team constants ────────────────────────────────────────────────────────────
-const NK_TEAM={id:"nocturnal-knights",name:"Nocturnal Knights",abbr:"NK",color:"#534AB7",colorLight:"#AFA9EC",type:"global",nkAlignment:"base",isDefault:true,description:"Dark urban anti-heroes operating in the shadows between crime and justice.",motto:"We are the dark between the lights.",origin:"Founded by Kareem Carter after surviving a government black-site experiment. The Knights exist because the organization responsible is still operating — and no legitimate hero was stopping them."};
+// ── Migration seeds (used only during one-time v3 migration, not at runtime) ──
+const NK_TEAM={id:"nocturnal-knights",name:"Nocturnal Knights",abbr:"NK",color:"#534AB7",colorLight:"#AFA9EC",type:"global",nkAlignment:"base",isDefault:false,description:"Dark urban anti-heroes operating in the shadows between crime and justice.",motto:"We are the dark between the lights.",origin:"Founded by Kareem Carter after surviving a government black-site experiment. The Knights exist because the organization responsible is still operating — and no legitimate hero was stopping them."};
 
 const TEAM_COLORS=[
   {id:"violet",label:"Void Violet",hex:"#534AB7"},{id:"teal",label:"Cipher Teal",hex:"#0F6E56"},
@@ -125,18 +125,18 @@ const TEAM_TYPES=[
 ];
 
 const NK_ALIGNMENTS=[
-  {id:"allied",label:"Allied with NK",color:"#0F6E56",desc:"Work together toward common goals"},
-  {id:"rival",label:"NK Rivals",color:"#BA7517",desc:"Competing interests, not outright enemies"},
-  {id:"enemy",label:"NK Enemies",color:"#8B1A1A",desc:"Active conflict with the Knights"},
+  {id:"allied",label:"Allied",color:"#0F6E56",desc:"Work together toward common goals"},
+  {id:"rival",label:"Rivals",color:"#BA7517",desc:"Competing interests, not outright enemies"},
+  {id:"enemy",label:"Enemies",color:"#8B1A1A",desc:"Active conflict"},
   {id:"neutral",label:"Neutral",color:"#888780",desc:"No established relationship"},
-  {id:"splinter",label:"NK Splinter Cell",color:"#993C1D",desc:"Broke away from the Knights"},
+  {id:"splinter",label:"Splinter Cell",color:"#993C1D",desc:"Broke away from the primary team"},
 ];
 
 const ALIGN_META={
-  base:{label:"NK Member",color:"#534AB7"},member:{label:"NK Member",color:"#534AB7"},
-  allied:{label:"Allied with NK",color:"#0F6E56"},rival:{label:"NK Rival",color:"#BA7517"},
-  enemy:{label:"NK Enemy",color:"#8B1A1A"},neutral:{label:"Neutral",color:"#888780"},
-  splinter:{label:"NK Splinter",color:"#993C1D"},
+  base:{label:"Member",color:"#534AB7"},member:{label:"Member",color:"#534AB7"},
+  allied:{label:"Allied",color:"#0F6E56"},rival:{label:"Rival",color:"#BA7517"},
+  enemy:{label:"Enemy",color:"#8B1A1A"},neutral:{label:"Neutral",color:"#888780"},
+  splinter:{label:"Splinter",color:"#993C1D"},
 };
 
 // ── Race tree ─────────────────────────────────────────────────────────────────
@@ -233,11 +233,11 @@ const RECRUIT_QUIZ=[
 ];
 
 const VILLAIN_QUIZ=[
-  {id:"role",question:"Role in the organization?",options:[{id:"architect",label:"The Architect — designed the experiments",value:"mastermind who designed the dark energy experiments"},{id:"director",label:"The Director — runs field operations",value:"tactical director, thinks in acceptable losses"},{id:"soldier",label:"The Soldier turned Commander",value:"former field operative, still prefers direct violence"},{id:"scientist",label:"The Scientist — chose org over ethics",value:"genius who chose the org deliberately"},{id:"handler",label:"The Handler — controlled subjects",value:"psychologist who studied and manipulated subjects"},]},
-  {id:"drive",question:"What drives them?",options:[{id:"believer",label:"True believer",value:"genuinely believes the org's work will save the world"},{id:"loss",label:"Lost someone because of the Knights",value:"grief has become a weapon"},{id:"power",label:"Pure hunger for power",value:"uses the org as vehicle for personal power"},{id:"subject",label:"Also a test subject — broken by it",value:"survived the same experiment, shattered"},{id:"protection",label:"Protecting someone inside the org",value:"does terrible things to shield someone they love"},]},
-  {id:"connection",question:"Connection to the Knights?",options:[{id:"creator",label:"Ran the experiment on Kareem",value:"directly responsible for what Kareem became"},{id:"betrayal",label:"Was once a Knight",value:"former ally who knows every weakness"},{id:"counter",label:"Built to counter the Knights",value:"engineered by the org after the Knights became a threat"},{id:"personal",label:"Knew Kareem before everything",value:"deep pre-experiment history"},{id:"collateral",label:"Lost someone to the Knights",value:"civilian caught in the crossfire"},]},
-  {id:"power",question:"Power source?",options:[{id:"corrupted",label:"Corrupted dark energy — same as Wakháŋ",value:"wields the same dark energy without restraint"},{id:"superior_tech",label:"Tech surpassing Null/Void",value:"tech so advanced it makes Jon's feel obsolete"},{id:"bio_weapon",label:"Weaponized biology",value:"biological weaponry designed to neutralize Catalix"},{id:"psychic",label:"Psychic assault",value:"breaks minds, rewrites memories"},{id:"army",label:"Commands an army",value:"commands hundreds of operatives"},]},
-  {id:"flaw",question:"Fatal flaw?",options:[{id:"hero",label:"Believes they are the real hero",value:"genuine conviction they are right"},{id:"grief",label:"Grief made them irrational",value:"the thing they lost has distorted all judgment"},{id:"orders",label:"Following orders they stopped believing",value:"too deep in the org to leave"},{id:"pride",label:"Underestimates the Knights",value:"contempt for the Knights is their blindspot"},{id:"mercy",label:"Still mercy left in them",value:"one Knight means something to them — cannot fully commit"},]},
+  {id:"role",question:"Role in the organization?",options:[{id:"architect",label:"The Architect — designed the experiments",value:"mastermind who designed the experiments"},{id:"director",label:"The Director — runs field operations",value:"tactical director, thinks in acceptable losses"},{id:"soldier",label:"The Soldier turned Commander",value:"former field operative, still prefers direct violence"},{id:"scientist",label:"The Scientist — chose org over ethics",value:"genius who chose the org deliberately"},{id:"handler",label:"The Handler — controlled subjects",value:"psychologist who studied and manipulated subjects"},]},
+  {id:"drive",question:"What drives them?",options:[{id:"believer",label:"True believer",value:"genuinely believes the org's work will save the world"},{id:"loss",label:"Lost someone because of the heroes",value:"grief has become a weapon"},{id:"power",label:"Pure hunger for power",value:"uses the org as vehicle for personal power"},{id:"subject",label:"Also a test subject — broken by it",value:"survived the same experiment, shattered"},{id:"protection",label:"Protecting someone inside the org",value:"does terrible things to shield someone they love"},]},
+  {id:"connection",question:"Connection to the heroes?",options:[{id:"creator",label:"Caused or enabled what made the heroes",value:"directly responsible for what the heroes became"},{id:"betrayal",label:"Was once on the team",value:"former ally who knows every weakness"},{id:"counter",label:"Built specifically to counter the heroes",value:"engineered after the heroes became a threat"},{id:"personal",label:"Deep personal history with a hero",value:"deep pre-origin personal history with a hero"},{id:"collateral",label:"Lost someone in the crossfire",value:"civilian caught in the crossfire"},]},
+  {id:"power",question:"Power source?",options:[{id:"corrupted",label:"Mirror power — same source as a hero, corrupted",value:"wields the same power type as the strongest hero, without restraint"},{id:"superior_tech",label:"Tech that makes a hero's feel obsolete",value:"tech so advanced it renders the team's best gadgets obsolete"},{id:"bio_weapon",label:"Weaponized biology",value:"biological weaponry built to neutralize the most powerful hero"},{id:"psychic",label:"Psychic assault",value:"breaks minds, rewrites memories"},{id:"army",label:"Commands an army",value:"commands hundreds of operatives"},]},
+  {id:"flaw",question:"Fatal flaw?",options:[{id:"hero",label:"Believes they are the real hero",value:"genuine conviction they are right"},{id:"grief",label:"Grief made them irrational",value:"the thing they lost has distorted all judgment"},{id:"orders",label:"Following orders they stopped believing",value:"too deep in the org to leave"},{id:"pride",label:"Underestimates the heroes",value:"contempt for the heroes is their blindspot"},{id:"mercy",label:"Still mercy left in them",value:"one hero means something to them — cannot fully commit"},]},
 ];
 
 const SCENARIOS=[{id:"ambush",label:"Ambush",icon:"⚡",desc:"Caught off-guard"},{id:"infiltration",label:"Infiltration",icon:"👁",desc:"Stealth mission"},{id:"rescue",label:"Rescue",icon:"🔗",desc:"One hero captured"},{id:"confrontation",label:"Confrontation",icon:"💥",desc:"Direct face-off"},{id:"revelation",label:"Revelation",icon:"📁",desc:"Dark truth surfaces"},{id:"heist",label:"Heist",icon:"🎯",desc:"Extract a target"},{id:"crossover",label:"Crossover",icon:"🌐",desc:"Two teams collide"}];
@@ -411,7 +411,7 @@ function CharacterPage({member,imageUrl,isVillain=false,teamName,teamColor}){
             <div><span style={{fontSize:8.5,fontWeight:"bold",color:cl,letterSpacing:"0.04em"}}>KEY STRENGTHS: </span><span style={{fontSize:8.5,color:"var(--text2)"}}>{keyStrengths}</span></div>
             {(member.gender||member.age||member.birthYear)&&<div><span style={{fontSize:8.5,fontWeight:"bold",color:cl,letterSpacing:"0.04em"}}>PROFILE: </span><span style={{fontSize:8.5,color:"var(--text2)"}}>{[member.gender,member.age&&`Age ${member.age}`,member.birthYear&&`b. ${member.birthYear}`].filter(Boolean).join(" · ")}</span></div>}
             {member.race&&<div><span style={{fontSize:8.5,fontWeight:"bold",color:cl,letterSpacing:"0.04em"}}>RACE: </span><span style={{fontSize:8.5,color:"var(--text2)"}}>{raceLabel(member.race)}</span></div>}
-            <div><span style={{fontSize:8.5,fontWeight:"bold",color:cl,letterSpacing:"0.04em"}}>STATUS: </span><span style={{fontSize:8.5,color:isVillain?"#E07070":"var(--text2)"}}>{isVillain?"HIGH PRIORITY THREAT":member.nkAlignment==="base"?"NK OPERATIVE":"ASSOCIATE"}</span></div>
+            <div><span style={{fontSize:8.5,fontWeight:"bold",color:cl,letterSpacing:"0.04em"}}>STATUS: </span><span style={{fontSize:8.5,color:isVillain?"#E07070":"var(--text2)"}}>{isVillain?"HIGH PRIORITY THREAT":member.nkAlignment==="base"?"OPERATIVE":"ASSOCIATE"}</span></div>
           </div>
         </div>
       </div>
@@ -576,9 +576,9 @@ function EditPanel({member,onSave,onCancel,callAI,teamName}){
     <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:14}}>
       {TEAM_RANKS.map(r=><button key={r.id} onClick={()=>setTeamRank(r.id)} style={{fontSize:9,padding:"3px 10px",background:teamRank===r.id?`${r.color||G}22`:"var(--bg3)",border:`1px solid ${teamRank===r.id?(r.color||G):"var(--border2)"}`,borderRadius:20,cursor:"pointer",color:teamRank===r.id?(r.color||G):"var(--text2)",fontFamily:"monospace"}}>{r.icon?`${r.icon} `:""}{r.label}</button>)}
     </div>
-    <div style={{fontSize:9,letterSpacing:"0.18em",color:`${c}88`,textTransform:"uppercase",marginBottom:8}}>NK Alignment</div>
+    <div style={{fontSize:9,letterSpacing:"0.18em",color:`${c}88`,textTransform:"uppercase",marginBottom:8}}>Team Alignment</div>
     <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:14}}>
-      {[{id:"base",label:"NK Member"},...NK_ALIGNMENTS].map(a=><button key={a.id} onClick={()=>setAlign(a.id)} style={{fontSize:9,padding:"3px 10px",background:align===a.id?`${(ALIGN_META[a.id]||{color:G}).color}22`:"var(--bg3)",border:`1px solid ${align===a.id?(ALIGN_META[a.id]||{color:G}).color:"var(--border2)"}`,borderRadius:20,cursor:"pointer",color:align===a.id?(ALIGN_META[a.id]||{color:G}).color:"var(--text2)",fontFamily:"monospace"}}>{a.label}</button>)}
+      {[{id:"base",label:"Member"},...NK_ALIGNMENTS].map(a=><button key={a.id} onClick={()=>setAlign(a.id)} style={{fontSize:9,padding:"3px 10px",background:align===a.id?`${(ALIGN_META[a.id]||{color:G}).color}22`:"var(--bg3)",border:`1px solid ${align===a.id?(ALIGN_META[a.id]||{color:G}).color:"var(--border2)"}`,borderRadius:20,cursor:"pointer",color:align===a.id?(ALIGN_META[a.id]||{color:G}).color:"var(--text2)",fontFamily:"monospace"}}>{a.label}</button>)}
     </div>
     <div style={{fontSize:9,letterSpacing:"0.18em",color:`${c}88`,textTransform:"uppercase",marginBottom:8}}>Stats</div>
     <div className="fstats-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:14}}>{Object.entries(stats).map(([k,v])=>(<div key={k}><div style={{fontSize:9,color:"var(--text2)",marginBottom:4,textTransform:"uppercase"}}>{k}</div><input type="number" min="1" max="100" value={v} onChange={e=>setStats(p=>({...p,[k]:Math.min(100,Math.max(1,+e.target.value))}))} style={{padding:"6px 10px"}}/></div>))}</div>
@@ -664,7 +664,7 @@ function TeamCreator({teams,members=[],onSave,onCancel,callAI,ollamaOk,initialDa
         relMemberNames.length&&`Key characters involved: ${relMemberNames.join(", ")}`,
         loreHint.trim()&&`Story direction: ${loreHint.trim()}`,
       ].filter(Boolean).join("\n");
-      const p=await callAI(`Create lore for a superhero team in the Nocturnal Knights universe. JSON only, keys "description", "motto", "origin".\n\nTeam name: ${name}\nType: ${type}\nNK alignment: ${align}\n${ctx?ctx+"\n":""}\nWeave any connections and story direction naturally into the origin. Keep the tone dark, grounded, and personal.\n\n{"description":"1 sentence team description","motto":"short team motto","origin":"2-3 sentence origin story"}`);
+      const p=await callAI(`Create lore for a superhero team. JSON only, keys "description", "motto", "origin".\n\nTeam name: ${name}\nType: ${type}\nAlignment: ${align}\n${ctx?ctx+"\n":""}\nWeave any connections and story direction naturally into the origin. Keep the tone dark, grounded, and personal.\n\n{"description":"1 sentence team description","motto":"short team motto","origin":"2-3 sentence origin story"}`);
       if(p?.description)setDesc(p.description);
       if(p?.motto)setMotto(p.motto);
       if(p?.origin)setOrigin(p.origin);
@@ -716,7 +716,7 @@ function TeamCreator({teams,members=[],onSave,onCancel,callAI,ollamaOk,initialDa
       {step===2&&(<>
         <span style={lbl}>Team Type</span>
         <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:18}}>{TEAM_TYPES.map(tt=><button key={tt.id} style={chip(type===tt.id,color)} onClick={()=>setType(tt.id)}>{tt.label}</button>)}</div>
-        <span style={lbl}>NK Alignment</span>
+        <span style={lbl}>Team Alignment</span>
         <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:14}}>
           {NK_ALIGNMENTS.map(a=><button key={a.id} onClick={()=>setAlign(a.id)} style={{padding:"10px 14px",background:align===a.id?`${a.color}14`:"var(--bg3)",border:`1px solid ${align===a.id?a.color:"var(--border2)"}`,borderRadius:9,cursor:"pointer",textAlign:"left",fontFamily:"monospace"}}>
             <div style={{fontSize:12,color:"var(--text-primary)",fontWeight:align===a.id?"bold":"normal"}}>{a.label}</div>
@@ -846,7 +846,7 @@ function RemotePanel({remoteInfo,setRemoteInfo,onClose,G,s}){
   };
   return(<div style={{background:"var(--bg2)",borderBottom:"1px solid var(--border)",padding:"14px 22px"}}>
     <div style={{maxWidth:960,margin:"0 auto"}}>
-      <div style={{fontSize:9,letterSpacing:"0.18em",color:"#5EB1FF88",textTransform:"uppercase",marginBottom:12}}>Remote Access & Settings — Superhero Forge {forgeVersion?`v${forgeVersion}`:""}</div>
+      <div style={{fontSize:9,letterSpacing:"0.18em",color:"#5EB1FF88",textTransform:"uppercase",marginBottom:12}}>Remote Access & Settings — Nocturnal Inc Superhero Forge {forgeVersion?`v${forgeVersion}`:""}</div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))",gap:12}}>
         <div style={{padding:"12px 14px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:8}}>
           <div style={{fontSize:10,fontWeight:"bold",color:"#5EB1FF",marginBottom:8}}>Cloudflared Tunnel</div>
@@ -876,8 +876,8 @@ function RemotePanel({remoteInfo,setRemoteInfo,onClose,G,s}){
 
 function App(){
   // ── Team state ──────────────────────────────────────────────────────────
-  const[teams,setTeams]=useState([NK_TEAM]);
-  const[activeTeamId,setActiveTeamId]=useState("nocturnal-knights");
+  const[teams,setTeams]=useState([]);
+  const[activeTeamId,setActiveTeamId]=useState(null);
   const[teamRosters,setTeamRosters]=useState({});
   const[showTeamCreator,setShowTeamCreator]=useState(false);
   const[editingTeamData,setEditingTeamData]=useState(null);
@@ -992,19 +992,41 @@ function App(){
     (async()=>{
       const MIGRATE_KEYS=["forge-teams","forge-rosters","forge-edits","forge-villains","forge-removed","forge-meta-ai-pref","nk-edits","nk-villain","nk-recruits"];
       for(const k of MIGRATE_KEYS){const lv=localStorage.getItem(k);if(lv!=null){try{const ex=await fetch(`/api/store/${encodeURIComponent(k)}`);if(!ex.ok){await window.storage.set(k,lv);}}catch(e){await window.storage.set(k,lv);}localStorage.removeItem(k);}}
-      try{const d=await window.storage.get("forge-teams");const saved=JSON.parse(d.value);if(saved&&saved.length){const savedNK=saved.find(t=>t.id==="nocturnal-knights");setTeams([savedNK?{...NK_TEAM,...savedNK}:NK_TEAM,...saved.filter(t=>!t.isDefault&&t.id!=="nocturnal-knights")]);}}catch(e){}
+      // ── v3 migration: move DEFAULT_NK core members from hardcoded to stored roster ──
+      try{
+        const migFlag=await window.storage.get("forge-v3").catch(()=>null);
+        if(!migFlag){
+          let mt=[],mr={},me={};
+          try{const d=await window.storage.get("forge-teams");mt=JSON.parse(d.value)||[];}catch(ex){}
+          try{const d=await window.storage.get("forge-rosters");mr=JSON.parse(d.value)||{};}catch(ex){}
+          try{const d=await window.storage.get("forge-edits");me=JSON.parse(d.value)||{};}catch(ex){}
+          const hasNKStored=mt.some(t=>t.id==="nocturnal-knights");
+          const hasAnyData=mt.length>0||Object.keys(mr).length>0;
+          if(hasAnyData){
+            if(!hasNKStored){mt=[NK_TEAM,...mt];await window.storage.set("forge-teams",JSON.stringify(mt));}
+            const nkR=mr["nocturnal-knights"]||[];
+            if(!nkR.some(m=>m.id==="darkstar")){
+              const merged=DEFAULT_NK.map(m=>me[m.id]?{...m,...me[m.id]}:m);
+              mr["nocturnal-knights"]=[...merged,...nkR];
+              await window.storage.set("forge-rosters",JSON.stringify(mr));
+            }
+          }
+          await window.storage.set("forge-v3","1");
+        }
+      }catch(ex){}
+      try{const d=await window.storage.get("forge-teams");const saved=JSON.parse(d.value)||[];if(saved.length)setTeams(saved);}catch(e){}
       try{const d=await window.storage.get("forge-rosters");setTeamRosters(JSON.parse(d.value)||{});}catch(e){}
       try{const d=await window.storage.get("forge-edits");setSharedEdits(JSON.parse(d.value)||{});}catch(e){
-        // backward compat: check old key
         try{const d2=await window.storage.get("nk-edits");setSharedEdits(JSON.parse(d2.value)||{});}catch(e2){}
       }
       try{const d=await window.storage.get("forge-villains");setVillainPool(JSON.parse(d.value)||[]);}catch(e){
         try{const d2=await window.storage.get("nk-villain");const v=JSON.parse(d2.value);if(v)setVillainPool([v]);}catch(e2){}
       }
-      // old NK recruits backward compat
       try{const d=await window.storage.get("nk-recruits");const rec=JSON.parse(d.value)||[];if(rec.length){setTeamRosters(p=>({...p,"nocturnal-knights":[...(p["nocturnal-knights"]||[]),...rec.map(r=>({...r,teamId:"nocturnal-knights"}))]}))};}catch(e){}
       try{const d=await window.storage.get("forge-meta-ai-pref");if(d)setHasMetaAI(JSON.parse(d.value));}catch(e){}
-      try{const d=await window.storage.get("nk-family");setFamilyLinks(JSON.parse(d.value)||[]);}catch(e){}
+      try{const d=await window.storage.get("forge-family");setFamilyLinks(JSON.parse(d.value)||[]);}catch(e){
+        try{const d2=await window.storage.get("nk-family");setFamilyLinks(JSON.parse(d2.value)||[]);}catch(e2){}
+      }
       try{const d=await window.storage.get("forge-removed");setRemovedMembers(JSON.parse(d.value)||{});}catch(e){}
       try{const r=await fetch("/api/images");const ids=await r.json();const loaded={};const t=Date.now();ids.forEach(id=>{loaded[id]=`/api/images/${id}?t=${t}`;});if(Object.keys(loaded).length)setImages(loaded);}catch(e){}
       try{const r=await fetch("/api/update/check");setUpdateInfo(await r.json());}catch(e){}
@@ -1016,6 +1038,13 @@ function App(){
     try{await window.storage.set(key,JSON.stringify(data));setSaved(true);setTimeout(()=>setSaved(false),2000);}catch(e){}
   },[]);
 
+  // Auto-set activeTeamId when teams load or active team is removed
+  useEffect(()=>{
+    if(teams.length>0&&(!activeTeamId||!teams.find(t=>t.id===activeTeamId))){
+      setActiveTeamId(teams[0].id);
+    }
+  },[teams,activeTeamId]);
+
   const addFamilyLink=useCallback(()=>{
     if(!ftAddA||!ftAddB||ftAddA===ftAddB)return;
     const rel=FAMILY_RELATIONS.find(r=>r.id===ftAddRelation);
@@ -1023,7 +1052,7 @@ function App(){
     setFamilyLinks(prev=>{
       if(prev.find(l=>(l.a===ftAddA&&l.b===ftAddB)||(l.a===ftAddB&&l.b===ftAddA)))return prev;
       const updated=[...prev,{id:`fl-${Date.now()}`,a:ftAddA,b:ftAddB,aRelation:rel.label,bRelation:rel.inverse}];
-      persist("nk-family",updated);
+      persist("forge-family",updated);
       return updated;
     });
     setFtAddA("");setFtAddB("");setFtAddRelation("parent");
@@ -1032,20 +1061,17 @@ function App(){
   const removeFamilyLink=useCallback(id=>{
     setFamilyLinks(prev=>{
       const updated=prev.filter(l=>l.id!==id);
-      persist("nk-family",updated);
+      persist("forge-family",updated);
       return updated;
     });
   },[persist]);
 
   // ── Computed ─────────────────────────────────────────────────────────────
-  const activeTeam=useMemo(()=>teams.find(t=>t.id===activeTeamId)||NK_TEAM,[teams,activeTeamId]);
+  const activeTeam=useMemo(()=>teams.find(t=>t.id===activeTeamId)||teams[0]||null,[teams,activeTeamId]);
 
   const getTeamRoster=useCallback((teamId)=>{
     const removed=removedMembers[teamId]||[];
     const custom=(teamRosters[teamId]||[]).filter(m=>!removed.includes(m.id));
-    if(teamId==="nocturnal-knights"){
-      return[...DEFAULT_NK.filter(m=>!removed.includes(m.id)).map(m=>sharedEdits[m.id]?{...m,...sharedEdits[m.id]}:m),...custom.map(m=>sharedEdits[m.id]?{...m,...sharedEdits[m.id]}:m)];
-    }
     return custom.map(m=>sharedEdits[m.id]?{...m,...sharedEdits[m.id]}:m);
   },[teamRosters,sharedEdits,removedMembers]);
 
@@ -1055,7 +1081,6 @@ function App(){
 
   const memberTeamMap=useMemo(()=>{
     const map={};
-    DEFAULT_NK.forEach(m=>{map[m.id]=["nocturnal-knights"];});
     Object.entries(teamRosters).forEach(([tid,members])=>{
       members.forEach(m=>{if(!map[m.id])map[m.id]=[];if(!map[m.id].includes(tid))map[m.id].push(tid);});
     });
@@ -1070,16 +1095,15 @@ function App(){
       ?teams.map(t=>t.id===editingTeamData.id?{...t,...teamData}:t)
       :[...teams,teamData];
     setTeams(newTeams);
-    persist("forge-teams",newTeams.filter(t=>!t.isDefault||t.id==="nocturnal-knights"));
+    persist("forge-teams",newTeams);
     setShowTeamCreator(false);setEditingTeamData(null);
   },[teams,editingTeamData,persist]);
 
   const deleteTeam=useCallback((teamId)=>{
-    if(teamId==="nocturnal-knights")return;
     const newTeams=teams.filter(t=>t.id!==teamId);
     setTeams(newTeams);
-    persist("forge-teams",newTeams.filter(t=>!t.isDefault));
-    if(activeTeamId===teamId)setActiveTeamId("nocturnal-knights");
+    persist("forge-teams",newTeams);
+    if(activeTeamId===teamId)setActiveTeamId(newTeams[0]?.id||null);
   },[teams,activeTeamId,persist]);
 
   // ── Character management ──────────────────────────────────────────────────
@@ -1203,7 +1227,7 @@ function App(){
     try{
       const raceStr=raceLabel(rRace);
       const raceLoreStr=raceLore(rRace);
-      const p=await callAI(`Create a ${activeTeam.name} team hero. JSON only.\n\nReal name: ${rName||"Unknown"}\nGender: ${rGender}\nAge: ${rAge||(rBirthYear?String(2026-parseInt(rBirthYear)):"Unknown")}\n${rBirthYear?`Birth year: ${rBirthYear}\n`:""}Race: ${raceStr||"Unspecified"}\n${raceLoreStr?`Race lore (bake into origin): ${raceLoreStr}\n`:""}${rStoryDir.trim()?`Story direction (shape the origin around this): ${rStoryDir.trim()}\n`:""}Team: ${activeTeam.name} (${teamType})\nAccent color: ${hex}\nNK alignment of this character: ${rNkAlign}\nExisting names (pick different): ${existingNames||"none yet"}\n${rHeroName?`Hero name: ${rHeroName} (use exactly this name)`:"Hero name: (choose a fitting dark name)"}\nQuiz:\n${answers}\n\nIMPORTANT: Use correct pronouns (${pronounOf(rGender)}/${pronounOf(rGender)==="they"?"them":pronounOf(rGender)==="she"?"her":"him"}) for this character throughout.\nIMPORTANT: Pick 2-3 specific comic or anime characters as DNA for this hero based on the quiz answers. Bake these invisibly into every output field — power names shaped by their style, tagline capturing their essence, origin echoing their arc. Never name-drop them; only list in the dna array.\n\n{"heroName":"${rHeroName||"2-word dark name"}","tagline":"one punchy sentence","role":"Role · Descriptor","origin":"2-3 sentences connected to the team and their world — reflect their race biology and birth year context if provided","powers":[{"name":"Name","desc":"visual desc"},{"name":"Name","desc":"visual desc"},{"name":"Name","desc":"visual desc"},{"name":"Name","desc":"visual desc"}],"stats":{"Power":75,"Speed":70,"Tech":60,"Intellect":80,"Will":85},"costumeDesc":"costume in team aesthetic with ${hex} accent","powerFX":"visible effects using ${hex}","consistencyNotes":"design lock rules","dna":["Character whose energy shapes this hero's powers — e.g. Vegeta","Character whose arc or personality informs their story"]}`,t=>setAiStreamText(t));
+      const p=await callAI(`Create a ${activeTeam.name} team hero. JSON only.\n\nReal name: ${rName||"Unknown"}\nGender: ${rGender}\nAge: ${rAge||(rBirthYear?String(2026-parseInt(rBirthYear)):"Unknown")}\n${rBirthYear?`Birth year: ${rBirthYear}\n`:""}Race: ${raceStr||"Unspecified"}\n${raceLoreStr?`Race lore (bake into origin): ${raceLoreStr}\n`:""}${rStoryDir.trim()?`Story direction (shape the origin around this): ${rStoryDir.trim()}\n`:""}Team: ${activeTeam.name} (${teamType})\nAccent color: ${hex}\nTeam alignment: ${rNkAlign}\nExisting names (pick different): ${existingNames||"none yet"}\n${rHeroName?`Hero name: ${rHeroName} (use exactly this name)`:"Hero name: (choose a fitting dark name)"}\nQuiz:\n${answers}\n\nIMPORTANT: Use correct pronouns (${pronounOf(rGender)}/${pronounOf(rGender)==="they"?"them":pronounOf(rGender)==="she"?"her":"him"}) for this character throughout.\nIMPORTANT: Pick 2-3 specific comic or anime characters as DNA for this hero based on the quiz answers. Bake these invisibly into every output field — power names shaped by their style, tagline capturing their essence, origin echoing their arc. Never name-drop them; only list in the dna array.\n\n{"heroName":"${rHeroName||"2-word dark name"}","tagline":"one punchy sentence","role":"Role · Descriptor","origin":"2-3 sentences connected to the team and their world — reflect their race biology and birth year context if provided","powers":[{"name":"Name","desc":"visual desc"},{"name":"Name","desc":"visual desc"},{"name":"Name","desc":"visual desc"},{"name":"Name","desc":"visual desc"}],"stats":{"Power":75,"Speed":70,"Tech":60,"Intellect":80,"Will":85},"costumeDesc":"costume in team aesthetic with ${hex} accent","powerFX":"visible effects using ${hex}","consistencyNotes":"design lock rules","dna":["Character whose energy shapes this hero's powers — e.g. Vegeta","Character whose arc or personality informs their story"]}`,t=>setAiStreamText(t));
       const num=String(activeRoster.length+1).padStart(2,"0");
       const computedAge=rAge||(rBirthYear?String(2026-parseInt(rBirthYear)):"");
       setRResult({id:`char-${Date.now()}`,teamId:activeTeamId,realName:rName||"Unknown",gender:rGender,age:computedAge,birthYear:rBirthYear||"",race:rRace,species:raceLabel(rRace)||"Human",color:hex,colorLight:hex+"CC",initials:rName?rName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",number:num,isCustom:true,nkAlignment:rNkAlign,teamRank:rTeamRank,...p});
@@ -1222,7 +1246,7 @@ function App(){
         const newLink={id:`fl-${Date.now()}`,a:rResult.id,b:rFamilyCharId,aRelation:rel.label,bRelation:rel.inverse};
         const updatedLinks=[...familyLinks,newLink];
         setFamilyLinks(updatedLinks);
-        persist("nk-family",updatedLinks);
+        persist("forge-family",updatedLinks);
       }
     }
     setRResult(null);setRAnswers({});setRName("");setRHeroName("");setRStep(0);setRNkAlign("neutral");setRTeamRank("operative");setRGender("Male");setRAge("");setRBirthYear("");setRRace(null);setRStoryDir("");setDeepAnswers({});setDeepPhase(0);setRFamilyCharId("");setRFamilyRelation("parent");setTab("roster");
@@ -1247,7 +1271,7 @@ function App(){
     try{
       const raceStr=raceLabel(rRace);
       const raceLoreStr=raceLore(rRace);
-      const p=await callAI(`Create a deeply developed ${activeTeam.name} hero using rich comic book lore. JSON only.\n\nReal name: ${rName||"Unknown"}\nGender: ${rGender}\nAge: ${rAge||(rBirthYear?String(2026-parseInt(rBirthYear)):"Unknown")}\n${rBirthYear?`Birth year: ${rBirthYear}\n`:""}Race: ${raceStr||"Unspecified"}\n${raceLoreStr?`Race lore (bake into origin): ${raceLoreStr}\n`:""}${rStoryDir.trim()?`Story direction (shape the origin around this): ${rStoryDir.trim()}\n`:""}Accent color: ${hex}\nNK alignment: ${rNkAlign}\nExisting names (must be different): ${existingNames||"none"}\n${rHeroName?`Hero name: ${rHeroName} (use exactly this name)`:"Hero name: (choose a distinct name fitting the lore profile)"}\nTeam: ${activeTeam.name}\nIMPORTANT: Use correct pronouns (${pronounOf(rGender)}/${pronounOf(rGender)==="they"?"them":pronounOf(rGender)==="she"?"her":"him"}) for this character throughout.\n${dnaFoundation?`\nCHARACTER DNA FOUNDATION (bake these invisibly into every field — powers named/described through their aesthetic, origin reflecting their arc pattern, personality in the tagline — filter through the NK universe, never reference by name except in the dna array):\n${dnaFoundation}\n`:""}\nFull lore profile:\n${loreContext}${freeText?"\nVisual references: "+freeText:""}\n\nUse this lore to create a hero that feels authentic to these inspirations. JSON:\n{"heroName":"${rHeroName||"2-word hero name, distinct and fitting the lore profile"}","tagline":"one piercing sentence that captures their essence","role":"Role · Descriptor","origin":"3-4 sentences backstory that directly reflects the lore answers — specific and rooted in their race and birth year context","powers":[{"name":"Power name matching their visual style","desc":"2-sentence visual description of exactly how this looks in action"},{"name":"Power name","desc":"visual desc"},{"name":"Power name","desc":"visual desc"},{"name":"Power name","desc":"visual desc"}],"stats":{"Power":75,"Speed":70,"Tech":60,"Intellect":80,"Will":85},"costumeDesc":"Detailed costume description using ${hex} accent, reflecting their costume philosophy answer","powerFX":"Exact visual description of power effects using ${hex}, matching their FX style answer","consistencyNotes":"2-3 specific design lock rules based on their visual choices","dna":["Primary DNA — exact character name like Vegeta or Moon Knight","Secondary DNA — another specific character baked into this hero","Optional third DNA — only if genuinely applicable"]}`,t=>setAiStreamText(t));
+      const p=await callAI(`Create a deeply developed ${activeTeam.name} hero using rich comic book lore. JSON only.\n\nReal name: ${rName||"Unknown"}\nGender: ${rGender}\nAge: ${rAge||(rBirthYear?String(2026-parseInt(rBirthYear)):"Unknown")}\n${rBirthYear?`Birth year: ${rBirthYear}\n`:""}Race: ${raceStr||"Unspecified"}\n${raceLoreStr?`Race lore (bake into origin): ${raceLoreStr}\n`:""}${rStoryDir.trim()?`Story direction (shape the origin around this): ${rStoryDir.trim()}\n`:""}Accent color: ${hex}\nTeam alignment: ${rNkAlign}\nExisting names (must be different): ${existingNames||"none"}\n${rHeroName?`Hero name: ${rHeroName} (use exactly this name)`:"Hero name: (choose a distinct name fitting the lore profile)"}\nTeam: ${activeTeam.name}\nIMPORTANT: Use correct pronouns (${pronounOf(rGender)}/${pronounOf(rGender)==="they"?"them":pronounOf(rGender)==="she"?"her":"him"}) for this character throughout.\n${dnaFoundation?`\nCHARACTER DNA FOUNDATION (bake these invisibly into every field — powers named/described through their aesthetic, origin reflecting their arc pattern, personality in the tagline — filter through the universe this team inhabits, never reference by name except in the dna array):\n${dnaFoundation}\n`:""}\nFull lore profile:\n${loreContext}${freeText?"\nVisual references: "+freeText:""}\n\nUse this lore to create a hero that feels authentic to these inspirations. JSON:\n{"heroName":"${rHeroName||"2-word hero name, distinct and fitting the lore profile"}","tagline":"one piercing sentence that captures their essence","role":"Role · Descriptor","origin":"3-4 sentences backstory that directly reflects the lore answers — specific and rooted in their race and birth year context","powers":[{"name":"Power name matching their visual style","desc":"2-sentence visual description of exactly how this looks in action"},{"name":"Power name","desc":"visual desc"},{"name":"Power name","desc":"visual desc"},{"name":"Power name","desc":"visual desc"}],"stats":{"Power":75,"Speed":70,"Tech":60,"Intellect":80,"Will":85},"costumeDesc":"Detailed costume description using ${hex} accent, reflecting their costume philosophy answer","powerFX":"Exact visual description of power effects using ${hex}, matching their FX style answer","consistencyNotes":"2-3 specific design lock rules based on their visual choices","dna":["Primary DNA — exact character name like Vegeta or Moon Knight","Secondary DNA — another specific character baked into this hero","Optional third DNA — only if genuinely applicable"]}`,t=>setAiStreamText(t));
       const num=String(activeRoster.length+1).padStart(2,"0");
       const computedAge=rAge||(rBirthYear?String(2026-parseInt(rBirthYear)):"");
       setRResult({id:`char-${Date.now()}`,teamId:activeTeamId,realName:rName||"Unknown",gender:rGender,age:computedAge,birthYear:rBirthYear||"",race:rRace,species:raceLabel(rRace)||"Human",color:hex,colorLight:hex+"CC",initials:rName?rName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",number:num,isCustom:true,nkAlignment:rNkAlign,teamRank:rTeamRank,deepLore:deepAnswers,...p});
@@ -1262,7 +1286,7 @@ function App(){
     const bare={id:`char-${Date.now()}`,teamId:activeTeamId,realName:rName||"Unknown",heroName:rHeroName,gender:rGender,age:computedAge,birthYear:rBirthYear||"",race:rRace,species:raceLabel(rRace)||"Human",color:hex,colorLight:hex+"CC",initials:rName?rName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",number:num,isCustom:true,nkAlignment:rNkAlign,teamRank:rTeamRank,tagline:"",role:"Hero",origin:"",powers:[],stats:{Power:50,Speed:50,Tech:50,Intellect:50,Will:50},costumeDesc:"",powerFX:"",consistencyNotes:"",dna:[]};
     const newRosters={...teamRosters,[activeTeamId]:[...(teamRosters[activeTeamId]||[]),bare]};
     setTeamRosters(newRosters);persist("forge-rosters",newRosters);
-    if(rFamilyCharId){const rel=FAMILY_RELATIONS.find(r=>r.id===rFamilyRelation);if(rel){const newLink={id:`fl-${Date.now()}`,a:bare.id,b:rFamilyCharId,aRelation:rel.label,bRelation:rel.inverse};const updatedLinks=[...familyLinks,newLink];setFamilyLinks(updatedLinks);persist("nk-family",updatedLinks);}}
+    if(rFamilyCharId){const rel=FAMILY_RELATIONS.find(r=>r.id===rFamilyRelation);if(rel){const newLink={id:`fl-${Date.now()}`,a:bare.id,b:rFamilyCharId,aRelation:rel.label,bRelation:rel.inverse};const updatedLinks=[...familyLinks,newLink];setFamilyLinks(updatedLinks);persist("forge-family",updatedLinks);}}
     setRResult(null);setRAnswers({});setRName("");setRHeroName("");setRStep(0);setRNkAlign("neutral");setRTeamRank("operative");setRGender("Male");setRAge("");setRBirthYear("");setRRace(null);setRStoryDir("");setDeepAnswers({});setDeepPhase(0);setRFamilyCharId("");setRFamilyRelation("parent");setTab("roster");
   };
 
@@ -1279,10 +1303,10 @@ function App(){
   const generateVillain=async()=>{
     setVLoading(true);setVResult(null);setAiStreamText("");
     const answers=VILLAIN_QUIZ.map(q=>{const opt=q.options.find(o=>o.id===vAnswers[q.id]);return`${q.question}: ${opt?.value||""}`;}).join("\n");
-    const targetNames=vTargetTeams.map(id=>teams.find(t=>t.id===id)?.name||id).join(", ")||"The Nocturnal Knights";
+    const targetNames=vTargetTeams.map(id=>teams.find(t=>t.id===id)?.name||id).join(", ")||(teams[0]?.name||"the heroes");
     try{
       const p=await callAI(`Create a villain who threatens: ${targetNames}. JSON only — keys: heroName, tagline, role, origin, powers, stats, dna.\n\nName: ${vName||"Unknown"}\nGender: ${vGender}\nIMPORTANT: Use correct pronouns (${pronounOf(vGender)}/${pronounOf(vGender)==="they"?"them":pronounOf(vGender)==="she"?"her":"him"}) throughout.\nTarget teams: ${targetNames}\nQuiz:\n${answers}\n\n{"heroName":"villain codename","tagline":"one chilling sentence","role":"Threat · Descriptor","origin":"3-4 sentences deeply tied to the target teams","powers":[{"name":"Name","desc":"desc, mirror or counter to a hero ability"},{"name":"Name","desc":"desc"},{"name":"Name","desc":"desc"},{"name":"Name","desc":"desc"}],"stats":{"Power":88,"Speed":78,"Tech":82,"Intellect":90,"Will":88},"dna":["Villain Inspiration 1","Villain Inspiration 2"]}`,t=>setAiStreamText(t));
-      setVResult({id:`villain-${Date.now()}`,realName:vName||"Unknown",gender:vGender,color:"#8B1A1A",colorLight:"#E07070",initials:vName?vName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",isVillain:true,targetTeams:vTargetTeams.length?vTargetTeams:["nocturnal-knights"],...p});
+      setVResult({id:`villain-${Date.now()}`,realName:vName||"Unknown",gender:vGender,color:"#8B1A1A",colorLight:"#E07070",initials:vName?vName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",isVillain:true,targetTeams:vTargetTeams.length?vTargetTeams:(teams[0]?[teams[0].id]:[]),...p});
     }catch(e){if(e.message==="Generation cancelled.")setVResult(null);else setVResult({error:true,msg:e.message});}
     setVLoading(false);setAiStreamText("");
   };
@@ -1296,7 +1320,7 @@ function App(){
   };
 
   const saveBareVillain=()=>{
-    const bare={id:`villain-${Date.now()}`,realName:vName||"Unknown",heroName:vName||"Unknown Threat",gender:vGender,color:"#8B1A1A",colorLight:"#E07070",initials:vName?vName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",isVillain:true,targetTeams:vTargetTeams.length?vTargetTeams:["nocturnal-knights"],tagline:"",role:"Threat",origin:"",powers:[],stats:{Power:50,Speed:50,Tech:50,Intellect:50,Will:50},dna:[]};
+    const bare={id:`villain-${Date.now()}`,realName:vName||"Unknown",heroName:vName||"Unknown Threat",gender:vGender,color:"#8B1A1A",colorLight:"#E07070",initials:vName?vName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",isVillain:true,targetTeams:vTargetTeams.length?vTargetTeams:(teams[0]?[teams[0].id]:[]),tagline:"",role:"Threat",origin:"",powers:[],stats:{Power:50,Speed:50,Tech:50,Intellect:50,Will:50},dna:[]};
     const newPool=[...villainPool,bare];
     setVillainPool(newPool);persist("forge-villains",newPool);
     setVResult(null);setVAnswers({});setVName("");setVStep(0);setVTargetTeams([]);setVGender("Male");
@@ -1486,7 +1510,7 @@ function App(){
     const sharedVillainsFor=id=>villainPool.filter(v=>v.targetTeams?.includes(activeTeamId)).map(v=>v.heroName);
     try{
       const payload={
-        members:activeRoster.map(m=>({...m,teamName:activeTeam.name,teamColor:activeTeam.color,nkAlignment:m.nkAlignment||(activeTeamId==="nocturnal-knights"?"base":activeTeam.nkAlignment),sharedVillains:sharedVillainsFor(m.id)})),
+        members:activeRoster.map(m=>({...m,teamName:activeTeam.name,teamColor:activeTeam.color,nkAlignment:m.nkAlignment||activeTeam.nkAlignment||"base",sharedVillains:sharedVillainsFor(m.id)})),
         images:b64Images,teamName:activeTeam.name,teamColor:activeTeam.color
       };
       const res=await fetch("/api/export-pdf",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
@@ -1525,8 +1549,7 @@ function App(){
   const rCurrentQ=RECRUIT_QUIZ[rStep-1];
   const vCurrentQ=VILLAIN_QUIZ[vStep-1];
 
-  // NK dynamics visible when active team is NK or always
-  const coreMembers=DEFAULT_NK;
+  const coreMembers=activeTeam?activeRoster.slice(0,8):[];
   const N=coreMembers.length,cx=200,cy=155,r=105;
   const positions=coreMembers.map((_,i)=>{const angle=(2*Math.PI*i/N)-Math.PI/2;return{x:cx+r*Math.cos(angle),y:cy+r*Math.sin(angle)};});
 
@@ -1597,12 +1620,13 @@ function App(){
     {/* ── Tabs ───────────────────────────────────────────────────────────── */}
     <div className="ftabs" style={{display:"flex",borderBottom:"1px solid rgba(212,175,55,0.12)",padding:"0 16px",overflowX:"auto",background:"var(--bg-base)",gap:2}}>
       {[["teams","Teams"],["roster","Roster"],["team","Team"],["family","Family"],["prompts","Prompts"],["recruit","+ Recruit"],["villains","Villains"],["story","Story"],["battle","⚡ Battle"],["arc","Arc"],["tiers","Tiers"],["universe","Universe"]].map(([id,label])=>(
-        <button key={id} className="ftab" style={s.tab(tab===id)} onClick={()=>setTab(id)}>{label}</button>
+        <button key={id} className="ftab" style={s.tab(tab===id)} onClick={()=>{if(!activeTeam&&id!=="teams")return;setTab(id);}} disabled={!activeTeam&&id!=="teams"}>{label}</button>
       ))}
     </div>
 
     <div className="fmain" style={{padding:"22px",maxWidth:960,margin:"0 auto"}}>
       {ollamaOk===false&&<OllamaGuide/>}
+      {!activeTeam&&tab!=="teams"&&(<div style={{textAlign:"center",padding:"60px 20px"}}><div style={{fontSize:13,color:"var(--text3)",marginBottom:16}}>No team selected.</div><button onClick={()=>setTab("teams")} style={{padding:"9px 22px",background:`${G}14`,border:`1px solid ${G}`,borderRadius:8,cursor:"pointer",color:G,fontSize:11,fontFamily:"monospace"}}>Go to Teams</button></div>)}
 
       {/* ── TEAMS TAB ─────────────────────────────────────────────────── */}
       {tab==="teams"&&(<>
@@ -1618,10 +1642,18 @@ function App(){
           />
         ):(
           <>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+            {teams.length===0&&!showTeamCreator&&(
+              <div style={{textAlign:"center",padding:"60px 20px"}}>
+                <div style={{fontSize:36,marginBottom:16}}>⚒</div>
+                <div style={{fontSize:20,fontWeight:"bold",color:"var(--text-primary)",marginBottom:8,fontFamily:"monospace"}}>Build Your Universe</div>
+                <div style={{fontSize:13,color:"var(--text2)",marginBottom:28,lineHeight:1.7,maxWidth:400,margin:"0 auto 28px"}}>Create your first team to get started. Add members, generate lore, build out your hero universe.</div>
+                <button onClick={()=>setShowTeamCreator(true)} style={{padding:"13px 32px",background:`${G}16`,border:`1px solid ${G}`,borderRadius:10,cursor:"pointer",color:G,fontSize:12,letterSpacing:"0.14em",textTransform:"uppercase",fontFamily:"monospace"}}>+ Create First Team</button>
+              </div>
+            )}
+            {teams.length>0&&<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
               <div><div style={{fontSize:9,letterSpacing:"0.2em",color:`${G}77`,textTransform:"uppercase",marginBottom:4}}>All Teams</div><div style={{fontSize:13,color:"var(--text2)"}}>Click a team to set it active — all tabs will reflect that team.</div></div>
               <button onClick={()=>setShowTeamCreator(true)} style={{padding:"9px 18px",background:`${G}14`,border:`1px solid ${G}`,borderRadius:8,cursor:"pointer",color:G,fontSize:10.5,letterSpacing:"0.12em",textTransform:"uppercase",fontFamily:"monospace",whiteSpace:"nowrap"}}>+ New Team</button>
-            </div>
+            </div>}
 
             {/* Team grid */}
             <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:12,marginBottom:32}}>
@@ -1786,22 +1818,23 @@ function App(){
       })()}
 
       {/* ── TEAM DYNAMICS TAB ─────────────────────────────────────────── */}
-      {tab==="team"&&(<>
+      {tab==="team"&&activeTeam&&(<>
         <div style={{fontSize:9,letterSpacing:"0.2em",color:`${G}77`,textTransform:"uppercase",marginBottom:12}}>{activeTeam.name} — Team Dynamics</div>
-        {activeTeamId==="nocturnal-knights"?(
+        {coreMembers.length>=2?(
           <>
             <div style={{background:"rgba(255,255,255,0.02)",border:"1px solid var(--border2)",borderRadius:12,overflow:"hidden",marginBottom:20}}>
               <svg viewBox="0 0 400 310" style={{width:"100%",display:"block"}}>
-                {NK_DYNAMICS.map((d,i)=>{
+                {(()=>{const memberIds=coreMembers.map(m=>m.id);return familyLinks.filter(l=>memberIds.includes(l.a)&&memberIds.includes(l.b)).map((d,i)=>{
                   const ai=coreMembers.findIndex(m=>m.id===d.a),bi=coreMembers.findIndex(m=>m.id===d.b);
                   if(ai<0||bi<0)return null;
                   const pa=positions[ai],pb=positions[bi],active=dynActive===i;
-                  return(<g key={i} style={{cursor:"pointer"}} onClick={()=>setDynActive(dynActive===i?null:i)}>
-                    <line x1={pa.x} y1={pa.y} x2={pb.x} y2={pb.y} stroke={d.color} strokeWidth={active?2.5:1.5} strokeOpacity={active?0.9:0.3}/>
-                    <circle cx={(pa.x+pb.x)/2} cy={(pa.y+pb.y)/2} r={15} fill={active?`${d.color}28`:"var(--bg3)"} stroke={d.color} strokeWidth={active?1.5:0.5} strokeOpacity={0.7}/>
-                    <text x={(pa.x+pb.x)/2} y={(pa.y+pb.y)/2+3} textAnchor="middle" fontSize="6.5" fill={d.color} fontFamily="monospace" opacity={0.85}>{d.label.split(" ").slice(0,2).join(" ")}</text>
+                  const lc=activeTeam.color;
+                  return(<g key={d.id} style={{cursor:"pointer"}} onClick={()=>setDynActive(dynActive===i?null:i)}>
+                    <line x1={pa.x} y1={pa.y} x2={pb.x} y2={pb.y} stroke={lc} strokeWidth={active?2.5:1.5} strokeOpacity={active?0.9:0.25}/>
+                    <circle cx={(pa.x+pb.x)/2} cy={(pa.y+pb.y)/2} r={14} fill={active?`${lc}28`:"var(--bg3)"} stroke={lc} strokeWidth={active?1.5:0.5} strokeOpacity={0.7}/>
+                    <text x={(pa.x+pb.x)/2} y={(pa.y+pb.y)/2+3} textAnchor="middle" fontSize="6" fill={lc} fontFamily="monospace" opacity={0.85}>{d.aRelation}</text>
                   </g>);
-                })}
+                });})()}
                 {coreMembers.map((m,i)=>{const p=positions[i];return(<g key={m.id}>
                   <defs><clipPath id={`cl-${m.id}`}><circle cx={p.x} cy={p.y} r={28}/></clipPath></defs>
                   <circle cx={p.x} cy={p.y} r={34} fill={`${m.color}18`} stroke={m.color} strokeWidth={1.5}/>
@@ -1809,26 +1842,23 @@ function App(){
                   <text x={p.x} y={p.y+48} textAnchor="middle" fontSize="8.5" fill="var(--text-primary)" fontFamily="monospace" fontWeight="bold">{m.heroName}</text>
                 </g>);})}
               </svg>
-              <div style={{fontSize:9,color:"var(--text4)",textAlign:"center",paddingBottom:10,letterSpacing:"0.08em"}}>Tap a connection to see relationship details</div>
+              <div style={{fontSize:9,color:"var(--text4)",textAlign:"center",paddingBottom:10,letterSpacing:"0.08em"}}>Family connections between roster members shown above · Add connections in the Family tab</div>
             </div>
-            {dynActive!==null&&NK_DYNAMICS[dynActive]&&(<div style={{marginBottom:20,padding:"16px 18px",background:`${NK_DYNAMICS[dynActive].color}0C`,border:`1px solid ${NK_DYNAMICS[dynActive].color}33`,borderRadius:10}}>
-              <div style={{fontSize:13,fontWeight:"bold",color:NK_DYNAMICS[dynActive].color,marginBottom:6}}>{NK_DYNAMICS[dynActive].label}</div>
-              <div style={{fontSize:12,color:"var(--text2)",lineHeight:1.65}}>{NK_DYNAMICS[dynActive].desc}</div>
-              <div style={{fontSize:9,color:"var(--text4)",marginTop:8}}>{DEFAULT_NK.find(m=>m.id===NK_DYNAMICS[dynActive].a)?.heroName} ↔ {DEFAULT_NK.find(m=>m.id===NK_DYNAMICS[dynActive].b)?.heroName}</div>
-            </div>)}
-            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(255px,1fr))",gap:10}}>
-              {NK_DYNAMICS.map((d,i)=>(<div key={i} onClick={()=>setDynActive(dynActive===i?null:i)} style={{background:dynActive===i?`${d.color}0E`:"var(--bg3)",border:`1px solid ${dynActive===i?d.color+"44":"rgba(255,255,255,0.06)"}`,borderRadius:10,padding:"13px 15px",cursor:"pointer"}}>
-                <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:6}}><div style={{width:7,height:7,borderRadius:"50%",background:d.color}}/><span style={{fontSize:12,fontWeight:"bold",color:"var(--text-primary)"}}>{d.label}</span></div>
-                <div style={{fontSize:9,color:d.color,marginBottom:6}}>{DEFAULT_NK.find(m=>m.id===d.a)?.heroName} · {DEFAULT_NK.find(m=>m.id===d.b)?.heroName}</div>
-                <div style={{fontSize:11,color:"var(--text3)",lineHeight:1.5}}>{d.desc.slice(0,100)}...</div>
-              </div>))}
-            </div>
+            {(()=>{const memberIds=coreMembers.map(m=>m.id);const activeLinks=familyLinks.filter(l=>memberIds.includes(l.a)&&memberIds.includes(l.b));
+            return activeLinks.length>0?(
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))",gap:10}}>
+                {activeLinks.map((d,i)=>{const ma=coreMembers.find(m=>m.id===d.a),mb=coreMembers.find(m=>m.id===d.b);return(<div key={d.id} onClick={()=>setDynActive(dynActive===i?null:i)} style={{background:dynActive===i?`${activeTeam.color}0E`:"var(--bg3)",border:`1px solid ${dynActive===i?activeTeam.color+"44":"rgba(255,255,255,0.06)"}`,borderRadius:10,padding:"13px 15px",cursor:"pointer"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:5}}><div style={{width:7,height:7,borderRadius:"50%",background:activeTeam.color}}/><span style={{fontSize:12,fontWeight:"bold",color:"var(--text-primary)"}}>{d.aRelation} / {d.bRelation}</span></div>
+                  <div style={{fontSize:9,color:activeTeam.color}}>{ma?.heroName} · {mb?.heroName}</div>
+                </div>);})}
+              </div>
+            ):<div style={{textAlign:"center",padding:"20px",color:"var(--text3)",fontSize:11}}>No family connections between roster members yet. Add them in the Family tab.</div>;
+            })()}
           </>
         ):(
           <div style={{textAlign:"center",padding:"40px 20px"}}>
-            <div style={{fontSize:9,letterSpacing:"0.12em",color:`${activeTeam.color}88`,textTransform:"uppercase",marginBottom:8}}>Custom Dynamics</div>
-            <div style={{fontSize:12,color:"var(--text2)",lineHeight:1.7,maxWidth:420,margin:"0 auto"}}>Dynamics are auto-generated from the NK roster. For {activeTeam.name}, add members via Recruit then come back here — as the roster grows, dynamic entries will appear between members.</div>
-            {activeRoster.length>=2&&<div style={{marginTop:20,fontSize:11,color:"var(--text2)"}}>Current roster: {activeRoster.map(m=>m.heroName).join(", ")}</div>}
+            <div style={{fontSize:9,letterSpacing:"0.12em",color:`${activeTeam.color}88`,textTransform:"uppercase",marginBottom:8}}>Team Dynamics</div>
+            <div style={{fontSize:12,color:"var(--text2)",lineHeight:1.7,maxWidth:420,margin:"0 auto"}}>Add at least 2 members via Recruit, then return here to see the team dynamics visualization.</div>
           </div>
         )}
       </>)}
@@ -1978,14 +2008,14 @@ function App(){
           <div style={{display:"flex",flexWrap:"wrap",gap:7,marginBottom:14}}>
             {TEAM_RANKS.map(r=><button key={r.id} onClick={()=>setRTeamRank(r.id)} style={{fontSize:9,padding:"4px 11px",background:rTeamRank===r.id?`${r.color||G}18`:"var(--bg3)",border:`1px solid ${rTeamRank===r.id?(r.color||G):"var(--border2)"}`,borderRadius:20,cursor:"pointer",color:rTeamRank===r.id?(r.color||G):"var(--text2)",fontFamily:"monospace"}}>{r.icon?`${r.icon} `:""}{r.label}</button>)}
           </div>
-          {activeTeamId!=="nocturnal-knights"&&(<>
-            <span style={{...s.lbl,marginTop:0}}>NK Alignment</span>
+          {(<>
+            <span style={{...s.lbl,marginTop:0}}>Team Alignment</span>
             <div style={{display:"flex",flexWrap:"wrap",gap:7,marginBottom:14}}>
               {NK_ALIGNMENTS.map(a=><button key={a.id} onClick={()=>setRNkAlign(a.id)} style={{fontSize:9,padding:"4px 11px",background:rNkAlign===a.id?`${a.color}18`:"var(--bg3)",border:`1px solid ${rNkAlign===a.id?a.color:"var(--border2)"}`,borderRadius:20,cursor:"pointer",color:rNkAlign===a.id?a.color:"var(--text2)",fontFamily:"monospace"}}>{a.label}</button>)}
             </div>
           </>)}
           {(()=>{
-            const recruitAllChars=[...Object.values(teamRosters||{}).flat(),...DEFAULT_NK,...villainPool];
+            const recruitAllChars=[...Object.values(teamRosters||{}).flat(),...villainPool];
             const uniqueChars=Object.values(Object.fromEntries(recruitAllChars.map(c=>[c.id,c])));
             const selChar=uniqueChars.find(c=>c.id===rFamilyCharId);
             const selRel=FAMILY_RELATIONS.find(r=>r.id===rFamilyRelation);
@@ -2600,14 +2630,16 @@ function App(){
 
       {/* ── UNIVERSE MAP TAB ──────────────────────────────────────────── */}
       {tab==="universe"&&(()=>{
-        const otherTeams=teams.filter(t=>t.id!=="nocturnal-knights");
-        const nkC={x:400,y:258};
+        const primaryTeam=teams[0];
+        const otherTeams=teams.slice(1);
+        if(!primaryTeam)return(<div style={{textAlign:"center",padding:"40px",color:"var(--text3)",fontSize:12}}>Create your first team to see the universe map.</div>);
+        const pC={x:400,y:258};
         const RAD=188;
         const teamPos=otherTeams.map((t,i)=>{
           const a=(i/Math.max(otherTeams.length,1))*Math.PI*2-Math.PI/2;
-          return{...t,x:nkC.x+Math.cos(a)*RAD,y:nkC.y+Math.sin(a)*RAD};
+          return{...t,x:pC.x+Math.cos(a)*RAD,y:pC.y+Math.sin(a)*RAD};
         });
-        const nkRoster=getTeamRoster("nocturnal-knights").slice(0,6);
+        const primaryRoster=getTeamRoster(primaryTeam.id).slice(0,6);
         const ALINE={allied:"#0F6E56",rival:"#BA7517",enemy:"#8B1A1A",neutral:"#555555",splinter:"#993C1D",base:"#534AB7",member:"#534AB7"};
         return(<>
           <div style={{fontSize:9,letterSpacing:"0.2em",color:`${G}77`,textTransform:"uppercase",marginBottom:12}}>Universe Map — All Teams & Relationships</div>
@@ -2616,13 +2648,13 @@ function App(){
               {teamPos.map(t=>{
                 const lc=ALINE[t.nkAlignment]||"#555";
                 const dash=t.nkAlignment==="enemy"?"8,5":t.nkAlignment==="rival"?"5,4":undefined;
-                return <line key={t.id+"-l"} x1={nkC.x} y1={nkC.y} x2={t.x} y2={t.y} stroke={lc} strokeWidth={1.5} strokeOpacity={0.45} strokeDasharray={dash}/>;
+                return <line key={t.id+"-l"} x1={pC.x} y1={pC.y} x2={t.x} y2={t.y} stroke={lc} strokeWidth={1.5} strokeOpacity={0.45} strokeDasharray={dash}/>;
               })}
-              <circle cx={nkC.x} cy={nkC.y} r={70} fill={`${NK_TEAM.color}10`} stroke={NK_TEAM.color} strokeWidth={1.5} strokeOpacity={0.7}/>
-              <text x={nkC.x} y={nkC.y-78} textAnchor="middle" fontSize="11" fill={NK_TEAM.color} fontFamily="monospace" fontWeight="bold">{NK_TEAM.abbr}</text>
-              {nkRoster.map((m,i)=>{
-                const a=(i/Math.max(nkRoster.length,1))*Math.PI*2-Math.PI/2;
-                const mx=nkC.x+Math.cos(a)*45,my=nkC.y+Math.sin(a)*45;
+              <circle cx={pC.x} cy={pC.y} r={70} fill={`${primaryTeam.color}10`} stroke={primaryTeam.color} strokeWidth={1.5} strokeOpacity={0.7}/>
+              <text x={pC.x} y={pC.y-78} textAnchor="middle" fontSize="11" fill={primaryTeam.color} fontFamily="monospace" fontWeight="bold">{primaryTeam.abbr}</text>
+              {primaryRoster.map((m,i)=>{
+                const a=(i/Math.max(primaryRoster.length,1))*Math.PI*2-Math.PI/2;
+                const mx=pC.x+Math.cos(a)*45,my=pC.y+Math.sin(a)*45;
                 return(<g key={m.id}>
                   <defs><clipPath id={`um-${m.id}`}><circle cx={mx} cy={my} r={14}/></clipPath></defs>
                   <circle cx={mx} cy={my} r={16} fill={`${m.color}22`} stroke={m.color} strokeWidth={1.2}/>
@@ -2655,7 +2687,7 @@ function App(){
               <span style={{fontSize:9,color:c,fontFamily:"monospace"}}>{k}</span>
             </div>)}
           </div>
-          {otherTeams.length===0&&<div style={{textAlign:"center",padding:"16px",color:"var(--text3)",fontSize:11}}>Create additional teams in the Teams tab to populate the map.</div>}
+          {otherTeams.length===0&&<div style={{textAlign:"center",padding:"16px",color:"var(--text3)",fontSize:11}}>Create additional teams in the Teams tab to populate the map. The first team ({primaryTeam.name}) anchors the center.</div>}
         </>);
       })()}
 

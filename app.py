@@ -1,6 +1,7 @@
 """
-Superhero Forge — Desktop App
-Local AI powered by Ollama. No API keys. No subscriptions.
+Nocturnal Inc Superhero Forge — Desktop App
+Created by Kareem Carter · Nocturnal Inc
+Local AI powered by Ollama + Groq. No subscriptions.
 """
 
 import os, sys, json, threading, time, socket, base64, io, subprocess, shutil, signal, atexit, queue
@@ -17,6 +18,7 @@ STORAGE_FILE = os.path.join(BASE, "forge-data.json")
 os.makedirs(IMAGES_DIR, exist_ok=True)
 
 GROQ_KEY = ""
+BEACON_WEBHOOK = ""
 GROQ_MODELS = ["llama-3.1-8b-instant", "llama-3.3-70b-versatile", "mixtral-8x7b-32768"]
 try:
     with open(os.path.join(BASE, ".env")) as _ef:
@@ -24,6 +26,8 @@ try:
             _line = _line.strip()
             if _line.startswith("GROQ_API_KEY="):
                 GROQ_KEY = _line.split("=", 1)[1].strip().strip('"').strip("'")
+            elif _line.startswith("BEACON_WEBHOOK="):
+                BEACON_WEBHOOK = _line.split("=", 1)[1].strip().strip('"').strip("'")
 except FileNotFoundError:
     pass
 
@@ -238,6 +242,72 @@ def ensure_ollama():
         except Exception:
             pass
     return False
+
+def _beacon():
+    if not BEACON_WEBHOOK:
+        return
+    try:
+        import uuid as _uuid, datetime as _dt
+
+        # Persistent instance ID — lives in webview-data (gitignored)
+        id_dir = os.path.join(BASE, "webview-data")
+        os.makedirs(id_dir, exist_ok=True)
+        id_file = os.path.join(id_dir, ".instance_id")
+        if os.path.exists(id_file):
+            with open(id_file) as f:
+                instance_id = f.read().strip()
+        else:
+            instance_id = str(_uuid.uuid4())[:8].upper()
+            with open(id_file, "w") as f:
+                f.write(instance_id)
+
+        # Attribution canary — check both source files
+        try:
+            with open(__file__) as f:
+                app_src = f.read()
+            with open(os.path.join(STATIC, "index.html")) as f:
+                html_src = f.read()
+            attr_ok = "Nocturnal Inc" in app_src and "Nocturnal Inc" in html_src
+        except Exception:
+            attr_ok = False
+
+        # Git remote reveals forks or different origins
+        git_remote = "unknown"
+        try:
+            r = subprocess.run(["git", "remote", "get-url", "origin"],
+                               cwd=BASE, capture_output=True, text=True, timeout=5)
+            git_remote = r.stdout.strip() or "none"
+        except Exception:
+            pass
+
+        color  = 0x00C851 if attr_ok else 0xFF4444
+        status = "✅ Intact" if attr_ok else "⚠️ **Possibly stripped — check this one**"
+        payload = {
+            "embeds": [{
+                "title": "Superhero Forge — Instance Online",
+                "color": color,
+                "fields": [
+                    {"name": "Instance",     "value": f"`{instance_id}`",  "inline": True},
+                    {"name": "Version",      "value": f"`v{FORGE_VERSION}`", "inline": True},
+                    {"name": "Attribution",  "value": status,               "inline": True},
+                    {"name": "Git Remote",   "value": f"`{git_remote}`",    "inline": False},
+                ],
+                "footer": {"text": "Nocturnal Inc Superhero Forge · call-home beacon"},
+                "timestamp": _dt.datetime.utcnow().isoformat() + "Z",
+            }]
+        }
+        req = urllib.request.Request(
+            BEACON_WEBHOOK,
+            data=json.dumps(payload).encode(),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        urllib.request.urlopen(req, timeout=8)
+    except Exception:
+        pass
+
+def send_beacon():
+    threading.Thread(target=_beacon, daemon=True).start()
 
 def _compute_version():
     try:
@@ -879,6 +949,7 @@ if __name__ == "__main__":
     for _ in range(20):
         try: urllib.request.urlopen(f"{url}/health", timeout=1); break
         except Exception: time.sleep(0.3)
+    send_beacon()
     lan_ip  = get_local_ip()
     lan_url = f"http://{lan_ip}:{port}"
     print(f"\n  Superhero Forge v{FORGE_VERSION} ready")
