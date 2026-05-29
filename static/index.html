@@ -1116,6 +1116,10 @@ function App(){
     };
     reader.readAsDataURL(file);
   },[]);
+  const downloadImg=useCallback((id,heroName)=>{
+    const url=images[id];if(!url)return;
+    fetch(url).then(r=>r.blob()).then(blob=>{const bUrl=URL.createObjectURL(blob);const a=document.createElement("a");a.href=bUrl;a.download=`${heroName.toLowerCase().replace(/\s+/g,"-")}.png`;document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(()=>URL.revokeObjectURL(bUrl),1000);}).catch(()=>{});
+  },[images]);
   const toggle=useCallback(id=>setExpanded(p=>({...p,[id]:!p[id]})),[]);
 
   const saveCharEdit=useCallback((id,data)=>{
@@ -1749,8 +1753,8 @@ function App(){
         <div className="fimage-grid" style={{display:"grid",gridTemplateColumns:`repeat(${Math.min(activeRoster.length,4)},1fr)`,gap:10,marginBottom:24}}>
           {activeRoster.map(m=>(<div key={m.id}>
             <input type="file" accept="image/*" style={{display:"none"}} ref={el=>fileRefs.current[m.id]=el} onChange={e=>handleImg(m.id,e.target.files[0])}/>
-            <div onClick={()=>fileRefs.current[m.id]?.click()} style={{background:images[m.id]?"transparent":`${m.color}08`,border:`1.5px dashed ${images[m.id]?m.color+"66":m.color+"2E"}`,borderRadius:9,overflow:"hidden",cursor:"pointer",aspectRatio:"3/4",position:"relative",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:6}}>
-              {images[m.id]?(<><img src={images[m.id]} alt={m.heroName} style={{width:"100%",height:"100%",objectFit:"cover",objectPosition:"top",position:"absolute",inset:0}}/><div style={{position:"absolute",inset:0,background:"linear-gradient(transparent 55%,rgba(0,0,0,0.88))"}}/><div style={{position:"absolute",bottom:8,left:8}}><div style={{fontSize:11,fontWeight:"bold",color:"#fff"}}>{m.heroName}</div><div style={{fontSize:8,color:m.colorLight||m.color}}>{m.number}</div></div><div style={{position:"absolute",top:6,right:6,background:`${m.color}dd`,borderRadius:10,padding:"2px 6px",fontSize:8,color:"#fff"}}>✓</div></>):(<><div style={{width:34,height:34,borderRadius:"50%",background:`${m.color}14`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:"bold",color:m.color}}>{m.initials}</div><div style={{fontSize:9,color:"var(--text4)",textAlign:"center",lineHeight:1.4}}>{m.heroName}<br/>tap to upload</div></>)}
+            <div onClick={!images[m.id]?()=>fileRefs.current[m.id]?.click():undefined} style={{background:images[m.id]?"transparent":`${m.color}08`,border:`1.5px dashed ${images[m.id]?m.color+"66":m.color+"2E"}`,borderRadius:9,overflow:"hidden",cursor:images[m.id]?"default":"pointer",aspectRatio:"3/4",position:"relative",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:6}}>
+              {images[m.id]?(<><img src={images[m.id]} alt={m.heroName} style={{width:"100%",height:"100%",objectFit:"cover",objectPosition:"top",position:"absolute",inset:0}}/><div style={{position:"absolute",inset:0,background:"linear-gradient(transparent 55%,rgba(0,0,0,0.88))"}}/><div style={{position:"absolute",bottom:8,left:8}}><div style={{fontSize:11,fontWeight:"bold",color:"#fff"}}>{m.heroName}</div><div style={{fontSize:8,color:m.colorLight||m.color}}>{m.number}</div></div><div style={{position:"absolute",top:6,right:6,display:"flex",gap:4}}><button onClick={e=>{e.stopPropagation();fileRefs.current[m.id]?.click();}} style={{fontSize:8,padding:"3px 8px",background:"rgba(0,0,0,0.65)",border:`1px solid ${m.color}99`,borderRadius:8,cursor:"pointer",color:"#fff",fontFamily:"monospace",backdropFilter:"blur(4px)"}}>↑ Change</button><button onClick={e=>{e.stopPropagation();downloadImg(m.id,m.heroName);}} style={{fontSize:8,padding:"3px 8px",background:"rgba(0,0,0,0.65)",border:`1px solid ${m.color}99`,borderRadius:8,cursor:"pointer",color:"#fff",fontFamily:"monospace",backdropFilter:"blur(4px)"}}>↓ Save</button></div></>):(<><div style={{width:34,height:34,borderRadius:"50%",background:`${m.color}14`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:"bold",color:m.color}}>{m.initials}</div><div style={{fontSize:9,color:"var(--text4)",textAlign:"center",lineHeight:1.4}}>{m.heroName}<br/>tap to upload</div></>)}
             </div>
           </div>))}
         </div>
@@ -1910,6 +1914,10 @@ function App(){
           {pResult.metaAI&&<><span style={s.lbl}>Meta AI Image Prompt</span><div style={s.pBox}>{pResult.metaAI}</div>{hasMetaAI?<MetaAILauncher prompt={pResult.metaAI} label="Meta AI" copied={copied.pmeta} onCopy={()=>copy("pmeta",pResult.metaAI)}/>:<div style={{display:"flex",justifyContent:"flex-end",marginTop:6,marginBottom:12}}><button style={s.cpyBtn(copied.pmeta)} onClick={()=>copy("pmeta",pResult.metaAI)}>{copied.pmeta?"Copied!":"Copy"}</button></div>}</>}
           {(pResult.group||pResult.duo)&&<div style={{marginTop:12}}>
             <button style={{...s.bigBtn(sheetLoading),background:sheetLoading?"var(--bg3)":"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.15)"}} onClick={()=>downloadTeamSheet(pResult.duo?[pResult.heroA,pResult.heroB]:undefined)} disabled={sheetLoading}>{sheetLoading?"Building reference sheet…":"📎 Download Reference Sheet"}</button>
+            <div style={{fontSize:9,color:"var(--text3)",textAlign:"center",marginTop:6}}>Upload this image alongside the prompt in Meta AI for best accuracy</div>
+          </div>}
+          {!pResult.group&&!pResult.duo&&pResult.member&&images[pResult.member.id]&&<div style={{marginTop:12}}>
+            <button style={{...s.bigBtn(false),background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.15)"}} onClick={()=>downloadImg(pResult.member.id,pResult.member.heroName)}>📎 Download Reference Image</button>
             <div style={{fontSize:9,color:"var(--text3)",textAlign:"center",marginTop:6}}>Upload this image alongside the prompt in Meta AI for best accuracy</div>
           </div>}
           {pResult.tripo3D&&<><span style={s.lbl}>Tripo3D Model Prompt</span><div style={s.pBox}>{pResult.tripo3D}</div><Tripo3DLauncher prompt={pResult.tripo3D} copied={copied.ptripo} onCopy={()=>copy("ptripo",pResult.tripo3D)}/></>}
