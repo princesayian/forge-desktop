@@ -674,7 +674,13 @@ function TeamCreator({teams,members=[],onSave,onCancel,callAI,ollamaOk,initialDa
   };
   const handleSave=()=>{
     if(!name.trim())return;
-    onSave({id:`team-${Date.now()}`,name:name.trim(),abbr:abbr.trim()||autoAbbr(name),color,colorLight:color+"CC",type,nkAlignment:align,description:desc,motto,origin,logoSeed,isDefault:false,createdAt:Date.now()});
+    const isEdit=!!initialData;
+    onSave({
+      id:isEdit?initialData.id:`team-${Date.now()}`,
+      isDefault:isEdit?initialData.isDefault:false,
+      createdAt:isEdit?initialData.createdAt:Date.now(),
+      name:name.trim(),abbr:abbr.trim()||autoAbbr(name),color,colorLight:color+"CC",type,nkAlignment:align,description:desc,motto,origin,logoSeed
+    });
   };
   const s2={padding:"12px 16px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:10};
   const lbl={fontSize:9,letterSpacing:"0.18em",color:"rgba(212,175,55,0.75)",textTransform:"uppercase",marginBottom:8,display:"block"};
@@ -1249,6 +1255,17 @@ function App(){
     setRLoading(false);setAiStreamText("");
   };
 
+  const saveBareRecruit=()=>{
+    const hex=ACCENT_COLORS.find(a=>a.id===rAccent)?.hex||"#A32D2D";
+    const num=String(activeRoster.length+1).padStart(2,"0");
+    const computedAge=rAge||(rBirthYear?String(2026-parseInt(rBirthYear)):"");
+    const bare={id:`char-${Date.now()}`,teamId:activeTeamId,realName:rName||"Unknown",heroName:rHeroName,gender:rGender,age:computedAge,birthYear:rBirthYear||"",race:rRace,species:raceLabel(rRace)||"Human",color:hex,colorLight:hex+"CC",initials:rName?rName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",number:num,isCustom:true,nkAlignment:rNkAlign,teamRank:rTeamRank,tagline:"",role:"Hero",origin:"",powers:[],stats:{Power:50,Speed:50,Tech:50,Intellect:50,Will:50},costumeDesc:"",powerFX:"",consistencyNotes:"",dna:[]};
+    const newRosters={...teamRosters,[activeTeamId]:[...(teamRosters[activeTeamId]||[]),bare]};
+    setTeamRosters(newRosters);persist("forge-rosters",newRosters);
+    if(rFamilyCharId){const rel=FAMILY_RELATIONS.find(r=>r.id===rFamilyRelation);if(rel){const newLink={id:`fl-${Date.now()}`,a:bare.id,b:rFamilyCharId,aRelation:rel.label,bRelation:rel.inverse};const updatedLinks=[...familyLinks,newLink];setFamilyLinks(updatedLinks);persist("nk-family",updatedLinks);}}
+    setRResult(null);setRAnswers({});setRName("");setRHeroName("");setRStep(0);setRNkAlign("neutral");setRTeamRank("operative");setRGender("Male");setRAge("");setRBirthYear("");setRRace(null);setRStoryDir("");setDeepAnswers({});setDeepPhase(0);setRFamilyCharId("");setRFamilyRelation("parent");setTab("roster");
+  };
+
   const generateTripo3D=async(member)=>{
     setTripo3DTarget(member.id);setTripo3DLoading(true);setTripo3DPrompt(null);
     try{
@@ -1275,6 +1292,13 @@ function App(){
     const newPool=[...villainPool,vResult];
     setVillainPool(newPool);
     persist("forge-villains",newPool);
+    setVResult(null);setVAnswers({});setVName("");setVStep(0);setVTargetTeams([]);setVGender("Male");
+  };
+
+  const saveBareVillain=()=>{
+    const bare={id:`villain-${Date.now()}`,realName:vName||"Unknown",heroName:vName||"Unknown Threat",gender:vGender,color:"#8B1A1A",colorLight:"#E07070",initials:vName?vName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",isVillain:true,targetTeams:vTargetTeams.length?vTargetTeams:["nocturnal-knights"],tagline:"",role:"Threat",origin:"",powers:[],stats:{Power:50,Speed:50,Tech:50,Intellect:50,Will:50},dna:[]};
+    const newPool=[...villainPool,bare];
+    setVillainPool(newPool);persist("forge-villains",newPool);
     setVResult(null);setVAnswers({});setVName("");setVStep(0);setVTargetTeams([]);setVGender("Male");
   };
 
@@ -1589,7 +1613,7 @@ function App(){
             onSave={saveTeam}
             onCancel={()=>{setShowTeamCreator(false);setEditingTeamData(null);}}
             callAI={callAI}
-            ollamaOk={ollamaOk}
+            ollamaOk={ollamaOk||groqOk}
             initialData={editingTeamData}
           />
         ):(
@@ -2039,7 +2063,14 @@ function App(){
             <button onClick={addRecruit} style={{flex:2,padding:"11px",background:`${activeTeam.color}16`,border:`1px solid ${activeTeam.color}`,borderRadius:8,cursor:"pointer",color:activeTeam.color,fontSize:10.5,letterSpacing:"0.1em",textTransform:"uppercase",fontFamily:"monospace"}}>Add to {activeTeam.abbr} →</button>
           </div>
         </>)}
-        {rResult?.error&&<div style={{padding:"12px",background:"rgba(192,57,43,0.1)",border:"1px solid rgba(192,57,43,0.28)",borderRadius:8,fontSize:11,color:"#e74c3c"}}>Generation failed: {rResult.msg}</div>}
+        {rResult?.error&&(<div style={{padding:"14px",background:"rgba(192,57,43,0.08)",border:"1px solid rgba(192,57,43,0.28)",borderRadius:10}}>
+          <div style={{fontSize:11,color:"#e74c3c",marginBottom:12,fontFamily:"monospace"}}>AI generation failed: {rResult.msg}</div>
+          <div style={{fontSize:10,color:"var(--text3)",marginBottom:14,lineHeight:1.6}}>Mandatory fields (Hero Name, Real Name, Race) are filled — you can save a basic profile now and fill in the details later via Edit.</div>
+          <div style={{display:"flex",gap:10}}>
+            <button onClick={()=>{setRResult(null);}} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:10.5,fontFamily:"monospace"}}>↺ Try Again</button>
+            <button onClick={saveBareRecruit} style={{flex:2,padding:"10px",background:`${activeTeam.color}14`,border:`1px solid ${activeTeam.color}55`,borderRadius:8,cursor:"pointer",color:activeTeam.color,fontSize:10.5,fontFamily:"monospace",letterSpacing:"0.06em"}}>Save Without AI →</button>
+          </div>
+        </div>)}
       </>)}
 
       {/* ── VILLAINS TAB ──────────────────────────────────────────────── */}
@@ -2074,7 +2105,14 @@ function App(){
               <button onClick={addVillain} style={{flex:2,padding:"11px",background:"rgba(139,26,26,0.2)",border:"1px solid #8B1A1A",borderRadius:8,cursor:"pointer",color:"#E07070",fontSize:10.5,letterSpacing:"0.1em",textTransform:"uppercase",fontFamily:"monospace"}}>Add to Pool →</button>
             </div>
           </>)}
-          {vResult?.error&&<div style={{padding:"12px",background:"rgba(192,57,43,0.1)",border:"1px solid rgba(192,57,43,0.28)",borderRadius:8,fontSize:11,color:"#e74c3c",marginBottom:16}}>Generation failed: {vResult.msg}</div>}
+          {vResult?.error&&(<div style={{padding:"14px",background:"rgba(192,57,43,0.08)",border:"1px solid rgba(192,57,43,0.28)",borderRadius:10,marginBottom:16}}>
+            <div style={{fontSize:11,color:"#e74c3c",marginBottom:12,fontFamily:"monospace"}}>AI generation failed: {vResult.msg}</div>
+            <div style={{fontSize:10,color:"var(--text3)",marginBottom:14,lineHeight:1.6}}>You can save a basic villain profile now and fill in powers, origin, and stats later via Edit.</div>
+            <div style={{display:"flex",gap:10}}>
+              <button onClick={()=>{setVResult(null);}} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:10.5,fontFamily:"monospace"}}>↺ Try Again</button>
+              <button onClick={saveBareVillain} style={{flex:2,padding:"10px",background:"rgba(139,26,26,0.15)",border:"1px solid rgba(139,26,26,0.5)",borderRadius:8,cursor:"pointer",color:"#E07070",fontSize:10.5,fontFamily:"monospace",letterSpacing:"0.06em"}}>Save Without AI →</button>
+            </div>
+          </div>)}
         </>)}
 
         {vStep===0&&!vResult&&(<>
