@@ -2,6 +2,7 @@ vendor/
 __pycache__/
 *.pyc
 config.json
+.env
 logs/
 .forge.lock
 data/
