@@ -1344,6 +1344,9 @@ if __name__ == "__main__":
         else:
             sys.exit(0)
 
+    # Pick a free port up front so the network scan checks the right one
+    port = find_free_port()
+
     # ── Network instance check (LAN) ──────────────────────────────────────────
     network_url = _find_network_instance(port)
     if network_url:
@@ -1374,7 +1377,6 @@ if __name__ == "__main__":
     ollama_ok = ensure_ollama()
     print(f"  Ollama {'ready' if ollama_ok else 'not found — AI features disabled'}")
 
-    port = find_free_port()
     url  = f"http://127.0.0.1:{port}"
     flask_thread = threading.Thread(target=run_flask, args=(port, "0.0.0.0"), daemon=True)
     flask_thread.start()
