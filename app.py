@@ -24,7 +24,20 @@ IMAGES_DIR  = os.path.join(BASE, "images")
 LOCK_FILE    = os.path.join(BASE, ".forge.lock")
 STORAGE_FILE = os.path.join(BASE, "forge-data.json")
 
-FORGE_VERSION = "1.2.0"
+def _compute_version():
+    try:
+        count = int(subprocess.check_output(
+            ["git", "rev-list", "--count", "HEAD"],
+            cwd=BASE, stderr=subprocess.DEVNULL, text=True
+        ).strip())
+        if count < 100:
+            return f"1.{count}"
+        # At 100 commits roll into 3-part semver: 1.2.1, 1.2.2, ...
+        return f"1.2.{count - 99}"
+    except Exception:
+        return "1.0"
+
+FORGE_VERSION = _compute_version()
 
 GROQ_KEY = ""
 GROQ_MODELS = ["llama-3.1-8b-instant", "llama-3.3-70b-versatile", "mixtral-8x7b-32768"]
