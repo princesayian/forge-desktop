@@ -25,6 +25,34 @@ LOCK_FILE   = os.path.join(BASE, ".forge.lock")
 
 FORGE_VERSION = "1.2.0"
 
+GROQ_KEY = ""
+GROQ_MODELS = ["llama-3.1-8b-instant", "llama-3.3-70b-versatile", "mixtral-8x7b-32768"]
+try:
+    with open(os.path.join(BASE, ".env")) as _ef:
+        for _line in _ef:
+            _line = _line.strip()
+            if _line.startswith("GROQ_API_KEY="):
+                GROQ_KEY = _line.split("=", 1)[1].strip().strip('"').strip("'")
+except FileNotFoundError:
+    pass
+
+def _load_store():
+    for path in (STORAGE_FILE, STORAGE_FILE + ".tmp"):
+        try:
+            with open(path, "r") as f:
+                return json.load(f)
+        except Exception:
+            continue
+    return {}
+
+def _save_store(data):
+    tmp = STORAGE_FILE + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump(data, f)
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tmp, STORAGE_FILE)
+
 TUNNEL_URL   = None
 _TUNNEL_PROC = None
 
@@ -160,8 +188,9 @@ def ollama_is_running() -> bool:
 # ---------------------------------------------------------------------------
 def check_for_updates():
     try:
+        env = _git_env()
         r = subprocess.run(["git", "fetch", "origin", "--quiet"],
-                           cwd=BASE, capture_output=True, timeout=15)
+                           cwd=BASE, capture_output=True, timeout=20, env=env)
         if r.returncode != 0:
             return False, None, None
         local  = subprocess.run(["git", "rev-parse", "HEAD"], cwd=BASE,
@@ -175,7 +204,8 @@ def check_for_updates():
 def pull_update():
     try:
         r = subprocess.run(["git", "pull", "origin", "main", "--rebase"],
-                           cwd=BASE, capture_output=True, text=True, timeout=60)
+                           cwd=BASE, capture_output=True, text=True, timeout=60,
+                           env=_git_env())
         return r.returncode == 0, (r.stdout + r.stderr).strip()
     except Exception as e:
         return False, str(e)
@@ -643,6 +673,36 @@ def pull_model():
 # API: Images
 # ---------------------------------------------------------------------------
 IMAGE_EXTENSIONS = (".jpg", ".jpeg", ".png", ".gif", ".webp")
+
+@app.route("/api/store", methods=["GET"])
+def store_list():
+    store = _load_store()
+    prefix = request.args.get("prefix", "")
+    keys = [k for k in store if k.startswith(prefix)] if prefix else list(store.keys())
+    return jsonify({"keys": keys})
+
+@app.route("/api/store/<key>", methods=["GET"])
+def store_get(key):
+    store = _load_store()
+    if key not in store:
+        return jsonify({"error": "not found"}), 404
+    return jsonify({"key": key, "value": store[key]})
+
+@app.route("/api/store/<key>", methods=["POST"])
+def store_set(key):
+    body = request.get_json(silent=True) or {}
+    value = body.get("value", "")
+    store = _load_store()
+    store[key] = value
+    _save_store(store)
+    return jsonify({"key": key, "value": value})
+
+@app.route("/api/store/<key>", methods=["DELETE"])
+def store_delete(key):
+    store = _load_store()
+    store.pop(key, None)
+    _save_store(store)
+    return jsonify({"key": key, "deleted": True})
 
 @app.route("/api/images", methods=["GET"])
 def list_images():
@@ -1239,6 +1299,7 @@ def run_flask(port, host="127.0.0.1"):
 # Main entry point
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
+    # ── Same-machine instance check ───────────────────────────────────────────
     existing = _existing_instance()
     if existing:
         import tkinter as tk
@@ -1259,6 +1320,26 @@ if __name__ == "__main__":
             except Exception: pass
         else:
             sys.exit(0)
+
+    # ── Network instance check (LAN) ──────────────────────────────────────────
+    network_url = find_network_instance()
+    if network_url:
+        import tkinter as tk
+        from tkinter import messagebox
+        import webbrowser as _wb
+        root = tk.Tk(); root.withdraw()
+        open_it = messagebox.askyesno(
+            "Superhero Forge Already Running on Network",
+            f"Superhero Forge is already running on your network:\n\n"
+            f"  {network_url}\n\n"
+            f"Open it in your browser? (No = launch a new instance here)",
+            icon="warning"
+        )
+        root.destroy()
+        if open_it:
+            _wb.open(network_url)
+            sys.exit(0)
+
     _write_lock()
     atexit.register(_remove_lock)
 
@@ -1272,7 +1353,7 @@ if __name__ == "__main__":
 
     port = find_free_port()
     url  = f"http://127.0.0.1:{port}"
-    flask_thread = threading.Thread(target=run_flask, args=(port, flask_host), daemon=True)
+    flask_thread = threading.Thread(target=run_flask, args=(port, "0.0.0.0"), daemon=True)
     flask_thread.start()
     for _ in range(20):
         try:
@@ -1302,10 +1383,17 @@ if __name__ == "__main__":
         threading.Thread(target=_start_remote, daemon=True).start()
     try:
         import webview
-        print("  Opening native window...\n")
-        webview.create_window("Superhero Forge", url, width=1280, height=900,
+        import webbrowser
+        print("  Opening native window (minimized) + browser tab...\n")
+        _storage = os.path.join(BASE, "webview-data")
+        os.makedirs(_storage, exist_ok=True)
+        _win = webview.create_window("Superhero Forge", url, width=1280, height=900,
             min_size=(960, 680), background_color="#09090F")
-        webview.start(debug=False)
+        def _on_started():
+            try: _win.minimize()
+            except Exception: pass
+            webbrowser.open(url)
+        webview.start(debug=False, private_mode=False, storage_path=_storage, func=_on_started)
     except ImportError:
         import webbrowser
         print("  PyWebView not found — opening in browser.\n")

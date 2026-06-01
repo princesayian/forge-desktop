@@ -3,14 +3,17 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>Superhero Forge V2</title>
+<title>Nocturnal Inc Superhero Forge</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0;}
   :root{
-    --bg-base:#09090F; --bg-card:var(--bg2); --bg-card2:var(--border2);
-    --bg-hover:var(--border2); --border:var(--border); --border2:var(--text4);
+    --bg:#09090F; --bg2:rgba(255,255,255,0.035); --bg3:rgba(255,255,255,0.025);
+    --bg-base:#09090F; --bg-card:rgba(255,255,255,0.04); --bg-card2:rgba(255,255,255,0.07);
+    --bg-hover:rgba(255,255,255,0.06); --border:rgba(255,255,255,0.10); --border2:rgba(255,255,255,0.06);
     --text-primary:#F0EAD6; --text-secondary:rgba(230,225,210,0.7); --text-muted:rgba(210,205,190,0.55);
     --text-faint:rgba(200,195,178,0.38); --shadow:rgba(0,0,0,0.6);
+    --text:var(--text-primary); --text2:var(--text-secondary); --text3:var(--text-muted); --text4:var(--text-faint);
+    --header-bg:rgba(6,6,12,0.97); --prompt-bg:rgba(255,255,255,0.045); --input-bg:rgba(255,255,255,0.04);
   }
   body.forge-light {
     --bg:        #F0ECE2;
@@ -37,33 +40,58 @@
     --shadow:    0 2px 12px rgba(0,0,0,0.15); --bg-card2:#E8E3D6; --bg-base:#F0ECE2;
     --bg-card:rgba(0,0,0,0.04); --bg-card2:#E8E3D6;
   }
-  body{background:var(--bg-base);color:var(--text-primary);font-family:'Courier New',monospace;overflow-x:hidden;transition:background 0.25s,color 0.25s;}
-  input,button,textarea,select{font-family:'Courier New',monospace;}
+  body{background:var(--bg-base);color:var(--text-primary);font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;overflow-x:hidden;transition:background 0.25s,color 0.25s;-webkit-font-smoothing:antialiased;}
+  input,button,textarea,select{font-family:'SF Mono','JetBrains Mono','Consolas','Courier New',monospace;}
   input[type=text],input[type=number],textarea{
     background:var(--bg-card);border:1px solid var(--border);
-    border-radius:7px;padding:9px 13px;color:var(--text-primary);font-size:12px;outline:none;width:100%;resize:vertical;
-    transition:background 0.2s,border 0.2s,color 0.2s;
+    border-radius:8px;padding:9px 13px;color:var(--text-primary);font-size:12.5px;outline:none;width:100%;resize:vertical;
+    transition:background 0.2s,border 0.2s,color 0.2s,box-shadow 0.2s;
   }
-  input:focus,textarea:focus{border-color:rgba(212,175,55,0.5);}
-  select{background:var(--bg-card);border:1px solid var(--border);color:var(--text-primary);}
-  ::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-track{background:transparent;}
-  ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
-  .theme-card{background:var(--bg-card);border:1px solid var(--border);}
+  input:focus,textarea:focus{border-color:rgba(212,175,55,0.6);box-shadow:0 0 0 3px rgba(212,175,55,0.1);}
+  select{background:var(--bg-card);border:1px solid var(--border);color:var(--text-primary);border-radius:7px;}
+  ::-webkit-scrollbar{width:5px;}::-webkit-scrollbar-track{background:transparent;}
+  ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.12);border-radius:3px;}
+  ::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,0.22);}
+  body.light-mode ::-webkit-scrollbar-thumb{background:rgba(0,0,0,0.15);}
+  body.light-mode ::-webkit-scrollbar-thumb:hover{background:rgba(0,0,0,0.28);}
+  button{cursor:pointer;transition:filter 0.12s,opacity 0.12s;}
+  button:not([disabled]):hover{filter:brightness(1.13);}
+  button:not([disabled]):active{filter:brightness(0.92);}
+  .theme-card{background:var(--bg-card);border:1px solid var(--border);box-shadow:0 2px 10px rgba(0,0,0,0.25);}
   .theme-card2{background:var(--bg-card2);border:1px solid var(--border2);}
   .t-primary{color:var(--text-primary)!important;}
   .t-secondary{color:var(--text-secondary)!important;}
   .t-muted{color:var(--text-muted)!important;}
   .t-faint{color:var(--text-faint)!important;}
+  /* ── Mobile ──────────────────────────────────────────────────────── */
+  @media (max-width:640px){
+    .fhdr{height:auto!important;padding:8px 12px!important;min-height:50px;}
+    .fhdr-right{gap:5px!important;flex-wrap:wrap!important;}
+    .fhdr-model,.fhdr-refresh,.fhdr-restart{display:none!important;}
+    .fmain{padding:14px 12px!important;}
+    .ftabs{padding:0 4px!important;}
+    .ftab{padding:8px 10px!important;font-size:9.5px!important;}
+    .fimage-grid{grid-template-columns:repeat(2,1fr)!important;}
+    .froster-row{flex-wrap:wrap!important;padding:8px 10px!important;gap:8px!important;}
+    .froster-actions{width:100%!important;flex-wrap:wrap!important;padding-top:5px!important;border-top:1px solid var(--border2)!important;}
+    .fchar-grid{grid-template-columns:1fr!important;min-height:auto!important;}
+    .fpowers-grid{grid-template-columns:1fr!important;}
+    .fstats-grid{grid-template-columns:1fr 1fr!important;}
+    .fchar-name{font-size:20px!important;}
+    .fbattle-grid{grid-template-columns:1fr!important;}
+    .fscenario-grid{grid-template-columns:repeat(2,1fr)!important;}
+    input[type=text],input[type=number],textarea,select{font-size:16px!important;}
+  }
 </style>
 </head>
 <body>
 <div id="root"></div>
 <script>
 window.storage={
-  get:async k=>{const v=localStorage.getItem(k);if(v===null)throw new Error("Key not found");return{key:k,value:v};},
-  set:async(k,v)=>{const s=typeof v==="string"?v:JSON.stringify(v);localStorage.setItem(k,s);return{key:k,value:s};},
-  delete:async k=>{localStorage.removeItem(k);return{key:k,deleted:true};},
-  list:async p=>({keys:Object.keys(localStorage).filter(k=>!p||k.startsWith(p))})
+  get:async k=>{const r=await fetch(`/api/store/${encodeURIComponent(k)}`);if(!r.ok)throw new Error("Key not found");return r.json();},
+  set:async(k,v)=>{const s=typeof v==="string"?v:JSON.stringify(v);const r=await fetch(`/api/store/${encodeURIComponent(k)}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({value:s})});return r.json();},
+  delete:async k=>{const r=await fetch(`/api/store/${encodeURIComponent(k)}`,{method:"DELETE"});return r.json();},
+  list:async p=>{const r=await fetch(`/api/store${p?`?prefix=${encodeURIComponent(p)}`:""}`);const d=await r.json();return d;}
 };
 </script>
 <script src="/vendor/react.js"></script>
@@ -222,6 +250,45 @@ const ALIGN_META = {
     color: "#993C1D"
   }
 };
+
+// ── Race tree ─────────────────────────────────────────────────────────────────
+const RACE_TREE={
+  human:{label:"Human",hint:"Standard biological human. No innate powers — ability comes from training, gear, or external modification.",subs:[
+    {id:"human",label:"Human",lore:"No biological enhancements — power comes entirely from discipline, skill, and will."},
+    {id:"enhanced_human",label:"Enhanced Human",lore:"Biologically modified — serum, experiment, or gene therapy unlocked their abilities. Their humanity is intact but upgraded."},
+    {id:"cybernetic_human",label:"Cybernetic Human",lore:"Technology fused into the body — part machine, part human, navigating identity between both worlds."},
+  ]},
+  mutate:{label:"Mutate",hint:"Human with a genetic mutation as the power source. The mutation may be inherited, triggered, or forced — but it defines who they are.",subs:[
+    {id:"a_gene_mutate",label:"A-Gene Mutate",lore:"Born with a dormant aggression gene that activated — power is in the blood, not earned. They never asked for this."},
+    {id:"experiment_mutate",label:"Experiment Mutate",lore:"Deliberately altered by outside forces — a test subject who survived and turned the results into identity."},
+    {id:"accident_mutate",label:"Accident Mutate",lore:"An unplanned event rewrote their biology — disaster became origin, mutation became purpose."},
+  ]},
+  alien:{label:"Alien",hint:"Not of this world. Power comes from biology, not modification. Three distinct species — each with a different relationship to strength, civilization, and purpose.",subs:[
+    {id:"zyrenian",label:"Zyrenian",lore:"Battle-bred warrior race — power scales with combat experience, pride is genetic, and losing is not in their vocabulary. War is culture. (Think: Saiyan)"},
+    {id:"auranthi",label:"Auranthi",lore:"Solar-absorbing species from a dead world — immense power drawn from starlight, haunted by a lost civilization they carry alone. (Think: Kryptonian)"},
+    {id:"dravosi",label:"Dravosi",lore:"Apex-predator empire builders — genetically superior conquering species driven by dominance, legacy, and the belief that strength is the only truth. (Think: Viltrumite)"},
+  ]},
+  hybrid:{label:"Hybrid",hint:"Mixed heritage of two races. Choose both bloodlines — biology and history from each side shape who they are. The combination creates something entirely new.",subs:[]},
+};
+function raceLabel(r){
+  if(!r)return"";
+  if(typeof r==="string")return r;
+  if(r.main==="hybrid"){
+    const l1=r.sub1?((RACE_TREE[r.sub1.main]?.subs||[]).find(s=>s.id===r.sub1.sub)?.label||r.sub1.sub||""):"";
+    const l2=r.sub2?((RACE_TREE[r.sub2.main]?.subs||[]).find(s=>s.id===r.sub2.sub)?.label||r.sub2.sub||""):"";
+    return l1&&l2?`Hybrid (${l1} · ${l2})`:"Hybrid";
+  }
+  return(RACE_TREE[r.main]?.subs||[]).find(s=>s.id===r.sub)?.label||r.sub||r.main||"";
+}
+function raceLore(r){
+  if(!r||typeof r==="string")return"";
+  if(r.main==="hybrid"){
+    const l1=r.sub1?((RACE_TREE[r.sub1.main]?.subs||[]).find(s=>s.id===r.sub1.sub)?.lore||""):"";
+    const l2=r.sub2?((RACE_TREE[r.sub2.main]?.subs||[]).find(s=>s.id===r.sub2.sub)?.lore||""):"";
+    return[l1,l2].filter(Boolean).join(" Their hybrid heritage blends both bloodlines.");
+  }
+  return(RACE_TREE[r.main]?.subs||[]).find(s=>s.id===r.sub)?.lore||"";
+}
 
 // ── Default NK members ────────────────────────────────────────────────────────
 const DEFAULT_NK = [{
@@ -795,6 +862,14 @@ const ACCENT_COLORS = [{
   label: "Violet",
   hex: "#8B2FC9"
 }];
+
+// ── Name Randomizer ───────────────────────────────────────────────────────────
+const _NP=["Iron","Shadow","Void","Crimson","Onyx","Silver","Neon","Apex","Titan","Nova","Obsidian","Midnight","Scarlet","Ghost","Forge","Static","Prism","Storm","Cipher","Null","Relic","Vex","Sable","Chrome","Dusk"];
+const _NC=["Hawk","Strike","Claw","Edge","Fist","Bolt","Veil","Surge","Shade","Blade","Gate","Prime","Shift","Arc","Pulse","Drift","Wraith","Rift","Crest","Fang","Lance","Reign","Tempest","Mark","Coil"];
+const _TS=["Covenant","Legion","Vanguard","Order","Collective","Guard","Division","Syndicate","Brigade","Alliance","Phalanx","Corps","Council","Squadron","Force","Crew","Conclave","Unit","Compact","Watch"];
+const _rp=a=>a[Math.floor(Math.random()*a.length)];
+const randTeamName=()=>`${_rp(_NP)} ${_rp(_TS)}`;
+const randHeroName=()=>{const r=Math.random();if(r<0.55)return _rp(_NP)+_rp(_NC);if(r<0.78)return _rp(_NP);return _rp(_NC);};
 
 // ── Deep Lore Quiz ────────────────────────────────────────────────────────────
 const DEEP_LORE_PHASES = [{
@@ -2951,6 +3026,34 @@ function App() {
       setTimeout(() => setSaved(false), 2000);
     } catch (e) {}
   }, []);
+
+  // Auto-set activeTeamId when teams load or active team is removed
+  useEffect(()=>{
+    if(teams.length>0&&(!activeTeamId||!teams.find(t=>t.id===activeTeamId))){
+      setActiveTeamId(teams[0].id);
+    }
+  },[teams,activeTeamId]);
+
+  const addFamilyLink=useCallback(()=>{
+    if(!ftAddA||!ftAddB||ftAddA===ftAddB)return;
+    const rel=FAMILY_RELATIONS.find(r=>r.id===ftAddRelation);
+    if(!rel)return;
+    setFamilyLinks(prev=>{
+      if(prev.find(l=>(l.a===ftAddA&&l.b===ftAddB)||(l.a===ftAddB&&l.b===ftAddA)))return prev;
+      const updated=[...prev,{id:`fl-${Date.now()}`,a:ftAddA,b:ftAddB,aRelation:rel.label,bRelation:rel.inverse}];
+      persist("forge-family",updated);
+      return updated;
+    });
+    setFtAddA("");setFtAddB("");setFtAddRelation("parent");
+  },[ftAddA,ftAddB,ftAddRelation,persist]);
+
+  const removeFamilyLink=useCallback(id=>{
+    setFamilyLinks(prev=>{
+      const updated=prev.filter(l=>l.id!==id);
+      persist("forge-family",updated);
+      return updated;
+    });
+  },[persist]);
 
   // ── Computed ─────────────────────────────────────────────────────────────
   const activeTeam = useMemo(() => teams.find(t => t.id === activeTeamId) || NK_TEAM, [teams, activeTeamId]);

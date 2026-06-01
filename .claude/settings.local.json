@@ -10,7 +10,15 @@
       "Bash(ollama list *)",
       "Bash(echo \"---exit:$?\")",
       "Bash(curl -s http://localhost:11434/api/tags)",
-      "Bash(curl -s http://localhost:7432/api/status)"
+      "Bash(curl -s http://localhost:7432/api/status)",
+      "Bash(python3 -c \"import playwright\")",
+      "Bash(pip3 install *)",
+      "Bash(python3 -m playwright install chromium)",
+      "Bash(python3 -c \"import playwright; print\\('ok'\\)\")",
+      "Bash(/usr/local/bin/pip3 install *)",
+      "Bash(/usr/local/bin/python3 -m playwright install chromium)",
+      "Bash(/usr/local/bin/python3 generate_docs.py)",
+      "Bash(git rebase *)"
     ]
   }
 }
