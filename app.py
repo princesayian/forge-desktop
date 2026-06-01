@@ -527,6 +527,7 @@ def status():
     model = config.get("model", "llama3.2")
     models = ollama_models()
     ollama_url = config.get("ollama_url", "http://localhost:11434")
+    groq_enabled = bool(config.get("groq_api_key") or GROQ_KEY)
     return jsonify({
         "ollama": running,
         "ollama_running": running,
@@ -535,6 +536,8 @@ def status():
         "model": model,
         "ollama_url": ollama_url,
         "mode": "remote" if _is_remote() else "local",
+        "version": FORGE_VERSION,
+        "groq": groq_enabled,
     })
 
 @app.route("/api/models")

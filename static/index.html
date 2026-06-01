@@ -147,7 +147,8 @@ const RACE_TREE={
     {id:"cybernetic_human",label:"Cybernetic Human",lore:"Technology fused into the body — part machine, part human, navigating identity between both worlds."},
   ]},
   mutate:{label:"Mutate",hint:"Human with a genetic mutation as the power source. The mutation may be inherited, triggered, or forced — but it defines who they are.",subs:[
-    {id:"a_gene_mutate",label:"A-Gene Mutate",lore:"Born with a dormant aggression gene that activated — power is in the blood, not earned. They never asked for this."},
+    {id:"a_gene_mutate",label:"A-Gene Mutate",lore:"Born with a dormant aggression gene that activated — power is in the blood, not earned. They never asked for this.",
+     codex:{overview:"The A-gene (Aggressive Gene) is a dormant sequence found in approximately 1 in 1.8 million humans. In its dormant state it reads as noncoding DNA. When activated, it does not create new biology — it removes the biological limiters that prevent the human body from exceeding its own structural limits.",biology:"The standard human body runs well below its theoretical performance ceiling. Muscular output is capped to prevent structural damage. Neural processing speed is throttled to prevent heat damage. Adrenaline response is metered to prevent cardiac events. The A-gene turns those protections off. An activated carrier has access to full biological output with no automatic cutoff — physical capability that outpaces any trained human. The body was not designed to run in this state indefinitely, so the A-gene compensates with an accelerated healing factor that emerges alongside activation. Powers are specific to each individual's baseline physiology and psychology; no two carriers are identical, but all trend toward aggression-expressing outputs: raw force, kinetic projection, speed, durability.",activation:"Every confirmed activation event was triggered by extreme stress — physiological, psychological, or both. The activation is not conscious. Carriers consistently describe blacking out or entering a dissociative state, then returning to awareness having done something they couldn't explain and couldn't immediately replicate. Initial activation is violent, disorienting, and dangerous. The first weeks are described as learning to drive something already going 90 mph.",discovery:"The A-gene was first isolated in 2019 by a research team funded through the Nexus Foundation — a private science organization later linked to the same government program that produced Wakháŋ. The original paper was published, then quietly retracted. The researchers scattered. Multiple A-gene carriers have since reported contact from unknown parties shortly before their activation events — suggesting at minimum that someone has a list, and at most, that some activations were not spontaneous.",note:"A-gene carriers didn't choose this. That fact shapes nearly every carrier's psychological relationship to their power. It was not earned, not trained, not discovered willingly. It simply arrived. What they do with it is their only real choice."}},
     {id:"experiment_mutate",label:"Experiment Mutate",lore:"Deliberately altered by outside forces — a test subject who survived and turned the results into identity."},
     {id:"accident_mutate",label:"Accident Mutate",lore:"An unplanned event rewrote their biology — disaster became origin, mutation became purpose."},
   ]},
@@ -531,6 +532,7 @@ const TIER_DEFS=[{id:"S",label:"S",color:"#D4AF37"},{id:"A",label:"A",color:"#5D
 const autoScore=m=>{const v=Object.values(m.stats||{});return v.length?Math.round(v.reduce((a,b)=>a+b,0)/v.length):0;};
 const autoTierFn=m=>{const sc=autoScore(m);return sc>=85?"S":sc>=70?"A":sc>=55?"B":"C";};
 const pronounOf=g=>g==="Female"?"she":g==="Non-binary"?"they":"he";
+const ageStage=age=>{const n=parseInt(age);if(isNaN(n))return "";if(n<13)return "child";if(n<18)return "teen";if(n<=25)return "young adult";return "adult";};
 
 // ── Shared UI components ──────────────────────────────────────────────────────
 function AlignmentBadge({alignment}){
@@ -703,6 +705,23 @@ function RaceSelector({value,onChange,color}){
         </div>
       )}
       {label&&<div style={{fontSize:8.5,color:`${c}88`,marginTop:5,fontFamily:"monospace"}}>→ {label}</div>}
+      {main&&main!=="hybrid"&&sub&&(()=>{
+        const entry=(RACE_TREE[main]?.subs||[]).find(s=>s.id===sub);
+        const cx=entry?.codex;
+        if(!cx)return null;
+        const rows=Object.entries(cx).map(([k,v])=>[k.replace(/([A-Z])/g," $1").trim(),v]).filter(([,v])=>v);
+        return(
+          <div style={{marginTop:10,padding:"10px 13px",background:`${c}08`,border:`1px solid ${c}22`,borderRadius:8}}>
+            <div style={{fontSize:7.5,letterSpacing:"0.18em",textTransform:"uppercase",color:`${c}88`,fontFamily:"monospace",marginBottom:8}}>Codex — {entry.label}</div>
+            {rows.map(([label,text])=>(
+              <div key={label} style={{marginBottom:8}}>
+                <span style={{fontSize:8,letterSpacing:"0.12em",textTransform:"uppercase",color:`${c}77`,fontFamily:"monospace"}}>{label}: </span>
+                <span style={{fontSize:10.5,color:"var(--text3)",lineHeight:1.6}}>{text}</span>
+              </div>
+            ))}
+          </div>
+        );
+      })()}
     </div>
   );
 }
@@ -1114,7 +1133,10 @@ function App(){
   // ── Recruit ─────────────────────────────────────────────────────────────
   // ── Recruit / Deep Forge ─────────────────────────────────────────────────
   const[rStep,setRStep]=useState(0);const[rAnswers,setRAnswers]=useState({});
-  const[rName,setRName]=useState("");const[rHeroName,setRHeroName]=useState("");const[rAccent,setRAccent]=useState("crimson");
+  const[rName,setRName]=useState("");const[rHeroName,setRHeroName]=useState("");
+const[rColors,setRColors]=useState(["#A32D2D"]);const[rCustomHex,setRCustomHex]=useState("");
+const toggleRColor=hex=>setRColors(prev=>{if(prev.includes(hex)){if(prev.length===1)return prev;return prev.filter(c=>c!==hex);}if(prev.length>=3)return prev;return[...prev,hex];});
+const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{6}$/)&&!h.match(/^#[0-9a-fA-F]{3}$/))return;setRColors(prev=>{if(prev.includes(h)||prev.length>=3)return prev;return[...prev,h];});setRCustomHex("");};
   const[rNkAlign,setRNkAlign]=useState("neutral");
   const[rTeamRank,setRTeamRank]=useState("operative");
   const[rFamilyCharId,setRFamilyCharId]=useState("");const[rFamilyRelation,setRFamilyRelation]=useState("parent");
@@ -1413,56 +1435,75 @@ function App(){
   const callAI=useCallback(async(prompt,onToken,maxTokens=1500)=>{
     const controller=new AbortController();
     genControllerRef.current=controller;
-    try{
-      const res=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:currentModel,max_tokens:maxTokens,messages:[{role:"user",content:prompt}]}),signal:controller.signal});
-      if(!res.body)throw new Error("No response stream");
-      const reader=res.body.getReader();
-      const dec=new TextDecoder();
-      let buf="",full="";
-      while(true){
-        const{done,value}=await reader.read();
-        if(done)break;
-        buf+=dec.decode(value,{stream:true});
-        const lines=buf.split("\n");buf=lines.pop()||"";
-        for(const line of lines){
-          if(!line.trim())continue;
-          let chunk;try{chunk=JSON.parse(line);}catch{continue;}
-          if(chunk.e)throw new Error(chunk.e);
-          if(chunk.t){full+=chunk.t;if(onToken)onToken(full);}
+    // Retry config: exponential backoff with jitter
+    const MAX_RETRIES=3;
+    const RETRYABLE_STATUS=new Set([429,500,502,503,504]);
+    let lastErr;
+    for(let attempt=0;attempt<=MAX_RETRIES;attempt++){
+      if(attempt>0){
+        // base delay: 1s, 2s, 4s — plus up to 500ms random jitter
+        const delay=1000*Math.pow(2,attempt-1)+Math.random()*500;
+        await new Promise(r=>setTimeout(r,delay));
+        if(controller.signal.aborted){genControllerRef.current=null;throw new Error("Generation cancelled.");}
+        if(onToken)onToken(""); // clear partial stream on retry
+      }
+      try{
+        const res=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:currentModel,max_tokens:maxTokens,messages:[{role:"user",content:prompt}]}),signal:controller.signal});
+        if(!res.ok){
+          if(RETRYABLE_STATUS.has(res.status)&&attempt<MAX_RETRIES){lastErr=new Error(`Server error ${res.status}`);continue;}
+          throw new Error(`HTTP ${res.status}`);
         }
+        if(!res.body)throw new Error("No response stream");
+        const reader=res.body.getReader();
+        const dec=new TextDecoder();
+        let buf="",full="";
+        while(true){
+          const{done,value}=await reader.read();
+          if(done)break;
+          buf+=dec.decode(value,{stream:true});
+          const lines=buf.split("\n");buf=lines.pop()||"";
+          for(const line of lines){
+            if(!line.trim())continue;
+            let chunk;try{chunk=JSON.parse(line);}catch{continue;}
+            if(chunk.e)throw new Error(chunk.e);
+            if(chunk.t){full+=chunk.t;if(onToken)onToken(full);}
+          }
+        }
+        genControllerRef.current=null;
+        const clean=full.replace(/```json\n?/g,"").replace(/```\n?/g,"").trim().replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g,ch=>'\\u'+ch.charCodeAt(0).toString(16).padStart(4,'0'));
+        try{return JSON.parse(clean);}catch{
+          const m=clean.match(/\{[\s\S]*\}/);
+          if(m){try{return JSON.parse(m[0]);}catch{}}
+          const start=clean.indexOf("{");
+          if(start>0){try{return JSON.parse(clean.slice(start));}catch{}}
+          throw new Error("Response was not valid JSON");
+        }
+      }catch(e){
+        if(e.name==="AbortError"){genControllerRef.current=null;throw new Error("Generation cancelled.");}
+        // Retry on network-level errors (TypeError: Failed to fetch, etc.)
+        if(e instanceof TypeError&&attempt<MAX_RETRIES){lastErr=e;continue;}
+        genControllerRef.current=null;
+        throw e;
       }
-      genControllerRef.current=null;
-      const clean=full.replace(/```json\n?/g,"").replace(/```\n?/g,"").trim().replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g,ch=>'\\u'+ch.charCodeAt(0).toString(16).padStart(4,'0'));
-      try{return JSON.parse(clean);}catch{
-        // Try greedy {…} extraction
-        const m=clean.match(/\{[\s\S]*\}/);
-        if(m){try{return JSON.parse(m[0]);}catch{}}
-        // Last resort: find the first { and try everything from there
-        const start=clean.indexOf("{");
-        if(start>0){try{return JSON.parse(clean.slice(start));}catch{}}
-        throw new Error("Response was not valid JSON");
-      }
-    }catch(e){
-      genControllerRef.current=null;
-      if(e.name==="AbortError")throw new Error("Generation cancelled.");
-      throw e;
     }
+    genControllerRef.current=null;
+    throw lastErr||new Error("Request failed after retries");
   },[currentModel]);
 
   // ── Recruit ───────────────────────────────────────────────────────────────
   const generateRecruit=async()=>{
     setRLoading(true);setRResult(null);setAiStreamText("");
-    const hex=ACCENT_COLORS.find(a=>a.id===rAccent)?.hex||"#A32D2D";
+    const hex=rColors[0]||"#A32D2D";const colorDesc=rColors.length===1?hex:rColors.map((c,i)=>(["primary","secondary","tertiary"][i]||"tertiary")+": "+c).join(", ");
     const teamType=TEAM_TYPES.find(t=>t.id===activeTeam.type)?.label||activeTeam.type;
     const answers=RECRUIT_QUIZ.map(q=>{const opt=q.options.find(o=>o.id===rAnswers[q.id]);return`${q.question}: ${opt?.value||""}`;}).join("\n");
     const existingNames=activeRoster.map(m=>m.heroName).join(", ");
     try{
       const raceStr=raceLabel(rRace);
       const raceLoreStr=raceLore(rRace);
-      const p=await callAI(`Create a ${activeTeam.name} team hero. JSON only.\n\nReal name: ${rName||"Unknown"}\nGender: ${rGender}\nAge: ${rAge||(rBirthYear?String(2026-parseInt(rBirthYear)):"Unknown")}\n${rBirthYear?`Birth year: ${rBirthYear}\n`:""}Race: ${raceStr||"Unspecified"}\n${raceLoreStr?`Race lore (bake into origin): ${raceLoreStr}\n`:""}${rStoryDir.trim()?`Story direction (shape the origin around this): ${rStoryDir.trim()}\n`:""}Team: ${activeTeam.name} (${teamType})\nAccent color: ${hex}\nTeam alignment: ${rNkAlign}\nExisting names (pick different): ${existingNames||"none yet"}\n${rHeroName?`Hero name: ${rHeroName} (use exactly this name)`:"Hero name: (choose a fitting dark name)"}\nQuiz:\n${answers}\n\nIMPORTANT: Use correct pronouns (${pronounOf(rGender)}/${pronounOf(rGender)==="they"?"them":pronounOf(rGender)==="she"?"her":"him"}) for this character throughout.\nIMPORTANT: Pick 2-3 specific comic or anime characters as DNA for this hero based on the quiz answers. Bake these invisibly into every output field — power names shaped by their style, tagline capturing their essence, origin echoing their arc. Never name-drop them; only list in the dna array.\n\n{"heroName":"${rHeroName||"2-word dark name"}","tagline":"one punchy sentence","role":"Role · Descriptor","origin":"2-3 sentences connected to the team and their world — reflect their race biology and birth year context if provided","powers":[{"name":"Name","desc":"visual desc"},{"name":"Name","desc":"visual desc"},{"name":"Name","desc":"visual desc"},{"name":"Name","desc":"visual desc"}],"stats":{"Power":75,"Speed":70,"Tech":60,"Intellect":80,"Will":85},"costumeDesc":"costume in team aesthetic with ${hex} accent","powerFX":"visible effects using ${hex}","consistencyNotes":"design lock rules","dna":["Character whose energy shapes this hero's powers — e.g. Vegeta","Character whose arc or personality informs their story"]}`,t=>setAiStreamText(t));
+      const p=await callAI(`Create a ${activeTeam.name} team hero. JSON only.\n\nReal name: ${rName||"Unknown"}\nGender: ${rGender}\nAge: ${rAge||(rBirthYear?String(2026-parseInt(rBirthYear)):"Unknown")}\n${rBirthYear?`Birth year: ${rBirthYear}\n`:""}Race: ${raceStr||"Unspecified"}\n${raceLoreStr?`Race lore (bake into origin): ${raceLoreStr}\n`:""}${rStoryDir.trim()?`Story direction (shape the origin around this): ${rStoryDir.trim()}\n`:""}Team: ${activeTeam.name} (${teamType})\nColor palette: ${colorDesc}\nTeam alignment: ${rNkAlign}\nExisting names (pick different): ${existingNames||"none yet"}\n${rHeroName?`Hero name: ${rHeroName} (use exactly this name)`:"Hero name: (choose a fitting dark name)"}\nQuiz:\n${answers}\n\nIMPORTANT: Use correct pronouns (${pronounOf(rGender)}/${pronounOf(rGender)==="they"?"them":pronounOf(rGender)==="she"?"her":"him"}) for this character throughout.\nIMPORTANT: Pick 2-3 specific comic or anime characters as DNA for this hero based on the quiz answers. Bake these invisibly into every output field — power names shaped by their style, tagline capturing their essence, origin echoing their arc. Never name-drop them; only list in the dna array.\n\n{"heroName":"${rHeroName||"2-word dark name"}","tagline":"one punchy sentence","role":"Role · Descriptor","origin":"2-3 sentences connected to the team and their world — reflect their race biology and birth year context if provided","powers":[{"name":"Name","desc":"visual desc"},{"name":"Name","desc":"visual desc"},{"name":"Name","desc":"visual desc"},{"name":"Name","desc":"visual desc"}],"stats":{"Power":75,"Speed":70,"Tech":60,"Intellect":80,"Will":85},"costumeDesc":"costume in team aesthetic using color palette ${colorDesc}","powerFX":"visible effects using color palette ${colorDesc}","consistencyNotes":"design lock rules","dna":["Character whose energy shapes this hero's powers — e.g. Vegeta","Character whose arc or personality informs their story"]}`,t=>setAiStreamText(t));
       const num=String(activeRoster.length+1).padStart(2,"0");
       const computedAge=rAge||(rBirthYear?String(2026-parseInt(rBirthYear)):"");
-      setRResult({id:`char-${Date.now()}`,teamId:activeTeamId,realName:rName||"Unknown",gender:rGender,age:computedAge,birthYear:rBirthYear||"",race:rRace,species:raceLabel(rRace)||"Human",color:hex,colorLight:hex+"CC",initials:rName?rName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",number:num,isCustom:true,nkAlignment:rNkAlign,teamRank:rTeamRank,...p});
+      setRResult({id:`char-${Date.now()}`,teamId:activeTeamId,realName:rName||"Unknown",gender:rGender,age:computedAge,birthYear:rBirthYear||"",race:rRace,species:raceLabel(rRace)||"Human",color:hex,colorPalette:rColors,colorLight:hex+"CC",initials:rName?rName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",number:num,isCustom:true,nkAlignment:rNkAlign,teamRank:rTeamRank,...p});
     }catch(e){if(e.message==="Generation cancelled.")setRResult(null);else setRResult({error:true,msg:e.message});}
     setRLoading(false);setAiStreamText("");
   };
@@ -1495,7 +1536,7 @@ function App(){
 
   const generateDeepRecruit=async()=>{
     setRLoading(true);setRResult(null);setAiStreamText("");
-    const hex=ACCENT_COLORS.find(a=>a.id===rAccent)?.hex||"#A32D2D";
+    const hex=rColors[0]||"#A32D2D";const colorDesc=rColors.length===1?hex:rColors.map((c,i)=>(["primary","secondary","tertiary"][i]||"tertiary")+": "+c).join(", ");
     const existingNames=activeRoster.map(m=>m.heroName).join(", ");
     // Build rich context from deep lore answers
     const loreContext=DEEP_LORE_PHASES.map(ph=>{
@@ -1512,36 +1553,36 @@ function App(){
     try{
       const raceStr=raceLabel(rRace);
       const raceLoreStr=raceLore(rRace);
-      const p=await callAI(`Create a deeply developed ${activeTeam.name} hero using rich comic book lore. JSON only.\n\nReal name: ${rName||"Unknown"}\nGender: ${rGender}\nAge: ${rAge||(rBirthYear?String(2026-parseInt(rBirthYear)):"Unknown")}\n${rBirthYear?`Birth year: ${rBirthYear}\n`:""}Race: ${raceStr||"Unspecified"}\n${raceLoreStr?`Race lore (bake into origin): ${raceLoreStr}\n`:""}${rStoryDir.trim()?`Story direction (shape the origin around this): ${rStoryDir.trim()}\n`:""}Accent color: ${hex}\nTeam alignment: ${rNkAlign}\nExisting names (must be different): ${existingNames||"none"}\n${rHeroName?`Hero name: ${rHeroName} (use exactly this name)`:"Hero name: (choose a distinct name fitting the lore profile)"}\nTeam: ${activeTeam.name}\nIMPORTANT: Use correct pronouns (${pronounOf(rGender)}/${pronounOf(rGender)==="they"?"them":pronounOf(rGender)==="she"?"her":"him"}) for this character throughout.\n${dnaFoundation?`\nCHARACTER DNA FOUNDATION (bake these invisibly into every field — powers named/described through their aesthetic, origin reflecting their arc pattern, personality in the tagline — filter through the universe this team inhabits, never reference by name except in the dna array):\n${dnaFoundation}\n`:""}\nFull lore profile:\n${loreContext}${freeText?"\nVisual references: "+freeText:""}\n\nUse this lore to create a hero that feels authentic to these inspirations. JSON:\n{"heroName":"${rHeroName||"2-word hero name, distinct and fitting the lore profile"}","tagline":"one piercing sentence that captures their essence","role":"Role · Descriptor","origin":"3-4 sentences backstory that directly reflects the lore answers — specific and rooted in their race and birth year context","powers":[{"name":"Power name matching their visual style","desc":"2-sentence visual description of exactly how this looks in action"},{"name":"Power name","desc":"visual desc"},{"name":"Power name","desc":"visual desc"},{"name":"Power name","desc":"visual desc"}],"stats":{"Power":75,"Speed":70,"Tech":60,"Intellect":80,"Will":85},"costumeDesc":"Detailed costume description using ${hex} accent, reflecting their costume philosophy answer","powerFX":"Exact visual description of power effects using ${hex}, matching their FX style answer","consistencyNotes":"2-3 specific design lock rules based on their visual choices","dna":["Primary DNA — exact character name like Vegeta or Moon Knight","Secondary DNA — another specific character baked into this hero","Optional third DNA — only if genuinely applicable"]}`,t=>setAiStreamText(t));
+      const p=await callAI(`Create a deeply developed ${activeTeam.name} hero using rich comic book lore. JSON only.\n\nReal name: ${rName||"Unknown"}\nGender: ${rGender}\nAge: ${rAge||(rBirthYear?String(2026-parseInt(rBirthYear)):"Unknown")}\n${rBirthYear?`Birth year: ${rBirthYear}\n`:""}Race: ${raceStr||"Unspecified"}\n${raceLoreStr?`Race lore (bake into origin): ${raceLoreStr}\n`:""}${rStoryDir.trim()?`Story direction (shape the origin around this): ${rStoryDir.trim()}\n`:""}Color palette: ${colorDesc}\nTeam alignment: ${rNkAlign}\nExisting names (must be different): ${existingNames||"none"}\n${rHeroName?`Hero name: ${rHeroName} (use exactly this name)`:"Hero name: (choose a distinct name fitting the lore profile)"}\nTeam: ${activeTeam.name}\nIMPORTANT: Use correct pronouns (${pronounOf(rGender)}/${pronounOf(rGender)==="they"?"them":pronounOf(rGender)==="she"?"her":"him"}) for this character throughout.\n${dnaFoundation?`\nCHARACTER DNA FOUNDATION (bake these invisibly into every field — powers named/described through their aesthetic, origin reflecting their arc pattern, personality in the tagline — filter through the universe this team inhabits, never reference by name except in the dna array):\n${dnaFoundation}\n`:""}\nFull lore profile:\n${loreContext}${freeText?"\nVisual references: "+freeText:""}\n\nUse this lore to create a hero that feels authentic to these inspirations. JSON:\n{"heroName":"${rHeroName||"2-word hero name, distinct and fitting the lore profile"}","tagline":"one piercing sentence that captures their essence","role":"Role · Descriptor","origin":"3-4 sentences backstory that directly reflects the lore answers — specific and rooted in their race and birth year context","powers":[{"name":"Power name matching their visual style","desc":"2-sentence visual description of exactly how this looks in action"},{"name":"Power name","desc":"visual desc"},{"name":"Power name","desc":"visual desc"},{"name":"Power name","desc":"visual desc"}],"stats":{"Power":75,"Speed":70,"Tech":60,"Intellect":80,"Will":85},"costumeDesc":"Detailed costume description using color palette ${colorDesc}, reflecting their costume philosophy answer","powerFX":"Exact visual description of power effects using color palette ${colorDesc}, matching their FX style answer","consistencyNotes":"2-3 specific design lock rules based on their visual choices","dna":["Primary DNA — exact character name like Vegeta or Moon Knight","Secondary DNA — another specific character baked into this hero","Optional third DNA — only if genuinely applicable"]}`,t=>setAiStreamText(t));
       const num=String(activeRoster.length+1).padStart(2,"0");
       const computedAge=rAge||(rBirthYear?String(2026-parseInt(rBirthYear)):"");
-      setRResult({id:`char-${Date.now()}`,teamId:activeTeamId,realName:rName||"Unknown",gender:rGender,age:computedAge,birthYear:rBirthYear||"",race:rRace,species:raceLabel(rRace)||"Human",color:hex,colorLight:hex+"CC",initials:rName?rName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",number:num,isCustom:true,nkAlignment:rNkAlign,teamRank:rTeamRank,deepLore:deepAnswers,...p});
+      setRResult({id:`char-${Date.now()}`,teamId:activeTeamId,realName:rName||"Unknown",gender:rGender,age:computedAge,birthYear:rBirthYear||"",race:rRace,species:raceLabel(rRace)||"Human",color:hex,colorPalette:rColors,colorLight:hex+"CC",initials:rName?rName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",number:num,isCustom:true,nkAlignment:rNkAlign,teamRank:rTeamRank,deepLore:deepAnswers,...p});
     }catch(e){if(e.message==="Generation cancelled.")setRResult(null);else setRResult({error:true,msg:e.message});}
     setRLoading(false);setAiStreamText("");
   };
 
   const generatePersonalProfile=async()=>{
     setRLoading(true);setRResult(null);setAiStreamText("");
-    const hex=ACCENT_COLORS.find(a=>a.id===rAccent)?.hex||"#A32D2D";
+    const hex=rColors[0]||"#A32D2D";const colorDesc=rColors.length===1?hex:rColors.map((c,i)=>(["primary","secondary","tertiary"][i]||"tertiary")+": "+c).join(", ");
     const existingNames=activeRoster.map(m=>m.heroName).join(", ");
     const profileContext=PERSONAL_PROFILE.map(sec=>`== ${sec.section} ==\n`+sec.questions.map(q=>{const opt=q.options.find(o=>o.id===profileAnswers[q.id]);return opt?`${q.q}\n→ ${opt.value}`:"";}).filter(Boolean).join("\n")).join("\n\n");
     const answerCount=Object.keys(profileAnswers).length;
     try{
       const raceStr=raceLabel(rRace);
       const raceLoreStr=raceLore(rRace);
-      const p=await callAI(`Create a hero built entirely from this person's real psychological and physical profile. JSON only.\n\nThis is not a generic hero — every power, origin, and trait must grow directly from who this specific person actually is. Powers are not chosen from archetypes; they emerge from the person's specific strengths, wounds, and way of moving through the world.\n\nReal name: ${rName||"Unknown"}\nGender: ${rGender}\nAge: ${rAge||(rBirthYear?String(2026-parseInt(rBirthYear)):"Unknown")}\n${rBirthYear?`Birth year: ${rBirthYear}\n`:""}Race: ${raceStr||"Unspecified"}\n${raceLoreStr?`Race lore (bake into origin): ${raceLoreStr}\n`:""}${rStoryDir.trim()?`Story direction: ${rStoryDir.trim()}\n`:""}Team: ${activeTeam.name}\nAccent color: ${hex}\nTeam alignment: ${rNkAlign}\nExisting names (must be different): ${existingNames||"none"}\n${rHeroName?`Hero name: ${rHeroName} (use exactly this name)`:""}\nIMPORTANT: Use correct pronouns (${pronounOf(rGender)}/${pronounOf(rGender)==="they"?"them":pronounOf(rGender)==="she"?"her":"him"}) throughout.\n\nPERSONAL PROFILE — 25 answers defining who this person actually is:\n\n${profileContext}\n\nBuild the hero from these truths. Powers must be an externalization of their actual traits, wounds, and way of being. The origin must reflect their real emotional core. Costume and FX must be the visual language of who they are — not what looks cool. Do not default to generic archetypes.\n\n{"heroName":"${rHeroName||"hero name that fits who they actually are"}","tagline":"one sentence that captures their specific truth","role":"Role · Descriptor drawn from their actual function in life","origin":"3-4 sentences — direct reflection of their wound, proving ground, and what they protect","powers":[{"name":"Power name traceable to their specific trait","desc":"How this power looks and works — directly from who they are"},{"name":"Power name","desc":"visual desc"},{"name":"Power name","desc":"visual desc"},{"name":"Power name","desc":"visual desc"}],"stats":{"Power":75,"Speed":70,"Tech":60,"Intellect":80,"Will":85},"costumeDesc":"Costume built from their color, movement, and symbol answers","powerFX":"Exact visual FX using ${hex} — must match their power texture and visual signature answers","consistencyNotes":"Design rules grounded in their specific identity choices","dna":["Archetype or character whose energy mirrors this profile","Second reference"]}`,t=>setAiStreamText(t));
+      const p=await callAI(`Create a hero built entirely from this person's real psychological and physical profile. JSON only.\n\nThis is not a generic hero — every power, origin, and trait must grow directly from who this specific person actually is. Powers are not chosen from archetypes; they emerge from the person's specific strengths, wounds, and way of moving through the world.\n\nReal name: ${rName||"Unknown"}\nGender: ${rGender}\nAge: ${rAge||(rBirthYear?String(2026-parseInt(rBirthYear)):"Unknown")}\n${rBirthYear?`Birth year: ${rBirthYear}\n`:""}Race: ${raceStr||"Unspecified"}\n${raceLoreStr?`Race lore (bake into origin): ${raceLoreStr}\n`:""}${rStoryDir.trim()?`Story direction: ${rStoryDir.trim()}\n`:""}Team: ${activeTeam.name}\nColor palette: ${colorDesc}\nTeam alignment: ${rNkAlign}\nExisting names (must be different): ${existingNames||"none"}\n${rHeroName?`Hero name: ${rHeroName} (use exactly this name)`:""}\nIMPORTANT: Use correct pronouns (${pronounOf(rGender)}/${pronounOf(rGender)==="they"?"them":pronounOf(rGender)==="she"?"her":"him"}) throughout.\n\nPERSONAL PROFILE — 25 answers defining who this person actually is:\n\n${profileContext}\n\nBuild the hero from these truths. Powers must be an externalization of their actual traits, wounds, and way of being. The origin must reflect their real emotional core. Costume and FX must be the visual language of who they are — not what looks cool. Do not default to generic archetypes.\n\n{"heroName":"${rHeroName||"hero name that fits who they actually are"}","tagline":"one sentence that captures their specific truth","role":"Role · Descriptor drawn from their actual function in life","origin":"3-4 sentences — direct reflection of their wound, proving ground, and what they protect","powers":[{"name":"Power name traceable to their specific trait","desc":"How this power looks and works — directly from who they are"},{"name":"Power name","desc":"visual desc"},{"name":"Power name","desc":"visual desc"},{"name":"Power name","desc":"visual desc"}],"stats":{"Power":75,"Speed":70,"Tech":60,"Intellect":80,"Will":85},"costumeDesc":"Costume built from their color, movement, and symbol answers using color palette ${colorDesc}","powerFX":"Exact visual FX using color palette ${colorDesc} — must match their power texture and visual signature answers","consistencyNotes":"Design rules grounded in their specific identity choices","dna":["Archetype or character whose energy mirrors this profile","Second reference"]}`,t=>setAiStreamText(t));
       const num=String(activeRoster.length+1).padStart(2,"0");
       const computedAge=rAge||(rBirthYear?String(2026-parseInt(rBirthYear)):"");
-      setRResult({id:`char-${Date.now()}`,teamId:activeTeamId,realName:rName||"Unknown",gender:rGender,age:computedAge,birthYear:rBirthYear||"",race:rRace,species:raceLabel(rRace)||"Human",color:hex,colorLight:hex+"CC",initials:rName?rName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",number:num,isCustom:true,nkAlignment:rNkAlign,teamRank:rTeamRank,profileLore:answerCount,...p});
+      setRResult({id:`char-${Date.now()}`,teamId:activeTeamId,realName:rName||"Unknown",gender:rGender,age:computedAge,birthYear:rBirthYear||"",race:rRace,species:raceLabel(rRace)||"Human",color:hex,colorPalette:rColors,colorLight:hex+"CC",initials:rName?rName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",number:num,isCustom:true,nkAlignment:rNkAlign,teamRank:rTeamRank,profileLore:answerCount,...p});
     }catch(e){if(e.message==="Generation cancelled.")setRResult(null);else setRResult({error:true,msg:e.message});}
     setRLoading(false);setAiStreamText("");
   };
 
   const saveBareRecruit=()=>{
-    const hex=ACCENT_COLORS.find(a=>a.id===rAccent)?.hex||"#A32D2D";
+    const hex=rColors[0]||"#A32D2D";const colorDesc=rColors.length===1?hex:rColors.map((c,i)=>(["primary","secondary","tertiary"][i]||"tertiary")+": "+c).join(", ");
     const num=String(activeRoster.length+1).padStart(2,"0");
     const computedAge=rAge||(rBirthYear?String(2026-parseInt(rBirthYear)):"");
-    const bare={id:`char-${Date.now()}`,teamId:activeTeamId,realName:rName||"Unknown",heroName:rHeroName,gender:rGender,age:computedAge,birthYear:rBirthYear||"",race:rRace,species:raceLabel(rRace)||"Human",color:hex,colorLight:hex+"CC",initials:rName?rName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",number:num,isCustom:true,nkAlignment:rNkAlign,teamRank:rTeamRank,tagline:"",role:"Hero",origin:"",powers:[],stats:{Power:50,Speed:50,Tech:50,Intellect:50,Will:50},costumeDesc:"",powerFX:"",consistencyNotes:"",dna:[]};
+    const bare={id:`char-${Date.now()}`,teamId:activeTeamId,realName:rName||"Unknown",heroName:rHeroName,gender:rGender,age:computedAge,birthYear:rBirthYear||"",race:rRace,species:raceLabel(rRace)||"Human",color:hex,colorPalette:rColors,colorLight:hex+"CC",initials:rName?rName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",number:num,isCustom:true,nkAlignment:rNkAlign,teamRank:rTeamRank,tagline:"",role:"Hero",origin:"",powers:[],stats:{Power:50,Speed:50,Tech:50,Intellect:50,Will:50},costumeDesc:"",powerFX:"",consistencyNotes:"",dna:[]};
     const newRosters={...teamRosters,[activeTeamId]:[...(teamRosters[activeTeamId]||[]),bare]};
     setTeamRosters(newRosters);persist("forge-rosters",newRosters);
     if(rFamilyCharId){const rel=FAMILY_RELATIONS.find(r=>r.id===rFamilyRelation);if(rel){const newLink={id:`fl-${Date.now()}`,a:bare.id,b:rFamilyCharId,aRelation:rel.label,bRelation:rel.inverse};const updatedLinks=[...familyLinks,newLink];setFamilyLinks(updatedLinks);persist("forge-family",updatedLinks);}}
@@ -1552,7 +1593,8 @@ function App(){
   const generateTripo3D=async(member)=>{
     setTripo3DTarget(member.id);setTripo3DLoading(true);setTripo3DPrompt(null);
     try{
-      const p=await callAI(`Generate a Tripo3D 3D model prompt for this character. JSON only, key "prompt".\n\nCharacter: ${member.heroName}\nCostume: ${member.costumeDesc||"dramatic suit"}\nPower FX: ${member.powerFX||"energy effects"}\nAccent color: ${member.color}\n\n{"prompt":"2-3 sentence Tripo3D prompt. Describe as a 3D model: full-body character standing in neutral A-pose or slight heroic stance. Mention separate color regions for multi-filament FDM printing. Mention watertight mesh, clean topology, no floating geometry. Include character-specific details like costume elements, weapon accessories, or power effect attachments that print as separate pieces."}`);
+      const tAgeStage=ageStage(member.age);
+      const p=await callAI(`Generate a Tripo3D 3D model prompt for this character. JSON only, key "prompt".\n\nCharacter: ${member.heroName}\nCostume: ${member.costumeDesc||"dramatic suit"}\nPower FX: ${member.powerFX||"energy effects"}\nAccent color: ${member.color}${tAgeStage?"\nAge stage: "+tAgeStage+" — body proportions must reflect this ("+tAgeStage+"-appropriate frame, musculature, and scale)":""}\n\n{"prompt":"2-3 sentence Tripo3D prompt. Describe as a 3D model: full-body character standing in neutral A-pose or slight heroic stance. Mention separate color regions for multi-filament FDM printing. Mention watertight mesh, clean topology, no floating geometry. Include character-specific details like costume elements, weapon accessories, or power effect attachments that print as separate pieces."}`);
       setTripo3DPrompt(p.prompt||"Generation failed.");
     }catch(e){setTripo3DPrompt("Generation failed: "+e.message);}
     setTripo3DLoading(false);
@@ -1597,7 +1639,7 @@ function App(){
     const castChars=[...allCharacters,...villainPool].filter(m=>sCast.includes(m.id));
     const scene=SCENARIOS.find(s=>s.id===sScenario);
     try{
-      const p=await callAI(`Write a Meta AI image prompt for a superhero scene. JSON only, key "prompt".\n\nCast: ${castChars.map(m=>`${m.heroName}${m.isVillain?" (VILLAIN)":""} (${m.powerFX||m.color+" energy"}, ${m.costumeDesc||"dramatic suit"})`).join("; ")}\nScenario: ${scene?.label} — ${scene?.desc}\nTone: ${sTone}\n\n{"prompt":"4-6 sentence Meta AI image prompt. Include each character with exact visual power effects. Dramatic nighttime setting matching the tone. End with: Cinematic wide shot, all characters visible, high-detail comic book illustration style."}`);
+      const p=await callAI(`Write a Meta AI image prompt for a superhero scene. JSON only, key "prompt".\n\nCast: ${castChars.map(m=>{const s=ageStage(m.age);return`${m.heroName}${m.isVillain?" (VILLAIN)":""}${s?" ["+s+"]":""} (${m.powerFX||m.color+" energy"}, ${m.costumeDesc||"dramatic suit"})`;}).join("; ")}\nScenario: ${scene?.label} — ${scene?.desc}\nTone: ${sTone}\n\nNote: Each character's age stage is noted in brackets — ensure physique, face, and proportions match that life stage.\n\n{"prompt":"4-6 sentence Meta AI image prompt. Include each character with exact visual power effects. Dramatic nighttime setting matching the tone. End with: Cinematic wide shot, all characters visible, high-detail comic book illustration style."}`);
       setSResult(p.prompt||"Generation failed — try again.");
     }catch(e){setSResult("Generation failed: "+e.message);}
     setSLoading(false);
@@ -1611,7 +1653,8 @@ function App(){
     const refNote=hasRef?"Start the metaAI prompt with: \"Maintaining exact character design from reference image — same face, same costume, same color scheme, same power effects. Do not redesign.\"":"";
     try{
       const mPronoun=pronounOf(member.gender||"");
-      const p=await callAI(`JSON only. Reply with exactly this format, no other text:\n{"metaAI":"...","tripo3D":"..."}\n\n${refNote}Character: ${member.heroName} (${member.realName}), ${member.gender||"Unknown"} ${raceLabel(member.race)||member.species||"Human"}${member.age?", age "+member.age:""}.\nTeam: ${activeTeam.name}. Style: ${style}.\nCostume: ${member.costumeDesc||"dramatic suit"}. Color: ${member.color}. Power FX: ${member.powerFX||member.color+" energy"}.\nDesign rules: ${member.consistencyNotes||"consistent accent color"}.\nPronouns: ${mPronoun}.\n\nmetaAI = 3-4 sentence full-body portrait. Correct ${member.gender||"hero"} visual cues. Exact costume and FX. Nighttime urban background. Full body visible, portrait orientation.\ntripo3D = 1 sentence FDM mesh prompt with separate color regions.\n\n{"metaAI":"...","tripo3D":"..."}`,null,500);
+      const mAgeStage=ageStage(member.age);
+      const p=await callAI(`JSON only. Reply with exactly this format, no other text:\n{"metaAI":"...","tripo3D":"..."}\n\n${refNote}Character: ${member.heroName} (${member.realName}), ${member.gender||"Unknown"} ${raceLabel(member.race)||member.species||"Human"}${member.age?", age "+member.age:""}${mAgeStage?" ("+mAgeStage+")":""}.\nTeam: ${activeTeam.name}. Style: ${style}.\nCostume: ${member.costumeDesc||"dramatic suit"}. Color: ${member.color}. Power FX: ${member.powerFX||member.color+" energy"}.\nDesign rules: ${member.consistencyNotes||"consistent accent color"}.\nPronouns: ${mPronoun}.${mAgeStage?"\nAge presentation: "+mAgeStage+" — visual physique, facial features, and proportions must reflect this life stage.":""}\n\nmetaAI = 3-4 sentence full-body portrait. Correct ${member.gender||"hero"} visual cues. Exact costume and FX. Nighttime urban background. Full body visible, portrait orientation.\ntripo3D = 1 sentence FDM mesh prompt with separate color regions.\n\n{"metaAI":"...","tripo3D":"..."}`,null,500);
       setPResult({member,...p});
     }catch(e){setPResult({error:true,msg:e.message});}
     setPLoading(false);
@@ -1625,7 +1668,8 @@ function App(){
     const charLines=activeRoster.map((m,i)=>{
       const race=raceLabel(m.race)||m.species||"Human";
       const notes=m.consistencyNotes?` ${m.consistencyNotes}`:"";
-      return `• ${m.heroName} [${pos[Math.min(i,pos.length-1)]}]: ${m.gender||"hero"}, ${race}. Costume: ${m.costumeDesc||"superhero suit"}. Accent color: ${m.color}. Power FX: ${m.powerFX||m.color+" energy"}.${notes}`;
+      const gs=ageStage(m.age);
+      return `• ${m.heroName} [${pos[Math.min(i,pos.length-1)]}]: ${m.gender||"hero"}, ${race}${gs?", "+gs:""}. Costume: ${m.costumeDesc||"superhero suit"}. Accent color: ${m.color}. Power FX: ${m.powerFX||m.color+" energy"}.${notes}`;
     }).join("\n");
     const metaAI=`Referencing the uploaded character sheet strictly — do not redesign any character. Every face, costume, and color must match the reference images exactly.\n\n${charLines}\n\nAll ${n} members of ${activeTeam.name} in a wide cinematic group shot — dynamic heroic poses, ${style?style+", ":""}photorealistic, dramatic cinematic lighting, nighttime city backdrop, full bodies visible.\n\nDO NOT alter any character's face, costume, colors, or power effects. Match the reference sheet exactly.`;
     setPResult({group:true,teamName:activeTeam.name,metaAI});
@@ -1640,7 +1684,8 @@ function App(){
     const desc=m=>{
       const race=raceLabel(m.race)||m.species||"Human";
       const notes=m.consistencyNotes?` ${m.consistencyNotes}`:"";
-      return `${m.heroName}: ${m.gender||"hero"}, ${race}. Costume: ${m.costumeDesc||"superhero suit"}. Accent color: ${m.color}. Power FX: ${m.powerFX||m.color+" energy"}.${notes}`;
+      const ds=ageStage(m.age);
+      return `${m.heroName}: ${m.gender||"hero"}, ${race}${ds?", "+ds:""}. Costume: ${m.costumeDesc||"superhero suit"}. Accent color: ${m.color}. Power FX: ${m.powerFX||m.color+" energy"}.${notes}`;
     };
     const metaAI=`Referencing the uploaded character sheet strictly — do not redesign either character. Every face, costume, and color must match the reference images exactly.\n\n[LEFT] ${desc(a)}\n\n[RIGHT] ${desc(b)}\n\n${a.heroName} and ${b.heroName} from ${activeTeam.name} — dynamic duo pose, both heroes facing slightly inward, ${style?style+", ":""}photorealistic, dramatic cinematic lighting, nighttime city backdrop, both fully visible, portrait or square format.\n\nDO NOT alter either character's face, costume, colors, or power effects. Match the reference sheet exactly.`;
     setPResult({duo:true,heroA:a,heroB:b,metaAI});
@@ -1804,7 +1849,7 @@ function App(){
     optBtn:(a,c=G)=>({width:"100%",padding:"12px 16px",background:a?`${c}1A`:"var(--bg3)",border:`1px solid ${a?c+"88":"var(--border2)"}`,borderRadius:9,cursor:"pointer",color:a?"var(--text)":"var(--text2)",fontFamily:"monospace",fontSize:12,textAlign:"left",marginBottom:8,transition:"all 0.12s"}),
   };
 
-  const rHex=ACCENT_COLORS.find(a=>a.id===rAccent)?.hex||G;
+  const rHex=rColors[0]||G;
   const rCurrentQ=RECRUIT_QUIZ[rStep-1];
   const vCurrentQ=VILLAIN_QUIZ[vStep-1];
 
@@ -1878,14 +1923,15 @@ function App(){
 
     {/* ── Tabs ───────────────────────────────────────────────────────────── */}
     <div className="ftabs" style={{display:"flex",borderBottom:"1px solid rgba(212,175,55,0.12)",padding:"0 16px",overflowX:"auto",background:"var(--bg-base)",gap:2}}>
-      {[["teams","Teams"],["roster","Roster"],["team","Team"],["family","Family"],["prompts","Prompts"],["recruit","+ Recruit"],["villains","Villains"],["story","Story"],["battle","⚡ Battle"],["arc","Arc"],["tiers","Tiers"],["universe","Universe"]].map(([id,label])=>(
-        <button key={id} className="ftab" style={s.tab(tab===id)} onClick={()=>{if(!activeTeam&&id!=="teams")return;setTab(id);}} disabled={!activeTeam&&id!=="teams"}>{label}</button>
-      ))}
+      {[["teams","Teams"],["roster","Roster"],["team","Team"],["family","Family"],["prompts","Prompts"],["recruit","+ Recruit"],["villains","Villains"],["story","Story"],["battle","⚡ Battle"],["arc","Arc"],["tiers","Tiers"],["universe","Universe"],["codex","Codex"]].map(([id,label])=>{
+        const freeTab=id==="teams"||id==="codex";
+        return(<button key={id} className="ftab" style={s.tab(tab===id)} onClick={()=>{if(!activeTeam&&!freeTab)return;setTab(id);}} disabled={!activeTeam&&!freeTab}>{label}</button>);
+      })}
     </div>
 
     <div className="fmain" style={{padding:"22px",maxWidth:960,margin:"0 auto"}}>
       {ollamaOk===false&&<OllamaGuide/>}
-      {!activeTeam&&tab!=="teams"&&(<div style={{textAlign:"center",padding:"60px 20px"}}><div style={{fontSize:13,color:"var(--text3)",marginBottom:16}}>No team selected.</div><button onClick={()=>setTab("teams")} style={{padding:"9px 22px",background:`${G}14`,border:`1px solid ${G}`,borderRadius:8,cursor:"pointer",color:G,fontSize:11,fontFamily:"monospace"}}>Go to Teams</button></div>)}
+      {!activeTeam&&tab!=="teams"&&tab!=="codex"&&(<div style={{textAlign:"center",padding:"60px 20px"}}><div style={{fontSize:13,color:"var(--text3)",marginBottom:16}}>No team selected.</div><button onClick={()=>setTab("teams")} style={{padding:"9px 22px",background:`${G}14`,border:`1px solid ${G}`,borderRadius:8,cursor:"pointer",color:G,fontSize:11,fontFamily:"monospace"}}>Go to Teams</button></div>)}
 
       {/* ── TEAMS TAB ─────────────────────────────────────────────────── */}
       {tab==="teams"&&(<>
@@ -2264,13 +2310,24 @@ function App(){
           <div style={{marginBottom:14}}>
             <span style={s.lbl}>Race <span style={{color:"#E07070"}}>*</span></span>
             <div style={{marginTop:6,outline:!rRace?"1px solid rgba(224,112,112,0.4)":undefined,borderRadius:8}}>
-              <RaceSelector value={rRace} onChange={setRRace} color={ACCENT_COLORS.find(a=>a.id===rAccent)?.hex||G}/>
+              <RaceSelector value={rRace} onChange={setRRace} color={rColors[0]||G}/>
             </div>
           </div>
-          <span style={s.lbl}>Accent Color</span>
-          <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:14}}>
-            {ACCENT_COLORS.map(ac=><button key={ac.id} onClick={()=>setRAccent(ac.id)} style={{display:"flex",alignItems:"center",gap:7,padding:"7px 12px",background:rAccent===ac.id?`${ac.hex}18`:"var(--bg3)",border:`1px solid ${rAccent===ac.id?ac.hex:"var(--border2)"}`,borderRadius:20,cursor:"pointer",fontFamily:"monospace",fontSize:11,color:rAccent===ac.id?"var(--text-primary)":"var(--text2)"}}><div style={{width:10,height:10,borderRadius:"50%",background:ac.hex,flexShrink:0}}/>{ac.label}</button>)}
+          <span style={s.lbl}>Outfit Color Palette <span style={{color:"var(--text4)",fontWeight:"normal"}}>(up to 3)</span></span>
+          <div style={{display:"flex",flexWrap:"wrap",gap:7,marginBottom:8}}>
+            {ACCENT_COLORS.map(ac=>{const sel=rColors.includes(ac.hex);const idx=rColors.indexOf(ac.hex);return(<button key={ac.id} onClick={()=>toggleRColor(ac.hex)} style={{display:"flex",alignItems:"center",gap:7,padding:"6px 11px",background:sel?`${ac.hex}18`:"var(--bg3)",border:`1px solid ${sel?ac.hex:"var(--border2)"}`,borderRadius:20,cursor:"pointer",fontFamily:"monospace",fontSize:11,color:sel?"var(--text-primary)":"var(--text2)",position:"relative"}}><div style={{width:10,height:10,borderRadius:"50%",background:ac.hex,flexShrink:0}}/>{ac.label}{sel&&<span style={{fontSize:8,background:ac.hex,color:"#fff",borderRadius:"50%",width:14,height:14,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:"bold",flexShrink:0}}>{idx+1}</span>}</button>);})}</div>
+          <div style={{display:"flex",gap:6,alignItems:"center",marginBottom:4}}>
+            <input type="color" value={rCustomHex||"#ffffff"} onChange={e=>setRCustomHex(e.target.value)} style={{width:32,height:32,padding:2,border:"1px solid var(--border2)",borderRadius:6,cursor:"pointer",background:"var(--bg3)",flexShrink:0}}/>
+            <input type="text" placeholder="#A3B2C1" value={rCustomHex} onChange={e=>setRCustomHex(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addCustomRColor()} style={{flex:1,padding:"6px 10px",fontFamily:"monospace",fontSize:11}}/>
+            <button onClick={addCustomRColor} disabled={rColors.length>=3} style={{padding:"6px 14px",background:rColors.length>=3?"var(--bg3)":`${G}14`,border:`1px solid ${rColors.length>=3?"var(--border2)":G}`,borderRadius:8,cursor:rColors.length>=3?"not-allowed":"pointer",color:rColors.length>=3?"var(--text4)":G,fontSize:10,fontFamily:"monospace",flexShrink:0}}>+ Add</button>
           </div>
+          {rColors.length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:14}}>
+            {rColors.map((c,i)=><div key={c} style={{display:"flex",alignItems:"center",gap:5,padding:"4px 10px",background:`${c}14`,border:`1px solid ${c}55`,borderRadius:20}}>
+              <div style={{width:8,height:8,borderRadius:"50%",background:c}}/>
+              <span style={{fontSize:9,color:c,fontFamily:"monospace"}}>{["Primary","Secondary","Tertiary"][i]}: {c}</span>
+              {i>0&&<button onClick={()=>setRColors(prev=>prev.filter(x=>x!==c))} style={{background:"none",border:"none",cursor:"pointer",color:`${c}99`,fontSize:12,padding:0,lineHeight:1,marginLeft:2}}>×</button>}
+            </div>)}
+          </div>}
           {deepMode&&(<>
             <span style={{...s.lbl,marginTop:0}}>Visual References (optional)</span>
             <input type="text" placeholder="e.g. Batman's silhouette, Vegeta's stance, Trunks' sword" value={deepAnswers.visualRef||""} onChange={e=>setDeepAnswers(p=>({...p,visualRef:e.target.value}))} style={{marginBottom:12}}/>
@@ -3082,6 +3139,75 @@ function App(){
             </div>)}
           </div>
           {otherTeams.length===0&&<div style={{textAlign:"center",padding:"16px",color:"var(--text3)",fontSize:11}}>Create additional teams in the Teams tab to populate the map. The first team ({primaryTeam.name}) anchors the center.</div>}
+        </>);
+      })()}
+
+      {/* ── CODEX TAB ─────────────────────────────────────────────────── */}
+      {tab==="codex"&&(()=>{
+        const CodexCard=({title,accent,sections,tagline})=>(
+          <div style={{background:"var(--bg3)",border:`1px solid ${accent}33`,borderRadius:12,marginBottom:20,overflow:"hidden"}}>
+            <div style={{padding:"16px 20px 12px",borderBottom:`1px solid ${accent}22`,background:`${accent}08`}}>
+              <div style={{fontSize:15,fontWeight:"bold",color:accent,fontFamily:"monospace",letterSpacing:"0.05em",marginBottom:4}}>{title}</div>
+              {tagline&&<div style={{fontSize:11,color:"var(--text3)",fontStyle:"italic"}}>{tagline}</div>}
+            </div>
+            <div style={{padding:"16px 20px"}}>
+              {sections.map(([label,text])=>text?(
+                <div key={label} style={{marginBottom:14}}>
+                  <div style={{fontSize:8.5,letterSpacing:"0.18em",textTransform:"uppercase",color:`${accent}99`,fontFamily:"monospace",marginBottom:5}}>{label}</div>
+                  <div style={{fontSize:11.5,color:"var(--text2)",lineHeight:1.65}}>{text}</div>
+                </div>
+              ):null)}
+            </div>
+          </div>
+        );
+        const {zyrenian,auranthi,dravosi}=RACE_TREE.alien.subs.reduce((a,s)=>({...a,[s.id]:s}),{});
+        const agene=RACE_TREE.mutate.subs.find(s=>s.id==="a_gene_mutate");
+        return(<>
+          <div style={{fontSize:9,letterSpacing:"0.2em",color:`${G}77`,textTransform:"uppercase",marginBottom:4}}>NK Universe Codex</div>
+          <div style={{fontSize:11,color:"var(--text3)",marginBottom:22}}>Canonical lore for the three alien species and the A-Gene mutation. These backstories are original to the NK universe.</div>
+
+          <div style={{fontSize:10,letterSpacing:"0.18em",textTransform:"uppercase",color:`${G}66`,fontFamily:"monospace",marginBottom:12,paddingBottom:6,borderBottom:"1px solid var(--border)"}}>— Alien Species —</div>
+
+          <CodexCard title="ZYRENIAN" accent="#B04A1A" tagline="War is not what they do. War is what they are."
+            sections={[
+              ["Overview",zyrenian?.lore],
+              ["Homeworld",zyrenian?.codex?.homeworld],
+              ["Biology — The Bloodline Response",zyrenian?.codex?.biology],
+              ["Culture",zyrenian?.codex?.culture],
+              ["Powers",zyrenian?.codex?.powers],
+              ["In the NK Universe",zyrenian?.codex?.note],
+            ]}/>
+
+          <CodexCard title="AURANTHI" accent="#D4A020" tagline="They carry a civilization that no longer exists — encoded in their blood."
+            sections={[
+              ["Overview",auranthi?.lore],
+              ["Homeworld",auranthi?.codex?.homeworld],
+              ["Biology — Solar Saturation",auranthi?.codex?.biology],
+              ["Culture",auranthi?.codex?.culture],
+              ["Powers",auranthi?.codex?.powers],
+              ["In the NK Universe",auranthi?.codex?.note],
+            ]}/>
+
+          <CodexCard title="DRAVOSI" accent="#5A5AE0" tagline="They are not cruel. They are orderly. That distinction makes them more dangerous."
+            sections={[
+              ["Overview",dravosi?.lore],
+              ["Homeworld",dravosi?.codex?.homeworld],
+              ["Biology — Biological Peak",dravosi?.codex?.biology],
+              ["Culture — The Supremacy",dravosi?.codex?.culture],
+              ["Powers",dravosi?.codex?.powers],
+              ["In the NK Universe",dravosi?.codex?.note],
+            ]}/>
+
+          <div style={{fontSize:10,letterSpacing:"0.18em",textTransform:"uppercase",color:`${G}66`,fontFamily:"monospace",marginBottom:12,paddingBottom:6,borderBottom:"1px solid var(--border)",marginTop:8}}>— Genetic Mutations —</div>
+
+          <CodexCard title="A-GENE MUTATION" accent="#0F9E75" tagline="It didn't give them power. It removed the locks on the power they already had."
+            sections={[
+              ["Overview",agene?.codex?.overview],
+              ["Biology — What the Gene Actually Does",agene?.codex?.biology],
+              ["Activation",agene?.codex?.activation],
+              ["Discovery & the Nexus Foundation",agene?.codex?.discovery],
+              ["What It Means",agene?.codex?.note],
+            ]}/>
         </>);
       })()}
 
