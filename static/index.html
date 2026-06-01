@@ -264,6 +264,13 @@ const FAMILY_RELATIONS=[
   {id:"adopted-child",label:"Adopted Child",inverse:"Adoptive Parent"},
   {id:"clone",label:"Clone of",inverse:"Original of"},
 ];
+const HERO_ASSOC_TYPES=[
+  {id:"sidekick",  label:"Sidekick of",      inverse:"Has Sidekick"},
+  {id:"partner",   label:"Partner of",        inverse:"Partner of"},
+  {id:"protege",   label:"Protégé of",        inverse:"Mentor of"},
+  {id:"mentor",    label:"Mentor of",         inverse:"Protégé of"},
+  {id:"legacy",    label:"Legacy Ally of",    inverse:"Legacy Predecessor of"},
+];
 const ART_STYLES=[{id:"comic",label:"Comic Art",text:"cinematic comic book character art, flat color with sharp ink lines, Marvel/DC quality"},{id:"rendered",label:"3D Render",text:"hyper-realistic CGI character render, cinematic lighting"},{id:"anime",label:"Anime",text:"high-quality anime illustration, dynamic shading, Shonen Jump style"},{id:"statue",label:"Statue",text:"collectible resin statue render, museum-quality painted figurine"}];
 const ACCENT_COLORS=[{id:"crimson",label:"Crimson",hex:"#A32D2D"},{id:"jade",label:"Jade",hex:"#1D9E75"},{id:"amber",label:"Amber",hex:"#BA7517"},{id:"silver",label:"Silver",hex:"#888780"},{id:"indigo",label:"Indigo",hex:"#4A3FA0"},{id:"copper",label:"Copper",hex:"#8B4513"},{id:"frost",label:"Frost",hex:"#378ADD"},{id:"violet",label:"Violet",hex:"#8B2FC9"}];
 
@@ -1057,6 +1064,7 @@ function App(){
   const[rNkAlign,setRNkAlign]=useState("neutral");
   const[rTeamRank,setRTeamRank]=useState("operative");
   const[rFamilyCharId,setRFamilyCharId]=useState("");const[rFamilyRelation,setRFamilyRelation]=useState("parent");
+  const[rHeroAssocId,setRHeroAssocId]=useState("");const[rHeroAssocType,setRHeroAssocType]=useState("sidekick");
   const[rGender,setRGender]=useState("Male");
   const[rAge,setRAge]=useState("");
   const[rBirthYear,setRBirthYear]=useState("");
@@ -1101,6 +1109,10 @@ function App(){
   const[ftAddB,setFtAddB]=useState("");
   const[ftAddRelation,setFtAddRelation]=useState("parent");
   const[ftActiveNode,setFtActiveNode]=useState(null);
+  const[heroAssocs,setHeroAssocs]=useState([]);
+  const[haAddA,setHaAddA]=useState("");
+  const[haAddB,setHaAddB]=useState("");
+  const[haAddType,setHaAddType]=useState("sidekick");
   // ── Delete PIN ───────────────────────────────────────────────────────────
   const DELETE_PIN="K76J85J!!K!8";
   const[pinDialog,setPinDialog]=useState(null);// {label,action}
@@ -1167,6 +1179,7 @@ function App(){
       try{const d=await window.storage.get("forge-family");setFamilyLinks(JSON.parse(d.value)||[]);}catch(e){
         try{const d2=await window.storage.get("nk-family");setFamilyLinks(JSON.parse(d2.value)||[]);}catch(e2){}
       }
+      try{const d=await window.storage.get("forge-hero-assocs");setHeroAssocs(JSON.parse(d.value)||[]);}catch(e){}
       try{const d=await window.storage.get("forge-removed");setRemovedMembers(JSON.parse(d.value)||{});}catch(e){}
       try{const r=await fetch("/api/images");const ids=await r.json();const loaded={};const t=Date.now();ids.forEach(id=>{loaded[id]=`/api/images/${id}?t=${t}`;});if(Object.keys(loaded).length)setImages(loaded);}catch(e){}
       try{const r=await fetch("/api/update/check");setUpdateInfo(await r.json());}catch(e){}
@@ -1202,6 +1215,27 @@ function App(){
     setFamilyLinks(prev=>{
       const updated=prev.filter(l=>l.id!==id);
       persist("forge-family",updated);
+      return updated;
+    });
+  },[persist]);
+
+  const addHeroAssoc=useCallback(()=>{
+    if(!haAddA||!haAddB||haAddA===haAddB)return;
+    const t=HERO_ASSOC_TYPES.find(x=>x.id===haAddType);
+    if(!t)return;
+    setHeroAssocs(prev=>{
+      if(prev.find(l=>(l.a===haAddA&&l.b===haAddB)||(l.a===haAddB&&l.b===haAddA)))return prev;
+      const updated=[...prev,{id:`ha-${Date.now()}`,a:haAddA,b:haAddB,aRelation:t.label,bRelation:t.inverse}];
+      persist("forge-hero-assocs",updated);
+      return updated;
+    });
+    setHaAddA("");setHaAddB("");setHaAddType("sidekick");
+  },[haAddA,haAddB,haAddType,persist]);
+
+  const removeHeroAssoc=useCallback(id=>{
+    setHeroAssocs(prev=>{
+      const updated=prev.filter(l=>l.id!==id);
+      persist("forge-hero-assocs",updated);
       return updated;
     });
   },[persist]);
@@ -1393,7 +1427,16 @@ function App(){
         persist("forge-family",updatedLinks);
       }
     }
-    setRResult(null);setRAnswers({});setRName("");setRHeroName("");setRStep(0);setRNkAlign("neutral");setRTeamRank("operative");setRGender("Male");setRAge("");setRBirthYear("");setRRace(null);setRStoryDir("");setDeepAnswers({});setDeepPhase(0);setProfileAnswers({});setProfileStep(0);setRFamilyCharId("");setRFamilyRelation("parent");setTab("roster");
+    if(rHeroAssocId){
+      const t=HERO_ASSOC_TYPES.find(x=>x.id===rHeroAssocType);
+      if(t){
+        const newAssoc={id:`ha-${Date.now()}`,a:rResult.id,b:rHeroAssocId,aRelation:t.label,bRelation:t.inverse};
+        const updatedAssocs=[...heroAssocs,newAssoc];
+        setHeroAssocs(updatedAssocs);
+        persist("forge-hero-assocs",updatedAssocs);
+      }
+    }
+    setRResult(null);setRAnswers({});setRName("");setRHeroName("");setRStep(0);setRNkAlign("neutral");setRTeamRank("operative");setRGender("Male");setRAge("");setRBirthYear("");setRRace(null);setRStoryDir("");setDeepAnswers({});setDeepPhase(0);setProfileAnswers({});setProfileStep(0);setRFamilyCharId("");setRFamilyRelation("parent");setRHeroAssocId("");setRHeroAssocType("sidekick");setTab("roster");
   };
 
   const generateDeepRecruit=async()=>{
@@ -1448,7 +1491,8 @@ function App(){
     const newRosters={...teamRosters,[activeTeamId]:[...(teamRosters[activeTeamId]||[]),bare]};
     setTeamRosters(newRosters);persist("forge-rosters",newRosters);
     if(rFamilyCharId){const rel=FAMILY_RELATIONS.find(r=>r.id===rFamilyRelation);if(rel){const newLink={id:`fl-${Date.now()}`,a:bare.id,b:rFamilyCharId,aRelation:rel.label,bRelation:rel.inverse};const updatedLinks=[...familyLinks,newLink];setFamilyLinks(updatedLinks);persist("forge-family",updatedLinks);}}
-    setRResult(null);setRAnswers({});setRName("");setRHeroName("");setRStep(0);setRNkAlign("neutral");setRTeamRank("operative");setRGender("Male");setRAge("");setRBirthYear("");setRRace(null);setRStoryDir("");setDeepAnswers({});setDeepPhase(0);setProfileAnswers({});setProfileStep(0);setRFamilyCharId("");setRFamilyRelation("parent");setTab("roster");
+    if(rHeroAssocId){const t=HERO_ASSOC_TYPES.find(x=>x.id===rHeroAssocType);if(t){const newAssoc={id:`ha-${Date.now()}`,a:bare.id,b:rHeroAssocId,aRelation:t.label,bRelation:t.inverse};const updatedAssocs=[...heroAssocs,newAssoc];setHeroAssocs(updatedAssocs);persist("forge-hero-assocs",updatedAssocs);}}
+    setRResult(null);setRAnswers({});setRName("");setRHeroName("");setRStep(0);setRNkAlign("neutral");setRTeamRank("operative");setRGender("Male");setRAge("");setRBirthYear("");setRRace(null);setRStoryDir("");setDeepAnswers({});setDeepPhase(0);setProfileAnswers({});setProfileStep(0);setRFamilyCharId("");setRFamilyRelation("parent");setRHeroAssocId("");setRHeroAssocType("sidekick");setTab("roster");
   };
 
   const generateTripo3D=async(member)=>{
@@ -2210,6 +2254,28 @@ function App(){
               </div>
             );
           })()}
+          {(()=>{
+            const recruitAllChars=[...Object.values(teamRosters||{}).flat(),...villainPool];
+            const uniqueChars=Object.values(Object.fromEntries(recruitAllChars.map(c=>[c.id,c])));
+            const selAssocChar=uniqueChars.find(c=>c.id===rHeroAssocId);
+            const selAssocType=HERO_ASSOC_TYPES.find(t=>t.id===rHeroAssocType);
+            return(
+              <div style={{marginBottom:14}}>
+                <span style={s.lbl}>Hero Association (optional)</span>
+                <div style={{fontSize:9,color:"var(--text3)",marginBottom:5}}>Sidekick, partner, legacy ally — outside of team alliances</div>
+                <select value={rHeroAssocId} onChange={e=>setRHeroAssocId(e.target.value)} style={{width:"100%",padding:"8px 10px",background:"var(--bg2)",border:"1px solid var(--border2)",borderRadius:7,color:"var(--text-primary)",fontFamily:"monospace",fontSize:11,marginTop:2,marginBottom:rHeroAssocId?8:0}}>
+                  <option value="">— No hero association —</option>
+                  {uniqueChars.map(c=><option key={c.id} value={c.id}>{c.heroName}{c.isVillain?" ⚠":""} ({c.realName||"?"})</option>)}
+                </select>
+                {rHeroAssocId&&(<>
+                  <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:6}}>
+                    {HERO_ASSOC_TYPES.map(t=><button key={t.id} onClick={()=>setRHeroAssocType(t.id)} style={{padding:"4px 10px",background:rHeroAssocType===t.id?`${activeTeam.color}18`:"var(--bg3)",border:`1px solid ${rHeroAssocType===t.id?activeTeam.color:"var(--border2)"}`,borderRadius:14,cursor:"pointer",fontSize:9,color:rHeroAssocType===t.id?activeTeam.color:"var(--text2)",fontFamily:"monospace"}}>{t.label}</button>)}
+                  </div>
+                  {selAssocChar&&selAssocType&&<div style={{fontSize:9,color:"var(--text3)",fontStyle:"italic"}}>{rHeroName||"New hero"} is <strong style={{color:activeTeam.color}}>{selAssocType.label}</strong> {selAssocChar.heroName} · {selAssocChar.heroName} is their <strong style={{color:activeTeam.color}}>{selAssocType.inverse}</strong></div>}
+                </>)}
+              </div>
+            );
+          })()}
           {(!rHeroName.trim()||!rName.trim()||!rRace)&&<div style={{fontSize:10,color:"#E07070",marginBottom:8,fontFamily:"monospace"}}>* Hero Name, Real Name, and Race are required</div>}
           <button style={s.bigBtn(!rHeroName.trim()||!rName.trim()||!rRace,activeTeam.color)} disabled={!rHeroName.trim()||!rName.trim()||!rRace} onClick={()=>deepMode?setDeepPhase(1):profileMode?setProfileStep(1):setRStep(1)}>
             {deepMode?"Begin Deep Forge →":profileMode?"Begin Profile →":"Begin Assessment →"}
@@ -2288,7 +2354,7 @@ function App(){
           </div>
           <CharacterPage member={rResult} imageUrl={null} teamName={activeTeam.name} teamColor={activeTeam.color}/>
           <div style={{display:"flex",gap:10,marginTop:14}}>
-            <button onClick={()=>{setRResult(null);setRStep(0);setRAnswers({});setDeepPhase(0);setDeepAnswers({});setProfileStep(0);setProfileAnswers({});}} style={{flex:1,padding:"11px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:10.5,fontFamily:"monospace"}}>Regenerate</button>
+            <button onClick={()=>{setRResult(null);setRStep(0);setRAnswers({});setDeepPhase(0);setDeepAnswers({});setProfileStep(0);setProfileAnswers({});setRHeroAssocId("");setRHeroAssocType("sidekick");}} style={{flex:1,padding:"11px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:10.5,fontFamily:"monospace"}}>Regenerate</button>
             <button onClick={addRecruit} style={{flex:2,padding:"11px",background:`${activeTeam.color}16`,border:`1px solid ${activeTeam.color}`,borderRadius:8,cursor:"pointer",color:activeTeam.color,fontSize:10.5,letterSpacing:"0.1em",textTransform:"uppercase",fontFamily:"monospace"}}>Add to {activeTeam.abbr} →</button>
           </div>
         </>)}
@@ -2824,6 +2890,81 @@ function App(){
               })}
             </div>
           </>)}
+
+          {/* ── Hero Associations ─────────────────────────────────────── */}
+          <div style={{marginTop:28}}>
+            <div style={{fontSize:9,letterSpacing:"0.2em",color:`${G}77`,textTransform:"uppercase",marginBottom:14}}>Hero Associations</div>
+            <div style={{fontSize:9,color:"var(--text3)",marginBottom:14}}>Sidekick, partner, legacy ally, mentor — outside of team alliances</div>
+
+            {/* Association list */}
+            {heroAssocs.length===0?(
+              <div style={{textAlign:"center",padding:"28px 0",color:"var(--text3)",marginBottom:20,border:"1px dashed var(--border)",borderRadius:12}}>
+                <div style={{fontSize:13,marginBottom:6,color:"var(--text-secondary)"}}>No hero associations yet</div>
+                <div style={{fontSize:10}}>Link two characters below to define their association.</div>
+              </div>
+            ):(
+              <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:20}}>
+                {heroAssocs.map(assoc=>{
+                  const cA=getChar(assoc.a),cB=getChar(assoc.b);
+                  const ASSOC_COLOR={"Sidekick of":"#5BA3D4","Has Sidekick":"#5BA3D4","Partner of":"#1D9E75","Protégé of":"#8B5CF6","Mentor of":"#8B5CF6","Legacy Ally of":"#D4AF37","Legacy Predecessor of":"#D4AF37"};
+                  const color=ASSOC_COLOR[assoc.aRelation]||"#888";
+                  return(
+                    <div key={assoc.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:9}}>
+                      <div style={{width:8,height:8,borderRadius:2,background:color,flexShrink:0}}/>
+                      <div style={{flex:1,fontSize:11}}>
+                        <span style={{color:"var(--text-primary)",fontWeight:"bold"}}>{cA?.heroName||assoc.a}</span>
+                        <span style={{color,margin:"0 7px"}}>is {assoc.aRelation}</span>
+                        <span style={{color:"var(--text-primary)",fontWeight:"bold"}}>{cB?.heroName||assoc.b}</span>
+                      </div>
+                      <button onClick={()=>removeHeroAssoc(assoc.id)} style={{padding:"3px 9px",background:"rgba(163,45,45,0.1)",border:"1px solid rgba(163,45,45,0.25)",borderRadius:6,cursor:"pointer",color:"#e74c3c",fontSize:9,fontFamily:"monospace",flexShrink:0}}>Remove</button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Add form */}
+            <div style={{background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:10,padding:"16px 18px"}}>
+              <div style={{fontSize:9,letterSpacing:"0.18em",color:`${G}88`,textTransform:"uppercase",marginBottom:12}}>Add Hero Association</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
+                <div>
+                  <div style={{fontSize:9,color:"var(--text3)",marginBottom:5,letterSpacing:"0.1em",textTransform:"uppercase"}}>Character A</div>
+                  <select value={haAddA} onChange={e=>setHaAddA(e.target.value)} style={{width:"100%",padding:"8px 10px",background:"var(--bg-card)",border:"1px solid var(--border)",borderRadius:7,color:"var(--text-primary)",fontFamily:"monospace",fontSize:11}}>
+                    <option value="">Select character…</option>
+                    {allChars.map(c=><option key={c.id} value={c.id}>{c.heroName}{c.isVillain?" ⚠":""}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <div style={{fontSize:9,color:"var(--text3)",marginBottom:5,letterSpacing:"0.1em",textTransform:"uppercase"}}>Character B</div>
+                  <select value={haAddB} onChange={e=>setHaAddB(e.target.value)} style={{width:"100%",padding:"8px 10px",background:"var(--bg-card)",border:"1px solid var(--border)",borderRadius:7,color:"var(--text-primary)",fontFamily:"monospace",fontSize:11}}>
+                    <option value="">Select character…</option>
+                    {allChars.filter(c=>c.id!==haAddA).map(c=><option key={c.id} value={c.id}>{c.heroName}{c.isVillain?" ⚠":""}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div style={{marginBottom:12}}>
+                <div style={{fontSize:9,color:"var(--text3)",marginBottom:7,letterSpacing:"0.1em",textTransform:"uppercase"}}>A is B's…</div>
+                <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                  {HERO_ASSOC_TYPES.map(t=>(
+                    <button key={t.id} onClick={()=>setHaAddType(t.id)}
+                      style={{padding:"5px 11px",background:haAddType===t.id?`${G}18`:"var(--bg-card)",border:`1px solid ${haAddType===t.id?G:"var(--border)"}`,borderRadius:16,cursor:"pointer",fontSize:10,color:haAddType===t.id?G:"var(--text3)",fontFamily:"monospace",transition:"all 0.1s"}}>
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+                {haAddA&&haAddB&&(()=>{
+                  const t=HERO_ASSOC_TYPES.find(x=>x.id===haAddType);
+                  const cA=getChar(haAddA),cB=getChar(haAddB);
+                  if(!t||!cA||!cB)return null;
+                  return<div style={{marginTop:9,fontSize:10,color:"var(--text3)",fontStyle:"italic"}}>{cA.heroName} <span style={{color:G,fontWeight:"bold"}}>{t.label}</span> {cB.heroName} · {cB.heroName} is their <span style={{color:G,fontWeight:"bold"}}>{t.inverse}</span></div>;
+                })()}
+              </div>
+              <button onClick={addHeroAssoc} disabled={!haAddA||!haAddB||haAddA===haAddB}
+                style={{width:"100%",padding:"11px",background:(!haAddA||!haAddB||haAddA===haAddB)?"var(--bg-card)":`${G}14`,border:`1px solid ${(!haAddA||!haAddB||haAddA===haAddB)?"var(--border)":G}`,borderRadius:8,cursor:(!haAddA||!haAddB||haAddA===haAddB)?"not-allowed":"pointer",color:(!haAddA||!haAddB||haAddA===haAddB)?"var(--text3)":G,fontSize:10.5,letterSpacing:"0.12em",textTransform:"uppercase",fontFamily:"monospace"}}>
+                Add Association →
+              </button>
+            </div>
+          </div>
         </>);
       })()}
 
