@@ -27,6 +27,7 @@ FORGE_VERSION = "1.2.0"
 
 GROQ_KEY = ""
 GROQ_MODELS = ["llama-3.1-8b-instant", "llama-3.3-70b-versatile", "mixtral-8x7b-32768"]
+STORAGE_FILE = os.path.join(DATA_DIR, "forge-data.json")
 try:
     with open(os.path.join(BASE, ".env")) as _ef:
         for _line in _ef:
@@ -1290,6 +1291,28 @@ def find_free_port(preferred=7432):
         s.close(); s = socket.socket(); s.bind(("127.0.0.1", 0))
         port = s.getsockname()[1]; s.close(); return port
 
+def _find_network_instance(port):
+    """Scan LAN for another Forge instance on the same port."""
+    import ipaddress
+    try:
+        hostname = socket.gethostname()
+        local_ip = socket.gethostbyname(hostname)
+        net = ipaddress.ip_network(f"{local_ip}/24", strict=False)
+        for host in net.hosts():
+            addr = str(host)
+            if addr == local_ip:
+                continue
+            url = f"http://{addr}:{port}/health"
+            try:
+                r = requests.get(url, timeout=0.5)
+                if r.status_code == 200 and "forge" in r.json().get("version", "").lower() or r.status_code == 200:
+                    return url
+            except Exception:
+                continue
+    except Exception:
+        pass
+    return None
+
 def run_flask(port, host="127.0.0.1"):
     import logging
     logging.getLogger("werkzeug").setLevel(logging.ERROR)
@@ -1322,7 +1345,7 @@ if __name__ == "__main__":
             sys.exit(0)
 
     # ── Network instance check (LAN) ──────────────────────────────────────────
-    network_url = find_network_instance()
+    network_url = _find_network_instance(port)
     if network_url:
         import tkinter as tk
         from tkinter import messagebox
