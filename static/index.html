@@ -152,9 +152,12 @@ const RACE_TREE={
     {id:"accident_mutate",label:"Accident Mutate",lore:"An unplanned event rewrote their biology — disaster became origin, mutation became purpose."},
   ]},
   alien:{label:"Alien",hint:"Not of this world. Power comes from biology, not modification. Three distinct species — each with a different relationship to strength, civilization, and purpose.",subs:[
-    {id:"zyrenian",label:"Zyrenian",lore:"Battle-bred warrior race — power scales with combat experience, pride is genetic, and losing is not in their vocabulary. War is culture. (Think: Saiyan)"},
-    {id:"auranthi",label:"Auranthi",lore:"Solar-absorbing species from a dead world — immense power drawn from starlight, haunted by a lost civilization they carry alone. (Think: Kryptonian)"},
-    {id:"dravosi",label:"Dravosi",lore:"Apex-predator empire builders — genetically superior conquering species driven by dominance, legacy, and the belief that strength is the only truth. (Think: Viltrumite)"},
+    {id:"zyrenian",label:"Zyrenian",lore:"Battle-bred warrior race — power scales with combat experience, pride is genetic, and losing is not in their vocabulary. War is culture.",
+     codex:{homeworld:"Zyrak (destroyed) — high-gravity volcanic world once ruled by 12 warring clans for ten millennia. Two centuries ago the clans escalated past the point of survival and burned the planet uninhabitable. Survivors scattered across the galaxy.",biology:"The Bloodline Response: every time a Zyrenian survives a genuine near-death combat event, their cells encode it — power ceiling increases permanently. A Zyrenian who has never truly been tested is weaker than their age suggests. One who has survived a hundred genuine battles is something else entirely. Atrophy is real: combat is biological fuel. Without conflict stimulus, enhanced capabilities slowly degrade.",culture:"Zyrenians have no word for surrender — only 'strategic withdrawal to return stronger,' which is considered intelligent. What they cannot tolerate is quitting. Deep clan loyalty earned through proven capability; once you've earned it, it is absolute and lifelong. They cannot follow someone they don't respect. But if you earn that respect in battle — or through courage they can read as battle — they will die for you without question.",powers:"Scaling strength ceiling, accelerated regeneration, extreme structural durability, combat-instinct neural processing that reads fights in real time.",note:"Displaced Zyrenians in the NK universe are mercenaries, exiles, or soldiers still searching for something worth fighting for. The rare ones who find a cause and redirect their full biology toward it are among the most dangerous beings on the planet."}},
+    {id:"auranthi",label:"Auranthi",lore:"Solar-absorbing species from a dead world — immense power drawn from starlight, haunted by a lost civilization they carry alone.",
+     codex:{homeworld:"Aureth Prime (destroyed) — twin-sun world whose civilization lasted 40,000 years. The Auranthi did not go to war. They built: libraries, architectures, sciences, medicines. Their civilization was two centuries ahead of any known parallel at the time of the end. The twin suns underwent spectral shift — a natural astronomical event that changed radiation frequency beyond what Auranthi biology could process. There was no enemy. Just physics.",biology:"Auranthi bodies are biological solar cells: they absorb stellar radiation and convert it into metabolic and physical energy. Under a yellow or blue-white star they enter solar saturation — enhanced strength, speed, flight, cellular regeneration, and energy projection. Without solar exposure, these capabilities decay. They do not rely on food as primary fuel. The civilizational archive of Aureth Prime is encoded in Auranthi DNA — not as accessible memory but as intuition. A carrier with no formal education may inexplicably understand advanced physics. The archive speaks through them.",culture:"The survivors carry their grief quietly. They understand on a cellular level that civilization is temporary — which makes them precise about what they do with their time. Many develop deep attachments to the worlds they settle on, not as replacement but as genuine love for what new civilizations can become. They protect what they care about with everything they have.",powers:"Solar saturation under yellow/blue star — flight, enhanced strength and speed, cellular regeneration, solar energy projection. Capabilities scale with star proximity and exposure time.",note:"Auranthi restraint is not weakness. It is philosophy. They have seen what power without purpose looks like. It looks like the spectral shift."}},
+    {id:"dravosi",label:"Dravosi",lore:"Apex-predator empire builders — genetically perfected through 40,000 years of deliberate self-selection, driven by dominance, legacy, and the belief that strength is the only honest currency.",
+     codex:{homeworld:"Dravoss — capital world of the Dravosi Supremacy, a 40-star-system empire that has expanded continuously for eight millennia. Built not on ideology but on one principle: the capable govern the rest.",biology:"Dravosi physiology represents the deliberate peak of biological development — 40,000 years of selective breeding amplified every natural advantage and eliminated every weakness. High-gravity origin gave them dense cellular structure and efficient musculature. Selective pressure removed disease susceptibility, pain tolerance limitations, and regenerative caps. They live 400-600 years aging past 30 almost imperceptibly, maintaining full physical capability until their final decades. They can survive brief vacuum exposure and process damage that would kill most species.",culture:"The Supremacy runs on one axiom: the capable govern the rest. What has no place in Dravosi society is voluntary weakness — failure to improve is a social transgression. What complicates the reading is that many Dravosi genuinely believe they are doing the galaxy a service. Subjugated worlds under the Supremacy are stable. Infrastructure is maintained. They are not wrong that their occupation produces order. They are not capable of understanding why that is insufficient. A Dravosi who encounters genuine resistance escalates immediately — not out of anger but out of curiosity. They want to know where the ceiling is.",powers:"Peak biological performance: strength, speed, and durability at the functional limit of biological life. Extended lifespan, vacuum resistance, rapid cellular repair. No exotic powers — just biology pushed to its absolute ceiling.",note:"Dravosi in the NK universe are scouts, exiles, or defectors. Exiles — cast out for failing the Supremacy's standards — have all the capability and none of the backing. They may be trying to prove something. Or they may have decided the Supremacy was wrong. Both make them unpredictable."}},
   ]},
   hybrid:{label:"Hybrid",hint:"Mixed heritage of two races. Choose both bloodlines — biology and history from each side shape who they are. The combination creates something entirely new.",subs:[]},
 };
@@ -275,12 +278,63 @@ const ART_STYLES=[{id:"comic",label:"Comic Art",text:"cinematic comic book chara
 const ACCENT_COLORS=[{id:"crimson",label:"Crimson",hex:"#A32D2D"},{id:"jade",label:"Jade",hex:"#1D9E75"},{id:"amber",label:"Amber",hex:"#BA7517"},{id:"silver",label:"Silver",hex:"#888780"},{id:"indigo",label:"Indigo",hex:"#4A3FA0"},{id:"copper",label:"Copper",hex:"#8B4513"},{id:"frost",label:"Frost",hex:"#378ADD"},{id:"violet",label:"Violet",hex:"#8B2FC9"}];
 
 // ── Name Randomizer ───────────────────────────────────────────────────────────
-const _NP=["Iron","Shadow","Void","Crimson","Onyx","Silver","Neon","Apex","Titan","Nova","Obsidian","Midnight","Scarlet","Ghost","Forge","Static","Prism","Storm","Cipher","Null","Relic","Vex","Sable","Chrome","Dusk"];
-const _NC=["Hawk","Strike","Claw","Edge","Fist","Bolt","Veil","Surge","Shade","Blade","Gate","Prime","Shift","Arc","Pulse","Drift","Wraith","Rift","Crest","Fang","Lance","Reign","Tempest","Mark","Coil"];
-const _TS=["Covenant","Legion","Vanguard","Order","Collective","Guard","Division","Syndicate","Brigade","Alliance","Phalanx","Corps","Council","Squadron","Force","Crew","Conclave","Unit","Compact","Watch"];
 const _rp=a=>a[Math.floor(Math.random()*a.length)];
-const randTeamName=()=>`${_rp(_NP)} ${_rp(_TS)}`;
-const randHeroName=()=>{const r=Math.random();if(r<0.55)return _rp(_NP)+_rp(_NC);if(r<0.78)return _rp(_NP);return _rp(_NC);};
+const _NAMES={
+  zyrenian:{
+    single:["Karath","Vexor","Ziran","Drakan","Thorvex","Krazon","Razik","Volkar","Zeth","Kurath","Sazir","Braxon","Tavar","Gorex","Vraxis","Kazon","Zarkon","Rekath","Vaxis","Drakath","Khorven","Zarex","Brakthor","Vezrak","Kazoth"],
+    prefix:["War","Blood","Iron","Ash","Void","Scar","Bone","Rage","Storm","Dusk","Hollow","Grim","Blaze","Crush","Rend"],
+    suffix:["Breaker","Fang","Crest","Kin","Scar","Strike","Fall","Reign","Vex","Thorn","Crash","Born","Split","Mark","Burn"],
+  },
+  auranthi:{
+    single:["Solenne","Auris","Lumenar","Caelian","Novaris","Solaris","Lumaire","Aurevan","Solveyn","Caelix","Novael","Auren","Celestrix","Lumanis","Aurael","Solmira","Caelum","Luminex","Novane","Aurevyn","Solvara","Caelris","Lumael","Aurenne","Solvanir"],
+    prefix:["Solar","Nova","Star","Lume","Aure","Cael","Dawn","Solis","Lux","Veil","Astral","Caelo","Solus","Auric","Novan"],
+    suffix:["born","veil","arc","prime","sol","flare","aris","mire","light","crest","rise","fall","shine","watch","burn"],
+  },
+  dravosi:{
+    single:["Valdris","Korrath","Supremax","Dravaxis","Imperion","Vaelkor","Korven","Maldrix","Supremon","Vaeldross","Orthax","Maxerath","Valdrix","Supremar","Dravos","Maldaxis","Vaelthor","Orthomax","Supremek","Korrath","Valdrek","Dravosk","Imperak","Maxorath","Vaelkrath"],
+    prefix:["Prime","Apex","Dread","Grand","Iron","Vael","Krath","Orth","Max","Supra","Arch","High","Steel","Drav","Kor"],
+    suffix:["Dross","Axis","Rex","Rath","Fist","Mark","Thorn","Kor","Prime","Vex","Reign","Crush","Fall","Claw","Edge"],
+  },
+  a_gene:{
+    single:["Fracture","Severance","Rend","Override","Threshold","Rampart","Faultline","Catalyst","Breakpoint","Overdrive","Zero Hour","Rupture","Shatter","Overload","Redline","Blowback","Incident","Surge","Flashpoint","Trigger","Cascade","Apex","Raw","Unbound","Unhinged"],
+  },
+  human:{
+    prefix:["Iron","Shadow","Void","Crimson","Onyx","Silver","Neon","Apex","Titan","Nova","Obsidian","Midnight","Scarlet","Ghost","Forge","Static","Prism","Storm","Cipher","Null","Relic","Vex","Sable","Chrome","Dusk","Ember","Wraith","Pulse","Rift","Crest","Lance","Shade","Hollow","Razor","Signal","Carbon","Flux","Slate","Ash","Frost"],
+    suffix:["Hawk","Strike","Claw","Edge","Fist","Bolt","Veil","Surge","Shade","Blade","Gate","Prime","Shift","Arc","Pulse","Drift","Wraith","Rift","Crest","Fang","Lance","Reign","Tempest","Mark","Coil","Beam","Spark","Watch","Cross","Lock","Burn","Wire","Crest","Fall","Point"],
+  },
+};
+const _TS=["Covenant","Legion","Vanguard","Order","Collective","Guard","Division","Syndicate","Brigade","Alliance","Phalanx","Corps","Council","Squadron","Force","Crew","Conclave","Unit","Compact","Watch"];
+const randTeamName=()=>`${_rp(_NAMES.human.prefix)} ${_rp(_TS)}`;
+function randHeroName(race){
+  const sub=race?.sub||race;
+  const main=race?.main;
+  const r=Math.random();
+  if(sub==="zyrenian"||main==="zyrenian"){
+    const n=_NAMES.zyrenian;
+    if(r<0.45)return _rp(n.single);
+    if(r<0.75)return _rp(n.prefix)+_rp(n.suffix);
+    return _rp(n.single);
+  }
+  if(sub==="auranthi"||main==="auranthi"){
+    const n=_NAMES.auranthi;
+    if(r<0.5)return _rp(n.single);
+    if(r<0.78)return _rp(n.prefix)+_rp(n.suffix);
+    return _rp(n.single);
+  }
+  if(sub==="dravosi"||main==="dravosi"){
+    const n=_NAMES.dravosi;
+    if(r<0.45)return _rp(n.single);
+    if(r<0.75)return _rp(n.prefix)+" "+_rp(n.suffix);
+    return _rp(n.single);
+  }
+  if(sub==="a_gene_mutate"||sub==="a_gene"){
+    return _rp(_NAMES.a_gene.single);
+  }
+  const h=_NAMES.human;
+  if(r<0.55)return _rp(h.prefix)+_rp(h.suffix);
+  if(r<0.78)return _rp(h.prefix);
+  return _rp(h.suffix);
+}
 
 // ── Deep Lore Quiz ────────────────────────────────────────────────────────────
 const DEEP_LORE_PHASES=[
@@ -2181,7 +2235,7 @@ function App(){
         {!rResult&&((!deepMode&&!profileMode&&rStep===0)||(deepMode&&deepPhase===0)||(profileMode&&profileStep===0))&&(<div style={s.card}>
           <div style={{fontSize:15,fontWeight:"bold",color:"var(--text-primary)",marginBottom:14}}>Who is this recruit?</div>
           <span style={s.lbl}>Hero Name <span style={{color:"#E07070"}}>*</span></span>
-          <div style={{display:"flex",gap:6,marginBottom:14}}><input type="text" placeholder="e.g. Ironhawk" value={rHeroName} onChange={e=>setRHeroName(e.target.value)} style={{flex:1,borderColor:!rHeroName.trim()?"rgba(224,112,112,0.5)":undefined}}/><button onClick={()=>setRHeroName(randHeroName())} title="Random hero name" style={{padding:"0 12px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:16,flexShrink:0}}>⚄</button></div>
+          <div style={{display:"flex",gap:6,marginBottom:14}}><input type="text" placeholder="e.g. Ironhawk" value={rHeroName} onChange={e=>setRHeroName(e.target.value)} style={{flex:1,borderColor:!rHeroName.trim()?"rgba(224,112,112,0.5)":undefined}}/><button onClick={()=>setRHeroName(randHeroName(rRace))} title="Random hero name (race-aware)" style={{padding:"0 12px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:16,flexShrink:0}}>⚄</button></div>
           <span style={s.lbl}>Real Name <span style={{color:"#E07070"}}>*</span></span>
           <input type="text" placeholder="e.g. Devon Marshall" value={rName} onChange={e=>setRName(e.target.value)} style={{marginBottom:14,borderColor:!rName.trim()?"rgba(224,112,112,0.5)":undefined}}/>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:14}}>
