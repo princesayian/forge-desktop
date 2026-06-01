@@ -21,7 +21,8 @@ CHARACTERS_DIR = os.path.join(DATA_DIR, "characters")
 TEAMS_DIR   = os.path.join(DATA_DIR, "teams")
 STORIES_DIR = os.path.join(DATA_DIR, "stories")
 IMAGES_DIR  = os.path.join(BASE, "images")
-LOCK_FILE   = os.path.join(BASE, ".forge.lock")
+LOCK_FILE    = os.path.join(BASE, ".forge.lock")
+STORAGE_FILE = os.path.join(BASE, "forge-data.json")
 
 FORGE_VERSION = "1.2.0"
 
