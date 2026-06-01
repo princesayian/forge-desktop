@@ -328,6 +328,143 @@ const DEEP_LORE_PHASES=[
     ]},
 ];
 
+const PERSONAL_PROFILE=[
+  {section:"Identity & Presence",questions:[
+    {id:"pp_entry",q:"How do people first notice you when you walk in?",options:[
+      {id:"a",label:"The energy shifts — people feel it before they see you",value:"commanding presence, the air changes when they enter"},
+      {id:"b",label:"You're already talking to someone — you pulled them in immediately",value:"magnetic, immediately connecting, draws people in"},
+      {id:"c",label:"You find a corner and observe everything first",value:"quiet watcher, strategic observer, reads the room before engaging"},
+      {id:"d",label:"You come in loudly — there's no question you arrived",value:"disruptive force, loud arrival, impossible to ignore"}]},
+    {id:"pp_energy",q:"What word do people use to describe your energy to someone who hasn't met you?",options:[
+      {id:"a",label:"Intense — there's a weight to you even when you're relaxed",value:"intense, heavy gravity, focused energy"},
+      {id:"b",label:"Warm — you make people feel seen immediately",value:"warm, disarming, people trust them instantly"},
+      {id:"c",label:"Sharp — they'll say you're perceptive to the point of unsettling",value:"sharp, perceptive, reads people in seconds"},
+      {id:"d",label:"Unpredictable — you keep people on their toes and they like it",value:"unpredictable, electric, hard to pin down"}]},
+    {id:"pp_role",q:"What role do you naturally fill in a group?",options:[
+      {id:"a",label:"The anchor — people stabilize around you",value:"anchor, stabilizer, the constant others orbit"},
+      {id:"b",label:"The spark — you set things in motion",value:"catalyst, ignites action, shifts the group's momentum"},
+      {id:"c",label:"The strategist — you're already three steps ahead",value:"strategist, sees the angles others miss"},
+      {id:"d",label:"The truth-teller — you say what no one else will",value:"truth-teller, cuts through noise, says the hard thing"}]},
+    {id:"pp_stress",q:"How do you carry stress — what does that look like on the outside?",options:[
+      {id:"a",label:"You get quieter. Stillness before the storm.",value:"controlled stillness under pressure, silence before action"},
+      {id:"b",label:"You get sharper. Every word has a purpose.",value:"precision increases under stress, calculated and deliberate"},
+      {id:"c",label:"You keep moving. Action is how you process.",value:"kinetic processor, movement-driven, stress becomes momentum"},
+      {id:"d",label:"You laugh. Humor is your armor.",value:"uses humor as armor, disarms tension with wit"}]},
+    {id:"pp_hidden",q:"What version of you do people rarely see?",options:[
+      {id:"a",label:"The vulnerable one — you carry more than you show",value:"carries hidden weight, deeper vulnerability beneath the exterior"},
+      {id:"b",label:"The ruthless one — you can make the hard call without hesitation",value:"capable of ruthlessness when it matters, the cold decision"},
+      {id:"c",label:"The playful one — you're much funnier than you let on",value:"genuine playfulness hidden behind the serious front"},
+      {id:"d",label:"The terrified one — a fear you've built your whole identity around",value:"core fear driving everything, built strength over original terror"}]}
+  ]},
+  {section:"Strengths & Skills",questions:[
+    {id:"pp_flow",q:"What can you do for hours without noticing time pass?",options:[
+      {id:"a",label:"Build or create something with your hands or mind",value:"builder, creator, flow state through making"},
+      {id:"b",label:"Solve a problem — the harder, the better",value:"problem-solver, thrives in complexity and challenge"},
+      {id:"c",label:"Move your body — train, compete, perform",value:"physical mastery, body as primary instrument"},
+      {id:"d",label:"Connect — conversation, coaching, leading people",value:"human connector, thrives in interpersonal depth"}]},
+    {id:"pp_gift",q:"What do people come to you for that you take for granted?",options:[
+      {id:"a",label:"Making sense of chaos — you organize the unseen",value:"pattern recognition, turns chaos into clarity"},
+      {id:"b",label:"Reading people — you know what someone needs before they say it",value:"emotional intelligence, reads subtext and intent instantly"},
+      {id:"c",label:"Getting things done — you execute when others theorize",value:"executer, action over analysis, gets it moving"},
+      {id:"d",label:"Being honest — people trust your read",value:"trusted advisor, radical honesty people rely on"}]},
+    {id:"pp_solve",q:"How do you solve problems — instinct or system?",options:[
+      {id:"a",label:"Pure instinct — you trust your gut and it's usually right",value:"instinct-driven, gut-trusting, rapid accurate reads"},
+      {id:"b",label:"System first — you map it before you move",value:"systematic thinker, maps before acting, structured approach"},
+      {id:"c",label:"Both — you run the system to confirm what your gut already said",value:"hybrid, uses system to validate instinct"},
+      {id:"d",label:"Neither — you improvise in the moment",value:"improvisational, present-moment solver, adapts on the fly"}]},
+    {id:"pp_exceptional",q:"What physical or mental trait do you know is exceptional?",options:[
+      {id:"a",label:"Endurance — you outlast everyone",value:"extraordinary endurance, built to outlast"},
+      {id:"b",label:"Speed of thought — you process faster than the room",value:"exceptional processing speed, fastest thinker in range"},
+      {id:"c",label:"Physical ability — strength, precision, or agility",value:"physical excellence, body performs at peak in one key domain"},
+      {id:"d",label:"Memory or pattern recognition — you see what others miss",value:"photographic or pattern memory, notices what others overlook"}]},
+    {id:"pp_team_super",q:"What's your superpower in a team setting?",options:[
+      {id:"a",label:"You make everyone around you better without trying",value:"elevates others, natural team multiplier"},
+      {id:"b",label:"You stay calm when everyone else breaks",value:"unbreakable composure, steadies the team under fire"},
+      {id:"c",label:"You see the winning move when everyone else sees the problem",value:"finds the path when others see a wall"},
+      {id:"d",label:"You take the hit so others don't have to",value:"shield, absorbs the worst so others can keep going"}]}
+  ]},
+  {section:"Conflict & Combat",questions:[
+    {id:"pp_pushed",q:"When you're truly pushed — what actually comes out?",options:[
+      {id:"a",label:"Focused fury — everything sharpens, you become the threat",value:"focused wrath, everything sharpens under extreme pressure"},
+      {id:"b",label:"Cold calm — you go completely still and terrifying",value:"cold calm under fire, stillness becomes the threat"},
+      {id:"c",label:"Primal force — something older and rawer takes over",value:"primal surge, raw force from a deeper layer of self"},
+      {id:"d",label:"Strategy — pressure makes you smarter, not angrier",value:"pressure-forged intelligence, threat unlocks strategic clarity"}]},
+    {id:"pp_conflict_type",q:"What kind of conflict brings out your best?",options:[
+      {id:"a",label:"A worthy opponent — someone who actually challenges you",value:"thrives against worthy opposition, match brings out full capacity"},
+      {id:"b",label:"Protecting something — a person, a principle, a promise",value:"protector mode unlocks peak performance"},
+      {id:"c",label:"Impossible odds — when the math says you can't win",value:"performs best when the situation is statistically hopeless"},
+      {id:"d",label:"Unfinished business — something personal is on the line",value:"motivated by personal stakes, old wounds become fuel"}]},
+    {id:"pp_underestimated",q:"How do you respond when someone underestimates you?",options:[
+      {id:"a",label:"You let them — then you end the conversation",value:"weaponizes being underestimated, patience then precision"},
+      {id:"b",label:"It fuels you — that doubt becomes your energy source",value:"underestimation as fuel, converts doubt into drive"},
+      {id:"c",label:"You correct it immediately — you don't play games",value:"refuses to be underestimated, asserts immediately"},
+      {id:"d",label:"You don't notice — you're focused on what you're doing",value:"mission-focused, immune to external perception"}]},
+    {id:"pp_line",q:"What crosses the line for you? What ends your restraint?",options:[
+      {id:"a",label:"Someone hurting someone who can't defend themselves",value:"protector trigger, ends restraint when the vulnerable are threatened"},
+      {id:"b",label:"Betrayal — someone breaking trust they were given",value:"betrayal is the unforgivable trigger, trust violation ends mercy"},
+      {id:"c",label:"Being lied to or manipulated",value:"deception is the line, manipulation ends patience"},
+      {id:"d",label:"Injustice — the wrong person paying the price",value:"injustice is the trigger, when the wrong person suffers"}]},
+    {id:"pp_odds",q:"When the odds are completely stacked against you — what's your move?",options:[
+      {id:"a",label:"Narrow the problem — find the one angle they didn't account for",value:"collapses the problem to the one exploitable edge"},
+      {id:"b",label:"Absorb the pressure and outlast — they'll crack first",value:"outlasts the opposition, endurance becomes the weapon"},
+      {id:"c",label:"Go bigger — if you're going to lose, make it legendary",value:"escalates into it, legendary effort over safe retreat"},
+      {id:"d",label:"Change the rules — redefine what winning means",value:"reframes the game entirely, changes what success looks like"}]}
+  ]},
+  {section:"Emotional Core",questions:[
+    {id:"pp_proving",q:"What are you still proving — and to who?",options:[
+      {id:"a",label:"That you belong here — there's still a voice that says you don't",value:"belonging wound, drives everything — still earning the seat"},
+      {id:"b",label:"That you're more than what they wrote you off as",value:"underdog origin, rewriting someone else's verdict"},
+      {id:"c",label:"That you made the right call on the thing that cost you",value:"justifying a sacrifice or choice that changed everything"},
+      {id:"d",label:"Nothing — you stopped caring what anyone thinks",value:"fully self-defined, liberated from external validation"}]},
+    {id:"pp_wound",q:"What loss or wound still quietly shapes your decisions?",options:[
+      {id:"a",label:"A person you couldn't protect or keep",value:"loss of a person, the one they couldn't save"},
+      {id:"b",label:"A version of yourself you left behind",value:"identity loss, mourning who they were before"},
+      {id:"c",label:"A moment you failed when it mattered most",value:"failure at the critical moment, reshapes every decision since"},
+      {id:"d",label:"Something that was taken that you didn't get to choose",value:"stolen — opportunity, identity, time — core wound is the theft"}]},
+    {id:"pp_protects",q:"What do you protect at all costs?",options:[
+      {id:"a",label:"A person or people — specific, named, irreplaceable",value:"specific protectee, the mission is always ultimately this person"},
+      {id:"b",label:"A principle — something you will not compromise even if it costs you",value:"principle-bound, will sacrifice anything before compromising it"},
+      {id:"c",label:"Your inner world — no one gets full access",value:"guards inner self fiercely, keeps the core shielded"},
+      {id:"d",label:"The future — what you're building, what's possible",value:"future-protector, sacrifices the present for what's possible"}]},
+    {id:"pp_walk",q:"What would make you walk away from the mission entirely?",options:[
+      {id:"a",label:"The mission becoming what you were fighting against",value:"moral corruption of the mission itself"},
+      {id:"b",label:"Losing the person the whole thing was for",value:"loses the anchor — the one who made it worth doing"},
+      {id:"c",label:"Discovering the truth was a lie from the start",value:"foundational deception, the mission was built on false premise"},
+      {id:"d",label:"You're the weapon and the collateral is people you love",value:"when the cost falls on the ones they protect"}]},
+    {id:"pp_promise",q:"What promise have you made to yourself that you will not break?",options:[
+      {id:"a",label:"Never lose yourself in the role you've been given",value:"remains human, never becomes the mask"},
+      {id:"b",label:"Never stop fighting, even when the reason gets complicated",value:"relentless — the fight continues even when the reason blurs"},
+      {id:"c",label:"Make it mean something — the sacrifice has to count",value:"the cost demands purpose, will not let it be wasted"},
+      {id:"d",label:"Come back — no matter what it takes, you come back",value:"survival promise, always comes back from the impossible"}]}
+  ]},
+  {section:"Visual Identity",questions:[
+    {id:"pp_color_feel",q:"What color or combination feels like you — not what you like, but what you are?",options:[
+      {id:"a",label:"Deep absorbing darks — black, charcoal, void",value:"deep darks, void palette, absence as presence"},
+      {id:"b",label:"Charged metallics — silver, gold, bronze, chrome",value:"metallic charge, earned brightness, forged quality"},
+      {id:"c",label:"Rich saturated single color — one dominant tone",value:"single dominant saturated color, unwavering identity"},
+      {id:"d",label:"Contrast — two colors in tension, neither wins",value:"high-contrast duality, two forces held in tension"}]},
+    {id:"pp_movement",q:"How do you move your body when things get real?",options:[
+      {id:"a",label:"Controlled and minimal — nothing wasted, everything deliberate",value:"economic movement, zero wasted motion, deliberate"},
+      {id:"b",label:"Explosive and direct — shortest path, maximum force",value:"explosive directness, straight-line force, no ceremony"},
+      {id:"c",label:"Fluid and adaptive — you redirect rather than resist",value:"fluid adaptation, redirects force, movement like water"},
+      {id:"d",label:"Unpredictable — you break patterns on purpose",value:"pattern-breaking, unpredictable movement, impossible to read"}]},
+    {id:"pp_power_visual",q:"What does your power leave behind when it touches the world?",options:[
+      {id:"a",label:"Marks — scorch, fracture, echo, afterimage",value:"leaves marks: scorched ground, fractured surfaces, afterimages"},
+      {id:"b",label:"Stillness — things simply stop, or never move again",value:"absolute stillness, things stop or cease — absence as power"},
+      {id:"c",label:"Light or energy — visible, dramatic, lit up",value:"visible energy signature, dramatic light, seen from distance"},
+      {id:"d",label:"Disruption — things nearby react to you, not just your target",value:"environmental disruption, proximity effect, field presence"}]},
+    {id:"pp_power_texture",q:"If your power had a material or texture — what is it made of?",options:[
+      {id:"a",label:"Something forged — steel, obsidian, iron",value:"forged material, hard-edged, formed under pressure"},
+      {id:"b",label:"Something living — bone, vine, organism",value:"organic, living material, biological and primal"},
+      {id:"c",label:"Something elemental — fire, void, lightning, water",value:"elemental, ancient force, natural phenomenon as weapon"},
+      {id:"d",label:"Something built — circuitry, data, engineered systems",value:"constructed, technological, engineered precision"}]},
+    {id:"pp_symbol",q:"What symbol, shape, or icon captures your identity?",options:[
+      {id:"a",label:"Something unbreakable — shield, wall, anchor",value:"unbreakable symbol, shield or anchor, immovable object"},
+      {id:"b",label:"Something sharp — blade, arrow, fracture line",value:"sharp symbol, blade or fracture, cutting through"},
+      {id:"c",label:"Something in motion — wave, spiral, orbit",value:"kinetic symbol, continuous motion, never at rest"},
+      {id:"d",label:"Something rare — eclipse, storm, singularity",value:"rare phenomenon symbol, unique in the world, singular event"}]}
+  ]}
+];
 
 const TIER_DEFS=[{id:"S",label:"S",color:"#D4AF37"},{id:"A",label:"A",color:"#5DCAA5"},{id:"B",label:"B",color:"#5EB1FF"},{id:"C",label:"C",color:"#888780"}];
 const autoScore=m=>{const v=Object.values(m.stats||{});return v.length?Math.round(v.reduce((a,b)=>a+b,0)/v.length):0;};
@@ -929,6 +1066,9 @@ function App(){
   const[deepMode,setDeepMode]=useState(false);
   const[deepPhase,setDeepPhase]=useState(0);
   const[deepAnswers,setDeepAnswers]=useState({});
+  const[profileMode,setProfileMode]=useState(false);
+  const[profileStep,setProfileStep]=useState(0);
+  const[profileAnswers,setProfileAnswers]=useState({});
   // ── Meta AI / Tripo3D preferences ────────────────────────────────────────
   const[hasMetaAI,setHasMetaAI]=useState(false);
   const[tripo3DTarget,setTripo3DTarget]=useState(null);
@@ -1253,7 +1393,7 @@ function App(){
         persist("forge-family",updatedLinks);
       }
     }
-    setRResult(null);setRAnswers({});setRName("");setRHeroName("");setRStep(0);setRNkAlign("neutral");setRTeamRank("operative");setRGender("Male");setRAge("");setRBirthYear("");setRRace(null);setRStoryDir("");setDeepAnswers({});setDeepPhase(0);setRFamilyCharId("");setRFamilyRelation("parent");setTab("roster");
+    setRResult(null);setRAnswers({});setRName("");setRHeroName("");setRStep(0);setRNkAlign("neutral");setRTeamRank("operative");setRGender("Male");setRAge("");setRBirthYear("");setRRace(null);setRStoryDir("");setDeepAnswers({});setDeepPhase(0);setProfileAnswers({});setProfileStep(0);setRFamilyCharId("");setRFamilyRelation("parent");setTab("roster");
   };
 
   const generateDeepRecruit=async()=>{
@@ -1283,6 +1423,23 @@ function App(){
     setRLoading(false);setAiStreamText("");
   };
 
+  const generatePersonalProfile=async()=>{
+    setRLoading(true);setRResult(null);setAiStreamText("");
+    const hex=ACCENT_COLORS.find(a=>a.id===rAccent)?.hex||"#A32D2D";
+    const existingNames=activeRoster.map(m=>m.heroName).join(", ");
+    const profileContext=PERSONAL_PROFILE.map(sec=>`== ${sec.section} ==\n`+sec.questions.map(q=>{const opt=q.options.find(o=>o.id===profileAnswers[q.id]);return opt?`${q.q}\n→ ${opt.value}`:"";}).filter(Boolean).join("\n")).join("\n\n");
+    const answerCount=Object.keys(profileAnswers).length;
+    try{
+      const raceStr=raceLabel(rRace);
+      const raceLoreStr=raceLore(rRace);
+      const p=await callAI(`Create a hero built entirely from this person's real psychological and physical profile. JSON only.\n\nThis is not a generic hero — every power, origin, and trait must grow directly from who this specific person actually is. Powers are not chosen from archetypes; they emerge from the person's specific strengths, wounds, and way of moving through the world.\n\nReal name: ${rName||"Unknown"}\nGender: ${rGender}\nAge: ${rAge||(rBirthYear?String(2026-parseInt(rBirthYear)):"Unknown")}\n${rBirthYear?`Birth year: ${rBirthYear}\n`:""}Race: ${raceStr||"Unspecified"}\n${raceLoreStr?`Race lore (bake into origin): ${raceLoreStr}\n`:""}${rStoryDir.trim()?`Story direction: ${rStoryDir.trim()}\n`:""}Team: ${activeTeam.name}\nAccent color: ${hex}\nTeam alignment: ${rNkAlign}\nExisting names (must be different): ${existingNames||"none"}\n${rHeroName?`Hero name: ${rHeroName} (use exactly this name)`:""}\nIMPORTANT: Use correct pronouns (${pronounOf(rGender)}/${pronounOf(rGender)==="they"?"them":pronounOf(rGender)==="she"?"her":"him"}) throughout.\n\nPERSONAL PROFILE — 25 answers defining who this person actually is:\n\n${profileContext}\n\nBuild the hero from these truths. Powers must be an externalization of their actual traits, wounds, and way of being. The origin must reflect their real emotional core. Costume and FX must be the visual language of who they are — not what looks cool. Do not default to generic archetypes.\n\n{"heroName":"${rHeroName||"hero name that fits who they actually are"}","tagline":"one sentence that captures their specific truth","role":"Role · Descriptor drawn from their actual function in life","origin":"3-4 sentences — direct reflection of their wound, proving ground, and what they protect","powers":[{"name":"Power name traceable to their specific trait","desc":"How this power looks and works — directly from who they are"},{"name":"Power name","desc":"visual desc"},{"name":"Power name","desc":"visual desc"},{"name":"Power name","desc":"visual desc"}],"stats":{"Power":75,"Speed":70,"Tech":60,"Intellect":80,"Will":85},"costumeDesc":"Costume built from their color, movement, and symbol answers","powerFX":"Exact visual FX using ${hex} — must match their power texture and visual signature answers","consistencyNotes":"Design rules grounded in their specific identity choices","dna":["Archetype or character whose energy mirrors this profile","Second reference"]}`,t=>setAiStreamText(t));
+      const num=String(activeRoster.length+1).padStart(2,"0");
+      const computedAge=rAge||(rBirthYear?String(2026-parseInt(rBirthYear)):"");
+      setRResult({id:`char-${Date.now()}`,teamId:activeTeamId,realName:rName||"Unknown",gender:rGender,age:computedAge,birthYear:rBirthYear||"",race:rRace,species:raceLabel(rRace)||"Human",color:hex,colorLight:hex+"CC",initials:rName?rName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",number:num,isCustom:true,nkAlignment:rNkAlign,teamRank:rTeamRank,profileLore:answerCount,...p});
+    }catch(e){if(e.message==="Generation cancelled.")setRResult(null);else setRResult({error:true,msg:e.message});}
+    setRLoading(false);setAiStreamText("");
+  };
+
   const saveBareRecruit=()=>{
     const hex=ACCENT_COLORS.find(a=>a.id===rAccent)?.hex||"#A32D2D";
     const num=String(activeRoster.length+1).padStart(2,"0");
@@ -1291,7 +1448,7 @@ function App(){
     const newRosters={...teamRosters,[activeTeamId]:[...(teamRosters[activeTeamId]||[]),bare]};
     setTeamRosters(newRosters);persist("forge-rosters",newRosters);
     if(rFamilyCharId){const rel=FAMILY_RELATIONS.find(r=>r.id===rFamilyRelation);if(rel){const newLink={id:`fl-${Date.now()}`,a:bare.id,b:rFamilyCharId,aRelation:rel.label,bRelation:rel.inverse};const updatedLinks=[...familyLinks,newLink];setFamilyLinks(updatedLinks);persist("forge-family",updatedLinks);}}
-    setRResult(null);setRAnswers({});setRName("");setRHeroName("");setRStep(0);setRNkAlign("neutral");setRTeamRank("operative");setRGender("Male");setRAge("");setRBirthYear("");setRRace(null);setRStoryDir("");setDeepAnswers({});setDeepPhase(0);setRFamilyCharId("");setRFamilyRelation("parent");setTab("roster");
+    setRResult(null);setRAnswers({});setRName("");setRHeroName("");setRStep(0);setRNkAlign("neutral");setRTeamRank("operative");setRGender("Male");setRAge("");setRBirthYear("");setRRace(null);setRStoryDir("");setDeepAnswers({});setDeepPhase(0);setProfileAnswers({});setProfileStep(0);setRFamilyCharId("");setRFamilyRelation("parent");setTab("roster");
   };
 
   const generateTripo3D=async(member)=>{
@@ -1930,44 +2087,54 @@ function App(){
         <div style={{padding:"10px 14px",background:`${activeTeam.color}0A`,border:`1px solid ${activeTeam.color}33`,borderRadius:8,fontSize:11,color:"var(--text2)",marginBottom:18}}>
           Recruiting for: <strong style={{color:activeTeam.color}}>{activeTeam.name}</strong> · Switch teams in the Teams tab to recruit for a different team.
         </div>
-        {/* Quick / Deep mode toggle */}
+        {/* Mode toggle */}
         <div style={{display:"flex",gap:8,marginBottom:18}}>
-          <button onClick={()=>{setDeepMode(false);setDeepPhase(0);setDeepAnswers({});setRStep(0);setRResult(null);}} style={{flex:1,padding:"10px",background:!deepMode?`${activeTeam.color}16`:"var(--bg3)",border:`1px solid ${!deepMode?activeTeam.color:"var(--border2)"}`,borderRadius:9,cursor:"pointer",fontFamily:"monospace",textAlign:"center"}}>
-            <div style={{fontSize:12,fontWeight:!deepMode?"bold":"normal",color:!deepMode?"var(--text-primary)":"var(--text2)"}}>⚡ Quick Forge</div>
+          <button onClick={()=>{setDeepMode(false);setProfileMode(false);setDeepPhase(0);setDeepAnswers({});setProfileStep(0);setProfileAnswers({});setRStep(0);setRResult(null);}} style={{flex:1,padding:"10px",background:!deepMode&&!profileMode?`${activeTeam.color}16`:"var(--bg3)",border:`1px solid ${!deepMode&&!profileMode?activeTeam.color:"var(--border2)"}`,borderRadius:9,cursor:"pointer",fontFamily:"monospace",textAlign:"center"}}>
+            <div style={{fontSize:12,fontWeight:!deepMode&&!profileMode?"bold":"normal",color:!deepMode&&!profileMode?"var(--text-primary)":"var(--text2)"}}>⚡ Quick Forge</div>
             <div style={{fontSize:9,color:"var(--text3)",marginTop:2}}>6 questions, fast result</div>
           </button>
-          <button onClick={()=>{setDeepMode(true);setDeepPhase(0);setDeepAnswers({});setRStep(0);setRResult(null);}} style={{flex:1,padding:"10px",background:deepMode?`${activeTeam.color}16`:"var(--bg3)",border:`1px solid ${deepMode?activeTeam.color:"var(--border2)"}`,borderRadius:9,cursor:"pointer",fontFamily:"monospace",textAlign:"center"}}>
+          <button onClick={()=>{setDeepMode(true);setProfileMode(false);setDeepPhase(0);setDeepAnswers({});setProfileStep(0);setProfileAnswers({});setRStep(0);setRResult(null);}} style={{flex:1,padding:"10px",background:deepMode?`${activeTeam.color}16`:"var(--bg3)",border:`1px solid ${deepMode?activeTeam.color:"var(--border2)"}`,borderRadius:9,cursor:"pointer",fontFamily:"monospace",textAlign:"center"}}>
             <div style={{fontSize:12,fontWeight:deepMode?"bold":"normal",color:deepMode?"var(--text-primary)":"var(--text2)"}}>📚 Deep Forge</div>
             <div style={{fontSize:9,color:"var(--text3)",marginTop:2}}>7 lore phases, richer result</div>
+          </button>
+          <button onClick={()=>{setProfileMode(true);setDeepMode(false);setDeepPhase(0);setDeepAnswers({});setProfileStep(0);setProfileAnswers({});setRStep(0);setRResult(null);}} style={{flex:1,padding:"10px",background:profileMode?`${activeTeam.color}16`:"var(--bg3)",border:`1px solid ${profileMode?activeTeam.color:"var(--border2)"}`,borderRadius:9,cursor:"pointer",fontFamily:"monospace",textAlign:"center"}}>
+            <div style={{fontSize:12,fontWeight:profileMode?"bold":"normal",color:profileMode?"var(--text-primary)":"var(--text2)"}}>🧬 Personal Profile</div>
+            <div style={{fontSize:9,color:"var(--text3)",marginTop:2}}>25 questions, built from you</div>
           </button>
         </div>
         <div style={{marginBottom:20}}>
           {/* Progress bar */}
           <div style={{height:3,background:"rgba(255,255,255,0.06)",borderRadius:2,marginBottom:6}}>
             <div style={{height:3,background:activeTeam.color,borderRadius:2,transition:"width 0.3s ease",
-              width:rResult?"100%":deepMode
-                ?`${(deepPhase/(DEEP_LORE_PHASES.length+1))*100}%`
-                :`${(rStep/(RECRUIT_QUIZ.length+1))*100}%`
+              width:rResult?"100%":profileMode
+                ?`${(profileStep/6)*100}%`
+                :deepMode
+                  ?`${(deepPhase/(DEEP_LORE_PHASES.length+1))*100}%`
+                  :`${(rStep/(RECRUIT_QUIZ.length+1))*100}%`
             }}/>
           </div>
           <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
             <span style={{fontSize:10,color:"var(--text2)"}}>
-              {rResult?"Review recruit":deepMode
-                ?(deepPhase===0?"Identity":`Phase ${deepPhase} of ${DEEP_LORE_PHASES.length} — ${DEEP_LORE_PHASES[deepPhase-1]?.title||""}`)
-                :(rStep===0?"Identity":`Question ${rStep} of ${RECRUIT_QUIZ.length}`)
+              {rResult?"Review recruit":profileMode
+                ?(profileStep===0?"Identity":`${PERSONAL_PROFILE[profileStep-1]?.section} — ${profileStep} of 5`)
+                :deepMode
+                  ?(deepPhase===0?"Identity":`Phase ${deepPhase} of ${DEEP_LORE_PHASES.length} — ${DEEP_LORE_PHASES[deepPhase-1]?.title||""}`)
+                  :(rStep===0?"Identity":`Question ${rStep} of ${RECRUIT_QUIZ.length}`)
               }
             </span>
             <span style={{fontSize:10,color:activeTeam.color}}>
-              {rResult?"Complete":deepMode
-                ?`${Math.round((deepPhase/(DEEP_LORE_PHASES.length+1))*100)}%`
-                :`${Math.round((rStep/(RECRUIT_QUIZ.length+1))*100)}%`
+              {rResult?"Complete":profileMode
+                ?`${Math.round((profileStep/6)*100)}%`
+                :deepMode
+                  ?`${Math.round((deepPhase/(DEEP_LORE_PHASES.length+1))*100)}%`
+                  :`${Math.round((rStep/(RECRUIT_QUIZ.length+1))*100)}%`
               }
             </span>
           </div>
         </div>
 
-        {/* ── Step 0: Identity (both modes) ── */}
-        {!rResult&&((!deepMode&&rStep===0)||(deepMode&&deepPhase===0))&&(<div style={s.card}>
+        {/* ── Step 0: Identity (all modes) ── */}
+        {!rResult&&((!deepMode&&!profileMode&&rStep===0)||(deepMode&&deepPhase===0)||(profileMode&&profileStep===0))&&(<div style={s.card}>
           <div style={{fontSize:15,fontWeight:"bold",color:"var(--text-primary)",marginBottom:14}}>Who is this recruit?</div>
           <span style={s.lbl}>Hero Name <span style={{color:"#E07070"}}>*</span></span>
           <div style={{display:"flex",gap:6,marginBottom:14}}><input type="text" placeholder="e.g. Ironhawk" value={rHeroName} onChange={e=>setRHeroName(e.target.value)} style={{flex:1,borderColor:!rHeroName.trim()?"rgba(224,112,112,0.5)":undefined}}/><button onClick={()=>setRHeroName(randHeroName())} title="Random hero name" style={{padding:"0 12px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:16,flexShrink:0}}>⚄</button></div>
@@ -2044,8 +2211,8 @@ function App(){
             );
           })()}
           {(!rHeroName.trim()||!rName.trim()||!rRace)&&<div style={{fontSize:10,color:"#E07070",marginBottom:8,fontFamily:"monospace"}}>* Hero Name, Real Name, and Race are required</div>}
-          <button style={s.bigBtn(!rHeroName.trim()||!rName.trim()||!rRace,activeTeam.color)} disabled={!rHeroName.trim()||!rName.trim()||!rRace} onClick={()=>deepMode?setDeepPhase(1):setRStep(1)}>
-            {deepMode?"Begin Deep Forge →":"Begin Assessment →"}
+          <button style={s.bigBtn(!rHeroName.trim()||!rName.trim()||!rRace,activeTeam.color)} disabled={!rHeroName.trim()||!rName.trim()||!rRace} onClick={()=>deepMode?setDeepPhase(1):profileMode?setProfileStep(1):setRStep(1)}>
+            {deepMode?"Begin Deep Forge →":profileMode?"Begin Profile →":"Begin Assessment →"}
           </button>
         </div>)}
 
@@ -2078,6 +2245,29 @@ function App(){
           </>);
         })()}
 
+        {/* ── Personal Profile sections ── */}
+        {!rResult&&profileMode&&profileStep>=1&&profileStep<=5&&(()=>{
+          const sec=PERSONAL_PROFILE[profileStep-1];
+          const secComplete=sec.questions.every(q=>profileAnswers[q.id]);
+          const isLast=profileStep===5;
+          return(<div style={s.card}>
+            <div style={{fontSize:9,letterSpacing:"0.12em",color:`${rHex}88`,textTransform:"uppercase",marginBottom:12}}>{sec.section} · {profileStep} of 5</div>
+            {sec.questions.map(q=>(<div key={q.id} style={{marginBottom:14}}>
+              <div style={{fontSize:13,fontWeight:"bold",color:"var(--text-primary)",marginBottom:8,lineHeight:1.4}}>{q.q}</div>
+              {q.options.map(opt=><button key={opt.id} onClick={()=>setProfileAnswers(p=>({...p,[q.id]:opt.id}))} style={s.optBtn(profileAnswers[q.id]===opt.id,rHex)}>{opt.label}</button>)}
+            </div>))}
+            <div style={{display:"flex",gap:10,marginTop:6}}>
+              <button onClick={()=>setProfileStep(p=>Math.max(0,p-1))} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text3)",fontSize:10.5,fontFamily:"monospace"}}>← Back</button>
+              {!isLast&&<button disabled={!secComplete} onClick={()=>setProfileStep(p=>p+1)} style={{flex:2,...s.bigBtn(!secComplete,rHex),marginTop:0}}>
+                {secComplete?`Next: ${PERSONAL_PROFILE[profileStep]?.section} →`:"Answer all questions to continue"}
+              </button>}
+              {isLast&&<button disabled={!secComplete||rLoading} onClick={generatePersonalProfile} style={{flex:2,...s.bigBtn(!secComplete||rLoading,rHex),marginTop:0}}>
+                {rLoading?"Forging your hero...":secComplete?"Generate My Hero →":"Answer all questions"}
+              </button>}
+            </div>
+          </div>);
+        })()}
+
         {rLoading&&<div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
           {aiStreamText&&<div style={{flex:1,padding:"10px 12px",background:"var(--bg2)",border:"1px solid var(--border2)",borderRadius:8,fontFamily:"monospace",fontSize:9,color:"var(--text3)",maxHeight:72,overflowY:"auto",whiteSpace:"pre-wrap",wordBreak:"break-all",lineHeight:1.5}}>{aiStreamText}</div>}
           {!aiStreamText&&<div style={{flex:1,padding:"10px 12px",background:"var(--bg2)",border:"1px solid var(--border2)",borderRadius:8,fontSize:9,color:"var(--text3)",fontFamily:"monospace"}}>Waiting for model response…</div>}
@@ -2092,12 +2282,13 @@ function App(){
               <div style={{fontSize:17,fontWeight:"bold",color:"var(--text-primary)"}}>{rResult.heroName}</div>
               <div style={{fontSize:11,color:rResult.color,marginTop:2}}>{rResult.realName} · {rResult.role}</div>
               {rResult.deepLore&&<div style={{fontSize:9,color:`${rResult.color}88`,marginTop:3,letterSpacing:"0.08em"}}>DEEP FORGE · {DEEP_LORE_PHASES.length} phases</div>}
+              {rResult.profileLore&&<div style={{fontSize:9,color:`${rResult.color}88`,marginTop:3,letterSpacing:"0.08em"}}>🧬 PERSONAL PROFILE · {rResult.profileLore} answers</div>}
             </div>
             {rResult.nkAlignment&&rResult.nkAlignment!=="base"&&<AlignmentBadge alignment={rResult.nkAlignment}/>}
           </div>
           <CharacterPage member={rResult} imageUrl={null} teamName={activeTeam.name} teamColor={activeTeam.color}/>
           <div style={{display:"flex",gap:10,marginTop:14}}>
-            <button onClick={()=>{setRResult(null);setRStep(0);setRAnswers({});setDeepPhase(0);setDeepAnswers({});}} style={{flex:1,padding:"11px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:10.5,fontFamily:"monospace"}}>Regenerate</button>
+            <button onClick={()=>{setRResult(null);setRStep(0);setRAnswers({});setDeepPhase(0);setDeepAnswers({});setProfileStep(0);setProfileAnswers({});}} style={{flex:1,padding:"11px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:10.5,fontFamily:"monospace"}}>Regenerate</button>
             <button onClick={addRecruit} style={{flex:2,padding:"11px",background:`${activeTeam.color}16`,border:`1px solid ${activeTeam.color}`,borderRadius:8,cursor:"pointer",color:activeTeam.color,fontSize:10.5,letterSpacing:"0.1em",textTransform:"uppercase",fontFamily:"monospace"}}>Add to {activeTeam.abbr} →</button>
           </div>
         </>)}
