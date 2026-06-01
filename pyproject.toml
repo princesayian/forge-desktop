@@ -1,0 +1,98 @@
+[project]
+name = "forge-desktop"
+version = "1.2.0"
+description = "Superhero Forge — character/team/story builder for the Nocturnal Knights universe"
+authors = [
+    {name = "Jon Bethea"},
+]
+license = "MIT"
+readme = "README.md"
+requires-python = ">=3.9,<3.14"
+keywords = ["superhero", "character-builder", "ollama", "flask", "nocturnal-knights"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: End Users/Desktop",
+    "Operating System :: MacOS",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Games/Entertainment",
+    "Topic :: Multimedia :: Graphics",
+]
+
+# Runtime dependencies (was: requirements.txt)
+dependencies = [
+    "flask>=3.0.0",
+    "pywebview>=5.0.0",
+    "requests>=2.31.0",
+    "reportlab>=4.0.0",
+]
+
+# Optional platform-specific PyWebView backends (install via `poetry install -E <platform>`)
+[project.optional-dependencies]
+macos = ["pywebview>=5.0.0"]
+windows = ["pywebview[winforms]>=5.0.0"]
+linux = ["pywebview[gtk]>=5.0.0"]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=5.0.0",
+    "flake8>=7.0.0",
+    "black>=24.0.0",
+    "mypy>=1.10.0",
+]
+
+[project.urls]
+Repository = "https://github.com/princesayian/forge-desktop"
+
+# -----------------------------------------------------------------------
+# Poetry-specific configuration
+# -----------------------------------------------------------------------
+[tool.poetry]
+package-mode = false
+
+[build-system]
+requires = ["poetry-core>=2.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+# -----------------------------------------------------------------------
+# Tool config
+# -----------------------------------------------------------------------
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short --strict-markers"
+filterwarnings = [
+    "ignore::urllib3.exceptions.NotOpenSSLWarning",
+]
+
+[tool.black]
+line-length = 100
+target-version = ["py39", "py310", "py311", "py312"]
+
+[tool.mypy]
+python_version = "3.9"
+ignore_missing_imports = true
+warn_unused_ignores = true
+
+[tool.coverage.run]
+source = ["."]
+omit = [
+    "tests/*",
+    "setup.py",
+    "vendor/*",
+    "data/*",
+    "images/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+]
