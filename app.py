@@ -262,6 +262,9 @@ def _write_lock():
     with open(LOCK_FILE, "w") as f:
         f.write(str(os.getpid()))
 
+def find_network_instance():
+    return None
+
 def _remove_lock():
     """Remove the lock file only if it holds our PID."""
     if not os.path.exists(LOCK_FILE):
