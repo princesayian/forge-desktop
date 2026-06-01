@@ -1,8 +1,10 @@
-﻿vendor/
+vendor/
 __pycache__/
 *.pyc
 config.json
 logs/
 .forge.lock
-webview-data/
-.env
+data/
+images/
+.claude/
+mnt/
