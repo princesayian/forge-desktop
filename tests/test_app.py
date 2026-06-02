@@ -684,6 +684,56 @@ class TestStaticRoutes(ForgeTestCase):
         r = self.client.get("/health")
         self.assertEqual(r.status_code, 200)
 
+    # ── New template-based UI ─────────────────────────────────────────
+    def test_index_renders_base_template(self):
+        """`/` returns a Jinja2-rendered HTML page, not the old static file."""
+        r = self.client.get("/")
+        self.assertEqual(r.status_code, 200)
+        html = r.data.decode()
+        # Bootstrap + Alpine CDN
+        self.assertIn("bootstrap@5", html)
+        self.assertIn("alpinejs", html)
+        # App shell
+        self.assertIn("Superhero Forge", html)
+        # Version meta tag
+        self.assertIn('name="forge-version"', html)
+        # All five tabs present
+        for tab in ["teams", "characters", "villains", "story", "settings"]:
+            self.assertIn(f"activeTab === '{tab}'", html)
+
+    def test_index_has_version_meta(self):
+        r = self.client.get("/")
+        html = r.data.decode()
+        # Version tag should be present and non-empty
+        import re
+        m = re.search(r'<meta name="forge-version" content="([^"]+)"', html)
+        self.assertTrue(m is not None, "forge-version meta tag missing")
+        self.assertTrue(len(m.group(1)) > 0)
+
+    def test_index_includes_teams_partial(self):
+        r = self.client.get("/")
+        html = r.data.decode()
+        # Teams tab content
+        self.assertIn("New Team", html)
+        self.assertIn("Roster", html)
+        # Alpine bindings
+        self.assertIn("openTeamCreator", html)
+        self.assertIn("saveTeam", html)
+        self.assertIn("deleteTeam", html)
+
+    def test_index_includes_settings_partial(self):
+        r = self.client.get("/")
+        html = r.data.decode()
+        self.assertIn("Ollama Status", html)
+        self.assertIn("Active Model", html)
+        self.assertIn("Connection", html)
+
+    def test_static_assets_serve(self):
+        for path in ["/static/css/theme.css", "/static/js/app.js"]:
+            r = self.client.get(path)
+            self.assertEqual(r.status_code, 200, f"{path} not served")
+            self.assertGreater(len(r.data), 0, f"{path} is empty")
+
 
 # ===========================================================================
 # 15. PDF export

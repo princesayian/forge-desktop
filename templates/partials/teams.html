@@ -1,0 +1,281 @@
+<!--
+  Teams tab — POC for the new Jinja2 + Alpine + Bootstrap stack.
+  Backed by /api/store (forge-teams, forge-rosters, forge-removed keys).
+  Persists on every change. No backend changes required.
+-->
+
+<!-- ── Toolbar ──────────────────────────────────────────────────────── -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <small class="text-muted text-uppercase" style="letter-spacing: 0.18em;">Teams</small>
+    <h4 class="mb-0" x-text="teams.length + ' ' + (teams.length === 1 ? 'team' : 'teams')"></h4>
+  </div>
+  <button class="btn btn-primary btn-sm" @click="openTeamCreator()">
+    <span style="font-size: 1.1em;">+</span> New Team
+  </button>
+</div>
+
+<!-- ── Loading state ────────────────────────────────────────────────── -->
+<div x-show="teamsLoading" class="text-center text-muted py-5">
+  <div class="spinner-border spinner-border-sm"></div>
+  Loading teams…
+</div>
+
+<!-- ── Empty state ──────────────────────────────────────────────────── -->
+<div x-show="!teamsLoading && customTeams.length === 0"
+     class="text-center text-muted py-5">
+  <p class="mb-1">You haven't created any teams yet.</p>
+  <p class="small">The Nocturnal Knights is your default team. Click <strong>+ New Team</strong> to add more.</p>
+</div>
+
+<!-- ── Team cards grid ──────────────────────────────────────────────── -->
+<div x-show="!teamsLoading" class="row g-3 mb-4">
+  <template x-for="t in teams" :key="t.id">
+    <div class="col-md-6 col-lg-4">
+      <div class="card team-card h-100"
+           :class="t.id === activeTeamId && 'team-card-active'"
+           :style="t.id === activeTeamId && `border-color: ${t.color}; background: ${t.color}11;`"
+           @click="setActiveTeam(t.id)"
+           role="button">
+
+        <div class="card-body">
+          <!-- Header: avatar + name + actions -->
+          <div class="d-flex align-items-start gap-2 mb-2">
+            <div class="team-avatar"
+                 :style="`background: ${t.color}22; border: 1px solid ${t.color}66; color: ${t.color};`">
+              <span x-text="t.abbr"></span>
+            </div>
+            <div class="flex-grow-1">
+              <div class="fw-semibold" x-text="t.name"></div>
+              <div class="small text-muted">
+                <span x-text="(TEAM_TYPES.find(x => x.id === t.type) || {}).label || t.type"></span>
+              </div>
+            </div>
+            <span x-show="t.isDefault"
+                  class="badge text-bg-secondary"
+                  title="Default team — read-only">DEFAULT</span>
+          </div>
+
+          <!-- Description -->
+          <p class="small text-muted mb-2" x-text="t.description || 'No description.'"></p>
+
+          <!-- Alignment + member count -->
+          <div class="d-flex justify-content-between align-items-center small">
+            <span class="badge"
+                  :style="`background: ${(NK_ALIGNMENTS.find(a => a.id === (t.nkAlignment === 'base' ? 'allied' : t.nkAlignment)) || {}).color || '#888'}33; color: ${(NK_ALIGNMENTS.find(a => a.id === (t.nkAlignment === 'base' ? 'allied' : t.nkAlignment)) || {}).color || '#888'};`"
+                  x-text="t.nkAlignment === 'base' ? 'NK Core' : (NK_ALIGNMENTS.find(a => a.id === t.nkAlignment) || {}).label || t.nkAlignment"></span>
+            <span class="text-muted" x-text="getActiveRoster(t.id).length + ' members'"></span>
+          </div>
+        </div>
+
+        <!-- Card footer with actions (only for non-default) -->
+        <div class="card-footer d-flex gap-2"
+             x-show="!t.isDefault"
+             @click.stop>
+          <button class="btn btn-sm btn-outline-secondary flex-grow-1"
+                  @click="openTeamEditor(t)">Edit</button>
+          <button class="btn btn-sm btn-outline-danger"
+                  @click="deleteTeam(t)">Delete</button>
+        </div>
+      </div>
+    </div>
+  </template>
+</div>
+
+<!-- ── Active team detail ───────────────────────────────────────────── -->
+<div x-show="!teamsLoading && activeTeam"
+     class="card mb-4"
+     :style="`border-color: ${activeTeam.color}55;`">
+  <div class="card-header d-flex justify-content-between align-items-center"
+       :style="`background: ${activeTeam.color}11;`">
+    <div>
+      <small class="text-muted text-uppercase" style="letter-spacing: 0.18em;">Active Team</small>
+      <h5 class="mb-0" x-text="activeTeam.name"></h5>
+    </div>
+    <button class="btn btn-sm btn-outline-primary" @click="openTeamEditor(activeTeam)">
+      ✎ Edit Team
+    </button>
+  </div>
+  <div class="card-body">
+
+    <!-- Team lore -->
+    <div class="row g-3 mb-3">
+      <div class="col-md-6">
+        <small class="text-muted text-uppercase d-block mb-1" style="letter-spacing: 0.15em;">Motto</small>
+        <p class="fst-italic" x-text="activeTeam.motto || '—'"></p>
+      </div>
+      <div class="col-md-6">
+        <small class="text-muted text-uppercase d-block mb-1" style="letter-spacing: 0.15em;">Origin</small>
+        <p class="small" x-text="activeTeam.origin || '—'"></p>
+      </div>
+    </div>
+
+    <hr style="border-color: rgba(255,255,255,0.08);">
+
+    <!-- Roster -->
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <small class="text-muted text-uppercase" style="letter-spacing: 0.18em;">Roster</small>
+      <span class="badge text-bg-dark" x-text="getActiveRoster().length + ' members'"></span>
+    </div>
+
+    <template x-if="getActiveRoster().length === 0">
+      <div class="text-muted small py-3 text-center">
+        <template x-if="activeTeam.isDefault">
+          <span>The Nocturnal Knights roster is managed on the Characters tab.</span>
+        </template>
+        <template x-if="!activeTeam.isDefault">
+          <span>No members yet. Add characters to this team from the Characters tab.</span>
+        </template>
+      </div>
+    </template>
+
+    <div class="row g-2">
+      <template x-for="m in getActiveRoster()" :key="m.id">
+        <div class="col-md-6 col-lg-4">
+          <div class="member-tile p-2"
+               :style="`background: ${m.color || '#888'}0A; border: 1px solid ${m.color || '#888'}33;`">
+            <div class="d-flex align-items-center gap-2">
+              <div class="member-avatar"
+                   :style="`background: ${m.color || '#888'}22; color: ${m.color || '#888'};`"
+                   x-text="m.initials || m.heroName?.slice(0,2).toUpperCase() || '?'"></div>
+              <div class="flex-grow-1 min-w-0">
+                <div class="fw-semibold small text-truncate" x-text="m.heroName"></div>
+                <div class="text-muted" style="font-size: 0.7rem;" x-text="m.realName || ''"></div>
+              </div>
+            </div>
+            <div class="mt-1 small text-muted text-truncate"
+                 x-text="(m.role || '').toUpperCase()"></div>
+          </div>
+        </div>
+      </template>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── Team editor modal (create + edit) ────────────────────────────── -->
+<div class="modal fade show"
+     :class="showTeamEditor && 'd-block'"
+     x-show="showTeamEditor"
+     x-transition.opacity
+     style="background: rgba(0,0,0,0.7); z-index: 1050;"
+     @keydown.escape.window="closeTeamEditor()">
+
+  <div class="modal-dialog modal-dialog-centered modal-lg" @click.stop>
+    <div class="modal-content" style="background: var(--forge-bg);">
+
+      <div class="modal-header" style="border-color: rgba(255,255,255,0.1);">
+        <h5 class="modal-title" x-text="editingTeam ? 'Edit Team' : 'New Team'"></h5>
+        <button type="button" class="btn-close btn-close-white" @click="closeTeamEditor()"></button>
+      </div>
+
+      <form @submit.prevent="saveTeam({
+        name: $event.target.name.value.trim(),
+        abbr: $event.target.abbr.value.trim() || autoAbbr($event.target.name.value),
+        color: $event.target.color.value,
+        colorLight: $event.target.color.value + 'CC',
+        type: $event.target.type.value,
+        nkAlignment: $event.target.align.value,
+        description: $event.target.desc.value,
+        motto: $event.target.motto.value,
+        origin: $event.target.origin.value,
+      })">
+
+        <div class="modal-body">
+
+          <!-- Name + Abbr -->
+          <div class="row g-3 mb-3">
+            <div class="col-md-7">
+              <label class="form-label small text-muted">Team Name</label>
+              <input type="text" name="name" class="form-control" required
+                     :value="editingTeam?.name || ''"
+                     placeholder="e.g. Midnight Sentinels">
+            </div>
+            <div class="col-md-5">
+              <label class="form-label small text-muted">Abbreviation</label>
+              <input type="text" name="abbr" class="form-control font-monospace"
+                     maxlength="4"
+                     :value="editingTeam?.abbr || ''"
+                     placeholder="MS">
+              <div class="form-text">Auto-generated from name if blank</div>
+            </div>
+          </div>
+
+          <!-- Color -->
+          <div class="mb-3">
+            <label class="form-label small text-muted">Color</label>
+            <div class="d-flex flex-wrap gap-2 align-items-center">
+              <template x-for="c in TEAM_COLORS" :key="c.id">
+                <label class="color-swatch"
+                       :title="c.label"
+                       :style="`background: ${c.hex};`">
+                  <input type="radio" name="color" :value="c.hex"
+                         :checked="(editingTeam?.color || '#534AB7') === c.hex"
+                         class="d-none">
+                  <span x-show="(editingTeam?.color || '#534AB7') === c.hex"
+                        style="color: white; text-shadow: 0 0 2px black;">✓</span>
+                </label>
+              </template>
+            </div>
+          </div>
+
+          <!-- Type + Alignment -->
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label small text-muted">Team Type</label>
+              <select name="type" class="form-select"
+                      x-init="$el.value = editingTeam?.type || 'street'">
+                <template x-for="tt in TEAM_TYPES" :key="tt.id">
+                  <option :value="tt.id" x-text="tt.label"
+                          :selected="(editingTeam?.type || 'street') === tt.id"></option>
+                </template>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small text-muted">NK Alignment</label>
+              <select name="align" class="form-select"
+                      x-init="$el.value = editingTeam?.nkAlignment || 'neutral'">
+                <template x-for="a in NK_ALIGNMENTS" :key="a.id">
+                  <option :value="a.id" x-text="a.label"
+                          :selected="(editingTeam?.nkAlignment || 'neutral') === a.id"></option>
+                </template>
+              </select>
+            </div>
+          </div>
+
+          <!-- Description -->
+          <div class="mb-3">
+            <label class="form-label small text-muted">Description</label>
+            <textarea name="desc" class="form-control" rows="2"
+                      :value="editingTeam?.description || ''"
+                      placeholder="One sentence team description"></textarea>
+          </div>
+
+          <!-- Motto + Origin -->
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label small text-muted">Motto</label>
+              <input type="text" name="motto" class="form-control"
+                     :value="editingTeam?.motto || ''"
+                     placeholder="e.g. We are the dark between the lights.">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small text-muted">Origin</label>
+              <input type="text" name="origin" class="form-control"
+                     :value="editingTeam?.origin || ''"
+                     placeholder="2-3 sentence origin story">
+            </div>
+          </div>
+
+        </div>
+
+        <div class="modal-footer" style="border-color: rgba(255,255,255,0.1);">
+          <button type="button" class="btn btn-outline-secondary" @click="closeTeamEditor()">Cancel</button>
+          <button type="submit" class="btn btn-primary"
+                  x-text="editingTeam ? 'Save Changes' : 'Create Team'"></button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+</div>
