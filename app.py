@@ -228,10 +228,20 @@ def pull_update():
 # ---------------------------------------------------------------------------
 # Remote access helpers
 # ---------------------------------------------------------------------------
+def _find_cloudflared():
+    cf = shutil.which("cloudflared")
+    if cf:
+        return cf
+    for p in ("/usr/local/bin/cloudflared", "/opt/homebrew/bin/cloudflared",
+              "/opt/homebrew/sbin/cloudflared", "/usr/bin/cloudflared"):
+        if os.path.isfile(p) and os.access(p, os.X_OK):
+            return p
+    return None
+
 def start_cloudflared(port):
     global TUNNEL_URL, _TUNNEL_PROC
     import re
-    cf = shutil.which("cloudflared")
+    cf = _find_cloudflared()
     if not cf:
         return None
     _TUNNEL_PROC = subprocess.Popen(
@@ -503,7 +513,7 @@ def api_remote():
         "url": TUNNEL_URL,
         "duck_domain": cfg.get("duck_domain", ""),
         "pin_set": bool(cfg.get("remote_pin", "")),
-        "cloudflared": bool(shutil.which("cloudflared"))
+        "cloudflared": bool(_find_cloudflared())
     })
 
 # ---------------------------------------------------------------------------
