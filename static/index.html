@@ -1070,7 +1070,7 @@ function RemotePanel({remoteInfo,setRemoteInfo,onClose,G,s,forgeVersion}){
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))",gap:12}}>
         <div style={{padding:"12px 14px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:8}}>
           <div style={{fontSize:10,fontWeight:"bold",color:"#5EB1FF",marginBottom:8}}>Cloudflared Tunnel</div>
-          <div style={{fontSize:10,color:"var(--text2)",lineHeight:1.6,marginBottom:8}}>{remoteInfo?.cloudflared?"✓ cloudflared installed":"✗ Not installed — run: winget install cloudflare.cloudflared"}</div>
+          <div style={{fontSize:10,color:"var(--text2)",lineHeight:1.6,marginBottom:8}}>{remoteInfo?.cloudflared?"✓ cloudflared installed":"✗ Not installed — Mac: brew install cloudflared · Windows: winget install cloudflare.cloudflared"}</div>
           {remoteInfo?.url?<div style={{fontSize:10,color:"#5DCAA5",wordBreak:"break-all"}}>{remoteInfo.url}</div>:<div style={{fontSize:10,color:"var(--text4)"}}>Tunnel starts when Remote Access is enabled</div>}
         </div>
         <div style={{padding:"12px 14px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:8}}>
