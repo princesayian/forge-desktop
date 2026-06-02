@@ -152,3 +152,45 @@ code, .font-monospace {
   border: 1px solid rgba(255,255,255,0.1);
 }
 
+/* ── Character card ───────────────────────────────────────────────── */
+.character-card {
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+.character-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+.character-card .card-footer {
+  background: rgba(255, 255, 255, 0.02);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 0.4rem 0.6rem;
+}
+.char-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 0.85rem;
+  font-family: monospace;
+  flex-shrink: 0;
+}
+.char-avatar-lg {
+  width: 56px;
+  height: 56px;
+  font-size: 1.1rem;
+  border-radius: 10px;
+}
+
+/* Progress bar refinement for stat bars */
+.progress {
+  border-radius: 3px;
+  overflow: hidden;
+}
+.progress-bar {
+  transition: width 0.4s ease;
+}
+

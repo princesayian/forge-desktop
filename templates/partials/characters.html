@@ -1,0 +1,321 @@
+<!--
+  Characters tab — POC for the new Jinja2 + Alpine + Bootstrap stack.
+  Backed by /api/characters (file-based CRUD) + /api/generate/* (Ollama).
+  Field-name compatibility for BOTH the default-NK schema and the
+  generated schema is handled in app.js (charName, charPowers, etc.).
+-->
+
+<!-- ── Toolbar ──────────────────────────────────────────────────────── -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <small class="text-muted text-uppercase" style="letter-spacing: 0.18em;">Characters</small>
+    <h4 class="mb-0" x-text="filteredCharacters.length + ' ' + (filteredCharacters.length === 1 ? 'character' : 'characters')"></h4>
+  </div>
+  <div class="d-flex gap-2">
+    <button class="btn btn-outline-primary btn-sm" @click="openGenerator('hero')" :disabled="!ollamaOk" title="Generate a new hero with Ollama">
+      ⚡ Generate Hero
+    </button>
+    <button class="btn btn-outline-danger btn-sm" @click="openGenerator('villain')" :disabled="!ollamaOk" title="Generate a new villain">
+      ☠ Generate Villain
+    </button>
+  </div>
+</div>
+
+<!-- ── Offline warning if Ollama down ────────────────────────────────── -->
+<div x-show="!ollamaOk" class="alert alert-warning small d-flex align-items-center gap-2">
+  <span>⚠</span>
+  <span>Ollama is not running — character generation is disabled. Check the <strong>Settings</strong> tab.</span>
+</div>
+
+<!-- ── Search + filter bar ──────────────────────────────────────────── -->
+<div class="row g-2 mb-3">
+  <div class="col-md-8">
+    <input type="text" class="form-control form-control-sm"
+           placeholder="Search by name, power, origin…"
+           x-model.debounce.150ms="characterSearch">
+  </div>
+  <div class="col-md-4">
+    <select class="form-select form-select-sm" x-model="characterFilter">
+      <option value="all">All types</option>
+      <option value="hero">Heroes</option>
+      <option value="villain">Villains</option>
+      <option value="recruit">Recruits</option>
+    </select>
+  </div>
+</div>
+
+<!-- ── Loading state ────────────────────────────────────────────────── -->
+<div x-show="charactersLoading" class="text-center text-muted py-5">
+  <div class="spinner-border spinner-border-sm"></div>
+  Loading characters…
+</div>
+
+<!-- ── Empty state ──────────────────────────────────────────────────── -->
+<div x-show="!charactersLoading && characters.length === 0"
+     class="text-center text-muted py-5">
+  <p class="mb-1">No characters yet.</p>
+  <p class="small">Click <strong>⚡ Generate Hero</strong> or <strong>☠ Generate Villain</strong> above to create one with Ollama.</p>
+</div>
+
+<!-- ── No results state (filter/search returned nothing) ────────────── -->
+<div x-show="!charactersLoading && characters.length > 0 && filteredCharacters.length === 0"
+     class="text-center text-muted py-4 small">
+  No characters match your search/filter.
+</div>
+
+<!-- ── Character cards grid ─────────────────────────────────────────── -->
+<div x-show="!charactersLoading && filteredCharacters.length > 0"
+     class="row g-3 mb-4">
+  <template x-for="c in filteredCharacters" :key="c.id || charName(c)">
+    <div class="col-md-6 col-lg-4 col-xl-3">
+      <div class="card character-card h-100"
+           :style="`border-color: ${charColor(c)}55;`"
+           @click="selectCharacter(c)"
+           role="button">
+
+        <!-- Header: avatar + name + type badge -->
+        <div class="card-body pb-2">
+          <div class="d-flex align-items-start gap-2 mb-2">
+            <div class="char-avatar"
+                 :style="`background: ${charColor(c)}22; border: 1px solid ${charColor(c)}66; color: ${charColor(c)};`"
+                 x-text="charInitials(c)"></div>
+            <div class="flex-grow-1 min-w-0">
+              <div class="fw-semibold text-truncate" x-text="charName(c)"></div>
+              <div class="small text-muted text-truncate" x-text="charRealName(c) || '—'"></div>
+            </div>
+            <span class="badge" :class="charTypeBadgeClass(c)" x-text="charTypeLabel(c)"></span>
+          </div>
+
+          <p x-show="charTagline(c)" class="small fst-italic mb-2" x-text="charTagline(c)"></p>
+          <p class="small text-muted mb-2" x-text="charRole(c) || ''"></p>
+
+          <!-- Powers (top 2) -->
+          <div class="d-flex flex-wrap gap-1">
+            <template x-for="p in charPowers(c).slice(0, 2)" :key="p.name">
+              <span class="badge text-bg-dark" x-text="p.name"></span>
+            </template>
+            <template x-if="charPowers(c).length > 2">
+              <span class="badge text-bg-secondary" x-text="'+' + (charPowers(c).length - 2)"></span>
+            </template>
+          </div>
+        </div>
+
+        <div class="card-footer text-end" @click.stop>
+          <button class="btn btn-sm btn-outline-secondary" @click="selectCharacter(c)">View</button>
+          <button class="btn btn-sm btn-outline-danger" @click="deleteCharacter(c)">Delete</button>
+        </div>
+      </div>
+    </div>
+  </template>
+</div>
+
+<!-- ── Character detail modal ────────────────────────────────────────── -->
+<div class="modal fade show"
+     :class="activeCharacter && 'd-block'"
+     x-show="activeCharacter"
+     x-transition.opacity
+     style="background: rgba(0,0,0,0.7); z-index: 1050;"
+     @keydown.escape.window="closeCharacter()">
+
+  <template x-if="activeCharacter">
+    <div class="modal-dialog modal-dialog-centered modal-lg" @click.stop>
+      <div class="modal-content" style="background: var(--forge-bg);">
+
+        <div class="modal-header" :style="`border-bottom: 2px solid ${charColor(activeCharacter)}55;`">
+          <div class="d-flex align-items-center gap-3">
+            <div class="char-avatar char-avatar-lg"
+                 :style="`background: ${charColor(activeCharacter)}22; border: 1px solid ${charColor(activeCharacter)}66; color: ${charColor(activeCharacter)};`"
+                 x-text="charInitials(activeCharacter)"></div>
+            <div>
+              <h5 class="modal-title mb-0" x-text="charName(activeCharacter)"></h5>
+              <small class="text-muted" x-text="charRealName(activeCharacter)"></small>
+            </div>
+          </div>
+          <button type="button" class="btn-close btn-close-white" @click="closeCharacter()"></button>
+        </div>
+
+        <div class="modal-body">
+
+          <!-- Type + role + tagline -->
+          <div class="d-flex gap-2 align-items-center mb-3 flex-wrap">
+            <span class="badge" :class="charTypeBadgeClass(activeCharacter)" x-text="charTypeLabel(activeCharacter)"></span>
+            <span x-show="charRole(activeCharacter)" class="badge text-bg-dark" x-text="charRole(activeCharacter)"></span>
+            <span x-show="charTagline(activeCharacter)" class="small fst-italic text-muted" x-text="'“' + charTagline(activeCharacter) + '”'"></span>
+          </div>
+
+          <!-- Powers -->
+          <template x-if="charPowers(activeCharacter).length > 0">
+            <div class="mb-3">
+              <small class="text-muted text-uppercase d-block mb-2" style="letter-spacing: 0.15em;">Powers</small>
+              <div class="d-flex flex-column gap-2">
+                <template x-for="p in charPowers(activeCharacter)" :key="p.name">
+                  <div>
+                    <div class="fw-semibold small" x-text="p.name"></div>
+                    <div x-show="p.desc" class="small text-muted" x-text="p.desc"></div>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </template>
+
+          <!-- Weaknesses (generated style) -->
+          <template x-if="charWeaknesses(activeCharacter).length > 0">
+            <div class="mb-3">
+              <small class="text-muted text-uppercase d-block mb-2" style="letter-spacing: 0.15em;">Weaknesses</small>
+              <div class="d-flex flex-wrap gap-1">
+                <template x-for="w in charWeaknesses(activeCharacter)" :key="w">
+                  <span class="badge text-bg-danger" x-text="w"></span>
+                </template>
+              </div>
+            </div>
+          </template>
+
+          <!-- Origin / backstory -->
+          <template x-if="charOrigin(activeCharacter)">
+            <div class="mb-3">
+              <small class="text-muted text-uppercase d-block mb-2" style="letter-spacing: 0.15em;">Origin</small>
+              <p class="small" x-text="charOrigin(activeCharacter)"></p>
+            </div>
+          </template>
+
+          <!-- Stats -->
+          <template x-if="charStatKeys(activeCharacter).length > 0">
+            <div class="mb-3">
+              <small class="text-muted text-uppercase d-block mb-2" style="letter-spacing: 0.15em;">Stats</small>
+              <div class="d-flex flex-column gap-2">
+                <template x-for="key in charStatKeys(activeCharacter)" :key="key">
+                  <div>
+                    <div class="d-flex justify-content-between small mb-1">
+                      <span x-text="key"></span>
+                      <span class="font-monospace" x-text="charStats(activeCharacter)[key]"></span>
+                    </div>
+                    <div class="progress" style="height: 6px; background: rgba(255,255,255,0.05);">
+                      <div class="progress-bar"
+                           :style="`width: ${Math.min(100, (charStats(activeCharacter)[key] / 100) * 100)}%; background: ${charColor(activeCharacter)};`"></div>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </template>
+
+          <!-- Appearance (generated style) -->
+          <template x-if="activeCharacter.appearance">
+            <div class="mb-3">
+              <small class="text-muted text-uppercase d-block mb-2" style="letter-spacing: 0.15em;">Appearance</small>
+              <p class="small" x-text="activeCharacter.appearance"></p>
+            </div>
+          </template>
+
+          <!-- Personality (generated style) -->
+          <template x-if="activeCharacter.personality">
+            <div class="mb-3">
+              <small class="text-muted text-uppercase d-block mb-2" style="letter-spacing: 0.15em;">Personality</small>
+              <p class="small" x-text="activeCharacter.personality"></p>
+            </div>
+          </template>
+
+        </div>
+
+        <div class="modal-footer" style="border-color: rgba(255,255,255,0.1);">
+          <button class="btn btn-outline-danger" @click="deleteCharacter(activeCharacter); closeCharacter();">Delete</button>
+          <button class="btn btn-primary" @click="closeCharacter()">Close</button>
+        </div>
+
+      </div>
+    </div>
+  </template>
+</div>
+
+<!-- ── Character generator modal ────────────────────────────────────── -->
+<div class="modal fade show"
+     :class="showCharacterGenerator && 'd-block'"
+     x-show="showCharacterGenerator"
+     x-transition.opacity
+     style="background: rgba(0,0,0,0.7); z-index: 1060;"
+     @keydown.escape.window="closeGenerator()">
+
+  <div class="modal-dialog modal-dialog-centered" @click.stop>
+    <div class="modal-content" style="background: var(--forge-bg);">
+
+      <div class="modal-header" style="border-color: rgba(255,255,255,0.1);">
+        <h5 class="modal-title">
+          <span x-show="generateForm.mode === 'hero'">⚡ Generate Hero</span>
+          <span x-show="generateForm.mode === 'villain'">☠ Generate Villain</span>
+          <span x-show="generateForm.mode === 'recruit'">⭐ Generate Recruit</span>
+        </h5>
+        <button type="button" class="btn-close btn-close-white" @click="closeGenerator()"></button>
+      </div>
+
+      <form @submit.prevent="generateCharacter()">
+        <div class="modal-body">
+
+          <!-- Mode selector -->
+          <div class="mb-3">
+            <label class="form-label small text-muted">Type</label>
+            <div class="btn-group w-100" role="group">
+              <input type="radio" class="btn-check" name="mode" id="gen-hero" value="hero"
+                     :checked="generateForm.mode === 'hero'"
+                     @change="generateForm.mode = 'hero'">
+              <label class="btn btn-outline-success" for="gen-hero">⚡ Hero</label>
+
+              <input type="radio" class="btn-check" name="mode" id="gen-villain" value="villain"
+                     :checked="generateForm.mode === 'villain'"
+                     @change="generateForm.mode = 'villain'">
+              <label class="btn btn-outline-danger" for="gen-villain">☠ Villain</label>
+
+              <input type="radio" class="btn-check" name="mode" id="gen-recruit" value="recruit"
+                     :checked="generateForm.mode === 'recruit'"
+                     @change="generateForm.mode = 'recruit'">
+              <label class="btn btn-outline-info" for="gen-recruit">⭐ Recruit</label>
+            </div>
+          </div>
+
+          <!-- Theme input -->
+          <div class="mb-3">
+            <label class="form-label small text-muted">Theme / Concept</label>
+            <textarea class="form-control" rows="3"
+                      x-model="generateForm.theme"
+                      placeholder="e.g. bioluminescent ocean guardian, or time-displaced samurai, or quantum hacker with split personalities..."
+                      :disabled="generating"></textarea>
+            <div class="form-text">
+              This is creative inspiration, NOT the hero's name. The model will invent a name.
+            </div>
+          </div>
+
+          <!-- Last result preview -->
+          <template x-if="lastGenerated && !lastGenerated.error">
+            <div class="alert alert-success small">
+              <div class="fw-semibold mb-1">✓ Generated:</div>
+              <div x-text="lastGenerated.name || lastGenerated.heroName"></div>
+              <div class="text-muted" x-text="lastGenerated.real_name || lastGenerated.realName"></div>
+              <div class="mt-1" x-text="lastGenerated.tagline || lastGenerated.backstory || lastGenerated.origin || ''"></div>
+            </div>
+          </template>
+          <template x-if="lastGenerated && lastGenerated.error">
+            <div class="alert alert-danger small">
+              <div class="fw-semibold mb-1">✗ Generation failed</div>
+              <div x-text="lastGenerated.error"></div>
+            </div>
+          </template>
+
+          <!-- Spinner -->
+          <div x-show="generating" class="text-center py-3">
+            <div class="spinner-border spinner-border-sm" style="color: var(--forge-gold);"></div>
+            <div class="small text-muted mt-2">Asking Ollama…</div>
+            <div class="small text-muted">This can take 5-30 seconds.</div>
+          </div>
+
+        </div>
+
+        <div class="modal-footer" style="border-color: rgba(255,255,255,0.1);">
+          <button type="button" class="btn btn-outline-secondary" @click="closeGenerator()" :disabled="generating">Cancel</button>
+          <button type="submit" class="btn btn-primary" :disabled="generating || !generateForm.theme.trim()">
+            <span x-show="!generating">⚡ Generate</span>
+            <span x-show="generating">Generating…</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

@@ -90,6 +90,20 @@ document.addEventListener('alpine:init', () => {
       { id: 'splinter', label: 'NK Splinter Cell', color: '#993C1D' },
     ],
 
+    // ── Characters state (loaded from /api/characters, file-based) ───────
+    characters: [],           // Array of character objects
+    charactersLoading: false,
+    activeCharacter: null,    // Currently selected character (for detail panel)
+    characterSearch: '',      // Filter text
+    characterFilter: 'all',   // 'all' | 'hero' | 'villain' | 'recruit'
+    showCharacterGenerator: false,
+    generateForm: {
+      theme: '',              // Free-text theme/concept
+      mode: 'hero',           // 'hero' | 'villain' | 'recruit'
+    },
+    generating: false,
+    lastGenerated: null,      // Result of last generation
+
     // ── Toast queue ──────────────────────────────────────────────────────
     toasts: [],
     _toastId: 0,
@@ -99,6 +113,7 @@ document.addEventListener('alpine:init', () => {
       this.refreshStatus();
       this.loadConfig();
       this.loadTeams();
+      this.loadCharacters();
       // Poll status every 10s
       setInterval(() => this.refreshStatus(), 10000);
     },
@@ -345,6 +360,162 @@ document.addEventListener('alpine:init', () => {
     autoAbbr(name) {
       if (!name) return '??';
       return name.split(' ').map(w => w[0] || '').join('').toUpperCase().slice(0, 3) || '??';
+    },
+
+    // ── Characters ───────────────────────────────────────────────────────
+    // Field-name compatibility: handle BOTH the default-NK schema
+    // (heroName, realName, role) AND the generated-hero schema
+    // (name, real_name, alignment). One character can have either or both.
+    charName(c)    { return c.name || c.heroName || 'Unknown'; },
+    charRealName(c){ return c.real_name || c.realName || ''; },
+    charRole(c)    { return c.role || c.alignment || ''; },
+    charColor(c)   {
+      if (c.color) return c.color;
+      // Generated heroes get a color from their stats hash
+      const name = this.charName(c);
+      const hue = [...name].reduce((a, c) => a + c.charCodeAt(0), 0) % 360;
+      return `hsl(${hue}, 55%, 50%)`;
+    },
+    charInitials(c) {
+      if (c.initials) return c.initials;
+      const n = this.charName(c);
+      return n.split(' ').map(w => w[0] || '').join('').toUpperCase().slice(0, 2) || '??';
+    },
+    charPowers(c) {
+      // NK style: powers: [{name, desc}]. Generated style: powers: [string]
+      if (!c.powers) return [];
+      return c.powers.map(p => typeof p === 'string' ? { name: p, desc: '' } : p);
+    },
+    charWeaknesses(c) { return c.weaknesses || []; },
+    charOrigin(c) { return c.origin || c.backstory || ''; },
+    charStats(c) { return c.stats || {}; },
+    charStatKeys(c) { return Object.keys(this.charStats(c)); },
+    charTagline(c) { return c.tagline || ''; },
+    charType(c) {
+      // 'hero' | 'villain' | 'recruit' | unknown
+      if (c.alignment === 'villain' || c.nkAlignment === 'enemy') return 'villain';
+      if (c.alignment === 'hero' || c.alignment === 'anti-hero' || c.alignment === 'vigilante' || c.nkAlignment === 'base') return 'hero';
+      if (c.role && /recruit/i.test(c.role)) return 'recruit';
+      if (c.isRecruit) return 'recruit';
+      return 'hero';  // default
+    },
+    charTypeLabel(c) {
+      const t = this.charType(c);
+      return t.charAt(0).toUpperCase() + t.slice(1);
+    },
+    charTypeBadgeClass(c) {
+      const t = this.charType(c);
+      if (t === 'villain') return 'text-bg-danger';
+      if (t === 'recruit') return 'text-bg-info';
+      return 'text-bg-success';
+    },
+
+    // Load all characters from /api/characters
+    async loadCharacters() {
+      this.charactersLoading = true;
+      try {
+        const list = await this.api('/api/characters');
+        this.characters = Array.isArray(list) ? list : [];
+      } catch (e) {
+        this.characters = [];
+        this.toast('error', 'Failed to load characters: ' + e.message);
+      } finally {
+        this.charactersLoading = false;
+      }
+    },
+
+    // Filtered + searched character list
+    get filteredCharacters() {
+      let list = this.characters;
+      // Filter by type
+      if (this.characterFilter !== 'all') {
+        list = list.filter(c => this.charType(c) === this.characterFilter);
+      }
+      // Search
+      const q = this.characterSearch.trim().toLowerCase();
+      if (q) {
+        list = list.filter(c => {
+          const hay = [
+            this.charName(c),
+            this.charRealName(c),
+            this.charRole(c),
+            this.charOrigin(c),
+            ...this.charPowers(c).map(p => p.name),
+          ].join(' ').toLowerCase();
+          return hay.includes(q);
+        });
+      }
+      return list;
+    },
+
+    selectCharacter(c) {
+      this.activeCharacter = c;
+    },
+    closeCharacter() {
+      this.activeCharacter = null;
+    },
+
+    async deleteCharacter(c) {
+      const name = this.charName(c);
+      // The DELETE endpoint uses a name slug — server derives it from
+      // character.name (lowercased, underscores). Generated heroes use
+      // `name`; NK defaults use `heroName`. We try `name` first.
+      const slug = (c.name || c.heroName || 'unknown').replace(/ /g, '_').toLowerCase();
+      if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
+      try {
+        await this.api(`/api/characters/${encodeURIComponent(slug)}`, { method: 'DELETE' });
+        this.characters = this.characters.filter(x => x !== c);
+        if (this.activeCharacter === c) this.activeCharacter = null;
+        this.toast('success', `"${name}" deleted`);
+      } catch (e) {
+        this.toast('error', 'Delete failed: ' + e.message);
+      }
+    },
+
+    // ── Generation ───────────────────────────────────────────────────────
+    openGenerator(mode = 'hero') {
+      this.generateForm.mode = mode;
+      this.generateForm.theme = '';
+      this.showCharacterGenerator = true;
+      this.lastGenerated = null;
+    },
+    closeGenerator() {
+      this.showCharacterGenerator = false;
+      this.generating = false;
+    },
+
+    async generateCharacter() {
+      if (!this.ollamaOk) {
+        this.toast('error', 'Ollama is not running. Check Settings.');
+        return;
+      }
+      const theme = this.generateForm.theme.trim();
+      if (!theme) {
+        this.toast('error', 'Please describe a theme or concept');
+        return;
+      }
+      this.generating = true;
+      this.lastGenerated = null;
+      const mode = this.generateForm.mode;
+      const endpoint = `/api/generate/${mode}`;
+      try {
+        const result = await this.api(endpoint, {
+          method: 'POST',
+          body: JSON.stringify({ extra: theme }),
+        });
+        this.lastGenerated = result;
+        // Server already saved the file — reload the list
+        await this.loadCharacters();
+        // Auto-select the new character
+        const newChar = this.characters.find(c => this.charName(c) === (result.name || result.heroName));
+        if (newChar) this.activeCharacter = newChar;
+        this.toast('success', `Generated: ${result.name || result.heroName}`);
+      } catch (e) {
+        this.lastGenerated = { error: e.message };
+        this.toast('error', 'Generation failed: ' + e.message);
+      } finally {
+        this.generating = false;
+      }
     },
 
     // ── Toasts ───────────────────────────────────────────────────────────

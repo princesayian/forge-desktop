@@ -219,6 +219,41 @@ class TestCharactersCRUD(ForgeTestCase):
         files = os.listdir(self.chars_dir)
         self.assertIn("dark_star.json", files)
 
+    def test_save_character_generated_schema(self):
+        """Generated heroes use {name, real_name, alignment, powers:[str], stats:{...}}."""
+        char = {
+            "name": "Tempest",
+            "real_name": "Eli Storm",
+            "alignment": "hero",
+            "powers": ["Wind control", "Lightning"],
+            "weaknesses": ["Calm emotions"],
+            "backstory": "Raised in a storm.",
+            "personality": "fierce, loyal",
+            "stats": {"strength": 7, "speed": 9},
+            "appearance": "Grey cloak, crackling aura",
+        }
+        r = self.client.post("/api/characters", json=char)
+        self.assertTrue(r.get_json()["ok"])
+        # Read it back via GET
+        r2 = self.client.get("/api/characters")
+        chars = r2.get_json()
+        self.assertEqual(len(chars), 1)
+        self.assertEqual(chars[0]["name"], "Tempest")
+        self.assertEqual(chars[0]["powers"], ["Wind control", "Lightning"])
+        # Slug is derived from `name` (lowercased, underscored)
+        files = os.listdir(self.chars_dir)
+        self.assertIn("tempest.json", files)
+
+    def test_delete_character_uses_name_slug(self):
+        """The slug used for DELETE is derived from the name field."""
+        self.client.post("/api/characters", json={"name": "Solar Flare"})
+        # The frontend calls DELETE /api/characters/solar_flare
+        r = self.client.delete("/api/characters/solar_flare")
+        self.assertEqual(r.status_code, 200)
+        self.assertTrue(r.get_json()["ok"])
+        files = os.listdir(self.chars_dir)
+        self.assertNotIn("solar_flare.json", files)
+
 
 # ===========================================================================
 # 4. Teams CRUD
@@ -733,6 +768,37 @@ class TestStaticRoutes(ForgeTestCase):
             r = self.client.get(path)
             self.assertEqual(r.status_code, 200, f"{path} not served")
             self.assertGreater(len(r.data), 0, f"{path} is empty")
+
+    def test_index_includes_characters_partial(self):
+        r = self.client.get("/")
+        html = r.data.decode()
+        # Characters tab content
+        self.assertIn("Generate Hero", html)
+        self.assertIn("Generate Villain", html)
+        self.assertIn("No characters yet", html)
+        # Alpine bindings (present in the partial)
+        self.assertIn("openGenerator", html)
+        self.assertIn("generateCharacter", html)
+        self.assertIn("selectCharacter", html)
+        self.assertIn("deleteCharacter", html)
+        # Field compatibility helpers (present in the partial)
+        self.assertIn("charName", html)
+        self.assertIn("charPowers", html)
+        self.assertIn("charStats", html)
+
+    def test_app_js_exposes_character_methods(self):
+        """The Alpine component defines all the character CRUD methods."""
+        r = self.client.get("/static/js/app.js")
+        self.assertEqual(r.status_code, 200)
+        js = r.data.decode()
+        for method in [
+            "loadCharacters", "selectCharacter", "closeCharacter",
+            "deleteCharacter", "openGenerator", "generateCharacter",
+            "charName", "charInitials", "charPowers", "charOrigin",
+            "charStats", "charStatKeys", "charType", "charTypeLabel",
+            "charTypeBadgeClass", "filteredCharacters",
+        ]:
+            self.assertIn(method, js, f"app.js missing {method}")
 
 
 # ===========================================================================

@@ -40,7 +40,7 @@
     </div>
 
     <div x-show="activeTab === 'characters'" x-transition.opacity>
-      <div class="text-muted p-4">Characters tab — coming in next migration pass.</div>
+      {% include "partials/characters.html" %}
     </div>
 
     <div x-show="activeTab === 'villains'" x-transition.opacity>
