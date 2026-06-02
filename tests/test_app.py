@@ -117,6 +117,73 @@ class TestStatusEndpoint(ForgeTestCase):
         self.assertTrue(data["ollama_running"])
         self.assertIn("llama3.2", data["models"])
 
+    @patch.object(_app_module, "ollama_is_running", return_value=True)
+    @patch.object(_app_module, "ollama_models", return_value=["qwen2.5:7b", "llama3.1:8b"])
+    def test_status_falls_back_when_configured_model_missing(self, mock_models, mock_running):
+        """If config says 'llama3.2' but only qwen2.5:7b is installed, use qwen2.5:7b."""
+        _app_module.config["model"] = "llama3.2"
+        r = self.client.get("/api/status")
+        data = r.get_json()
+        self.assertEqual(data["configured_model"], "llama3.2")
+        self.assertEqual(data["current_model"], "qwen2.5:7b")
+        self.assertTrue(data["model_fallback"])
+        # Side effect: config updated
+        self.assertEqual(_app_module.config["model"], "qwen2.5:7b")
+
+    @patch.object(_app_module, "ollama_is_running", return_value=True)
+    @patch.object(_app_module, "ollama_models", return_value=["llama3.2", "qwen2.5:7b"])
+    def test_status_uses_configured_model_when_present(self, mock_models, mock_running):
+        """If config model is installed, use it (no fallback)."""
+        _app_module.config["model"] = "llama3.2"
+        r = self.client.get("/api/status")
+        data = r.get_json()
+        self.assertEqual(data["current_model"], "llama3.2")
+        self.assertFalse(data["model_fallback"])
+
+
+class TestOllamaModelsFilter(ForgeTestCase):
+    """ollama_models() should skip cloud models and sort local by size."""
+
+    def test_ollama_models_skips_cloud(self):
+        import requests
+        fake_response = {
+            "models": [
+                {"name": "glm-4.7-flash:latest", "size": 19_019_270_852},
+                {"name": "kimi-k2.6:cloud", "size": 384, "remote_model": "kimi-k2.6", "remote_host": "https://ollama.com:443"},
+                {"name": "lfm2.5-thinking:latest", "size": 731_163_903},
+                {"name": "qwen2.5:7b", "size": 4_683_087_332},
+            ]
+        }
+        with patch.object(requests, "get") as mock_get:
+            mock_get.return_value.status_code = 200
+            mock_get.return_value.json.return_value = fake_response
+            mock_get.return_value.raise_for_status = lambda: None
+            models = _app_module.ollama_models()
+            # kimi cloud model excluded
+            self.assertNotIn("kimi-k2.6:cloud", models)
+            # All local models present
+            self.assertIn("glm-4.7-flash:latest", models)
+            self.assertIn("lfm2.5-thinking:latest", models)
+            self.assertIn("qwen2.5:7b", models)
+            # Sorted by size ascending: lfm (731M) → qwen2.5 (4.7G) → glm (19G)
+            self.assertEqual(models[0], "lfm2.5-thinking:latest")
+            self.assertEqual(models[1], "qwen2.5:7b")
+            self.assertEqual(models[2], "glm-4.7-flash:latest")
+
+    def test_get_model_falls_back_when_configured_missing(self):
+        """_get_model() picks first available when configured isn't installed."""
+        _app_module.config["model"] = "nonexistent-model"
+        with patch.object(_app_module, "ollama_models", return_value=["qwen2.5:7b", "llama3.1:8b"]):
+            result = _app_module._get_model({})
+        self.assertEqual(result, "qwen2.5:7b")
+
+    def test_get_model_respects_request_override(self):
+        """_get_model() honors an explicit model in the request body."""
+        _app_module.config["model"] = "qwen2.5:7b"
+        with patch.object(_app_module, "ollama_models", return_value=["qwen2.5:7b", "llama3.1:8b"]):
+            result = _app_module._get_model({"model": "llama3.1:8b"})
+        self.assertEqual(result, "llama3.1:8b")
+
 
 class TestModelsEndpoint(ForgeTestCase):
 

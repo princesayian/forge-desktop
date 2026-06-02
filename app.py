@@ -91,11 +91,35 @@ if "secret_key" not in config:
     config["secret_key"] = base64.b64encode(os.urandom(24)).decode()
     save_config(config)
 
-# ---------------------------------------------------------------------------
+# -----------------------------------------------------------------------
 # Data directories
-# ---------------------------------------------------------------------------
+# -----------------------------------------------------------------------
 for d in (CHARACTERS_DIR, TEAMS_DIR, STORIES_DIR, IMAGES_DIR):
     os.makedirs(d, exist_ok=True)
+
+# -----------------------------------------------------------------------
+# Startup model sanity check
+# -----------------------------------------------------------------------
+# If the configured model isn't in Ollama's local model list (e.g. user
+# pulled a new model and the old default doesn't exist anymore), swap
+# in the smallest local one so the app doesn't silently 404 on generate.
+def _resolve_default_model():
+    """Return a model name that's known to be installed, or the configured one."""
+    available = ollama_models()
+    if not available:
+        return config.get("model", "llama3.2")
+    if config.get("model") in available:
+        return config.get("model")
+    return available[0]
+
+try:
+    resolved = _resolve_default_model()
+    if resolved != config.get("model"):
+        config["model"] = resolved
+        save_config(config)
+except Exception:
+    # Don't block startup on Ollama being unreachable
+    pass
 
 # ---------------------------------------------------------------------------
 # Mode helpers
@@ -127,7 +151,12 @@ def _safe_name(name: str, ext: str = ".json") -> str:
 # Ollama API helpers
 # ---------------------------------------------------------------------------
 def ollama_models():
-    """Return list of available model names."""
+    """Return list of local, installed model names (filtered, sorted small-first).
+
+    Skips cloud models (anything with `remote_model` in its tag entry)
+    because they may rate-limit or hang on simple test prompts. Returns
+    the smallest local model first so generation is snappy.
+    """
     base = config["ollama_url"].rstrip("/")
     try:
         if _is_remote():
@@ -138,7 +167,11 @@ def ollama_models():
         else:
             r = requests.get(f"{base}/api/tags", timeout=5)
             r.raise_for_status()
-            return [m["name"] for m in r.json().get("models", [])]
+            raw = r.json().get("models", [])
+            # Only local models (no remote_model field); sort by size ascending
+            local = [m for m in raw if "remote_model" not in m]
+            local.sort(key=lambda m: m.get("size", 0))
+            return [m["name"] for m in local]
     except Exception:
         return []
 
@@ -521,15 +554,24 @@ def update_config():
 @app.route("/api/status")
 def status():
     running = ollama_is_running()
-    model = config.get("model", "llama3.2")
+    model = _get_model({})  # resolves + falls back if configured model missing
     models = ollama_models()
     ollama_url = config.get("ollama_url", "http://localhost:11434")
+    # If the configured model is missing, persist the fallback so future
+    # calls don't have to re-resolve.
+    configured = config.get("model", "llama3.2")
+    fallback_used = bool(models) and model != configured
+    if fallback_used:
+        config["model"] = model
+        save_config(config)
     return jsonify({
         "ollama": running,
         "ollama_running": running,
         "models": models,
         "current_model": model,
         "model": model,
+        "configured_model": configured,
+        "model_fallback": fallback_used,
         "ollama_url": ollama_url,
         "mode": "remote" if _is_remote() else "local",
     })
@@ -772,8 +814,21 @@ def delete_image(img_id):
 # API: AI Generation endpoints
 # ---------------------------------------------------------------------------
 def _get_model(data):
-    """Resolve model from request data or config."""
-    return data.get("model") or config.get("model", "llama3.2")
+    """Resolve model from request data or config.
+
+    If the configured model isn't installed in Ollama, fall back to the
+    first available model so generation doesn't silently 404.
+    """
+    requested = data.get("model") or config.get("model", "llama3.2")
+    available = ollama_models()
+    if not available:
+        # Can't even reach Ollama — return the configured name and let
+        # the caller surface the connection error.
+        return requested
+    if requested in available:
+        return requested
+    # Configured model not installed — fall back to first available.
+    return available[0]
 
 @app.route("/api/generate/hero", methods=["POST"])
 def generate_hero():
