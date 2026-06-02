@@ -69,6 +69,7 @@ def _save_store(data):
 
 TUNNEL_URL   = None
 _TUNNEL_PROC = None
+_DUCK_THREAD = None
 
 # ---------------------------------------------------------------------------
 # Config helpers
@@ -517,19 +518,33 @@ def get_config():
 
 @app.route("/api/config", methods=["POST"])
 def update_config():
+    global _DUCK_THREAD
     data = request.get_json() or {}
+    was_remote = bool(config.get("remote_enabled"))
     if "model" in data:
         config["model"] = data["model"]
     if "ollama_url" in data:
         config["ollama_url"] = data["ollama_url"].rstrip("/")
     if "ollama_api_key" in data:
         config["ollama_api_key"] = data["ollama_api_key"]
-    # Allow other keys through
     for k, v in data.items():
         if k not in ("model", "ollama_url", "ollama_api_key"):
             config[k] = v
     save_config(config)
-    return jsonify({"ok": True, "mode": "remote" if _is_remote() else "local"})
+
+    # Start DuckDNS loop immediately if credentials are now available
+    if config.get("remote_enabled") and config.get("duck_token") and config.get("duck_domain"):
+        if _DUCK_THREAD is None or not _DUCK_THREAD.is_alive():
+            _DUCK_THREAD = threading.Thread(
+                target=duckdns_loop,
+                args=(config["duck_token"], config["duck_domain"]),
+                daemon=True
+            )
+            _DUCK_THREAD.start()
+
+    # Remote was just enabled — Flask needs to rebind to 0.0.0.0 (requires restart)
+    needs_restart = not was_remote and bool(config.get("remote_enabled"))
+    return jsonify({"ok": True, "mode": "remote" if _is_remote() else "local", "needs_restart": needs_restart})
 
 # ---------------------------------------------------------------------------
 # API: Status & Models
