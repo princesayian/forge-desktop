@@ -6,9 +6,8 @@
 #
 # run          Start the app (browser fallback if no PyWebView)
 # run-gui      Start the app in PyWebView desktop mode
-# setup        First-time setup: create venv + install deps + download vendor JS
+# setup        First-time setup: create venv + install deps
 # install      Install/refresh dependencies (idempotent)
-# vendor       Download vendor JS libraries (React, ReactDOM)
 # test         Run the test suite
 # lint         Run Python syntax check on app.py
 # clean        Remove generated data (characters, teams, stories)
@@ -16,7 +15,7 @@
 # version      Print the current FORGE_VERSION
 # help         Show available targets
 
-.PHONY: run run-gui setup install vendor test lint clean nuke version help
+.PHONY: run run-gui setup install test lint clean nuke version help
 
 # -----------------------------------------------------------------------
 # Tooling
@@ -63,7 +62,7 @@ run-gui:
 # Setup
 # -----------------------------------------------------------------------
 # Idempotent first-time setup. Safe to run multiple times.
-setup: install vendor
+setup: install
 	@echo "[+] Setup complete."
 	@echo ""
 	@echo "    To launch:    make run"
@@ -80,11 +79,6 @@ else
 	@echo "[*] Virtualenv present — syncing deps via 'poetry install --sync'"
 	@$(POETRY) install --extras "$(PLATFORM_EXTRA)" --extras "dev" --sync
 endif
-
-# Download vendor JS (React, ReactDOM) into ./vendor/
-vendor:
-	@echo "[*] Downloading vendor JS libraries..."
-	@$(POETRY) run $(PYTHON) setup.py
 
 # -----------------------------------------------------------------------
 # Quality
@@ -146,9 +140,8 @@ help:
 	@echo ""
 	@echo "  run          Start the app"
 	@echo "  run-gui      Start the app (alias for run)"
-	@echo "  setup        First-time setup: install + vendor JS"
+	@echo "  setup        First-time setup: install Python deps"
 	@echo "  install      Install/refresh Python deps via Poetry"
-	@echo "  vendor       Download vendor JS (React, ReactDOM)"
 	@echo "  test         Run pytest"
 	@echo "  test-cov     Run pytest with coverage report"
 	@echo "  lint         Syntax check + flake8 on app.py"

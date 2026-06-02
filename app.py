@@ -7,14 +7,13 @@ Nocturnal Knights Character System · Remote & Local modes
 import os, sys, json, threading, time, socket, base64, io, subprocess, shutil, signal, atexit
 import glob
 import requests
-from flask import Flask, request, jsonify, send_from_directory, send_file, session, redirect, render_template
+from flask import Flask, request, jsonify, send_file, session, redirect, render_template
 
 # ---------------------------------------------------------------------------
 # Paths & Constants
 # ---------------------------------------------------------------------------
 BASE        = os.path.dirname(os.path.abspath(__file__))
 STATIC      = os.path.join(BASE, "static")
-VENDOR      = os.path.join(BASE, "vendor")
 CONFIG_FILE = os.path.join(BASE, "config.json")
 DATA_DIR    = os.path.join(BASE, "data")
 CHARACTERS_DIR = os.path.join(DATA_DIR, "characters")
@@ -457,10 +456,6 @@ def verify_pin():
 @app.route("/")
 def index():
     return render_template("base.html")
-
-@app.route("/vendor/<path:filename>")
-def vendor(filename):
-    return send_from_directory(VENDOR, filename)
 
 # Inject version into every template
 @app.context_processor

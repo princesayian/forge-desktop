@@ -1,0 +1,282 @@
+<!--
+  Story tab — POC for the new Jinja2 + Alpine + Bootstrap stack.
+  Backed by:
+    - /api/stories          (GET list, DELETE by slug)
+    - /api/generate/story   (POST {heroes, villains, setting} → saves + returns)
+  Each story: {title, heroes, villains, setting, content, source_model, ts}
+-->
+
+<!-- ── Toolbar ──────────────────────────────────────────────────────── -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <small class="text-muted text-uppercase" style="letter-spacing: 0.18em;">Stories</small>
+    <h4 class="mb-0" x-text="filteredStories.length + ' ' + (filteredStories.length === 1 ? 'story' : 'stories')"></h4>
+  </div>
+  <div class="d-flex gap-2">
+    <input type="text" class="form-control form-control-sm"
+           placeholder="Search…"
+           style="width: 200px;"
+           x-model.debounce.150ms="storySearch">
+    <button class="btn btn-primary btn-sm"
+            @click="openStoryGenerator()"
+            :disabled="!ollamaOk"
+            title="Generate a new story with Ollama">
+      <span style="font-size: 1.1em;">📖</span> Generate Story
+    </button>
+  </div>
+</div>
+
+<!-- ── Offline warning ──────────────────────────────────────────────── -->
+<div x-show="!ollamaOk" class="alert alert-warning small d-flex align-items-center gap-2">
+  <span>⚠</span>
+  <span>Ollama is not running — story generation is disabled. Check the <strong>Settings</strong> tab.</span>
+</div>
+
+<!-- ── Loading state ────────────────────────────────────────────────── -->
+<div x-show="storiesLoading" class="text-center text-muted py-5">
+  <div class="spinner-border spinner-border-sm"></div>
+  Loading stories…
+</div>
+
+<!-- ── Empty state ──────────────────────────────────────────────────── -->
+<div x-show="!storiesLoading && stories.length === 0"
+     class="text-center text-muted py-5">
+  <p class="mb-1">No stories yet.</p>
+  <p class="small">Click <strong>📖 Generate Story</strong> to have Ollama write one for you.</p>
+</div>
+
+<!-- ── No results state ─────────────────────────────────────────────── -->
+<div x-show="!storiesLoading && stories.length > 0 && filteredStories.length === 0"
+     class="text-center text-muted py-4 small">
+  No stories match your search.
+</div>
+
+<!-- ── Story cards ──────────────────────────────────────────────────── -->
+<div x-show="!storiesLoading && filteredStories.length > 0"
+     class="row g-3 mb-4">
+  <template x-for="s in filteredStories" :key="s.title + (s.ts || '')">
+    <div class="col-md-6 col-lg-4">
+      <div class="card h-100" style="background: var(--forge-surface); border: 1px solid rgba(255,255,255,0.08);"
+           @click="selectStory(s)"
+           role="button">
+
+        <div class="card-body">
+
+          <!-- Title + word count -->
+          <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+            <h6 class="card-title mb-0" x-text="storyTitle(s)"></h6>
+            <span class="badge text-bg-dark" x-text="storyWordCount(s) + ' words'"></span>
+          </div>
+
+          <!-- Date + model -->
+          <div class="small text-muted mb-2 d-flex gap-2 flex-wrap">
+            <span x-show="storyTimestamp(s)" x-text="storyTimestamp(s)"></span>
+            <span x-show="storyModel(s)" class="font-monospace" x-text="storyModel(s)"></span>
+          </div>
+
+          <!-- Cast chips -->
+          <div class="mb-2" x-show="storyHeroes(s).length > 0 || storyVillains(s).length > 0">
+            <template x-for="h in storyHeroes(s).slice(0, 3)" :key="'h-' + h">
+              <span class="badge text-bg-success me-1 mb-1" x-text="h"></span>
+            </template>
+            <template x-for="v in storyVillains(s).slice(0, 2)" :key="'v-' + v">
+              <span class="badge text-bg-danger me-1 mb-1" x-text="v"></span>
+            </template>
+          </div>
+
+          <!-- Preview -->
+          <p class="small text-muted mb-0" style="line-height: 1.5;"
+             x-text="storyPreview(s)"></p>
+
+        </div>
+
+        <div class="card-footer text-end" @click.stop>
+          <button class="btn btn-sm btn-outline-secondary" @click="selectStory(s)">Read</button>
+          <button class="btn btn-sm btn-outline-danger" @click="deleteStory(s)">Delete</button>
+        </div>
+      </div>
+    </div>
+  </template>
+</div>
+
+<!-- ── Story detail modal ───────────────────────────────────────────── -->
+<div class="modal fade show"
+     :class="activeStory && 'd-block'"
+     x-show="activeStory"
+     x-transition.opacity
+     style="background: rgba(0,0,0,0.7); z-index: 1050;"
+     @keydown.escape.window="closeStory()">
+
+  <template x-if="activeStory">
+    <div class="modal-dialog modal-dialog-centered modal-xl" @click.stop>
+      <div class="modal-content" style="background: var(--forge-bg); max-height: 90vh;">
+
+        <div class="modal-header" style="border-color: rgba(255,255,255,0.1);">
+          <div>
+            <small class="text-muted text-uppercase" style="letter-spacing: 0.15em; font-size: 0.7rem;">Story</small>
+            <h5 class="modal-title mb-0" x-text="storyTitle(activeStory)"></h5>
+          </div>
+          <button type="button" class="btn-close btn-close-white" @click="closeStory()"></button>
+        </div>
+
+        <div class="modal-body" style="overflow-y: auto; max-height: 70vh;">
+
+          <!-- Meta strip -->
+          <div class="d-flex flex-wrap gap-2 mb-3 small">
+            <span x-show="storySetting(activeStory)" class="badge text-bg-secondary">
+              📍 <span x-text="storySetting(activeStory)"></span>
+            </span>
+            <span x-show="storyModel(activeStory)" class="badge text-bg-dark font-monospace"
+                  x-text="storyModel(activeStory)"></span>
+            <span x-show="storyTimestamp(activeStory)" class="badge text-bg-dark"
+                  x-text="storyTimestamp(activeStory)"></span>
+          </div>
+
+          <!-- Cast -->
+          <template x-if="storyHeroes(activeStory).length > 0 || storyVillains(activeStory).length > 0">
+            <div class="mb-3">
+              <small class="text-muted text-uppercase d-block mb-2" style="letter-spacing: 0.15em;">Cast</small>
+              <div class="d-flex flex-wrap gap-1">
+                <template x-for="h in storyHeroes(activeStory)" :key="'mh-' + h">
+                  <span class="badge text-bg-success" x-text="'⚡ ' + h"></span>
+                </template>
+                <template x-for="v in storyVillains(activeStory)" :key="'mv-' + v">
+                  <span class="badge text-bg-danger" x-text="'☠ ' + v"></span>
+                </template>
+              </div>
+            </div>
+          </template>
+
+          <hr style="border-color: rgba(255,255,255,0.08);">
+
+          <!-- Content (preserves paragraphs) -->
+          <article class="story-content"
+                   style="white-space: pre-wrap; line-height: 1.7; font-size: 0.95rem;"
+                   x-text="storyContent(activeStory)"></article>
+
+        </div>
+
+        <div class="modal-footer" style="border-color: rgba(255,255,255,0.1);">
+          <button class="btn btn-outline-danger"
+                  @click="deleteStory(activeStory); closeStory();">Delete</button>
+          <button class="btn btn-primary" @click="closeStory()">Close</button>
+        </div>
+
+      </div>
+    </div>
+  </template>
+</div>
+
+<!-- ── Story generator modal ───────────────────────────────────────── -->
+<div class="modal fade show"
+     :class="showStoryGenerator && 'd-block'"
+     x-show="showStoryGenerator"
+     x-transition.opacity
+     style="background: rgba(0,0,0,0.7); z-index: 1060;"
+     @keydown.escape.window="closeStoryGenerator()">
+
+  <div class="modal-dialog modal-dialog-centered modal-lg" @click.stop>
+    <div class="modal-content" style="background: var(--forge-bg);">
+
+      <div class="modal-header" style="border-color: rgba(255,255,255,0.1);">
+        <h5 class="modal-title">📖 Generate Story</h5>
+        <button type="button" class="btn-close btn-close-white" @click="closeStoryGenerator()"></button>
+      </div>
+
+      <form @submit.prevent="generateStory()">
+        <div class="modal-body">
+
+          <!-- Setting input -->
+          <div class="mb-3">
+            <label class="form-label small text-muted">Setting</label>
+            <input type="text" class="form-control"
+                   x-model="storyGenerateForm.setting"
+                   placeholder="a dark city at night, an abandoned space station, a high school reunion…"
+                   :disabled="generatingStory">
+          </div>
+
+          <!-- Hero picker -->
+          <div class="mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <label class="form-label small text-muted mb-0">Heroes</label>
+              <button type="button" class="btn btn-sm btn-link p-0"
+                      @click="pickFromActiveRoster()"
+                      x-show="getActiveRoster().length > 0">
+                Use active team
+              </button>
+            </div>
+            <div x-show="characters.length === 0" class="text-muted small">
+              No characters yet. Generate some on the Characters tab first.
+            </div>
+            <div class="d-flex flex-wrap gap-1">
+              <template x-for="c in characters" :key="c.id || charName(c)">
+                <label class="target-chip"
+                       :class="storyGenerateForm.heroIds.includes(c.id) && 'target-chip-active'"
+                       :style="storyGenerateForm.heroIds.includes(c.id) && `background: ${charColor(c)}22; border-color: ${charColor(c)}; color: ${charColor(c)};`">
+                  <input type="checkbox"
+                         :checked="storyGenerateForm.heroIds.includes(c.id)"
+                         @change="toggleStoryHero(c.id)"
+                         class="d-none">
+                  <span x-text="'⚡ ' + charName(c)"></span>
+                </label>
+              </template>
+            </div>
+          </div>
+
+          <!-- Villain picker -->
+          <div class="mb-3">
+            <label class="form-label small text-muted">Villains</label>
+            <div x-show="villainPool.length === 0" class="text-muted small">
+              No villains in the pool. Generate some on the Villains tab first, or skip — stories can be hero-only.
+            </div>
+            <div class="d-flex flex-wrap gap-1">
+              <template x-for="v in villainPool" :key="v.id || villName(v)">
+                <label class="target-chip"
+                       :class="storyGenerateForm.villainIds.includes(v.id) && 'target-chip-active'"
+                       :style="storyGenerateForm.villainIds.includes(v.id) && 'background: rgba(139,26,26,0.13); border-color: #8B1A1A; color: #ff8a8a;'">
+                  <input type="checkbox"
+                         :checked="storyGenerateForm.villainIds.includes(v.id)"
+                         @change="toggleStoryVillain(v.id)"
+                         class="d-none">
+                  <span x-text="'☠ ' + villName(v)"></span>
+                </label>
+              </template>
+            </div>
+          </div>
+
+          <!-- Last result preview -->
+          <template x-if="lastGeneratedStory && !lastGeneratedStory.error">
+            <div class="alert alert-success small">
+              <div class="fw-semibold mb-1">✓ Story saved:</div>
+              <div x-text="storyTitle(lastGeneratedStory)"></div>
+              <div class="text-muted" x-text="storyWordCount(lastGeneratedStory) + ' words'"></div>
+            </div>
+          </template>
+          <template x-if="lastGeneratedStory && lastGeneratedStory.error">
+            <div class="alert alert-danger small">
+              <div class="fw-semibold mb-1">✗ Generation failed</div>
+              <div x-text="lastGeneratedStory.error"></div>
+            </div>
+          </template>
+
+          <!-- Spinner -->
+          <div x-show="generatingStory" class="text-center py-3">
+            <div class="spinner-border spinner-border-sm" style="color: var(--forge-gold);"></div>
+            <div class="small text-muted mt-2">Asking Ollama to write a story…</div>
+            <div class="small text-muted">This can take 15-60 seconds.</div>
+          </div>
+
+        </div>
+
+        <div class="modal-footer" style="border-color: rgba(255,255,255,0.1);">
+          <button type="button" class="btn btn-outline-secondary" @click="closeStoryGenerator()" :disabled="generatingStory">Cancel</button>
+          <button type="submit" class="btn btn-primary"
+                  :disabled="generatingStory || (storyGenerateForm.heroIds.length === 0 && storyGenerateForm.villainIds.length === 0)">
+            <span x-show="!generatingStory">📖 Generate</span>
+            <span x-show="generatingStory">Writing…</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

@@ -6,6 +6,7 @@
 :root {
   --forge-gold: #D4AF37;
   --forge-bg:   #09090F;
+  --forge-surface: #14141C;
   --forge-text: #F0EAD6;
 }
 
@@ -213,5 +214,17 @@ code, .font-monospace {
 }
 .target-chip-active {
   font-weight: bold;
+}
+
+/* ── Story prose typography ───────────────────────────────────────── */
+.story-content {
+  font-family: 'Georgia', 'Iowan Old Style', serif;
+  color: var(--forge-text);
+}
+.story-content::first-letter {
+  /* Drop cap only at start of first paragraph */
+}
+.story-content p {
+  margin-bottom: 1em;
 }
 

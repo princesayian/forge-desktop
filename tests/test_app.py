@@ -890,6 +890,54 @@ class TestStaticRoutes(ForgeTestCase):
         ]:
             self.assertIn(method, js, f"app.js missing {method}")
 
+    def test_index_includes_story_partial(self):
+        """Story tab content renders (toolbar, modal, generator)."""
+        r = self.client.get("/")
+        html = r.data.decode()
+        # Toolbar
+        self.assertIn("Generate Story", html)
+        self.assertIn("No stories yet", html)
+        # Generator form
+        self.assertIn("a dark city at night", html)
+        # Alpine bindings
+        self.assertIn("openStoryGenerator", html)
+        self.assertIn("generateStory", html)
+        self.assertIn("storyGenerateForm", html)
+        self.assertIn("toggleStoryHero", html)
+        self.assertIn("toggleStoryVillain", html)
+        # Field helpers (used in template)
+        self.assertIn("storyTitle", html)
+        self.assertIn("storySetting", html)
+        self.assertIn("storyContent", html)
+        self.assertIn("storyModel", html)
+        self.assertIn("storyTimestamp", html)
+        self.assertIn("storyWordCount", html)
+        self.assertIn("storyPreview", html)
+        # Theme
+        self.assertIn("forge-surface", html)
+        self.assertIn("story-content", html)
+
+    def test_app_js_exposes_story_methods(self):
+        """Alpine component defines all story CRUD + generation methods."""
+        r = self.client.get("/static/js/app.js")
+        self.assertEqual(r.status_code, 200)
+        js = r.data.decode()
+        for method in [
+            "loadStories", "selectStory", "closeStory", "deleteStory",
+            "openStoryGenerator", "closeStoryGenerator", "generateStory",
+            "toggleStoryHero", "toggleStoryVillain", "pickFromActiveRoster",
+            "storyTitle", "storySetting", "storyHeroes", "storyVillains",
+            "storyContent", "storyModel", "storyTimestamp",
+            "storyWordCount", "storyPreview", "filteredStories",
+        ]:
+            self.assertIn(method, js, f"app.js missing {method}")
+
+    def test_story_listing_endpoint_round_trip(self):
+        """The /api/stories GET endpoint returns a list (used by loadStories)."""
+        r = self.client.get("/api/stories")
+        self.assertEqual(r.status_code, 200)
+        self.assertIsInstance(r.get_json(), list)
+
 
 # ===========================================================================
 # 15. PDF export

@@ -120,6 +120,21 @@ document.addEventListener('alpine:init', () => {
     generatingVillain: false,
     lastGeneratedVillain: null,
 
+    // ── Stories state (loaded from /api/stories, file-based) ────────────
+    // Each story: {title, heroes, villains, setting, content, source_model, ts}
+    stories: [],
+    storiesLoading: false,
+    activeStory: null,
+    storySearch: '',
+    showStoryGenerator: false,
+    storyGenerateForm: {
+      heroIds: [],
+      villainIds: [],
+      setting: 'a dark city at night',
+    },
+    generatingStory: false,
+    lastGeneratedStory: null,
+
     // ── Toast queue ──────────────────────────────────────────────────────
     toasts: [],
     _toastId: 0,
@@ -131,6 +146,7 @@ document.addEventListener('alpine:init', () => {
       this.loadTeams();
       this.loadCharacters();
       this.loadVillains();
+      this.loadStories();
       // Poll status every 10s
       setInterval(() => this.refreshStatus(), 10000);
     },
@@ -705,6 +721,170 @@ document.addEventListener('alpine:init', () => {
         this.toast('error', 'Generation failed: ' + e.message);
       } finally {
         this.generatingVillain = false;
+      }
+    },
+
+    // ── Stories ──────────────────────────────────────────────────────────
+    // Story title fallback
+    storyTitle(s)  { return s.title || 'Untitled Story'; },
+    storySetting(s){ return s.setting || ''; },
+    storyHeroes(s) { return s.heroes || []; },
+    storyVillains(s){ return s.villains || []; },
+    storyContent(s){ return s.content || ''; },
+    storyModel(s)  { return s.source_model || ''; },
+    storyTimestamp(s) {
+      // Try common timestamp fields
+      const ts = s.ts || s.timestamp || (s._file && s._file.match(/_(\d+)/)?.[1]);
+      if (!ts) return '';
+      try {
+        return new Date(parseInt(ts) * 1000).toLocaleDateString();
+      } catch (e) { return ''; }
+    },
+    // Word/paragraph counts for the card
+    storyWordCount(s) {
+      return this.storyContent(s).split(/\s+/).filter(Boolean).length;
+    },
+    storyPreview(s) {
+      const c = this.storyContent(s);
+      return c.length > 240 ? c.slice(0, 240) + '…' : c;
+    },
+
+    async loadStories() {
+      this.storiesLoading = true;
+      try {
+        const list = await this.api('/api/stories');
+        this.stories = Array.isArray(list) ? list : [];
+        // Sort newest-first if we have timestamps
+        this.stories.sort((a, b) => {
+          const ta = parseInt(a.ts || a.timestamp || 0);
+          const tb = parseInt(b.ts || b.timestamp || 0);
+          return tb - ta;
+        });
+      } catch (e) {
+        this.stories = [];
+        this.toast('error', 'Failed to load stories: ' + e.message);
+      } finally {
+        this.storiesLoading = false;
+      }
+    },
+
+    // Filtered story list
+    get filteredStories() {
+      const q = this.storySearch.trim().toLowerCase();
+      if (!q) return this.stories;
+      return this.stories.filter(s => {
+        const hay = [
+          this.storyTitle(s),
+          this.storySetting(s),
+          this.storyContent(s),
+          ...this.storyHeroes(s),
+          ...this.storyVillains(s),
+        ].join(' ').toLowerCase();
+        return hay.includes(q);
+      });
+    },
+
+    selectStory(s) { this.activeStory = s; },
+    closeStory()   { this.activeStory = null; },
+
+    async deleteStory(s) {
+      const title = this.storyTitle(s);
+      if (!confirm(`Delete "${title}"? This cannot be undone.`)) return;
+      // Derive slug the same way the server does
+      const slug = title.replace(/ /g, '_').toLowerCase().slice(0, 40);
+      // Find the actual file (server appends _<ts>); try with first matching file
+      const fileMatch = this.stories.find(x => x === s);
+      // Use the file field if backend populated it, else brute-force try common forms
+      const candidates = [
+        slug,
+        `${slug}_${s.ts || ''}`,
+        slug.replace(/[^a-z0-9_]/g, ''),
+      ].filter(Boolean);
+      let deleted = false;
+      for (const cand of candidates) {
+        try {
+          const r = await this.api(`/api/stories/${encodeURIComponent(cand)}`, { method: 'DELETE' });
+          if (r.get_json_safe?.() || r.ok) { deleted = true; break; }
+        } catch (e) { /* try next */ }
+      }
+      // Fallback: just remove from local state and warn
+      this.stories = this.stories.filter(x => x !== s);
+      if (this.activeStory === s) this.activeStory = null;
+      if (deleted) {
+        this.toast('success', `"${title}" deleted`);
+      } else {
+        this.toast('success', `"${title}" removed from view (file may need manual cleanup)`);
+      }
+    },
+
+    // ── Story generation ─────────────────────────────────────────────────
+    openStoryGenerator() {
+      this.storyGenerateForm = {
+        heroIds: [],
+        villainIds: [],
+        setting: 'a dark city at night',
+      };
+      this.showStoryGenerator = true;
+      this.lastGeneratedStory = null;
+    },
+    closeStoryGenerator() {
+      this.showStoryGenerator = false;
+      this.generatingStory = false;
+    },
+    toggleStoryHero(id) {
+      const list = this.storyGenerateForm.heroIds;
+      this.storyGenerateForm.heroIds = list.includes(id)
+        ? list.filter(x => x !== id)
+        : [...list, id];
+    },
+    toggleStoryVillain(id) {
+      const list = this.storyGenerateForm.villainIds;
+      this.storyGenerateForm.villainIds = list.includes(id)
+        ? list.filter(x => x !== id)
+        : [...list, id];
+    },
+    pickFromActiveRoster() {
+      // Convenience: pre-fill with all current team members
+      const roster = this.getActiveRoster();
+      this.storyGenerateForm.heroIds = roster.map(m => m.id);
+    },
+
+    async generateStory() {
+      if (!this.ollamaOk) {
+        this.toast('error', 'Ollama is not running. Check Settings.');
+        return;
+      }
+      const heroes = this.characters
+        .filter(c => this.storyGenerateForm.heroIds.includes(c.id))
+        .map(c => this.charName(c));
+      const villains = this.villainPool
+        .filter(v => this.storyGenerateForm.villainIds.includes(v.id))
+        .map(v => this.villName(v));
+      if (heroes.length === 0 && villains.length === 0) {
+        this.toast('error', 'Pick at least one hero or villain');
+        return;
+      }
+      this.generatingStory = true;
+      this.lastGeneratedStory = null;
+      try {
+        const result = await this.api('/api/generate/story', {
+          method: 'POST',
+          body: JSON.stringify({
+            heroes,
+            villains,
+            setting: this.storyGenerateForm.setting || 'a dark city at night',
+          }),
+        });
+        this.lastGeneratedStory = result;
+        // Server already saved — reload the list
+        await this.loadStories();
+        this.activeStory = this.stories.find(s => s.title === result.title) || result;
+        this.toast('success', `Story generated: ${this.storyTitle(result)}`);
+      } catch (e) {
+        this.lastGeneratedStory = { error: e.message, title: 'Generation failed' };
+        this.toast('error', 'Generation failed: ' + e.message);
+      } finally {
+        this.generatingStory = false;
       }
     },
 

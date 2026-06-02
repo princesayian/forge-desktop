@@ -53,7 +53,7 @@ python setup.py
 python3 setup.py
 ```
 
-This installs Python packages and downloads the frontend libraries (React + ReactDOM). Takes about a minute.
+This installs Python packages via Poetry. Takes about a minute.
 
 ---
 
@@ -171,23 +171,31 @@ ollama pull mistral
 
 ```
 forge-desktop/
-├── app.py                ← Main application (Flask server + all API endpoints)
-├── setup.py              ← Run once to set up
-├── requirements.txt      ← Python dependencies
-├── config.json.example   ← Template for config (config.json auto-created, gitignored)
-├── CHANGELOG.md          ← Version history
-├── run.bat               ← Windows launcher
-├── run.sh                ← Mac/Linux launcher
+├── app.py                 ← Main application (Flask server + all API endpoints)
+├── setup.py               ← Helper script (Ollama check, config init)
+├── pyproject.toml         ← Python dependencies (Poetry)
+├── poetry.lock            ← Locked dep versions
+├── Makefile               ← Build/test/run targets
+├── config.json.example    ← Template for config (config.json auto-created, gitignored)
+├── CHANGELOG.md           ← Version history
+├── run.bat                ← Windows launcher
+├── run.sh                 ← Mac/Linux launcher
 ├── data/
-│   ├── characters/       ← Saved hero/villain JSON files
+│   ├── characters/        ← Saved hero/villain JSON files
 │   ├── teams/             ← Saved team JSON files
 │   └── stories/           ← Saved story JSON files
-├── images/               ← Uploaded character portraits
+├── images/                ← Uploaded character portraits
 ├── static/
-│   └── index.html          ← The full Superhero Forge UI (React createElement)
-└── vendor/               ← Created by setup.py
-    ├── react.js
-    └── react-dom.js
+│   ├── css/theme.css      ← Custom dark theme
+│   └── js/app.js          ← Alpine.js app (~900 lines)
+└── templates/             ← Jinja2 templates
+    ├── base.html          ← Layout: nav, tabs, toasts
+    └── partials/          ← One file per tab
+        ├── settings.html
+        ├── teams.html
+        ├── characters.html
+        ├── villains.html
+        └── story.html
 ```
 
 ---

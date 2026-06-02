@@ -1,67 +1,25 @@
 """
 Superhero Forge — Setup Script
-Run once before first launch: python setup.py
+Run once before first launch: poetry install --extras <platform> --extras dev
+Or just: make install
+
+This file is kept only for the helper functions (check_ollama, create_config)
+that the Makefile still uses. The Python deps are now managed by Poetry.
 """
 
-import os, sys, subprocess, urllib.request
+import os, sys, urllib.request, json, subprocess
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-VENDOR = os.path.join(BASE, "vendor")
-
-VENDOR_FILES = [
-    ("react.js",     "https://unpkg.com/react@18/umd/react.production.min.js"),
-    ("react-dom.js", "https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"),
-]
 
 def step(msg): print(f"\n  ▸ {msg}")
 def ok(msg):   print(f"    ✓ {msg}")
 def info(msg): print(f"    · {msg}")
 
 def install_packages():
-    step("Installing Python packages...")
-    reqs = os.path.join(BASE, "requirements.txt")
-    result = subprocess.run(
-        [sys.executable, "-m", "pip", "install", "-r", reqs, "--quiet"],
-        capture_output=True, text=True
-    )
-    if result.returncode != 0:
-        # Try without quiet for better error output
-        subprocess.run([sys.executable, "-m", "pip", "install", "-r", reqs])
-    ok("Python packages installed")
-
-    # PyWebView has platform-specific extras
-    platform = sys.platform
-    if platform == "win32":
-        subprocess.run(
-            [sys.executable, "-m", "pip", "install", "pywebview[winforms]", "--quiet"],
-            capture_output=True
-        )
-        ok("PyWebView Windows backend installed")
-    elif platform == "darwin":
-        subprocess.run(
-            [sys.executable, "-m", "pip", "install", "pywebview", "--quiet"],
-            capture_output=True
-        )
-        ok("PyWebView macOS backend installed")
-
-def download_vendor():
-    step("Downloading frontend libraries...")
-    os.makedirs(VENDOR, exist_ok=True)
-
-    for filename, url in VENDOR_FILES:
-        dest = os.path.join(VENDOR, filename)
-        if os.path.exists(dest) and os.path.getsize(dest) > 1000:
-            ok(f"{filename} already present, skipping")
-            continue
-        info(f"Downloading {filename}...")
-        try:
-            urllib.request.urlretrieve(url, dest)
-            size_kb = os.path.getsize(dest) // 1024
-            ok(f"{filename} downloaded ({size_kb}KB)")
-        except Exception as e:
-            print(f"\n  ✗ Failed to download {filename}: {e}")
-            print(f"    Download manually from: {url}")
-            print(f"    Save to: {dest}")
+    """No-op when Poetry is the package manager. Kept for compatibility."""
+    step("Python packages managed by Poetry")
+    info("Run: make install   (or: poetry install --extras <platform> --extras dev)")
+    ok("Skipped (Poetry is the package manager now)")
 
 def check_ollama():
     step("Checking for Ollama...")
@@ -84,7 +42,6 @@ def check_ollama():
         return False
 
 def create_config():
-    import json
     config_path = os.path.join(BASE, "config.json")
     if not os.path.exists(config_path):
         with open(config_path, "w") as f:
@@ -97,7 +54,6 @@ if __name__ == "__main__":
     print("="*50)
 
     install_packages()
-    download_vendor()
     create_config()
     check_ollama()
 
@@ -105,6 +61,6 @@ if __name__ == "__main__":
     print("  Setup complete!")
     print()
     print("  To launch:")
-    print("    Windows:  run.bat  (or: python app.py)")
-    print("    Mac/Linux: sh run.sh  (or: python3 app.py)")
+    print("    poetry run python app.py")
+    print("    (or: make run)")
     print("="*50 + "\n")
