@@ -966,6 +966,20 @@ def generate_story():
 # ---------------------------------------------------------------------------
 SYSTEM_PROMPT = "You are a creative writing assistant specializing in superhero fiction. When asked to return JSON, return ONLY valid JSON — no markdown fences, no preamble, no explanation. The JSON must be complete and parseable."
 
+def _ndjson_text(text):
+    """Return a streaming NDJSON response with a single {t} chunk — matches callAI's parser."""
+    from flask import stream_with_context
+    def _gen():
+        yield json.dumps({"t": text}) + "\n"
+    return Response(stream_with_context(_gen()), mimetype="application/x-ndjson")
+
+def _ndjson_error(msg, status=500):
+    """Return a streaming NDJSON response with an {e} error chunk."""
+    from flask import stream_with_context
+    def _gen():
+        yield json.dumps({"e": msg}) + "\n"
+    return Response(stream_with_context(_gen()), mimetype="application/x-ndjson", status=status)
+
 @app.route("/api/chat", methods=["POST"])
 def chat():
     data = request.json or {}
@@ -977,18 +991,25 @@ def chat():
     if not messages or messages[0].get("role") != "system":
         messages.insert(0, {"role": "system", "content": SYSTEM_PROMPT})
 
-    # Detect JSON-only mode
-    use_json_format = False
-    for msg in messages:
-        content = msg.get("content", "")
-        if any(kw in content for kw in ("JSON only", '"prompt"', "keys:")):
-            use_json_format = True
-            break
-
-    base = config["ollama_url"].rstrip("/")
+    # Detect JSON-only mode (for local Ollama format hint)
+    use_json_format = any(
+        any(kw in msg.get("content", "") for kw in ("JSON only", '"prompt"', "keys:"))
+        for msg in messages
+    )
 
     try:
-        if _is_remote():
+        use_groq = model in GROQ_MODELS and bool(GROQ_KEY)
+        if use_groq:
+            r = requests.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={"Content-Type": "application/json", "Authorization": f"Bearer {GROQ_KEY}"},
+                json={"model": model, "messages": messages, "max_tokens": max_tokens},
+                timeout=180,
+            )
+            r.raise_for_status()
+            text = r.json().get("choices", [{}])[0].get("message", {}).get("content", "")
+        elif _is_remote():
+            base = config["ollama_url"].rstrip("/")
             r = requests.post(
                 f"{base}/v1/chat/completions",
                 headers=_headers(),
@@ -996,47 +1017,40 @@ def chat():
                 timeout=180,
             )
             if r.status_code == 401:
-                return jsonify({"error": "Authentication failed. Check your API key."}), 401
+                return _ndjson_error("Authentication failed. Check your API key.", 401)
             r.raise_for_status()
-            resp_data = r.json()
-            text = resp_data.get("choices", [{}])[0].get("message", {}).get("content", "")
+            text = r.json().get("choices", [{}])[0].get("message", {}).get("content", "")
         else:
+            base = config["ollama_url"].rstrip("/")
             payload = {
                 "model": model,
                 "messages": messages,
                 "stream": False,
-                "options": {
-                    "temperature": 0.8,
-                    "num_predict": max_tokens,
-                    "top_p": 0.9,
-                },
+                "options": {"temperature": 0.8, "num_predict": max_tokens, "top_p": 0.9},
             }
             if use_json_format:
                 payload["format"] = "json"
-            r = requests.post(
-                f"{base}/api/chat",
-                json=payload,
-                timeout=180,
-            )
+            r = requests.post(f"{base}/api/chat", json=payload, timeout=180)
             r.raise_for_status()
-            resp_data = r.json()
-            text = resp_data.get("message", {}).get("content", "")
+            text = r.json().get("message", {}).get("content", "")
 
-        return jsonify({"content": [{"type": "text", "text": text}]})
+        return _ndjson_text(text)
 
     except requests.exceptions.ConnectionError:
-        mode = "remote" if _is_remote() else "local"
-        if mode == "remote":
-            return jsonify({"error": "Cannot reach remote API. Check the URL and API key."}), 503
-        return jsonify({"error": "Ollama is not running. Start it with: ollama serve"}), 503
+        if model in GROQ_MODELS and GROQ_KEY:
+            return _ndjson_error("Cannot reach Groq API. Check your internet connection.", 503)
+        if _is_remote():
+            return _ndjson_error("Cannot reach remote API. Check the URL and API key.", 503)
+        return _ndjson_error("Ollama is not running. Start it with: ollama serve", 503)
     except requests.exceptions.Timeout:
-        return jsonify({"error": f"Model {model} timed out."}), 504
+        return _ndjson_error(f"Model {model} timed out.", 504)
     except requests.exceptions.HTTPError as e:
-        if e.response is not None and e.response.status_code == 401:
-            return jsonify({"error": "Authentication failed. Check your API key."}), 401
-        return jsonify({"error": str(e)}), e.response.status_code if e.response is not None else 500
+        code = e.response.status_code if e.response is not None else 500
+        if code == 401:
+            return _ndjson_error("Authentication failed. Check your API key.", 401)
+        return _ndjson_error(str(e), code)
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return _ndjson_error(str(e), 500)
 
 # ---------------------------------------------------------------------------
 # PDF Export
