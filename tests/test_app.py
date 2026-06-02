@@ -372,6 +372,60 @@ class TestStoreEndpoint(ForgeTestCase):
         r = self.client.get("/api/store?prefix=user_")
         self.assertEqual(sorted(r.get_json()["keys"]), ["user_1", "user_2"])
 
+    def test_villain_pool_round_trip(self):
+        """The forge-villains store key holds an array of villain objects."""
+        villains = [
+            {
+                "id": "villain-1",
+                "name": "Plague",
+                "real_name": "Victor Dark",
+                "alignment": "villain",
+                "powers": ["Toxic gas"],
+                "weaknesses": ["Fire"],
+                "backstory": "Failed chemist.",
+                "personality": "ruthless",
+                "threat_level": "metro",
+                "goal": "Contaminate the city",
+                "stats": {"strength": 5, "speed": 4},
+                "appearance": "Hazard suit",
+                "isVillain": True,
+                "targetTeams": ["nocturnal-knights"],
+                "nkAlignment": "enemy",
+            },
+            {
+                "id": "villain-2",
+                "name": "Cipher",
+                "real_name": "Mira Vox",
+                "alignment": "villain",
+                "powers": ["Mind control", "Illusion"],
+                "threat_level": "global",
+                "goal": "World domination",
+                "isVillain": True,
+                "targetTeams": [],
+                "nkAlignment": "enemy",
+            },
+        ]
+        import json
+        # Save the array
+        r = self.client.post(
+            "/api/store/forge-villains",
+            json={"value": json.dumps(villains)},
+        )
+        self.assertEqual(r.status_code, 200)
+        # Read it back
+        r2 = self.client.get("/api/store/forge-villains")
+        self.assertEqual(r2.status_code, 200)
+        body = r2.get_json()
+        self.assertEqual(body["key"], "forge-villains")
+        loaded = json.loads(body["value"])
+        self.assertEqual(len(loaded), 2)
+        self.assertEqual(loaded[0]["name"], "Plague")
+        self.assertEqual(loaded[0]["threat_level"], "metro")
+        self.assertEqual(loaded[1]["goal"], "World domination")
+        # List via prefix to confirm visibility
+        r3 = self.client.get("/api/store?prefix=forge-")
+        self.assertIn("forge-villains", r3.get_json()["keys"])
+
 
 # ===========================================================================
 # 7. Images
@@ -797,6 +851,42 @@ class TestStaticRoutes(ForgeTestCase):
             "charName", "charInitials", "charPowers", "charOrigin",
             "charStats", "charStatKeys", "charType", "charTypeLabel",
             "charTypeBadgeClass", "filteredCharacters",
+        ]:
+            self.assertIn(method, js, f"app.js missing {method}")
+
+    def test_index_includes_villains_partial(self):
+        r = self.client.get("/")
+        html = r.data.decode()
+        # Villains tab content
+        self.assertIn("Generate Villain", html)
+        self.assertIn("No active threats", html)
+        # Threat levels in dropdown
+        for level in ["street", "metro", "global", "cosmic"]:
+            self.assertIn(f'value="{level}"', html)
+        # Alpine bindings (present in the partial)
+        self.assertIn("openVillainGenerator", html)
+        self.assertIn("generateVillain", html)
+        self.assertIn("villainGenerateForm", html)
+        self.assertIn("toggleVillainTarget", html)
+        # Field helpers (present in the partial — those referenced in the template)
+        self.assertIn("villName", html)
+        self.assertIn("villGoal", html)
+        self.assertIn("villTargetTeamNames", html)
+        self.assertIn("villThreatLevel", html)
+
+    def test_app_js_exposes_villain_methods(self):
+        """Alpine component defines all villain pool + generation methods."""
+        r = self.client.get("/static/js/app.js")
+        self.assertEqual(r.status_code, 200)
+        js = r.data.decode()
+        for method in [
+            "loadVillains", "selectVillain", "closeVillain",
+            "deleteVillain", "addCharacterAsVillain",
+            "openVillainGenerator", "closeVillainGenerator", "generateVillain",
+            "toggleVillainTarget",
+            "villName", "villPowers", "villGoal", "villThreatLevel",
+            "villThreatBadgeClass", "villTargetTeams", "villTargetTeamNames",
+            "filteredVillains",
         ]:
             self.assertIn(method, js, f"app.js missing {method}")
 

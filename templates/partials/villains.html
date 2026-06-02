@@ -1,0 +1,347 @@
+<!--
+  Villains tab — POC for the new Jinja2 + Alpine + Bootstrap stack.
+  Backed by:
+    - /api/store/forge-villains  (the pool — array of villain objects)
+    - /api/generate/villain       (Ollama generation, saves to data/characters/)
+  Each villain = character-shaped object with isVillain, targetTeams, threat_level.
+-->
+
+<!-- ── Toolbar ──────────────────────────────────────────────────────── -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <small class="text-muted text-uppercase" style="letter-spacing: 0.18em;">Villains</small>
+    <h4 class="mb-0" x-text="filteredVillains.length + ' ' + (filteredVillains.length === 1 ? 'threat' : 'threats')"></h4>
+  </div>
+  <div class="d-flex gap-2">
+    <button class="btn btn-outline-danger btn-sm"
+            @click="openVillainGenerator()"
+            :disabled="!ollamaOk"
+            title="Generate a new villain with Ollama">
+      ☠ Generate Villain
+    </button>
+  </div>
+</div>
+
+<!-- ── Offline warning ──────────────────────────────────────────────── -->
+<div x-show="!ollamaOk" class="alert alert-warning small d-flex align-items-center gap-2">
+  <span>⚠</span>
+  <span>Ollama is not running — villain generation is disabled. Check the <strong>Settings</strong> tab.</span>
+</div>
+
+<!-- ── Search + filter ──────────────────────────────────────────────── -->
+<div class="row g-2 mb-3">
+  <div class="col-md-8">
+    <input type="text" class="form-control form-control-sm"
+           placeholder="Search by name, power, origin, goal…"
+           x-model.debounce.150ms="villainSearch">
+  </div>
+  <div class="col-md-4">
+    <select class="form-select form-select-sm" x-model="villainThreatFilter">
+      <option value="all">All threat levels</option>
+      <option value="street">Street</option>
+      <option value="metro">Metro</option>
+      <option value="global">Global</option>
+      <option value="cosmic">Cosmic</option>
+    </select>
+  </div>
+</div>
+
+<!-- ── Loading state ────────────────────────────────────────────────── -->
+<div x-show="villainsLoading" class="text-center text-muted py-5">
+  <div class="spinner-border spinner-border-sm"></div>
+  Loading villain pool…
+</div>
+
+<!-- ── Empty state ──────────────────────────────────────────────────── -->
+<div x-show="!villainsLoading && villainPool.length === 0"
+     class="text-center text-muted py-5">
+  <p class="mb-1">No active threats.</p>
+  <p class="small">Click <strong>☠ Generate Villain</strong> to create one with Ollama, or add an existing character as a villain from the <strong>Characters</strong> tab.</p>
+</div>
+
+<!-- ── No results state ─────────────────────────────────────────────── -->
+<div x-show="!villainsLoading && villainPool.length > 0 && filteredVillains.length === 0"
+     class="text-center text-muted py-4 small">
+  No villains match your search/filter.
+</div>
+
+<!-- ── Villain cards grid ───────────────────────────────────────────── -->
+<div x-show="!villainsLoading && filteredVillains.length > 0"
+     class="row g-3 mb-4">
+  <template x-for="v in filteredVillains" :key="v.id || villName(v)">
+    <div class="col-md-6 col-lg-4 col-xl-3">
+      <div class="card character-card h-100"
+           :style="`border-color: ${charColor(v)}55; background: linear-gradient(135deg, transparent, ${charColor(v)}08);`"
+           @click="selectVillain(v)"
+           role="button">
+
+        <div class="card-body pb-2">
+          <!-- Header: avatar + name + threat badge -->
+          <div class="d-flex align-items-start gap-2 mb-2">
+            <div class="char-avatar"
+                 :style="`background: ${charColor(v)}22; border: 1px solid ${charColor(v)}66; color: ${charColor(v)};`"
+                 x-text="charInitials(v)"></div>
+            <div class="flex-grow-1 min-w-0">
+              <div class="fw-semibold text-truncate" x-text="villName(v)"></div>
+              <div class="small text-muted text-truncate" x-text="villRealName(v) || '—'"></div>
+            </div>
+            <span class="badge" :class="villThreatBadgeClass(v)" x-text="villThreatLevel(v).toUpperCase()"></span>
+          </div>
+
+          <p x-show="v.tagline" class="small fst-italic mb-2" x-text="v.tagline"></p>
+
+          <!-- Goal -->
+          <p x-show="villGoal(v)" class="small mb-2">
+            <span class="text-muted text-uppercase" style="font-size: 0.7rem; letter-spacing: 0.1em;">Goal:</span>
+            <span x-text="villGoal(v)"></span>
+          </p>
+
+          <!-- Powers (top 2) -->
+          <div class="d-flex flex-wrap gap-1 mb-2">
+            <template x-for="p in villPowers(v).slice(0, 2)" :key="p.name">
+              <span class="badge text-bg-dark" x-text="p.name"></span>
+            </template>
+            <template x-if="villPowers(v).length > 2">
+              <span class="badge text-bg-secondary" x-text="'+' + (villPowers(v).length - 2)"></span>
+            </template>
+          </div>
+
+          <!-- Target teams -->
+          <div x-show="villTargetTeamNames(v).length > 0" class="small text-muted">
+            <span class="text-uppercase" style="font-size: 0.7rem; letter-spacing: 0.1em;">Targets:</span>
+            <span x-text="villTargetTeamNames(v).join(', ')"></span>
+          </div>
+        </div>
+
+        <div class="card-footer text-end" @click.stop>
+          <button class="btn btn-sm btn-outline-secondary" @click="selectVillain(v)">View</button>
+          <button class="btn btn-sm btn-outline-danger" @click="deleteVillain(v)">Remove</button>
+        </div>
+      </div>
+    </div>
+  </template>
+</div>
+
+<!-- ── Villain detail modal ─────────────────────────────────────────── -->
+<div class="modal fade show"
+     :class="activeVillain && 'd-block'"
+     x-show="activeVillain"
+     x-transition.opacity
+     style="background: rgba(0,0,0,0.7); z-index: 1050;"
+     @keydown.escape.window="closeVillain()">
+
+  <template x-if="activeVillain">
+    <div class="modal-dialog modal-dialog-centered modal-lg" @click.stop>
+      <div class="modal-content" style="background: var(--forge-bg);">
+
+        <div class="modal-header" :style="`border-bottom: 2px solid ${charColor(activeVillain)}55;`">
+          <div class="d-flex align-items-center gap-3">
+            <div class="char-avatar char-avatar-lg"
+                 :style="`background: ${charColor(activeVillain)}22; border: 1px solid ${charColor(activeVillain)}66; color: ${charColor(activeVillain)};`"
+                 x-text="charInitials(activeVillain)"></div>
+            <div>
+              <h5 class="modal-title mb-0" x-text="villName(activeVillain)"></h5>
+              <small class="text-muted" x-text="villRealName(activeVillain)"></small>
+            </div>
+          </div>
+          <button type="button" class="btn-close btn-close-white" @click="closeVillain()"></button>
+        </div>
+
+        <div class="modal-body">
+
+          <!-- Type + threat + goal + tagline -->
+          <div class="d-flex gap-2 align-items-center mb-3 flex-wrap">
+            <span class="badge" :class="villThreatBadgeClass(activeVillain)" x-text="villThreatLevel(activeVillain).toUpperCase()"></span>
+            <span x-show="activeVillain.alignment" class="badge text-bg-dark" x-text="activeVillain.alignment"></span>
+            <span x-show="activeVillain.tagline" class="small fst-italic text-muted" x-text="'“' + activeVillain.tagline + '”'"></span>
+          </div>
+
+          <!-- Goal (prominent for villains) -->
+          <template x-if="villGoal(activeVillain)">
+            <div class="alert alert-danger small mb-3">
+              <strong>Goal:</strong> <span x-text="villGoal(activeVillain)"></span>
+            </div>
+          </template>
+
+          <!-- Powers -->
+          <template x-if="villPowers(activeVillain).length > 0">
+            <div class="mb-3">
+              <small class="text-muted text-uppercase d-block mb-2" style="letter-spacing: 0.15em;">Powers</small>
+              <div class="d-flex flex-column gap-2">
+                <template x-for="p in villPowers(activeVillain)" :key="p.name">
+                  <div>
+                    <div class="fw-semibold small" x-text="p.name"></div>
+                    <div x-show="p.desc" class="small text-muted" x-text="p.desc"></div>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </template>
+
+          <!-- Weaknesses -->
+          <template x-if="villWeaknesses(activeVillain).length > 0">
+            <div class="mb-3">
+              <small class="text-muted text-uppercase d-block mb-2" style="letter-spacing: 0.15em;">Weaknesses</small>
+              <div class="d-flex flex-wrap gap-1">
+                <template x-for="w in villWeaknesses(activeVillain)" :key="w">
+                  <span class="badge text-bg-success" x-text="w"></span>
+                </template>
+              </div>
+            </div>
+          </template>
+
+          <!-- Origin / backstory -->
+          <template x-if="villOrigin(activeVillain)">
+            <div class="mb-3">
+              <small class="text-muted text-uppercase d-block mb-2" style="letter-spacing: 0.15em;">Origin</small>
+              <p class="small" x-text="villOrigin(activeVillain)"></p>
+            </div>
+          </template>
+
+          <!-- Stats -->
+          <template x-if="villStatKeys(activeVillain).length > 0">
+            <div class="mb-3">
+              <small class="text-muted text-uppercase d-block mb-2" style="letter-spacing: 0.15em;">Stats</small>
+              <div class="d-flex flex-column gap-2">
+                <template x-for="key in villStatKeys(activeVillain)" :key="key">
+                  <div>
+                    <div class="d-flex justify-content-between small mb-1">
+                      <span x-text="key"></span>
+                      <span class="font-monospace" x-text="villStats(activeVillain)[key]"></span>
+                    </div>
+                    <div class="progress" style="height: 6px; background: rgba(255,255,255,0.05);">
+                      <div class="progress-bar"
+                           :style="`width: ${Math.min(100, (villStats(activeVillain)[key] / 100) * 100)}%; background: ${charColor(activeVillain)};`"></div>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </template>
+
+          <!-- Target teams -->
+          <template x-if="villTargetTeamNames(activeVillain).length > 0">
+            <div class="mb-3">
+              <small class="text-muted text-uppercase d-block mb-2" style="letter-spacing: 0.15em;">Targets</small>
+              <div class="d-flex flex-wrap gap-1">
+                <template x-for="name in villTargetTeamNames(activeVillain)" :key="name">
+                  <span class="badge text-bg-danger" x-text="name"></span>
+                </template>
+              </div>
+            </div>
+          </template>
+
+          <!-- Appearance -->
+          <template x-if="activeVillain.appearance">
+            <div class="mb-3">
+              <small class="text-muted text-uppercase d-block mb-2" style="letter-spacing: 0.15em;">Appearance</small>
+              <p class="small" x-text="activeVillain.appearance"></p>
+            </div>
+          </template>
+
+          <!-- Personality -->
+          <template x-if="activeVillain.personality">
+            <div class="mb-3">
+              <small class="text-muted text-uppercase d-block mb-2" style="letter-spacing: 0.15em;">Personality</small>
+              <p class="small" x-text="activeVillain.personality"></p>
+            </div>
+          </template>
+
+        </div>
+
+        <div class="modal-footer" style="border-color: rgba(255,255,255,0.1);">
+          <button class="btn btn-outline-danger" @click="deleteVillain(activeVillain); closeVillain();">Remove from Pool</button>
+          <button class="btn btn-primary" @click="closeVillain()">Close</button>
+        </div>
+
+      </div>
+    </div>
+  </template>
+</div>
+
+<!-- ── Villain generator modal ──────────────────────────────────────── -->
+<div class="modal fade show"
+     :class="showVillainGenerator && 'd-block'"
+     x-show="showVillainGenerator"
+     x-transition.opacity
+     style="background: rgba(0,0,0,0.7); z-index: 1060;"
+     @keydown.escape.window="closeVillainGenerator()">
+
+  <div class="modal-dialog modal-dialog-centered" @click.stop>
+    <div class="modal-content" style="background: var(--forge-bg);">
+
+      <div class="modal-header" style="border-color: rgba(255,255,255,0.1);">
+        <h5 class="modal-title">☠ Generate Villain</h5>
+        <button type="button" class="btn-close btn-close-white" @click="closeVillainGenerator()"></button>
+      </div>
+
+      <form @submit.prevent="generateVillain()">
+        <div class="modal-body">
+
+          <!-- Theme input -->
+          <div class="mb-3">
+            <label class="form-label small text-muted">Concept / Theme</label>
+            <textarea class="form-control" rows="3"
+                      x-model="villainGenerateForm.theme"
+                      placeholder="e.g. a biotech CEO whose gene therapy is creating monsters, or a quantum thief who steals memories..."
+                      :disabled="generatingVillain"></textarea>
+            <div class="form-text">
+              This is creative inspiration, NOT the villain's name. The model will invent one.
+            </div>
+          </div>
+
+          <!-- Target team selector -->
+          <div class="mb-3">
+            <label class="form-label small text-muted">Targets (which teams does this villain threaten?)</label>
+            <div class="d-flex flex-wrap gap-2">
+              <template x-for="t in teams" :key="t.id">
+                <label class="target-chip"
+                       :class="villainGenerateForm.targetTeams.includes(t.id) && 'target-chip-active'"
+                       :style="villainGenerateForm.targetTeams.includes(t.id) && `background: ${t.color}22; border-color: ${t.color};`">
+                  <input type="checkbox"
+                         :checked="villainGenerateForm.targetTeams.includes(t.id)"
+                         @change="toggleVillainTarget(t.id)"
+                         class="d-none">
+                  <span x-text="t.abbr || t.name"></span>
+                </label>
+              </template>
+            </div>
+            <div class="form-text">Leave empty to target the active team (or NK by default).</div>
+          </div>
+
+          <!-- Last result preview -->
+          <template x-if="lastGeneratedVillain && !lastGeneratedVillain.error">
+            <div class="alert alert-success small">
+              <div class="fw-semibold mb-1">✓ Generated:</div>
+              <div x-text="villName(lastGeneratedVillain)"></div>
+              <div class="text-muted" x-text="villRealName(lastGeneratedVillain)"></div>
+              <div class="mt-1" x-text="lastGeneratedVillain.tagline || lastGeneratedVillain.backstory || ''"></div>
+            </div>
+          </template>
+          <template x-if="lastGeneratedVillain && lastGeneratedVillain.error">
+            <div class="alert alert-danger small">
+              <div class="fw-semibold mb-1">✗ Generation failed</div>
+              <div x-text="lastGeneratedVillain.error"></div>
+            </div>
+          </template>
+
+          <!-- Spinner -->
+          <div x-show="generatingVillain" class="text-center py-3">
+            <div class="spinner-border spinner-border-sm" style="color: var(--forge-gold);"></div>
+            <div class="small text-muted mt-2">Asking Ollama…</div>
+            <div class="small text-muted">This can take 5-30 seconds.</div>
+          </div>
+
+        </div>
+
+        <div class="modal-footer" style="border-color: rgba(255,255,255,0.1);">
+          <button type="button" class="btn btn-outline-secondary" @click="closeVillainGenerator()" :disabled="generatingVillain">Cancel</button>
+          <button type="submit" class="btn btn-danger" :disabled="generatingVillain || !villainGenerateForm.theme.trim()">
+            <span x-show="!generatingVillain">☠ Generate</span>
+            <span x-show="generatingVillain">Generating…</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

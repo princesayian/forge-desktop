@@ -104,6 +104,22 @@ document.addEventListener('alpine:init', () => {
     generating: false,
     lastGenerated: null,      // Result of last generation
 
+    // ── Villains state (pool, stored in /api/store/forge-villains) ──────
+    // Each villain = character-shaped object with `isVillain: true`,
+    // `targetTeams: [teamId, ...]`, optional `threatLevel`, `goal`.
+    villainPool: [],
+    villainsLoading: false,
+    activeVillain: null,
+    villainSearch: '',
+    villainThreatFilter: 'all',   // 'all' | 'street' | 'metro' | 'global' | 'cosmic'
+    showVillainGenerator: false,
+    villainGenerateForm: {
+      theme: '',
+      targetTeams: [],         // Selected team IDs this villain targets
+    },
+    generatingVillain: false,
+    lastGeneratedVillain: null,
+
     // ── Toast queue ──────────────────────────────────────────────────────
     toasts: [],
     _toastId: 0,
@@ -114,6 +130,7 @@ document.addEventListener('alpine:init', () => {
       this.loadConfig();
       this.loadTeams();
       this.loadCharacters();
+      this.loadVillains();
       // Poll status every 10s
       setInterval(() => this.refreshStatus(), 10000);
     },
@@ -515,6 +532,179 @@ document.addEventListener('alpine:init', () => {
         this.toast('error', 'Generation failed: ' + e.message);
       } finally {
         this.generating = false;
+      }
+    },
+
+    // ── Villains ─────────────────────────────────────────────────────────
+    // Field helpers (reuse charName/charPowers where possible)
+    villName(v)    { return this.charName(v); },
+    villRealName(v){ return this.charRealName(v); },
+    villPowers(v)  { return this.charPowers(v); },
+    villWeaknesses(v) { return v.weaknesses || []; },
+    villOrigin(v)  { return v.origin || v.backstory || ''; },
+    villStats(v)   { return v.stats || {}; },
+    villStatKeys(v){ return Object.keys(this.villStats(v)); },
+    villGoal(v)    { return v.goal || ''; },
+    villThreatLevel(v) {
+      // Standardize: server returns 'street'|'metro'|'global'|'cosmic' (or other)
+      return v.threat_level || v.threatLevel || 'street';
+    },
+    villThreatBadgeClass(v) {
+      const lvl = this.villThreatLevel(v);
+      if (lvl === 'cosmic') return 'text-bg-danger';
+      if (lvl === 'global') return 'text-bg-warning';
+      if (lvl === 'metro')  return 'text-bg-info';
+      return 'text-bg-secondary';  // street
+    },
+    villTargetTeams(v) {
+      return v.targetTeams || [];
+    },
+    villTargetTeamNames(v) {
+      return this.villTargetTeams(v).map(id => {
+        const t = this.teams.find(x => x.id === id);
+        return t ? t.name : id;
+      });
+    },
+
+    // Load villain pool from /api/store
+    async loadVillains() {
+      this.villainsLoading = true;
+      try {
+        const list = await this.storeGet('forge-villains');
+        this.villainPool = Array.isArray(list) ? list : [];
+      } catch (e) {
+        // First run — no villains yet
+        this.villainPool = [];
+      } finally {
+        this.villainsLoading = false;
+      }
+    },
+
+    // Filtered villain list (search + threat level)
+    get filteredVillains() {
+      let list = this.villainPool;
+      // Threat filter
+      if (this.villainThreatFilter !== 'all') {
+        list = list.filter(v => this.villThreatLevel(v) === this.villainThreatFilter);
+      }
+      // Search
+      const q = this.villainSearch.trim().toLowerCase();
+      if (q) {
+        list = list.filter(v => {
+          const hay = [
+            this.villName(v),
+            this.villRealName(v),
+            this.villOrigin(v),
+            this.villGoal(v),
+            ...this.villPowers(v).map(p => p.name),
+          ].join(' ').toLowerCase();
+          return hay.includes(q);
+        });
+      }
+      return list;
+    },
+
+    selectVillain(v) { this.activeVillain = v; },
+    closeVillain()   { this.activeVillain = null; },
+
+    async deleteVillain(v) {
+      const name = this.villName(v);
+      if (!confirm(`Remove "${name}" from the villain pool? (The character file, if any, will be kept.)`)) return;
+      try {
+        const newList = this.villainPool.filter(x => x !== v);
+        await this.storeSet('forge-villains', newList);
+        this.villainPool = newList;
+        if (this.activeVillain === v) this.activeVillain = null;
+        this.toast('success', `"${name}" removed from pool`);
+      } catch (e) {
+        this.toast('error', 'Delete failed: ' + e.message);
+      }
+    },
+
+    // Manual add: turn an existing character into a villain (adds to pool)
+    async addCharacterAsVillain(c) {
+      const targets = this.activeTeamId ? [this.activeTeamId] : ['nocturnal-knights'];
+      const v = {
+        ...c,
+        isVillain: true,
+        targetTeams: targets,
+        nkAlignment: 'enemy',
+      };
+      // Avoid duplicates by id
+      if (this.villainPool.find(x => x.id === v.id)) {
+        this.toast('error', `${this.villName(c)} is already in the villain pool`);
+        return;
+      }
+      const newList = [...this.villainPool, v];
+      try {
+        await this.storeSet('forge-villains', newList);
+        this.villainPool = newList;
+        this.toast('success', `${this.villName(c)} added as villain`);
+      } catch (e) {
+        this.toast('error', 'Add failed: ' + e.message);
+      }
+    },
+
+    // ── Villain generation ───────────────────────────────────────────────
+    openVillainGenerator() {
+      this.villainGenerateForm = { theme: '', targetTeams: this.activeTeamId ? [this.activeTeamId] : [] };
+      this.showVillainGenerator = true;
+      this.lastGeneratedVillain = null;
+    },
+    closeVillainGenerator() {
+      this.showVillainGenerator = false;
+      this.generatingVillain = false;
+    },
+    toggleVillainTarget(teamId) {
+      const list = this.villainGenerateForm.targetTeams;
+      const idx = list.indexOf(teamId);
+      if (idx >= 0) {
+        this.villainGenerateForm.targetTeams = list.filter(x => x !== teamId);
+      } else {
+        this.villainGenerateForm.targetTeams = [...list, teamId];
+      }
+    },
+
+    async generateVillain() {
+      if (!this.ollamaOk) {
+        this.toast('error', 'Ollama is not running. Check Settings.');
+        return;
+      }
+      const theme = this.villainGenerateForm.theme.trim();
+      if (!theme) {
+        this.toast('error', 'Please describe a villain concept');
+        return;
+      }
+      this.generatingVillain = true;
+      this.lastGeneratedVillain = null;
+      try {
+        // Server generates AND saves character file at /api/generate/villain
+        const result = await this.api('/api/generate/villain', {
+          method: 'POST',
+          body: JSON.stringify({ extra: theme }),
+        });
+        // Augment with our pool metadata
+        const v = {
+          ...result,
+          isVillain: true,
+          targetTeams: this.villainGenerateForm.targetTeams.length
+            ? this.villainGenerateForm.targetTeams
+            : [this.activeTeamId || 'nocturnal-knights'],
+          nkAlignment: 'enemy',
+          id: result.id || `villain-${Date.now()}`,
+        };
+        // Add to pool and persist
+        const newList = [...this.villainPool, v];
+        await this.storeSet('forge-villains', newList);
+        this.villainPool = newList;
+        this.lastGeneratedVillain = v;
+        this.activeVillain = v;
+        this.toast('success', `Villain generated: ${this.villName(v)}`);
+      } catch (e) {
+        this.lastGeneratedVillain = { error: e.message };
+        this.toast('error', 'Generation failed: ' + e.message);
+      } finally {
+        this.generatingVillain = false;
       }
     },
 
