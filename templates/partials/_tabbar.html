@@ -1,0 +1,22 @@
+<ul class="nav nav-tabs mb-3">
+  <li class="nav-item">
+    <button class="nav-link" :class="activeTab === 'teams' && 'active'"
+            @click="activeTab = 'teams'">Teams</button>
+  </li>
+  <li class="nav-item">
+    <button class="nav-link" :class="activeTab === 'characters' && 'active'"
+            @click="activeTab = 'characters'">Characters</button>
+  </li>
+  <li class="nav-item">
+    <button class="nav-link" :class="activeTab === 'villains' && 'active'"
+            @click="activeTab = 'villains'">Villains</button>
+  </li>
+  <li class="nav-item">
+    <button class="nav-link" :class="activeTab === 'story' && 'active'"
+            @click="activeTab = 'story'">Story</button>
+  </li>
+  <li class="nav-item ms-auto">
+    <button class="nav-link" :class="activeTab === 'settings' && 'active'"
+            @click="activeTab = 'settings'">⚙ Settings</button>
+  </li>
+</ul>

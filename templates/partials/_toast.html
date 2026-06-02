@@ -1,0 +1,16 @@
+<!--
+  Toast container. Stack auto-managed by forgeApp.toast() method.
+-->
+<div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1080;">
+  <template x-for="t in toasts" :key="t.id">
+    <div class="toast show align-items-center text-bg-dark border-0 mb-2"
+         :class="t.kind === 'error' ? 'border-danger' : 'border-success'"
+         role="alert">
+      <div class="d-flex">
+        <div class="toast-body" x-text="t.message"></div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto"
+                @click="dismissToast(t.id)"></button>
+      </div>
+    </div>
+  </template>
+</div>

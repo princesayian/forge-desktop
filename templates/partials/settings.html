@@ -1,0 +1,172 @@
+<!--
+  Settings tab — POC for the new Jinja2 + Alpine + Bootstrap stack.
+  Wires directly to existing /api/* endpoints, no new backend needed.
+-->
+<div class="row g-3">
+
+  <!-- ── Ollama status card ──────────────────────────────────────────────── -->
+  <div class="col-md-6">
+    <div class="card h-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span class="fw-semibold">Ollama Status</span>
+        <button class="btn btn-sm btn-outline-secondary"
+                @click="refreshStatus()" :disabled="statusLoading">
+          <span x-show="!statusLoading">↻ Refresh</span>
+          <span x-show="statusLoading" class="spinner-border spinner-border-sm"></span>
+        </button>
+      </div>
+      <div class="card-body">
+
+        <div class="d-flex align-items-center gap-2 mb-3">
+          <span class="status-dot-lg"
+                :class="ollamaOk ? 'bg-success' : 'bg-danger'"></span>
+          <span x-text="ollamaOk ? 'Running' : 'Not reachable'"
+                :class="ollamaOk ? 'text-success' : 'text-danger'"
+                class="fw-semibold"></span>
+        </div>
+
+        <dl class="row mb-0 small">
+          <dt class="col-sm-4 text-muted">URL</dt>
+          <dd class="col-sm-8 font-monospace" x-text="ollamaUrl"></dd>
+
+          <dt class="col-sm-4 text-muted">Mode</dt>
+          <dd class="col-sm-8">
+            <span class="badge"
+                  :class="mode === 'remote' ? 'text-bg-info' : 'text-bg-secondary'"
+                  x-text="mode"></span>
+          </dd>
+
+          <dt class="col-sm-4 text-muted">Active model</dt>
+          <dd class="col-sm-8 font-monospace" x-text="currentModel"></dd>
+
+          <dt class="col-sm-4 text-muted">Available models</dt>
+          <dd class="col-sm-8">
+            <template x-if="models.length === 0">
+              <span class="text-muted">None</span>
+            </template>
+            <template x-for="m in models" :key="m">
+              <span class="badge text-bg-dark me-1 font-monospace" x-text="m"></span>
+            </template>
+          </dd>
+        </dl>
+
+        <div x-show="!ollamaOk" class="alert alert-warning mt-3 mb-0 small">
+          Ollama isn't running. To use AI features:
+          <ol class="mb-0 mt-1">
+            <li>Download from <a href="https://ollama.com" target="_blank" class="alert-link">ollama.com</a></li>
+            <li>Launch it (it runs as a background service)</li>
+            <li>Run: <code>ollama pull llama3.2</code></li>
+            <li>Click ↻ Refresh</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Model picker card ──────────────────────────────────────────────── -->
+  <div class="col-md-6">
+    <div class="card h-100">
+      <div class="card-header fw-semibold">Active Model</div>
+      <div class="card-body">
+
+        <template x-if="models.length > 0">
+          <div>
+            <label class="form-label small text-muted">Pick a model to use for generation</label>
+            <select class="form-select" x-model="currentModel" @change="saveModel()">
+              <template x-for="m in models" :key="m">
+                <option :value="m" x-text="m"></option>
+              </template>
+            </select>
+            <div class="form-text">
+              Changes take effect immediately. Used for hero, villain, and story generation.
+            </div>
+          </div>
+        </template>
+
+        <template x-if="models.length === 0">
+          <div class="text-muted small">
+            <template x-if="ollamaOk">
+              <span>No models installed. Run <code>ollama pull llama3.2</code> to get started.</span>
+            </template>
+            <template x-if="!ollamaOk">
+              <span>Ollama isn't running — see status card.</span>
+            </template>
+          </div>
+        </template>
+
+        <hr>
+
+        <button class="btn btn-outline-primary btn-sm"
+                :disabled="!ollamaOk || pulling"
+                @click="pullModel()">
+          <span x-show="!pulling">⬇ Pull a model</span>
+          <span x-show="pulling" class="d-inline-flex align-items-center gap-2">
+            <span class="spinner-border spinner-border-sm"></span>
+            Pulling… (this can take a few minutes)
+          </span>
+        </button>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Connection settings card ──────────────────────────────────────── -->
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header fw-semibold">Connection</div>
+      <div class="card-body">
+        <form @submit.prevent="saveConnection()">
+          <div class="row g-3 align-items-end">
+            <div class="col-md-6">
+              <label class="form-label small text-muted">Ollama URL</label>
+              <input type="url" class="form-control font-monospace"
+                     x-model="form.ollamaUrl">
+              <div class="form-text">Default: <code>http://localhost:11434</code></div>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small text-muted">Remote API key (optional)</label>
+              <input type="password" class="form-control font-monospace"
+                     x-model="form.ollamaApiKey"
+                     :placeholder="hasApiKey ? '••••••••  (set)' : 'leave blank for local'">
+              <div class="form-text">
+                <span x-text="hasApiKey ? 'Set — click to change' : 'Not set'"></span>
+              </div>
+            </div>
+            <div class="col-md-2">
+              <button type="submit" class="btn btn-primary w-100"
+                      :disabled="saving">
+                <span x-show="!saving">Save</span>
+                <span x-show="saving" class="spinner-border spinner-border-sm"></span>
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── About card ────────────────────────────────────────────────────── -->
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header fw-semibold">About</div>
+      <div class="card-body small">
+        <dl class="row mb-0">
+          <dt class="col-sm-3 text-muted">Version</dt>
+          <dd class="col-sm-9 font-monospace" x-text="version"></dd>
+
+          <dt class="col-sm-3 text-muted">Repository</dt>
+          <dd class="col-sm-9">
+            <a href="https://github.com/princesayian/forge-desktop" target="_blank"
+               class="text-decoration-none">github.com/princesayian/forge-desktop</a>
+          </dd>
+
+          <dt class="col-sm-3 text-muted">Stack</dt>
+          <dd class="col-sm-9">
+            Flask API + Jinja2 templates + Alpine.js + Bootstrap 5
+          </dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+</div>

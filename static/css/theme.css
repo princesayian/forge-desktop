@@ -1,0 +1,71 @@
+/*
+ * Superhero Forge — custom theme on top of Bootstrap 5 dark.
+ * Keep this small. Most styling should come from Bootstrap utility classes.
+ */
+
+:root {
+  --forge-gold: #D4AF37;
+  --forge-bg:   #09090F;
+  --forge-text: #F0EAD6;
+}
+
+[x-cloak] { display: none !important; }
+
+body {
+  background: var(--forge-bg);
+  color: var(--forge-text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+}
+
+.navbar-brand {
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* Status indicator dot */
+.status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  box-shadow: 0 0 6px currentColor;
+}
+.status-dot-lg {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  box-shadow: 0 0 8px currentColor;
+}
+
+/* Tab bar: make active tab gold */
+.nav-tabs .nav-link.active {
+  color: var(--forge-gold);
+  border-bottom-color: var(--forge-gold);
+  background: transparent;
+}
+.nav-tabs .nav-link {
+  color: var(--forge-text);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+}
+.nav-tabs .nav-link:hover {
+  border-bottom-color: rgba(212, 175, 55, 0.4);
+  color: var(--forge-gold);
+}
+
+/* Cards: subtle border instead of Bootstrap's default */
+.card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.card-header {
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Code/monospace tweaks */
+code, .font-monospace {
+  color: var(--forge-gold);
+}

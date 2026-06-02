@@ -1,0 +1,25 @@
+<nav class="navbar navbar-expand-lg bg-body-tertiary border-bottom">
+  <div class="container-fluid">
+    <a class="navbar-brand fw-bold" href="#">
+      <span style="color: var(--forge-gold);">⚡</span>
+      Superhero Forge
+      <small class="text-muted ms-2" style="font-size: 0.7em;"
+             x-text="'v' + version"></small>
+    </a>
+
+    <div class="d-flex align-items-center gap-3">
+      <!-- Ollama status indicator (live, polls every 10s) -->
+      <span class="d-flex align-items-center gap-2 small">
+        <span class="status-dot"
+              :class="ollamaOk ? 'bg-success' : 'bg-secondary'"
+              :title="ollamaOk ? 'Ollama running' : 'Ollama not reachable'"></span>
+        <span class="text-muted" x-text="ollamaOk ? 'Ollama' : 'Ollama (offline)'"></span>
+      </span>
+
+      <!-- Mode badge -->
+      <span class="badge"
+            :class="mode === 'remote' ? 'text-bg-info' : 'text-bg-secondary'"
+            x-text="mode"></span>
+    </div>
+  </div>
+</nav>
