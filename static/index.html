@@ -2092,11 +2092,11 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
             {/* Team Alliance Map */}
               {teams.length>1&&(<>
                 <div style={{fontSize:9,letterSpacing:"0.2em",color:`${G}77`,textTransform:"uppercase",marginBottom:14}}>Alliance Map</div>
-                <div style={{background:"rgba(255,255,255,0.02)",border:"1px solid var(--border2)",borderRadius:12,overflow:"hidden",padding:"10px 0",marginBottom:24}}>
-                  <svg viewBox={`0 0 ${Math.max(400,teams.length*80)} 300`} style={{width:"100%",display:"block"}}>
+                <div style={{background:"rgba(255,255,255,0.02)",border:"1px solid var(--border2)",borderRadius:12,overflow:"hidden",padding:"10px 0 14px",marginBottom:24}}>
+                  <svg viewBox={`0 0 ${Math.max(400,teams.length*80)} 360`} style={{width:"100%",display:"block"}}>
                     {(()=>{
                       const n=teams.length;
-                      const cxm=Math.max(400,n*80)/2,cym=150,rm=Math.min(110,cxm-60);
+                      const cxm=Math.max(400,n*80)/2,cym=175,rm=Math.min(110,cxm-60);
                       const pts=teams.map((_,i)=>{const a=(2*Math.PI*i/n)-Math.PI/2;return{x:cxm+rm*Math.cos(a),y:cym+rm*Math.sin(a)};});
                       const lines=[];
                       teams.forEach((t,i)=>{
