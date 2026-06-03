@@ -7,7 +7,7 @@ Nocturnal Knights Character System · Remote & Local modes
 import os, sys, json, threading, time, socket, base64, io, subprocess, shutil, signal, atexit
 import glob
 import requests
-from flask import Flask, request, jsonify, send_from_directory, send_file, session, redirect
+from flask import Flask, Response, request, jsonify, send_from_directory, send_file, session, redirect, stream_with_context
 
 # ---------------------------------------------------------------------------
 # Paths & Constants
@@ -977,14 +977,12 @@ SYSTEM_PROMPT = "You are a creative writing assistant specializing in superhero 
 
 def _ndjson_text(text):
     """Return a streaming NDJSON response with a single {t} chunk — matches callAI's parser."""
-    from flask import stream_with_context
     def _gen():
         yield json.dumps({"t": text}) + "\n"
     return Response(stream_with_context(_gen()), mimetype="application/x-ndjson")
 
 def _ndjson_error(msg, status=500):
     """Return a streaming NDJSON response with an {e} error chunk."""
-    from flask import stream_with_context
     def _gen():
         yield json.dumps({"e": msg}) + "\n"
     return Response(stream_with_context(_gen()), mimetype="application/x-ndjson", status=status)
