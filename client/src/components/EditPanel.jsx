@@ -1,0 +1,85 @@
+import { useState } from 'react';
+import { G, TEAM_RANKS, NK_ALIGNMENTS, ALIGN_META, raceLabel, raceLore } from '../constants/index.js';
+import RaceSelector from './RaceSelector.jsx';
+
+export default function EditPanel({member,onSave,onCancel,callAI,teamName}){
+  const[t,setT]=useState(member.tagline||"");
+  const[o,setO]=useState(member.origin||"");
+  const[stats,setStats]=useState({...member.stats});
+  const[powers,setPowers]=useState(member.powers.map(p=>({...p})));
+  const[align,setAlign]=useState(member.nkAlignment||"neutral");
+  const[teamRank,setTeamRank]=useState(member.teamRank||"operative");
+  const[gender,setGender]=useState(member.gender||"");
+  const[race,setRace]=useState(member.race||null);
+  const[birthYear,setBirthYear]=useState(member.birthYear||"");
+  const[age,setAge]=useState(member.birthYear?String(2026-parseInt(member.birthYear)):(member.age||""));
+  const[storyDir,setStoryDir]=useState("");
+  const[regenLoading,setRegenLoading]=useState(false);
+  const c=member.color;
+  async function regenOrigin(){
+    if(!callAI)return;
+    setRegenLoading(true);
+    try{
+      const rl=raceLabel(race);
+      const rc=raceLore(race);
+      const p=await callAI(`Regenerate the origin story for this character. JSON only, key "origin".\n\nCharacter: ${member.heroName} (${member.realName})\nRole: ${member.role||"Hero"}\nTeam: ${teamName||"Unknown"}\nRace: ${rl||"Unspecified"}\nRace lore: ${rc||"No special racial traits"}\nPowers: ${(member.powers||[]).map(pw=>pw.name).join(", ")}\nCurrent origin: ${o}\n${storyDir.trim()?`Story direction (shape the new origin around this): ${storyDir.trim()}\n`:""}\nWrite a new origin (2-3 sentences) rooted in their racial biology and history${storyDir.trim()?" and the story direction given":""}.${!storyDir.trim()?" Keep their core identity but reshape the backstory through their race.":""}\n{"origin":"new origin here"}`);
+      if(p?.origin) setO(p.origin);
+    }catch(e){}
+    setRegenLoading(false);
+  }
+  return(<div style={{padding:"18px 20px",background:"var(--bg-card2, #07070E)",border:`1px solid ${c}33`,borderRadius:"0 0 12px 12px"}}>
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:14}}>
+      <div>
+        <div style={{fontSize:9,letterSpacing:"0.12em",color:`${c}88`,textTransform:"uppercase",marginBottom:5}}>Gender</div>
+        <select value={gender} onChange={e=>setGender(e.target.value)} style={{width:"100%",padding:"7px 10px",background:"var(--bg2)",border:"1px solid var(--border2)",borderRadius:7,color:"var(--text-primary)",fontSize:11}}>
+          <option value="">— unset —</option>
+          <option value="Male">Male</option>
+          <option value="Female">Female</option>
+          <option value="Non-binary">Non-binary</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+      <div>
+        <div style={{fontSize:9,letterSpacing:"0.12em",color:`${c}88`,textTransform:"uppercase",marginBottom:5}}>Birth Year</div>
+        <input type="number" placeholder="e.g. 1995" value={birthYear} onChange={e=>{setBirthYear(e.target.value);setAge(e.target.value?String(2026-parseInt(e.target.value)):"");}} style={{padding:"7px 10px"}}/>
+      </div>
+      <div>
+        <div style={{fontSize:9,letterSpacing:"0.12em",color:`${c}88`,textTransform:"uppercase",marginBottom:5}}>Age {birthYear&&age?`(${age} yrs)`:""}</div>
+        <input type="text" placeholder="e.g. 28 or Unknown" value={age} onChange={e=>setAge(e.target.value)} style={{padding:"7px 10px"}}/>
+      </div>
+    </div>
+    <div style={{marginBottom:14}}>
+      <div style={{fontSize:9,letterSpacing:"0.12em",color:`${c}88`,textTransform:"uppercase",marginBottom:8}}>Race</div>
+      <RaceSelector value={race} onChange={setRace} color={c}/>
+    </div>
+    <div style={{fontSize:9,letterSpacing:"0.18em",color:`${c}88`,textTransform:"uppercase",marginBottom:6}}>Tagline</div>
+    <input type="text" value={t} onChange={e=>setT(e.target.value)} style={{marginBottom:14}}/>
+    {callAI&&<div style={{marginBottom:10}}>
+      <div style={{fontSize:9,letterSpacing:"0.12em",color:`${c}88`,textTransform:"uppercase",marginBottom:5}}>Story Direction <span style={{opacity:0.55}}>(optional)</span></div>
+      <input type="text" placeholder="e.g. Betrayed by their mentor · Found faith after losing everything" value={storyDir} onChange={e=>setStoryDir(e.target.value)} style={{padding:"6px 10px",fontSize:10.5}}/>
+    </div>}
+    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
+      <div style={{fontSize:9,letterSpacing:"0.18em",color:`${c}88`,textTransform:"uppercase"}}>Origin</div>
+      {callAI&&<button onClick={regenOrigin} disabled={regenLoading} style={{fontSize:8.5,padding:"2px 10px",background:`${c}14`,border:`1px solid ${c}55`,borderRadius:12,cursor:"pointer",color:c,fontFamily:"var(--font-mono)",opacity:regenLoading?0.6:1}}>
+        {regenLoading?"Generating...":"↺ Regenerate from Race"}
+      </button>}
+    </div>
+    <textarea value={o} onChange={e=>setO(e.target.value)} style={{height:80,marginBottom:14}}/>
+    <div style={{fontSize:9,letterSpacing:"0.18em",color:`${c}88`,textTransform:"uppercase",marginBottom:8}}>Team Rank</div>
+    <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:14}}>
+      {TEAM_RANKS.map(r=><button key={r.id} onClick={()=>setTeamRank(r.id)} style={{fontSize:9,padding:"3px 10px",background:teamRank===r.id?`${r.color||G}22`:"var(--bg3)",border:`1px solid ${teamRank===r.id?(r.color||G):"var(--border2)"}`,borderRadius:20,cursor:"pointer",color:teamRank===r.id?(r.color||G):"var(--text2)",fontFamily:"var(--font-mono)"}}>{r.icon?`${r.icon} `:""}{r.label}</button>)}
+    </div>
+    <div style={{fontSize:9,letterSpacing:"0.18em",color:`${c}88`,textTransform:"uppercase",marginBottom:8}}>Team Alignment</div>
+    <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:14}}>
+      {[{id:"base",label:"Member"},...NK_ALIGNMENTS].map(a=><button key={a.id} onClick={()=>setAlign(a.id)} style={{fontSize:9,padding:"3px 10px",background:align===a.id?`${(ALIGN_META[a.id]||{color:G}).color}22`:"var(--bg3)",border:`1px solid ${align===a.id?(ALIGN_META[a.id]||{color:G}).color:"var(--border2)"}`,borderRadius:20,cursor:"pointer",color:align===a.id?(ALIGN_META[a.id]||{color:G}).color:"var(--text2)",fontFamily:"var(--font-mono)"}}>{a.label}</button>)}
+    </div>
+    <div style={{fontSize:9,letterSpacing:"0.18em",color:`${c}88`,textTransform:"uppercase",marginBottom:8}}>Stats</div>
+    <div className="fstats-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:14}}>{Object.entries(stats).map(([k,v])=>(<div key={k}><div style={{fontSize:9,color:"var(--text2)",marginBottom:4,textTransform:"uppercase"}}>{k}</div><input type="number" min="1" max="100" value={v} onChange={e=>setStats(p=>({...p,[k]:Math.min(100,Math.max(1,+e.target.value))}))} style={{padding:"6px 10px"}}/></div>))}</div>
+    <div style={{fontSize:9,letterSpacing:"0.18em",color:`${c}88`,textTransform:"uppercase",marginBottom:8}}>Powers</div>
+    {powers.map((p,i)=>(<div key={i} style={{marginBottom:10}}><input type="text" placeholder="Power name" value={p.name} onChange={e=>setPowers(pw=>pw.map((x,j)=>j===i?{...x,name:e.target.value}:x))} style={{marginBottom:4}}/><input type="text" placeholder="Description" value={p.desc} onChange={e=>setPowers(pw=>pw.map((x,j)=>j===i?{...x,desc:e.target.value}:x))}/></div>))}
+    <div style={{display:"flex",gap:10,marginTop:16}}>
+      <button onClick={onCancel} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:11}}>Cancel</button>
+      <button onClick={()=>onSave({tagline:t,origin:o,stats,powers,nkAlignment:align,teamRank,gender,age,birthYear,race,species:raceLabel(race)||member.species||""})} style={{flex:2,padding:"10px",background:`${c}18`,border:`1px solid ${c}`,borderRadius:8,cursor:"pointer",color:c,fontSize:11,letterSpacing:"0.1em",textTransform:"uppercase"}}>Save Changes</button>
+    </div>
+  </div>);
+}

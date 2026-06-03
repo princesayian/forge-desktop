@@ -9,3 +9,5 @@ data/
 images/
 .claude/
 mnt/
+client/node_modules/
+static/assets/

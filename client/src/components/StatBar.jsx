@@ -1,0 +1,3 @@
+export default function StatBar({label,value,color}){
+  return(<div style={{marginBottom:7}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}><span style={{fontSize:9,letterSpacing:"0.12em",color:"var(--text3)",textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>{label}</span><span style={{fontSize:9,color,fontWeight:"700",fontFamily:"var(--font-mono)"}}>{value}</span></div><div style={{height:3,background:"rgba(255,255,255,0.07)",borderRadius:3}}><div style={{height:3,width:`${value}%`,background:color,borderRadius:3,boxShadow:`0 0 6px ${color}55`}}/></div></div>);
+}

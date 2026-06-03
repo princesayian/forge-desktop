@@ -443,7 +443,7 @@ def extract_json(text: str) -> dict:
 # ---------------------------------------------------------------------------
 # Flask app
 # ---------------------------------------------------------------------------
-app = Flask(__name__, static_folder=STATIC)
+app = Flask(__name__, static_folder=STATIC, static_url_path="")
 app.config["JSON_SORT_KEYS"] = False
 app.secret_key = base64.b64decode(config.get("secret_key", base64.b64encode(os.urandom(24)).decode()))
 
