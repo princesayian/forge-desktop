@@ -3,6 +3,8 @@ import { G, TEAM_RANKS, NK_ALIGNMENTS, ALIGN_META, raceLabel, raceLore } from '.
 import RaceSelector from './RaceSelector.jsx';
 
 export default function EditPanel({member,onSave,onCancel,callAI,teamName}){
+  const[heroName,setHeroName]=useState(member.heroName||"");
+  const[realName,setRealName]=useState(member.realName||"");
   const[t,setT]=useState(member.tagline||"");
   const[o,setO]=useState(member.origin||"");
   const[stats,setStats]=useState({...member.stats});
@@ -28,6 +30,16 @@ export default function EditPanel({member,onSave,onCancel,callAI,teamName}){
     setRegenLoading(false);
   }
   return(<div style={{padding:"18px 20px",background:"var(--bg-card2, #07070E)",border:`1px solid ${c}33`,borderRadius:"0 0 12px 12px"}}>
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:14}}>
+      <div>
+        <div style={{fontSize:9,letterSpacing:"0.12em",color:`${c}88`,textTransform:"uppercase",marginBottom:5}}>Hero Name</div>
+        <input type="text" value={heroName} onChange={e=>setHeroName(e.target.value)} style={{padding:"7px 10px"}}/>
+      </div>
+      <div>
+        <div style={{fontSize:9,letterSpacing:"0.12em",color:`${c}88`,textTransform:"uppercase",marginBottom:5}}>Real Name</div>
+        <input type="text" value={realName} onChange={e=>setRealName(e.target.value)} style={{padding:"7px 10px"}}/>
+      </div>
+    </div>
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:14}}>
       <div>
         <div style={{fontSize:9,letterSpacing:"0.12em",color:`${c}88`,textTransform:"uppercase",marginBottom:5}}>Gender</div>
@@ -79,7 +91,7 @@ export default function EditPanel({member,onSave,onCancel,callAI,teamName}){
     {powers.map((p,i)=>(<div key={i} style={{marginBottom:10}}><input type="text" placeholder="Power name" value={p.name} onChange={e=>setPowers(pw=>pw.map((x,j)=>j===i?{...x,name:e.target.value}:x))} style={{marginBottom:4}}/><input type="text" placeholder="Description" value={p.desc} onChange={e=>setPowers(pw=>pw.map((x,j)=>j===i?{...x,desc:e.target.value}:x))}/></div>))}
     <div style={{display:"flex",gap:10,marginTop:16}}>
       <button onClick={onCancel} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:11}}>Cancel</button>
-      <button onClick={()=>onSave({tagline:t,origin:o,stats,powers,nkAlignment:align,teamRank,gender,age,birthYear,race,species:raceLabel(race)||member.species||""})} style={{flex:2,padding:"10px",background:`${c}18`,border:`1px solid ${c}`,borderRadius:8,cursor:"pointer",color:c,fontSize:11,letterSpacing:"0.1em",textTransform:"uppercase"}}>Save Changes</button>
+      <button onClick={()=>onSave({heroName,realName,tagline:t,origin:o,stats,powers,nkAlignment:align,teamRank,gender,age,birthYear,race,species:raceLabel(race)||member.species||""})} style={{flex:2,padding:"10px",background:`${c}18`,border:`1px solid ${c}`,borderRadius:8,cursor:"pointer",color:c,fontSize:11,letterSpacing:"0.1em",textTransform:"uppercase"}}>Save Changes</button>
     </div>
   </div>);
 }

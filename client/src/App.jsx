@@ -337,11 +337,51 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
   const toggle=useCallback(id=>setExpanded(p=>({...p,[id]:!p[id]})),[]);
 
   const saveCharEdit=useCallback((id,data)=>{
-    const ne={...sharedEdits,[id]:data};
+    const allRosterChars=Object.values(teamRosters).flat();
+    const base=[...allRosterChars,...soloHeroes,...villainPool].find(c=>c.id===id);
+    const current=base?(sharedEdits[id]?{...base,...sharedEdits[id]}:base):null;
+    const oldHeroName=current?.heroName||"";
+    const oldRealName=current?.realName||"";
+    const newHeroName=data.heroName!==undefined?data.heroName:oldHeroName;
+    const newRealName=data.realName!==undefined?data.realName:oldRealName;
+    const heroChanged=newHeroName&&newHeroName!==oldHeroName;
+    const realChanged=newRealName&&newRealName!==oldRealName;
+    const swapText=txt=>{
+      if(!txt||typeof txt!=="string")return txt;
+      let t=txt;
+      if(heroChanged)t=t.split(oldHeroName).join(newHeroName);
+      if(realChanged)t=t.split(oldRealName).join(newRealName);
+      return t;
+    };
+    const textReplace=char=>{
+      const fields=["tagline","origin","costumeDesc","powerFX","consistencyNotes"];
+      const upd={};let changed=false;
+      for(const f of fields){if(char[f]){const r=swapText(char[f]);if(r!==char[f]){upd[f]=r;changed=true;}}}
+      if(char.powers){const np=char.powers.map(p=>({...p,name:swapText(p.name),desc:swapText(p.desc)}));if(JSON.stringify(np)!==JSON.stringify(char.powers)){upd.powers=np;changed=true;}}
+      if(char.dna){const nd=char.dna.map(d=>swapText(d));if(JSON.stringify(nd)!==JSON.stringify(char.dna)){upd.dna=nd;changed=true;}}
+      return changed?upd:null;
+    };
+    const editedData={...data};
+    if(realChanged&&newRealName)editedData.initials=newRealName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase();
+    let ne={...sharedEdits,[id]:editedData};
+    if(heroChanged||realChanged){
+      for(const char of allRosterChars){
+        if(char.id===id)continue;
+        const merged=ne[char.id]?{...char,...ne[char.id]}:char;
+        const upd=textReplace(merged);
+        if(upd)ne[char.id]={...(ne[char.id]||{}), ...upd};
+      }
+    }
     setSharedEdits(ne);
-    setEditingChar(p=>({...p,[id]:false}));
     persist("forge-edits",ne);
-  },[sharedEdits,persist]);
+    if(heroChanged||realChanged){
+      const updatedSolo=soloHeroes.map(h=>{if(h.id===id)return h;const upd=textReplace(h);return upd?{...h,...upd}:h;});
+      if(JSON.stringify(updatedSolo)!==JSON.stringify(soloHeroes)){setSoloHeroes(updatedSolo);persist("forge-solo-heroes",updatedSolo);}
+      const updatedVillains=villainPool.map(v=>{if(v.id===id)return v;const upd=textReplace(v);return upd?{...v,...upd}:v;});
+      if(JSON.stringify(updatedVillains)!==JSON.stringify(villainPool)){setVillainPool(updatedVillains);persist("forge-villains",updatedVillains);}
+    }
+    setEditingChar(p=>({...p,[id]:false}));
+  },[sharedEdits,teamRosters,soloHeroes,villainPool,persist]);
 
   // ── Solo hero management ──────────────────────────────────────────────────
   const addSoloHeroFn=useCallback((hero)=>{
@@ -861,14 +901,14 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
 
   // ── Styles ────────────────────────────────────────────────────────────────
   const s={
-    tab:a=>({padding:"10px 16px",fontSize:10.5,letterSpacing:"0.1em",textTransform:"uppercase",cursor:"pointer",border:"none",background:a?"rgba(212,175,55,0.08)":"transparent",color:a?G:"var(--text3)",borderBottom:a?`2px solid ${G}`:"2px solid transparent",fontFamily:"var(--font-mono)",whiteSpace:"nowrap",flexShrink:0,transition:"color 0.15s,background 0.15s"}),
-    card:{background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:12,padding:"16px 18px",boxShadow:"0 2px 12px rgba(0,0,0,0.2)"},
-    lbl:{fontSize:9.5,letterSpacing:"0.2em",color:"rgba(212,175,55,0.65)",textTransform:"uppercase",marginBottom:9,display:"block",fontFamily:"var(--font-mono)"},
-    chip:(a,c=G)=>({padding:"6px 13px",background:a?`${c}1A`:"var(--bg3)",border:`1px solid ${a?c+"88":"var(--border2)"}`,borderRadius:20,cursor:"pointer",fontSize:10.5,color:a?c:"var(--text3)",fontFamily:"var(--font-mono)",fontWeight:a?"600":"normal",transition:"all 0.12s"}),
-    pBox:{background:"var(--prompt-bg)",border:"1px solid var(--border2)",borderRadius:10,padding:"14px 16px",fontFamily:"var(--font-mono)",fontSize:11.5,color:"var(--text2)",lineHeight:1.75,whiteSpace:"pre-wrap",wordBreak:"break-word"},
-    cpyBtn:d=>({padding:"5px 12px",background:d?`${G}22`:"var(--bg3)",border:`1px solid ${d?G:"var(--border)"}`,borderRadius:7,cursor:"pointer",fontSize:10,color:d?G:"var(--text3)",fontFamily:"var(--font-mono)"}),
-    bigBtn:(d,c=G)=>({width:"100%",padding:"13px",background:d?"var(--bg3)":`${c}16`,border:`1px solid ${d?"var(--border2)":c}`,borderRadius:9,cursor:d?"not-allowed":"pointer",color:d?"var(--text4)":c,fontSize:11,letterSpacing:"0.1em",textTransform:"uppercase",fontFamily:"var(--font-mono)",marginTop:6,fontWeight:"600"}),
-    optBtn:(a,c=G)=>({width:"100%",padding:"12px 16px",background:a?`${c}1A`:"var(--bg3)",border:`1px solid ${a?c+"88":"var(--border2)"}`,borderRadius:9,cursor:"pointer",color:a?"var(--text)":"var(--text2)",fontFamily:"var(--font-mono)",fontSize:12,textAlign:"left",marginBottom:8,transition:"all 0.12s"}),
+    tab:a=>({padding:"11px 18px",fontSize:11,letterSpacing:"0.1em",textTransform:"uppercase",cursor:"pointer",border:"none",background:a?"rgba(212,175,55,0.08)":"transparent",color:a?G:"var(--text3)",borderBottom:a?`2px solid ${G}`:"2px solid transparent",fontFamily:"var(--font-mono)",whiteSpace:"nowrap",flexShrink:0,transition:"color 0.15s,background 0.15s"}),
+    card:{background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:14,padding:"20px 24px",boxShadow:"0 2px 16px rgba(0,0,0,0.22)"},
+    lbl:{fontSize:11,letterSpacing:"0.18em",color:"rgba(212,175,55,0.65)",textTransform:"uppercase",marginBottom:10,display:"block",fontFamily:"var(--font-mono)"},
+    chip:(a,c=G)=>({padding:"7px 15px",background:a?`${c}1A`:"var(--bg3)",border:`1px solid ${a?c+"88":"var(--border2)"}`,borderRadius:20,cursor:"pointer",fontSize:11,color:a?c:"var(--text3)",fontFamily:"var(--font-mono)",fontWeight:a?"600":"normal",transition:"all 0.12s"}),
+    pBox:{background:"var(--prompt-bg)",border:"1px solid var(--border2)",borderRadius:10,padding:"16px 18px",fontFamily:"var(--font-mono)",fontSize:12,color:"var(--text2)",lineHeight:1.8,whiteSpace:"pre-wrap",wordBreak:"break-word"},
+    cpyBtn:d=>({padding:"6px 14px",background:d?`${G}22`:"var(--bg3)",border:`1px solid ${d?G:"var(--border)"}`,borderRadius:8,cursor:"pointer",fontSize:11,color:d?G:"var(--text3)",fontFamily:"var(--font-mono)"}),
+    bigBtn:(d,c=G)=>({width:"100%",padding:"14px",background:d?"var(--bg3)":`${c}16`,border:`1px solid ${d?"var(--border2)":c}`,borderRadius:10,cursor:d?"not-allowed":"pointer",color:d?"var(--text4)":c,fontSize:12,letterSpacing:"0.1em",textTransform:"uppercase",fontFamily:"var(--font-mono)",marginTop:6,fontWeight:"600"}),
+    optBtn:(a,c=G)=>({width:"100%",padding:"13px 18px",background:a?`${c}1A`:"var(--bg3)",border:`1px solid ${a?c+"88":"var(--border2)"}`,borderRadius:10,cursor:"pointer",color:a?"var(--text)":"var(--text2)",fontFamily:"var(--font-mono)",fontSize:12.5,textAlign:"left",marginBottom:8,transition:"all 0.12s"}),
   };
 
   const rHex=rColors[0]||G;
@@ -962,7 +1002,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
       })}
     </div>
 
-    <div className="fmain" style={{padding:"22px",maxWidth:960,margin:"0 auto"}}>
+    <div className="fmain" style={{padding:"28px 26px",maxWidth:960,margin:"0 auto"}}>
       {ollamaOk===false&&<OllamaGuide/>}
       {!activeTeam&&tab!=="teams"&&tab!=="codex"&&(<div style={{textAlign:"center",padding:"60px 20px"}}><div style={{fontSize:13,color:"var(--text3)",marginBottom:16}}>No team selected.</div><button onClick={()=>setTab("teams")} style={{padding:"9px 22px",background:`${G}14`,border:`1px solid ${G}`,borderRadius:8,cursor:"pointer",color:G,fontSize:11,fontFamily:"var(--font-mono)"}}>Go to Teams</button></div>)}
 
@@ -1136,12 +1176,15 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
 
       {/* ── ROSTER TAB ────────────────────────────────────────────────── */}
       {tab==="roster"&&(<>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}>
-          <div>
-            <div style={{fontSize:9,letterSpacing:"0.18em",color:`${activeTeam.color}88`,textTransform:"uppercase",marginBottom:3}}>{activeTeam.name}</div>
-            <p style={{fontSize:12,color:"var(--text2)",lineHeight:1.5}}>Upload images, expand to view full pages, or Edit to modify any character.</p>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:28,gap:16}}>
+          <div style={{display:"flex",alignItems:"center",gap:16}}>
+            <TeamLogo team={activeTeam} size={56}/>
+            <div>
+              <h2 className="forge-h2" style={{color:activeTeam.color}}>{activeTeam.name}</h2>
+              <p style={{fontSize:12.5,color:"var(--text2)",lineHeight:1.5,marginTop:5}}>Upload images, expand to view full pages, or Edit to modify any character.</p>
+            </div>
           </div>
-          <button onClick={exportPDF} disabled={pdfLoading} style={{padding:"8px 16px",background:pdfLoading?"var(--bg3)":`${G}14`,border:`1px solid ${pdfLoading?"var(--border2)":G}`,borderRadius:8,cursor:pdfLoading?"not-allowed":"pointer",color:pdfLoading?"var(--text4)":G,fontSize:10,letterSpacing:"0.1em",textTransform:"uppercase",fontFamily:"var(--font-mono)",whiteSpace:"nowrap",flexShrink:0,marginLeft:16}}>
+          <button onClick={exportPDF} disabled={pdfLoading} style={{padding:"9px 18px",background:pdfLoading?"var(--bg3)":`${G}14`,border:`1px solid ${pdfLoading?"var(--border2)":G}`,borderRadius:9,cursor:pdfLoading?"not-allowed":"pointer",color:pdfLoading?"var(--text4)":G,fontSize:11,letterSpacing:"0.1em",textTransform:"uppercase",fontFamily:"var(--font-mono)",whiteSpace:"nowrap",flexShrink:0}}>
             {pdfLoading?"Exporting...":"⬇ Export PDF"}
           </button>
         </div>
@@ -1160,8 +1203,8 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
         </div>
         <div style={{display:"flex",flexDirection:"column",gap:8}}>
           {activeRoster.map(m=>(<div key={m.id}>
-            <div className="froster-row" style={{display:"flex",alignItems:"center",gap:12,padding:"11px 16px",background:expanded[m.id]?`${m.color}0E`:"rgba(255,255,255,0.02)",border:`1px solid ${expanded[m.id]?m.color+"44":"rgba(255,255,255,0.06)"}`,borderRadius:editingChar[m.id]||expanded[m.id]?"10px 10px 0 0":10,cursor:"pointer"}}>
-              {images[m.id]?<img src={images[m.id]} alt="" style={{width:38,height:38,borderRadius:6,objectFit:"cover",objectPosition:"top",flexShrink:0}} onClick={()=>toggle(m.id)}/>:<div style={{width:38,height:38,borderRadius:6,background:`${m.color}14`,border:`1px dashed ${m.color}44`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:"bold",color:m.color,flexShrink:0}} onClick={()=>toggle(m.id)}>{m.initials}</div>}
+            <div className="froster-row" style={{display:"flex",alignItems:"center",gap:14,padding:"13px 18px",background:expanded[m.id]?`${m.color}0E`:"rgba(255,255,255,0.02)",border:`1px solid ${expanded[m.id]?m.color+"44":"rgba(255,255,255,0.06)"}`,borderRadius:editingChar[m.id]||expanded[m.id]?"12px 12px 0 0":12,cursor:"pointer"}}>
+              {images[m.id]?<img src={images[m.id]} alt="" style={{width:44,height:44,borderRadius:8,objectFit:"cover",objectPosition:"top",flexShrink:0}} onClick={()=>toggle(m.id)}/>:<div style={{width:44,height:44,borderRadius:8,background:`${m.color}14`,border:`1px dashed ${m.color}44`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:"bold",color:m.color,flexShrink:0}} onClick={()=>toggle(m.id)}>{m.initials}</div>}
               <div style={{flex:1}} onClick={()=>toggle(m.id)}>
                 <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
                   <span style={{fontSize:13,fontWeight:"bold",color:"var(--text-primary)"}}>{m.heroName}</span>
@@ -1172,32 +1215,32 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                 </div>
                 <div style={{fontSize:10,color:"var(--text3)",marginTop:1}}>{m.role}</div>
               </div>
-              <div className="froster-actions" style={{display:"flex",gap:6,alignItems:"center"}}>
-                <button onClick={e=>{e.stopPropagation();setEditingChar(p=>({...p,[m.id]:!p[m.id]}));setExpanded(p=>({...p,[m.id]:false}));}} style={{fontSize:9,padding:"3px 9px",background:editingChar[m.id]?`${m.color}22`:"var(--bg3)",border:`1px solid ${editingChar[m.id]?m.color:"var(--border)"}`,borderRadius:6,cursor:"pointer",color:editingChar[m.id]?m.color:"var(--text3)",fontFamily:"var(--font-mono)"}}>{editingChar[m.id]?"Close":"Edit"}</button>
-                <button onClick={e=>{e.stopPropagation();setSwitchingMember(switchingMember===m.id?null:m.id);setSharingMember(null);}} style={{fontSize:9,padding:"3px 9px",background:switchingMember===m.id?`${m.color}22`:"var(--bg3)",border:`1px solid ${switchingMember===m.id?m.color:"var(--border)"}`,borderRadius:6,cursor:"pointer",color:switchingMember===m.id?m.color:"var(--text3)",fontFamily:"var(--font-mono)"}}>Move</button>
-                <button onClick={e=>{e.stopPropagation();setSharingMember(sharingMember===m.id?null:m.id);setSwitchingMember(null);}} style={{fontSize:9,padding:"3px 9px",background:sharingMember===m.id?`${m.color}22`:"var(--bg3)",border:`1px solid ${sharingMember===m.id?m.color:"var(--border)"}`,borderRadius:6,cursor:"pointer",color:sharingMember===m.id?m.color:"var(--text3)",fontFamily:"var(--font-mono)"}}>+Team</button>
-                <button onClick={e=>{e.stopPropagation();requirePin(`Remove ${m.heroName} from roster`,()=>removeMember(activeTeamId,m));}} style={{fontSize:9,padding:"3px 9px",background:"rgba(163,45,45,0.1)",border:"1px solid rgba(163,45,45,0.28)",borderRadius:6,cursor:"pointer",color:"#e74c3c",fontFamily:"var(--font-mono)"}}>Remove</button>
-                {images[m.id]&&<button onClick={e=>{e.stopPropagation();generateTripo3D(m);}} style={{fontSize:9,padding:"3px 9px",background:"rgba(15,110,86,0.1)",border:"1px solid rgba(15,110,86,0.3)",borderRadius:6,cursor:"pointer",color:"#5DCAA5",fontFamily:"var(--font-mono)",whiteSpace:"nowrap"}}>{tripo3DLoading&&tripo3DTarget===m.id?"...":"⬡ Tripo3D"}</button>}
+              <div className="froster-actions" style={{display:"flex",gap:7,alignItems:"center"}}>
+                <button onClick={e=>{e.stopPropagation();setEditingChar(p=>({...p,[m.id]:!p[m.id]}));setExpanded(p=>({...p,[m.id]:false}));}} style={{fontSize:10.5,padding:"5px 12px",background:editingChar[m.id]?`${m.color}22`:"var(--bg3)",border:`1px solid ${editingChar[m.id]?m.color:"var(--border)"}`,borderRadius:8,cursor:"pointer",color:editingChar[m.id]?m.color:"var(--text3)",fontFamily:"var(--font-mono)"}}>{editingChar[m.id]?"Close":"Edit"}</button>
+                <button onClick={e=>{e.stopPropagation();setSwitchingMember(switchingMember===m.id?null:m.id);setSharingMember(null);}} style={{fontSize:10.5,padding:"5px 12px",background:switchingMember===m.id?`${m.color}22`:"var(--bg3)",border:`1px solid ${switchingMember===m.id?m.color:"var(--border)"}`,borderRadius:8,cursor:"pointer",color:switchingMember===m.id?m.color:"var(--text3)",fontFamily:"var(--font-mono)"}}>Move</button>
+                <button onClick={e=>{e.stopPropagation();setSharingMember(sharingMember===m.id?null:m.id);setSwitchingMember(null);}} style={{fontSize:10.5,padding:"5px 12px",background:sharingMember===m.id?`${m.color}22`:"var(--bg3)",border:`1px solid ${sharingMember===m.id?m.color:"var(--border)"}`,borderRadius:8,cursor:"pointer",color:sharingMember===m.id?m.color:"var(--text3)",fontFamily:"var(--font-mono)"}}>+Team</button>
+                <button onClick={e=>{e.stopPropagation();requirePin(`Remove ${m.heroName} from roster`,()=>removeMember(activeTeamId,m));}} style={{fontSize:10.5,padding:"5px 12px",background:"rgba(163,45,45,0.1)",border:"1px solid rgba(163,45,45,0.28)",borderRadius:8,cursor:"pointer",color:"#e74c3c",fontFamily:"var(--font-mono)"}}>Remove</button>
+                {images[m.id]&&<button onClick={e=>{e.stopPropagation();generateTripo3D(m);}} style={{fontSize:10.5,padding:"5px 12px",background:"rgba(15,110,86,0.1)",border:"1px solid rgba(15,110,86,0.3)",borderRadius:8,cursor:"pointer",color:"#5DCAA5",fontFamily:"var(--font-mono)",whiteSpace:"nowrap"}}>{tripo3DLoading&&tripo3DTarget===m.id?"...":"⬡ Tripo3D"}</button>}
                 <div style={{fontSize:11,color:`${m.color}88`,minWidth:16}} onClick={()=>toggle(m.id)}>{expanded[m.id]?"▲":"▼"}</div>
               </div>
             </div>
-            {switchingMember===m.id&&(<div style={{display:"flex",flexWrap:"wrap",gap:6,padding:"10px 16px",background:`${m.color}08`,border:`1px solid ${m.color}33`,borderTop:"none",borderRadius:"0 0 8px 8px",alignItems:"center"}}>
-              <span style={{fontSize:9,color:"var(--text4)",letterSpacing:"0.1em",marginRight:4}}>MOVE TO:</span>
-              {teams.filter(t=>t.id!==activeTeamId).map(t=><button key={t.id} onClick={()=>switchMemberTeam(m,t.id)} style={{fontSize:9,padding:"3px 10px",background:`${t.color}14`,border:`1px solid ${t.color}44`,borderRadius:20,cursor:"pointer",color:t.color,fontFamily:"var(--font-mono)"}}>{t.name}</button>)}
-              <button onClick={()=>flipToVillain(m)} style={{fontSize:9,padding:"3px 10px",background:"rgba(139,26,26,0.12)",border:"1px solid rgba(139,26,26,0.35)",borderRadius:20,cursor:"pointer",color:"#e74c3c",fontFamily:"var(--font-mono)"}}>⚠ Go Villain</button>
-              <button onClick={()=>setSwitchingMember(null)} style={{fontSize:9,padding:"3px 8px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:20,cursor:"pointer",color:"var(--text4)",fontFamily:"var(--font-mono)",marginLeft:4}}>Cancel</button>
+            {switchingMember===m.id&&(<div style={{display:"flex",flexWrap:"wrap",gap:8,padding:"12px 18px",background:`${m.color}08`,border:`1px solid ${m.color}33`,borderTop:"none",borderRadius:"0 0 12px 12px",alignItems:"center"}}>
+              <span style={{fontSize:10,color:"var(--text4)",letterSpacing:"0.12em",textTransform:"uppercase",marginRight:4,fontFamily:"var(--font-mono)"}}>Move to:</span>
+              {teams.filter(t=>t.id!==activeTeamId).map(t=><button key={t.id} onClick={()=>switchMemberTeam(m,t.id)} style={{fontSize:10.5,padding:"5px 13px",background:`${t.color}14`,border:`1px solid ${t.color}44`,borderRadius:20,cursor:"pointer",color:t.color,fontFamily:"var(--font-mono)"}}>{t.name}</button>)}
+              <button onClick={()=>flipToVillain(m)} style={{fontSize:10.5,padding:"5px 13px",background:"rgba(139,26,26,0.12)",border:"1px solid rgba(139,26,26,0.35)",borderRadius:20,cursor:"pointer",color:"#e74c3c",fontFamily:"var(--font-mono)"}}>⚠ Go Villain</button>
+              <button onClick={()=>setSwitchingMember(null)} style={{fontSize:10.5,padding:"5px 11px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:20,cursor:"pointer",color:"var(--text4)",fontFamily:"var(--font-mono)",marginLeft:4}}>Cancel</button>
             </div>)}
             {sharingMember===m.id&&(()=>{
               const alreadyOn=(memberTeamMap[m.id]||[]);
               const eligible=teams.filter(t=>t.id!==activeTeamId&&!alreadyOn.includes(t.id));
-              return(<div style={{display:"flex",flexWrap:"wrap",gap:6,padding:"10px 16px",background:`${m.color}08`,border:`1px solid ${m.color}33`,borderTop:"none",borderRadius:"0 0 8px 8px",alignItems:"center"}}>
-                <span style={{fontSize:9,color:"var(--text4)",letterSpacing:"0.1em",marginRight:4}}>ALSO ADD TO:</span>
+              return(<div style={{display:"flex",flexWrap:"wrap",gap:8,padding:"12px 18px",background:`${m.color}08`,border:`1px solid ${m.color}33`,borderTop:"none",borderRadius:"0 0 12px 12px",alignItems:"center"}}>
+                <span style={{fontSize:10,color:"var(--text4)",letterSpacing:"0.12em",textTransform:"uppercase",marginRight:4,fontFamily:"var(--font-mono)"}}>Also add to:</span>
                 {eligible.length===0
-                  ?<span style={{fontSize:9,color:"var(--text4)",fontStyle:"italic"}}>Already on all teams</span>
-                  :eligible.map(t=><button key={t.id} onClick={()=>addToTeam(m,t.id)} style={{fontSize:9,padding:"3px 10px",background:`${t.color}14`,border:`1px solid ${t.color}44`,borderRadius:20,cursor:"pointer",color:t.color,fontFamily:"var(--font-mono)"}}>{t.name}</button>)
+                  ?<span style={{fontSize:10.5,color:"var(--text4)",fontStyle:"italic"}}>Already on all teams</span>
+                  :eligible.map(t=><button key={t.id} onClick={()=>addToTeam(m,t.id)} style={{fontSize:10.5,padding:"5px 13px",background:`${t.color}14`,border:`1px solid ${t.color}44`,borderRadius:20,cursor:"pointer",color:t.color,fontFamily:"var(--font-mono)"}}>{t.name}</button>)
                 }
-                {alreadyOn.filter(t=>t!==activeTeamId).length>0&&<span style={{fontSize:9,color:"var(--text3)",marginLeft:4}}>· On: {alreadyOn.filter(t=>t!==activeTeamId).map(t=>teams.find(x=>x.id===t)?.name||t).join(", ")}</span>}
-                <button onClick={()=>setSharingMember(null)} style={{fontSize:9,padding:"3px 8px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:20,cursor:"pointer",color:"var(--text4)",fontFamily:"var(--font-mono)",marginLeft:4}}>Cancel</button>
+                {alreadyOn.filter(t=>t!==activeTeamId).length>0&&<span style={{fontSize:10,color:"var(--text3)",marginLeft:4}}>· On: {alreadyOn.filter(t=>t!==activeTeamId).map(t=>teams.find(x=>x.id===t)?.name||t).join(", ")}</span>}
+                <button onClick={()=>setSharingMember(null)} style={{fontSize:10.5,padding:"5px 11px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:20,cursor:"pointer",color:"var(--text4)",fontFamily:"var(--font-mono)",marginLeft:4}}>Cancel</button>
               </div>);
             })()}
             {editingChar[m.id]&&<EditPanel member={m} onSave={d=>saveCharEdit(m.id,d)} onCancel={()=>setEditingChar(p=>({...p,[m.id]:false}))} callAI={callAI} teamName={activeTeam.name}/>}
