@@ -1129,6 +1129,33 @@ function App(){
   const[updatePulling,setUpdatePulling]=useState(false);
   // ── Villain pool ────────────────────────────────────────────────────────
   const[villainPool,setVillainPool]=useState([]);
+  // ── Solo / Independent Heroes ─────────────────────────────────────────────
+  const[soloHeroes,setSoloHeroes]=useState([]);
+  const[soloVillains,setSoloVillains]=useState({});
+  const[activeSoloId,setActiveSoloId]=useState(null);
+  const[soloHeroView,setSoloHeroView]=useState("profile");
+  const[rogueMode,setRogueMode]=useState(null); // null or heroId — saves villain to rogues gallery
+  const[showSoloCreator,setShowSoloCreator]=useState(false);
+  const[soloStoryResult,setSoloStoryResult]=useState(null);
+  const[soloStoryLoading,setSoloStoryLoading]=useState(false);
+  const[soloStoryRogueIds,setSoloStoryRogueIds]=useState([]);
+  // Solo creator wizard state
+  const[scStep,setScStep]=useState(0);
+  const[scAnswers,setScAnswers]=useState({});
+  const[scName,setScName]=useState("");
+  const[scHeroName,setScHeroName]=useState("");
+  const[scGender,setScGender]=useState("Male");
+  const[scRace,setScRace]=useState(null);
+  const[scColors,setScColors]=useState(["#888780"]);
+  const[scCustomHex,setScCustomHex]=useState("");
+  const[scStoryDir,setScStoryDir]=useState("");
+  const[scAge,setScAge]=useState("");
+  const[scBirthYear,setScBirthYear]=useState("");
+  const[scResult,setScResult]=useState(null);
+  const[scLoading,setScLoading]=useState(false);
+  const toggleScColor=hex=>setScColors(prev=>{if(prev.includes(hex)){if(prev.length===1)return prev;return prev.filter(c=>c!==hex);}if(prev.length>=3)return prev;return[...prev,hex];});
+  const addCustomScColor=()=>{const h=scCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{6}$/))return;setScColors(prev=>{if(prev.includes(h)||prev.length>=3)return prev;return[...prev,h];});setScCustomHex("");};
+  const resetSoloCreator=()=>{setScStep(0);setScAnswers({});setScName("");setScHeroName("");setScGender("Male");setScRace(null);setScColors(["#888780"]);setScCustomHex("");setScStoryDir("");setScAge("");setScBirthYear("");setScResult(null);setScLoading(false);};
   // ── Ollama ──────────────────────────────────────────────────────────────
   const[ollamaOk,setOllamaOk]=useState(null);const[groqOk,setGroqOk]=useState(false);
   const[forgeVersion,setForgeVersion]=useState("");
@@ -1264,6 +1291,8 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
       try{const r=await fetch("/api/images");const ids=await r.json();const loaded={};const t=Date.now();ids.forEach(id=>{loaded[id]=`/api/images/${id}?t=${t}`;});if(Object.keys(loaded).length)setImages(loaded);}catch(e){}
       try{const r=await fetch("/api/update/check");setUpdateInfo(await r.json());}catch(e){}
       try{const r=await fetch("/api/remote");setRemoteInfo(await r.json());}catch(e){}
+      try{const d=await window.storage.get("forge-solo-heroes");setSoloHeroes(JSON.parse(d.value)||[]);}catch(e){}
+      try{const d=await window.storage.get("forge-solo-villains");setSoloVillains(JSON.parse(d.value)||{});}catch(e){}
     })();
   },[]);
 
@@ -1331,7 +1360,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
 
   const activeRoster=useMemo(()=>getTeamRoster(activeTeamId),[getTeamRoster,activeTeamId]);
 
-  const allCharacters=useMemo(()=>teams.flatMap(t=>getTeamRoster(t.id)),[teams,getTeamRoster]);
+  const allCharacters=useMemo(()=>[...teams.flatMap(t=>getTeamRoster(t.id)),...soloHeroes],[teams,getTeamRoster,soloHeroes]);
 
   const memberTeamMap=useMemo(()=>{
     const map={};
@@ -1383,6 +1412,56 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     persist("forge-edits",ne);
   },[sharedEdits,persist]);
 
+  // ── Solo hero management ──────────────────────────────────────────────────
+  const addSoloHeroFn=useCallback((hero)=>{
+    const updated=[...soloHeroes,hero];setSoloHeroes(updated);persist("forge-solo-heroes",updated);
+  },[soloHeroes,persist]);
+  const removeSoloHeroFn=useCallback((heroId)=>{
+    fetch(`/api/images/${heroId}`,{method:"DELETE"}).catch(()=>{});
+    setImages(p=>{const n={...p};delete n[heroId];return n;});
+    const updated=soloHeroes.filter(h=>h.id!==heroId);setSoloHeroes(updated);persist("forge-solo-heroes",updated);
+    if(activeSoloId===heroId)setActiveSoloId(null);
+  },[soloHeroes,activeSoloId,persist]);
+  const addSoloRogueFn=useCallback((heroId,rogue)=>{
+    const existing=soloVillains[heroId]||[];
+    const updated={...soloVillains,[heroId]:[...existing,rogue]};setSoloVillains(updated);persist("forge-solo-villains",updated);
+  },[soloVillains,persist]);
+  const removeSoloRogueFn=useCallback((heroId,rogueId)=>{
+    const updated={...soloVillains,[heroId]:(soloVillains[heroId]||[]).filter(v=>v.id!==rogueId)};setSoloVillains(updated);persist("forge-solo-villains",updated);
+  },[soloVillains,persist]);
+  const generateSoloHero=async()=>{
+    if(!scName.trim()&&!scHeroName.trim())return;
+    setScLoading(true);setScResult(null);
+    const hex=scColors[0]||"#888780";
+    const colorDesc=scColors.length===1?hex:scColors.map((c,i)=>(["primary","secondary","tertiary"][i])+": "+c).join(", ");
+    const answers=RECRUIT_QUIZ.map(q=>{const opt=q.options.find(o=>o.id===scAnswers[q.id]);return opt?`${q.question}: ${opt.value}`:"";}).filter(Boolean).join("\n");
+    const raceStr=raceLabel(scRace);const raceLoreStr=raceLore(scRace);
+    const computedAge=scAge||(scBirthYear?String(2026-parseInt(scBirthYear)):"");
+    try{
+      const p=await callAI(`Create a solo independent superhero (no team). JSON only.\n\nReal name: ${scName||"Unknown"}\nGender: ${scGender}\nAge: ${computedAge||"Unknown"}\n${scBirthYear?`Birth year: ${scBirthYear}\n`:""}Race: ${raceStr||"Unspecified"}\n${raceLoreStr?`Race lore: ${raceLoreStr}\n`:""}${scStoryDir.trim()?`Story direction: ${scStoryDir.trim()}\n`:""}Color palette: ${colorDesc}\n${scHeroName?`Hero name: ${scHeroName} (use exactly this name)`:"Hero name: (choose a fitting name)"}\nIMPORTANT: Use correct pronouns (${pronounOf(scGender)}/${pronounOf(scGender)==="they"?"them":pronounOf(scGender)==="she"?"her":"him"}) throughout.\nThis hero operates alone. Their origin and motivation should reflect that — no team dependency, personal mission, personal rogues gallery.\nQuiz:\n${answers||"Not provided"}\n\n{"heroName":"${scHeroName||"2-word hero name"}","tagline":"one piercing sentence capturing their solo essence","role":"Role · Descriptor (no team)","origin":"3-4 sentences — personal backstory, why they operate alone, what drives them","powers":[{"name":"Power","desc":"visual desc"},{"name":"Power","desc":"visual desc"},{"name":"Power","desc":"visual desc"},{"name":"Power","desc":"visual desc"}],"stats":{"Power":75,"Speed":70,"Tech":60,"Intellect":80,"Will":85},"costumeDesc":"costume using color palette ${colorDesc}","powerFX":"visual power effects using color palette ${colorDesc}","consistencyNotes":"design lock rules","dna":["Inspiration 1","Inspiration 2"]}`,t=>{});
+      setScResult({id:`solo-${Date.now()}`,solo:true,teamId:null,realName:scName||"Unknown",gender:scGender,age:computedAge,birthYear:scBirthYear||"",race:scRace,species:raceStr||"Human",color:hex,colorPalette:scColors,colorLight:hex+"CC",initials:scName?scName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",isCustom:true,...p});
+    }catch(e){if(e.message!=="Generation cancelled.")setScResult({error:true,msg:e.message});}
+    setScLoading(false);
+  };
+  const saveSoloHero=()=>{
+    if(!scResult||scResult.error)return;
+    addSoloHeroFn(scResult);
+    setShowSoloCreator(false);
+    setActiveSoloId(scResult.id);
+    setSoloHeroView("profile");
+    resetSoloCreator();
+  };
+  const generateSoloStory=async(hero,rogues)=>{
+    if(!hero||rogues.length===0)return;
+    setSoloStoryLoading(true);setSoloStoryResult(null);
+    const selected=rogues.filter(v=>soloStoryRogueIds.length===0||soloStoryRogueIds.includes(v.id));
+    const rogueNames=selected.length?selected.map(v=>v.heroName).join(", "):rogues[0].heroName;
+    try{
+      const r=await callAI(`Write a solo superhero story scene. JSON only.\n\nHero: ${hero.heroName} (${hero.role||"Solo Hero"})\nOrigin: ${hero.origin||""}\nVillain(s): ${rogueNames}\n\n{"title":"story title","scene":"4-5 cinematic paragraphs — a solo showdown between ${hero.heroName} and ${rogueNames}","outcome":"one sentence on who gains the upper hand","hook":"one-sentence next-chapter hook"}`,t=>{});
+      setSoloStoryResult(r);
+    }catch(e){setSoloStoryResult({error:e.message});}
+    setSoloStoryLoading(false);
+  };
   const removeMember=useCallback((teamId,member)=>{
     fetch(`/api/images/${member.id}`,{method:"DELETE"}).catch(()=>{});
     setImages(p=>{const n={...p};delete n[member.id];return n;});
@@ -1608,7 +1687,9 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
   const generateVillain=async()=>{
     setVLoading(true);setVResult(null);setAiStreamText("");
     const answers=VILLAIN_QUIZ.map(q=>{const opt=q.options.find(o=>o.id===vAnswers[q.id]);return`${q.question}: ${opt?.value||""}`;}).join("\n");
-    const targetNames=vTargetTeams.map(id=>teams.find(t=>t.id===id)?.name||id).join(", ")||(teams[0]?.name||"the heroes");
+    const targetNames=rogueMode
+      ?(soloHeroes.find(h=>h.id===rogueMode)?.heroName||"the solo hero")
+      :vTargetTeams.map(id=>teams.find(t=>t.id===id)?.name||id).join(", ")||(teams[0]?.name||"the heroes");
     try{
       const p=await callAI(`Create a villain who threatens: ${targetNames}. JSON only — keys: heroName, tagline, role, origin, powers, stats, dna.\n\nName: ${vName||"Unknown"}\nGender: ${vGender}\nIMPORTANT: Use correct pronouns (${pronounOf(vGender)}/${pronounOf(vGender)==="they"?"them":pronounOf(vGender)==="she"?"her":"him"}) throughout.\nTarget teams: ${targetNames}\nQuiz:\n${answers}\n\n{"heroName":"villain codename","tagline":"one chilling sentence","role":"Threat · Descriptor","origin":"3-4 sentences deeply tied to the target teams","powers":[{"name":"Name","desc":"desc, mirror or counter to a hero ability"},{"name":"Name","desc":"desc"},{"name":"Name","desc":"desc"},{"name":"Name","desc":"desc"}],"stats":{"Power":88,"Speed":78,"Tech":82,"Intellect":90,"Will":88},"dna":["Villain Inspiration 1","Villain Inspiration 2"]}`,t=>setAiStreamText(t));
       setVResult({id:`villain-${Date.now()}`,realName:vName||"Unknown",gender:vGender,color:"#8B1A1A",colorLight:"#E07070",initials:vName?vName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",isVillain:true,targetTeams:vTargetTeams.length?vTargetTeams:(teams[0]?[teams[0].id]:[]),...p});
@@ -1618,16 +1699,22 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
 
   const addVillain=()=>{
     if(!vResult||vResult.error)return;
-    const newPool=[...villainPool,vResult];
-    setVillainPool(newPool);
-    persist("forge-villains",newPool);
+    if(rogueMode){
+      addSoloRogueFn(rogueMode,{...vResult,rogueFor:rogueMode});
+      setRogueMode(null);
+    }else{
+      const newPool=[...villainPool,vResult];setVillainPool(newPool);persist("forge-villains",newPool);
+    }
     setVResult(null);setVAnswers({});setVName("");setVStep(0);setVTargetTeams([]);setVGender("Male");
   };
 
   const saveBareVillain=()=>{
     const bare={id:`villain-${Date.now()}`,realName:vName||"Unknown",heroName:vName||"Unknown Threat",gender:vGender,color:"#8B1A1A",colorLight:"#E07070",initials:vName?vName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",isVillain:true,targetTeams:vTargetTeams.length?vTargetTeams:(teams[0]?[teams[0].id]:[]),tagline:"",role:"Threat",origin:"",powers:[],stats:{Power:50,Speed:50,Tech:50,Intellect:50,Will:50},dna:[]};
-    const newPool=[...villainPool,bare];
-    setVillainPool(newPool);persist("forge-villains",newPool);
+    if(rogueMode){
+      addSoloRogueFn(rogueMode,{...bare,rogueFor:rogueMode});setRogueMode(null);
+    }else{
+      const newPool=[...villainPool,bare];setVillainPool(newPool);persist("forge-villains",newPool);
+    }
     setVResult(null);setVAnswers({});setVName("");setVStep(0);setVTargetTeams([]);setVGender("Male");
   };
 
@@ -2002,7 +2089,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                 </div>
               </div>
 
-              {/* Team Alliance Map */}
+            {/* Team Alliance Map */}
               {teams.length>1&&(<>
                 <div style={{fontSize:9,letterSpacing:"0.2em",color:`${G}77`,textTransform:"uppercase",marginBottom:14}}>Alliance Map</div>
                 <div style={{background:"rgba(255,255,255,0.02)",border:"1px solid var(--border2)",borderRadius:12,overflow:"hidden",padding:"10px 0",marginBottom:24}}>
@@ -2035,6 +2122,44 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                 </div>
               </>)}
             </>)}
+
+            {/* ── Independent Heroes — always visible in Teams tab ── */}
+            <div style={{marginBottom:24}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+                <div>
+                  <div style={{fontSize:9,letterSpacing:"0.2em",color:"rgba(136,135,128,0.7)",textTransform:"uppercase",marginBottom:4}}>Independent Heroes</div>
+                  <div style={{fontSize:12,color:"var(--text3)"}}>Solo operatives — no team, personal rogues gallery.</div>
+                </div>
+                <button onClick={()=>{resetSoloCreator();setShowSoloCreator(true);}} style={{padding:"8px 16px",background:"rgba(136,135,128,0.08)",border:"1px solid rgba(136,135,128,0.3)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:10.5,letterSpacing:"0.12em",textTransform:"uppercase",fontFamily:"monospace",whiteSpace:"nowrap"}}>+ Solo Hero</button>
+              </div>
+              {soloHeroes.length===0&&<div style={{padding:"16px 0 4px",color:"var(--text4)",fontSize:11,fontStyle:"italic"}}>No independents yet — Spider-Man operates alone for a reason.</div>}
+              {soloHeroes.length>0&&<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(230px,1fr))",gap:10}}>
+                {soloHeroes.map(hero=>{
+                  const rogueCount=(soloVillains[hero.id]||[]).length;
+                  return(
+                    <div key={hero.id} onClick={()=>{setActiveSoloId(hero.id);setSoloHeroView("profile");}} style={{background:`${hero.color}08`,border:`1px solid ${hero.color}30`,borderRadius:12,padding:"14px 16px",cursor:"pointer",transition:"border-color 0.15s,background 0.15s"}}
+                      onMouseEnter={e=>{e.currentTarget.style.background=`${hero.color}14`;e.currentTarget.style.borderColor=`${hero.color}55`;}}
+                      onMouseLeave={e=>{e.currentTarget.style.background=`${hero.color}08`;e.currentTarget.style.borderColor=`${hero.color}30`;}}>
+                      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
+                        {images[hero.id]
+                          ?<img src={images[hero.id]} alt="" style={{width:44,height:44,borderRadius:"50%",objectFit:"cover",objectPosition:"top",border:`2px solid ${hero.color}55`,flexShrink:0}}/>
+                          :<div style={{width:44,height:44,borderRadius:"50%",background:`${hero.color}18`,border:`2px solid ${hero.color}44`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:"bold",color:hero.color,flexShrink:0}}>{hero.initials||"??"}</div>}
+                        <div style={{minWidth:0}}>
+                          <div style={{fontSize:13,fontWeight:"bold",color:"var(--text-primary)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{hero.heroName}</div>
+                          <div style={{fontSize:9.5,color:"var(--text3)"}}>{hero.realName}</div>
+                        </div>
+                      </div>
+                      <div style={{fontSize:9,color:"var(--text3)",fontStyle:"italic",lineHeight:1.5,marginBottom:8,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{hero.tagline}</div>
+                      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                        <span style={{fontSize:8,padding:"2px 9px",background:"rgba(136,135,128,0.12)",border:"1px solid rgba(136,135,128,0.25)",borderRadius:20,color:"var(--text4)",letterSpacing:"0.1em"}}>INDEPENDENT</span>
+                        {rogueCount>0&&<span style={{fontSize:8,padding:"2px 9px",background:"rgba(139,26,26,0.12)",border:"1px solid rgba(139,26,26,0.3)",borderRadius:20,color:"#E07070",letterSpacing:"0.08em"}}>{rogueCount} rogue{rogueCount!==1?"s":""}</span>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>}
+            </div>
+
           </>
         )}
       </>)}
@@ -3216,6 +3341,261 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
       })()}
 
     </div>
+
+    {/* ── Solo Hero Creator Modal ──────────────────────────────────────────── */}
+    {showSoloCreator&&(
+      <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.88)",zIndex:1100,overflowY:"auto",display:"flex",justifyContent:"center",padding:"40px 20px"}}>
+        <div style={{background:"var(--bg-base)",border:"1px solid rgba(136,135,128,0.25)",borderRadius:16,width:"100%",maxWidth:580,padding:"28px",height:"fit-content",boxShadow:"0 20px 60px rgba(0,0,0,0.6)"}}>
+          {/* Header */}
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:22}}>
+            <div>
+              <div style={{fontSize:8.5,letterSpacing:"0.24em",color:"rgba(136,135,128,0.65)",textTransform:"uppercase",marginBottom:5,fontFamily:"monospace"}}>Independent Hero</div>
+              <div style={{fontSize:19,fontWeight:"900",color:"var(--text-primary)",letterSpacing:"0.02em"}}>Solo Hero Forge</div>
+              <div style={{fontSize:11,color:"var(--text3)",marginTop:3}}>No team. Personal mission. Their own rogues gallery.</div>
+            </div>
+            <button onClick={()=>{setShowSoloCreator(false);resetSoloCreator();}} style={{background:"none",border:"none",cursor:"pointer",color:"var(--text3)",fontSize:22,padding:"2px 6px",lineHeight:1,flexShrink:0}}>×</button>
+          </div>
+          {/* Progress */}
+          <div style={{height:3,background:"rgba(255,255,255,0.06)",borderRadius:2,marginBottom:18}}>
+            <div style={{height:3,width:scResult?`100%`:`${(scStep/(RECRUIT_QUIZ.length+1))*100}%`,background:"#888780",borderRadius:2,transition:"width 0.3s ease"}}/>
+          </div>
+          {/* Step 0 — Identity */}
+          {!scResult&&scStep===0&&(
+            <div>
+              <div style={{fontSize:14,fontWeight:"bold",color:"var(--text-primary)",marginBottom:14}}>Who is this hero?</div>
+              <span style={s.lbl}>Hero Name <span style={{color:"#E07070"}}>*</span></span>
+              <div style={{display:"flex",gap:6,marginBottom:12}}><input type="text" placeholder="e.g. Ironhawk" value={scHeroName} onChange={e=>setScHeroName(e.target.value)} style={{flex:1}}/><button onClick={()=>setScHeroName(randHeroName(scRace))} style={{padding:"0 12px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:16,flexShrink:0}}>⚄</button></div>
+              <span style={s.lbl}>Real Name</span>
+              <input type="text" placeholder="e.g. Devon Marshall" value={scName} onChange={e=>setScName(e.target.value)} style={{marginBottom:12}}/>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
+                <div>
+                  <span style={s.lbl}>Gender</span>
+                  <select value={scGender} onChange={e=>setScGender(e.target.value)} style={{width:"100%",padding:"8px 10px",background:"var(--bg2)",border:"1px solid var(--border2)",borderRadius:7,color:"var(--text-primary)",fontSize:11,marginTop:4}}>
+                    <option value="Male">Male</option><option value="Female">Female</option><option value="Non-binary">Non-binary</option><option value="Other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <span style={s.lbl}>Birth Year (optional)</span>
+                  <input type="number" placeholder="e.g. 1995" value={scBirthYear} onChange={e=>{setScBirthYear(e.target.value);setScAge(e.target.value?String(2026-parseInt(e.target.value)):"");}} style={{marginTop:4,padding:"8px 10px"}}/>
+                </div>
+              </div>
+              <div style={{marginBottom:12}}>
+                <span style={s.lbl}>Story Direction (optional)</span>
+                <textarea style={{height:52,fontSize:11,marginTop:4}} placeholder={`e.g. "Vigilante protecting one neighborhood" · "Former gov agent gone rogue" · "Alien stranded on Earth"`} value={scStoryDir} onChange={e=>setScStoryDir(e.target.value)}/>
+              </div>
+              <div style={{marginBottom:12}}>
+                <span style={s.lbl}>Race <span style={{color:"#E07070"}}>*</span></span>
+                <div style={{marginTop:6}}><RaceSelector value={scRace} onChange={setScRace} color={scColors[0]||"#888780"}/></div>
+              </div>
+              <span style={s.lbl}>Color Palette <span style={{color:"var(--text4)",fontWeight:"normal"}}>(up to 3)</span></span>
+              <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:8}}>
+                {ACCENT_COLORS.map(ac=>{const sel=scColors.includes(ac.hex);const idx=scColors.indexOf(ac.hex);return(<button key={ac.id} onClick={()=>toggleScColor(ac.hex)} style={{display:"flex",alignItems:"center",gap:6,padding:"5px 10px",background:sel?`${ac.hex}18`:"var(--bg3)",border:`1px solid ${sel?ac.hex:"var(--border2)"}`,borderRadius:20,cursor:"pointer",fontFamily:"monospace",fontSize:10.5,color:sel?"var(--text-primary)":"var(--text2)"}}><div style={{width:9,height:9,borderRadius:"50%",background:ac.hex}}/>{ac.label}{sel&&<span style={{fontSize:7.5,background:ac.hex,color:"#fff",borderRadius:"50%",width:13,height:13,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:"bold"}}>{idx+1}</span>}</button>);})}
+              </div>
+              <div style={{display:"flex",gap:6,alignItems:"center",marginBottom:16}}>
+                <input type="color" value={scCustomHex||"#ffffff"} onChange={e=>setScCustomHex(e.target.value)} style={{width:32,height:32,padding:2,border:"1px solid var(--border2)",borderRadius:6,cursor:"pointer",background:"var(--bg3)",flexShrink:0}}/>
+                <input type="text" placeholder="#A3B2C1" value={scCustomHex} onChange={e=>setScCustomHex(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addCustomScColor()} style={{flex:1,padding:"6px 10px",fontFamily:"monospace",fontSize:11}}/>
+                <button onClick={addCustomScColor} disabled={scColors.length>=3} style={{padding:"6px 12px",background:scColors.length>=3?"var(--bg3)":`${G}14`,border:`1px solid ${scColors.length>=3?"var(--border2)":G}`,borderRadius:8,cursor:scColors.length>=3?"not-allowed":"pointer",color:scColors.length>=3?"var(--text4)":G,fontSize:10,fontFamily:"monospace",flexShrink:0}}>+ Add</button>
+              </div>
+              <button onClick={()=>{if(scHeroName.trim()||scName.trim())setScStep(1);}} disabled={!scHeroName.trim()&&!scName.trim()} style={{width:"100%",...s.bigBtn(!scHeroName.trim()&&!scName.trim(),"#888780")}}>Begin Forge →</button>
+            </div>
+          )}
+          {/* Quiz steps */}
+          {!scResult&&scStep>=1&&scStep<=RECRUIT_QUIZ.length&&(()=>{const q=RECRUIT_QUIZ[scStep-1];return(
+            <div>
+              <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}><span style={{fontSize:10,color:"var(--text2)"}}>Question {scStep} of {RECRUIT_QUIZ.length}</span><span style={{fontSize:10,color:"#888780"}}>{Math.round((scStep/(RECRUIT_QUIZ.length+1))*100)}%</span></div>
+              <div style={s.card}>
+                <div style={{fontSize:14,fontWeight:"bold",color:"var(--text-primary)",marginBottom:16,lineHeight:1.4}}>{q.question}</div>
+                {q.options.map(opt=><button key={opt.id} onClick={()=>{setScAnswers(p=>({...p,[q.id]:opt.id}));if(scStep<RECRUIT_QUIZ.length)setScStep(p=>p+1);}} style={s.optBtn(scAnswers[q.id]===opt.id,"#888780")}>{opt.label}</button>)}
+                <div style={{display:"flex",gap:10,marginTop:10}}>
+                  <button onClick={()=>scStep===1?setScStep(0):setScStep(p=>p-1)} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text3)",fontSize:10.5,fontFamily:"monospace"}}>← Back</button>
+                  {scStep===RECRUIT_QUIZ.length&&scAnswers[q.id]&&<button onClick={generateSoloHero} disabled={scLoading} style={{flex:2,...s.bigBtn(scLoading,"#888780"),marginTop:0}}>{scLoading?"Forging hero...":"Generate Solo Hero →"}</button>}
+                </div>
+              </div>
+            </div>
+          );})()}
+          {/* Loading */}
+          {scLoading&&<div style={{padding:"14px",background:"var(--bg2)",border:"1px solid rgba(136,135,128,0.2)",borderRadius:8,fontSize:10,color:"var(--text3)",fontFamily:"monospace",marginTop:10}}>Forging independent hero…</div>}
+          {/* Result */}
+          {scResult&&!scResult.error&&(<>
+            <CharacterPage member={scResult} imageUrl={null} isVillain={false} teamName="Independent"/>
+            <div style={{display:"flex",gap:10,marginTop:14}}>
+              <button onClick={resetSoloCreator} style={{flex:1,padding:"11px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:10.5,fontFamily:"monospace"}}>Regenerate</button>
+              <button onClick={saveSoloHero} style={{flex:2,padding:"11px",background:"rgba(136,135,128,0.12)",border:"1px solid rgba(136,135,128,0.4)",borderRadius:8,cursor:"pointer",color:"var(--text-primary)",fontSize:10.5,letterSpacing:"0.1em",textTransform:"uppercase",fontFamily:"monospace"}}>Add to Independents →</button>
+            </div>
+          </>)}
+          {scResult?.error&&(<div style={{padding:"14px",background:"rgba(192,57,43,0.08)",border:"1px solid rgba(192,57,43,0.28)",borderRadius:10,marginBottom:8}}>
+            <div style={{fontSize:11,color:"#e74c3c",marginBottom:10,fontFamily:"monospace"}}>Generation failed: {scResult.msg}</div>
+            <button onClick={resetSoloCreator} style={{padding:"9px 18px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:10.5,fontFamily:"monospace"}}>↺ Try Again</button>
+          </div>)}
+        </div>
+      </div>
+    )}
+
+    {/* ── Solo Hero Profile Modal ──────────────────────────────────────────── */}
+    {activeSoloId&&(()=>{
+      const hero=soloHeroes.find(h=>h.id===activeSoloId);
+      if(!hero)return null;
+      const rogues=soloVillains[activeSoloId]||[];
+      const heroColor=hero.color||"#888780";
+      const isAddingRogue=rogueMode===activeSoloId;
+      return(
+        <div style={{position:"fixed",inset:0,background:"var(--bg-base)",zIndex:1050,overflowY:"auto"}}>
+          {/* Top bar */}
+          <div style={{position:"sticky",top:0,zIndex:10,background:"var(--header-bg)",borderBottom:`1px solid ${heroColor}25`,padding:"12px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",backdropFilter:"blur(8px)"}}>
+            <div style={{display:"flex",alignItems:"center",gap:14}}>
+              <button onClick={()=>{setActiveSoloId(null);setSoloHeroView("profile");setRogueMode(null);setVStep(0);setVResult(null);setVAnswers({});setVName("");setVGender("Male");}} style={{padding:"6px 14px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:10.5,fontFamily:"monospace"}}>← Back</button>
+              <div>
+                <div style={{fontSize:8,letterSpacing:"0.22em",color:"rgba(136,135,128,0.65)",textTransform:"uppercase",fontFamily:"monospace",marginBottom:2}}>Independent Hero</div>
+                <div style={{fontSize:16,fontWeight:"900",color:heroColor}}>{hero.heroName}</div>
+              </div>
+            </div>
+            <div style={{display:"flex",gap:8,alignItems:"center"}}>
+              <label style={{cursor:"pointer",padding:"6px 12px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:8,fontSize:10,color:"var(--text3)",fontFamily:"monospace"}}>
+                Upload Image <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>e.target.files?.[0]&&handleImg(hero.id,e.target.files[0])}/>
+              </label>
+              {images[hero.id]&&<button onClick={()=>downloadImg(hero.id,hero.heroName)} style={{padding:"6px 12px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:8,cursor:"pointer",color:"var(--text3)",fontSize:10,fontFamily:"monospace"}}>⬇ Save Image</button>}
+              <button onClick={()=>requirePin(`Delete ${hero.heroName}`,()=>removeSoloHeroFn(hero.id))} style={{padding:"6px 12px",background:"rgba(163,45,45,0.08)",border:"1px solid rgba(163,45,45,0.25)",borderRadius:8,cursor:"pointer",color:"#e74c3c",fontSize:10,fontFamily:"monospace"}}>Delete</button>
+            </div>
+          </div>
+
+          {/* Sub-nav */}
+          <div style={{display:"flex",gap:2,padding:"0 20px",borderBottom:`1px solid ${heroColor}18`,background:"var(--header-bg)"}}>
+            {[["profile","Profile"],["rogues",`Rogues${rogues.length?` (${rogues.length})`:""}`,],["story","Story"]].map(([id,label])=>(
+              <button key={id} onClick={()=>{setSoloHeroView(id);if(id!=="rogues"){setRogueMode(null);setVStep(0);setVResult(null);setVAnswers({});setVName("");setVGender("Male");}}} style={{padding:"10px 18px",background:"none",border:"none",borderBottom:soloHeroView===id?`2px solid ${heroColor}`:"2px solid transparent",cursor:"pointer",color:soloHeroView===id?"var(--text-primary)":"var(--text3)",fontSize:11,fontFamily:"monospace",marginBottom:-1,transition:"color 0.15s"}}>{label}</button>
+            ))}
+          </div>
+
+          <div style={{maxWidth:920,margin:"0 auto",padding:"24px 20px"}}>
+
+            {/* Profile view */}
+            {soloHeroView==="profile"&&(
+              <CharacterPage member={hero} imageUrl={images[hero.id]||null} isVillain={false} teamName="Independent"/>
+            )}
+
+            {/* Rogues Gallery */}
+            {soloHeroView==="rogues"&&(<>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+                <div>
+                  <div style={{fontSize:9,letterSpacing:"0.2em",color:"rgba(139,26,26,0.7)",textTransform:"uppercase",marginBottom:4}}>Rogues Gallery</div>
+                  <div style={{fontSize:12,color:"var(--text3)"}}>Villains personally tied to {hero.heroName}. Their story is intertwined.</div>
+                </div>
+                {!isAddingRogue&&<button onClick={()=>{setRogueMode(activeSoloId);setVStep(0);setVResult(null);setVAnswers({});setVName("");setVGender("Male");}} style={{padding:"8px 16px",background:"rgba(139,26,26,0.1)",border:"1px solid rgba(139,26,26,0.35)",borderRadius:8,cursor:"pointer",color:"#E07070",fontSize:10.5,fontFamily:"monospace",whiteSpace:"nowrap"}}>+ Add Rogue</button>}
+              </div>
+
+              {/* Villain creation flow (reused, in rogueMode) */}
+              {isAddingRogue&&(<>
+                <div style={{padding:"10px 14px",background:`${heroColor}0A`,border:`1px solid ${heroColor}25`,borderRadius:8,fontSize:11,color:"var(--text2)",marginBottom:18}}>
+                  Creating rogue for: <strong style={{color:heroColor}}>{hero.heroName}</strong>
+                  <button onClick={()=>{setRogueMode(null);setVStep(0);setVResult(null);setVAnswers({});setVName("");setVGender("Male");}} style={{float:"right",background:"none",border:"none",cursor:"pointer",color:"var(--text4)",fontSize:13}}>×</button>
+                </div>
+                <div style={{marginBottom:20}}>
+                  <div style={{height:3,background:"rgba(255,255,255,0.06)",borderRadius:2,marginBottom:6}}><div style={{height:3,width:`${vResult?100:(vStep/(VILLAIN_QUIZ.length+1))*100}%`,background:"#8B1A1A",borderRadius:2}}/></div>
+                  <div style={{display:"flex",justifyContent:"space-between"}}><span style={{fontSize:10,color:"var(--text2)"}}>{vResult?"Review rogue":`Question ${vStep} of ${VILLAIN_QUIZ.length}`}</span><span style={{fontSize:10,color:"#E07070"}}>{vResult?"Complete":`${Math.round((vStep/(VILLAIN_QUIZ.length+1))*100)}%`}</span></div>
+                </div>
+                {!vResult&&vStep===0&&(
+                  <div style={s.card}>
+                    <div style={{fontSize:13,fontWeight:"bold",color:"var(--text-primary)",marginBottom:12}}>Who is this rogue?</div>
+                    <span style={s.lbl}>Real Name (optional)</span>
+                    <input type="text" placeholder="e.g. Marcus Vane" value={vName} onChange={e=>setVName(e.target.value)} style={{marginBottom:10}}/>
+                    <span style={s.lbl}>Gender</span>
+                    <select value={vGender} onChange={e=>setVGender(e.target.value)} style={{width:"100%",padding:"8px 10px",background:"var(--bg2)",border:"1px solid var(--border2)",borderRadius:7,color:"var(--text-primary)",fontSize:11,marginTop:4,marginBottom:14}}>
+                      <option value="Male">Male</option><option value="Female">Female</option><option value="Non-binary">Non-binary</option><option value="Other">Other</option>
+                    </select>
+                    <button style={s.bigBtn(false,"#8B1A1A")} onClick={()=>setVStep(1)}>Begin Threat Assessment →</button>
+                  </div>
+                )}
+                {!vResult&&vStep>=1&&vStep<=VILLAIN_QUIZ.length&&(()=>{const vq=VILLAIN_QUIZ[vStep-1];return(
+                  <div style={s.card}>
+                    <div style={{fontSize:14,fontWeight:"bold",color:"var(--text-primary)",marginBottom:16,lineHeight:1.4}}>{vq.question}</div>
+                    {vq.options.map(opt=><button key={opt.id} onClick={()=>{setVAnswers(p=>({...p,[vq.id]:opt.id}));if(vStep<VILLAIN_QUIZ.length)setVStep(p=>p+1);}} style={s.optBtn(vAnswers[vq.id]===opt.id,"#8B1A1A")}>{opt.label}</button>)}
+                    <div style={{display:"flex",gap:10,marginTop:10}}>
+                      <button onClick={()=>vStep===1?setVStep(0):setVStep(p=>p-1)} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text3)",fontSize:10.5,fontFamily:"monospace"}}>← Back</button>
+                      {vStep===VILLAIN_QUIZ.length&&vAnswers[vq.id]&&<button onClick={generateVillain} disabled={vLoading} style={{flex:2,...s.bigBtn(vLoading,"#8B1A1A"),marginTop:0}}>{vLoading?"Forging rogue...":"Generate Rogue →"}</button>}
+                    </div>
+                  </div>
+                );})()}
+                {vLoading&&<div style={{padding:"12px",background:"var(--bg2)",border:"1px solid rgba(139,26,26,0.2)",borderRadius:8,fontSize:10,color:"var(--text3)",fontFamily:"monospace",marginTop:10}}>Forging rogue for {hero.heroName}…</div>}
+                {vResult&&!vResult.error&&(<>
+                  <CharacterPage member={vResult} imageUrl={null} isVillain={true}/>
+                  <div style={{display:"flex",gap:10,marginTop:14,marginBottom:20}}>
+                    <button onClick={()=>{setVResult(null);setVStep(0);setVAnswers({});}} style={{flex:1,padding:"11px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:10.5,fontFamily:"monospace"}}>Regenerate</button>
+                    <button onClick={addVillain} style={{flex:2,padding:"11px",background:"rgba(139,26,26,0.2)",border:"1px solid #8B1A1A",borderRadius:8,cursor:"pointer",color:"#E07070",fontSize:10.5,letterSpacing:"0.1em",textTransform:"uppercase",fontFamily:"monospace"}}>Add to Rogues Gallery →</button>
+                  </div>
+                </>)}
+                {vResult?.error&&(<div style={{padding:"14px",background:"rgba(192,57,43,0.08)",border:"1px solid rgba(192,57,43,0.28)",borderRadius:10,marginBottom:16}}>
+                  <div style={{fontSize:11,color:"#e74c3c",marginBottom:10,fontFamily:"monospace"}}>Generation failed: {vResult.msg}</div>
+                  <div style={{display:"flex",gap:10}}>
+                    <button onClick={()=>setVResult(null)} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:10.5,fontFamily:"monospace"}}>↺ Try Again</button>
+                    <button onClick={saveBareVillain} style={{flex:2,padding:"10px",background:"rgba(139,26,26,0.15)",border:"1px solid rgba(139,26,26,0.5)",borderRadius:8,cursor:"pointer",color:"#E07070",fontSize:10.5,fontFamily:"monospace"}}>Save Without AI →</button>
+                  </div>
+                </div>)}
+              </>)}
+
+              {/* Existing rogues */}
+              {rogues.length===0&&!isAddingRogue&&<div style={{textAlign:"center",padding:"40px 20px",color:"var(--text4)",fontSize:12,fontStyle:"italic"}}>No rogues yet. Every solo hero needs a nemesis.</div>}
+              {rogues.length>0&&(
+                <div style={{display:"flex",flexDirection:"column",gap:10,marginTop:isAddingRogue?24:0}}>
+                  {rogues.map(v=>(
+                    <div key={v.id} style={{background:"rgba(139,26,26,0.07)",border:"1px solid rgba(139,26,26,0.22)",borderRadius:10,padding:"14px 16px"}}>
+                      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+                        <div style={{display:"flex",alignItems:"center",gap:10}}>
+                          <div style={{width:36,height:36,borderRadius:"50%",background:"rgba(139,26,26,0.18)",border:"1px solid rgba(139,26,26,0.38)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:"bold",color:"#E07070",flexShrink:0}}>{v.initials}</div>
+                          <div><div style={{fontSize:13,fontWeight:"bold",color:"var(--text-primary)"}}>{v.heroName}</div><div style={{fontSize:10,color:"var(--text3)"}}>{v.realName} · {v.role}</div></div>
+                        </div>
+                        <button onClick={()=>removeSoloRogueFn(activeSoloId,v.id)} style={{fontSize:9,padding:"3px 9px",background:"rgba(163,45,45,0.08)",border:"1px solid rgba(163,45,45,0.25)",borderRadius:6,cursor:"pointer",color:"#e74c3c",fontFamily:"monospace"}}>Remove</button>
+                      </div>
+                      <div style={{fontSize:11,color:"var(--text3)",fontStyle:"italic",lineHeight:1.5}}>{v.tagline}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>)}
+
+            {/* Story Generator */}
+            {soloHeroView==="story"&&(<>
+              <div style={{marginBottom:20}}>
+                <div style={{fontSize:9,letterSpacing:"0.2em",color:`${heroColor}77`,textTransform:"uppercase",marginBottom:4}}>Solo Story</div>
+                <div style={{fontSize:12,color:"var(--text3)"}}>Generate a cinematic scene between {hero.heroName} and their rogues.</div>
+              </div>
+              {rogues.length===0&&(
+                <div style={{...s.card,textAlign:"center",padding:"30px"}}>
+                  <div style={{fontSize:13,color:"var(--text3)",marginBottom:14}}>No rogues in the gallery yet.</div>
+                  <button onClick={()=>setSoloHeroView("rogues")} style={{padding:"9px 20px",background:"rgba(139,26,26,0.1)",border:"1px solid rgba(139,26,26,0.3)",borderRadius:8,cursor:"pointer",color:"#E07070",fontSize:11,fontFamily:"monospace"}}>Add a Rogue First</button>
+                </div>
+              )}
+              {rogues.length>0&&(<>
+                <div style={s.card}>
+                  <div style={{fontSize:12,fontWeight:"bold",color:"var(--text-primary)",marginBottom:12}}>Cast of Rogues</div>
+                  <div style={{fontSize:11,color:"var(--text3)",marginBottom:12}}>Select which rogues appear (leave all unchecked for the full gallery):</div>
+                  <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:20}}>
+                    {rogues.map(v=>(
+                      <button key={v.id} onClick={()=>setSoloStoryRogueIds(p=>p.includes(v.id)?p.filter(x=>x!==v.id):[...p,v.id])} style={{...s.chip(soloStoryRogueIds.includes(v.id),"#8B1A1A"),display:"flex",alignItems:"center",gap:6}}>
+                        <div style={{width:7,height:7,borderRadius:1,background:"#8B1A1A",flexShrink:0}}/>
+                        {v.heroName}
+                      </button>
+                    ))}
+                  </div>
+                  <button onClick={()=>generateSoloStory(hero,rogues)} disabled={soloStoryLoading} style={s.bigBtn(soloStoryLoading,heroColor)}>{soloStoryLoading?"Writing scene...":"Generate Scene"}</button>
+                </div>
+                {soloStoryResult&&!soloStoryResult.error&&(
+                  <div style={{...s.card,marginTop:16}}>
+                    <div style={{fontSize:15,fontWeight:"bold",color:heroColor,marginBottom:14}}>{soloStoryResult.title}</div>
+                    <div style={{fontSize:12,color:"var(--text2)",lineHeight:1.8,whiteSpace:"pre-wrap",marginBottom:16}}>{soloStoryResult.scene}</div>
+                    <div style={{borderTop:"1px solid var(--border2)",paddingTop:12,display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+                      <div><div style={{fontSize:8.5,letterSpacing:"0.16em",color:"var(--text4)",textTransform:"uppercase",marginBottom:4}}>Outcome</div><div style={{fontSize:11,color:"var(--text2)"}}>{soloStoryResult.outcome}</div></div>
+                      <div><div style={{fontSize:8.5,letterSpacing:"0.16em",color:"var(--text4)",textTransform:"uppercase",marginBottom:4}}>Next Chapter Hook</div><div style={{fontSize:11,color:heroColor,fontStyle:"italic"}}>{soloStoryResult.hook}</div></div>
+                    </div>
+                  </div>
+                )}
+                {soloStoryResult?.error&&<div style={{padding:"12px",background:"rgba(192,57,43,0.08)",border:"1px solid rgba(192,57,43,0.25)",borderRadius:8,marginTop:14,fontSize:11,color:"#e74c3c",fontFamily:"monospace"}}>{soloStoryResult.error}</div>}
+              </>)}
+            </>)}
+
+          </div>
+        </div>
+      );
+    })()}
+
   </div>);
 }
 

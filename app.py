@@ -158,7 +158,16 @@ def ollama_models():
         return []
 
 def ollama_generate(model: str, prompt: str) -> str:
-    """Send a generation request. Uses /v1/chat/completions for remote or /api/generate for local."""
+    """Send a generation request. Routes to Groq, remote OpenAI-compat, or local Ollama."""
+    if model in GROQ_MODELS and GROQ_KEY:
+        r = requests.post(
+            "https://api.groq.com/openai/v1/chat/completions",
+            headers={"Content-Type": "application/json", "Authorization": f"Bearer {GROQ_KEY}"},
+            json={"model": model, "messages": [{"role": "user", "content": prompt}], "max_tokens": 1200},
+            timeout=180,
+        )
+        r.raise_for_status()
+        return r.json().get("choices", [{}])[0].get("message", {}).get("content", "")
     base = config["ollama_url"].rstrip("/")
     if _is_remote():
         r = requests.post(
