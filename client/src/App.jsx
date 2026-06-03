@@ -10,7 +10,7 @@ import {
   DEEP_LORE_PHASES, PERSONAL_PROFILE,
   _rp, _NAMES, _TS, randTeamName, randHeroName,
 } from './constants/index.js';
-import { autoScore, autoTierFn, pronounOf, ageStage } from './utils/helpers.js';
+import { autoScore, autoTierFn, pronounOf, ageStage, hexToColorName } from './utils/helpers.js';
 import AlignmentBadge from './components/AlignmentBadge.jsx';
 import StatBar from './components/StatBar.jsx';
 import CharacterPage from './components/CharacterPage.jsx';
@@ -134,6 +134,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
   const[crossover,setCrossover]=useState(false);
   // ── Prompts ──────────────────────────────────────────────────────────────
   const[pStyle,setPStyle]=useState("comic");
+  const[pPlatform,setPPlatform]=useState("meta-ai");
   const[pSelected,setPSelected]=useState(null);
   const[pLoading,setPLoading]=useState(false);const[pResult,setPResult]=useState(null);const[sheetLoading,setSheetLoading]=useState(false);
   const[duoA,setDuoA]=useState("");const[duoB,setDuoB]=useState("");
@@ -214,6 +215,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
       }
       try{const d=await window.storage.get("nk-recruits");const rec=JSON.parse(d.value)||[];if(rec.length){setTeamRosters(p=>({...p,"nocturnal-knights":[...(p["nocturnal-knights"]||[]),...rec.map(r=>({...r,teamId:"nocturnal-knights"}))]}))};}catch(e){}
       try{const d=await window.storage.get("forge-meta-ai-pref");if(d)setHasMetaAI(JSON.parse(d.value));}catch(e){}
+      try{const d=await window.storage.get("forge-prompt-platform");if(d)setPPlatform(JSON.parse(d.value)||"meta-ai");}catch(e){}
       try{const d=await window.storage.get("forge-family");setFamilyLinks(JSON.parse(d.value)||[]);}catch(e){
         try{const d2=await window.storage.get("nk-family");setFamilyLinks(JSON.parse(d2.value)||[]);}catch(e2){}
       }
@@ -701,7 +703,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     const castChars=[...allCharacters,...villainPool].filter(m=>sCast.includes(m.id));
     const scene=SCENARIOS.find(s=>s.id===sScenario);
     try{
-      const p=await callAI(`Direct visual image prompt for Meta AI Imagine. JSON only, key "prompt".\n\nCast: ${castChars.map(m=>{const s=ageStage(m.age);return`${m.heroName}${m.isVillain?" (VILLAIN)":""}${s?" ["+s+"]":""} (${m.powerFX||m.color+" energy"}, ${m.costumeDesc||"dramatic suit"}, accent color: ${m.color})`;}).join("; ")}\nScenario: ${scene?.label} — ${scene?.desc}\nTone: ${sTone}\n\nAge stage is in brackets — physique, face, and proportions must visually match each character's life stage.\n\n{"prompt":"5-6 sentence direct visual prompt. NEVER use instruction verbs — do NOT start with Generate, Create, Draw, Show, or any command. Begin directly with the scene visuals. Sentence 1: Set the scene environment with specific nighttime urban details — exact location, lighting sources, atmosphere matching the tone. Sentence 2-4: Each character described visually — their position in the scene, exact costume colors and armor, power FX actively firing (color, glow, particles, energy). Sentence 5: Action/interaction between characters matching the scenario. Sentence 6 (style): photorealistic digital painting, cinematic wide shot, all characters fully visible, dramatic lighting, high detail, comic book illustration style."}`);
+      const p=await callAI(`Direct visual image prompt for Meta AI Imagine. JSON only, key "prompt".\n\nCast: ${castChars.map(m=>{const s=ageStage(m.age);const cn=hexToColorName(m.color);return`${m.heroName}${m.isVillain?" (VILLAIN)":""}${s?" ["+s+"]":""} (${m.powerFX||cn+" energy"}, ${m.costumeDesc||"dramatic suit"}, accent color: ${cn})`;}).join("; ")}\nScenario: ${scene?.label} — ${scene?.desc}\nTone: ${sTone}\n\nAge stage is in brackets — physique, face, and proportions must visually match each character's life stage.\n\n{"prompt":"5-6 sentence direct visual prompt. NEVER use instruction verbs — do NOT start with Generate, Create, Draw, Show, or any command. NEVER use hex codes — describe all colors by name. Begin directly with the scene visuals. Sentence 1: Set the scene environment with specific nighttime urban details — exact location, lighting sources, atmosphere matching the tone. Sentence 2-4: Each character described visually — position in scene, exact costume with named colors, power FX actively firing (color names for glow, particles, energy). Sentence 5: Action/interaction between characters matching the scenario. Sentence 6 (style): photorealistic digital painting, cinematic wide shot, all characters fully visible, dramatic lighting, high detail, comic book illustration style."}`);
       setSResult(p.prompt||"Generation failed — try again.");
     }catch(e){setSResult("Generation failed: "+e.message);}
     setSLoading(false);
@@ -716,8 +718,15 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     try{
       const mPronoun=pronounOf(member.gender||"");
       const mAgeStage=ageStage(member.age);
-      const p=await callAI(`JSON only. Reply with exactly this format, no other text:\n{"metaAI":"...","tripo3D":"..."}\n\n${refNote}Character: ${member.heroName} (${member.realName}), ${member.gender||"Unknown"} ${raceLabel(member.race)||member.species||"Human"}${member.age?", age "+member.age:""}${mAgeStage?" ("+mAgeStage+")":""}.\nTeam: ${activeTeam.name}. Style: ${style}.\nCostume: ${member.costumeDesc||"dramatic suit"}. Primary color: ${member.color}. Power FX: ${member.powerFX||member.color+" energy"}.\nDesign rules: ${member.consistencyNotes||"consistent accent color"}.\nPronouns: ${mPronoun}.${mAgeStage?"\nAge presentation: "+mAgeStage+" — physique, face, and body proportions must visually match this life stage.":""}\n\nmetaAI = Write a direct visual image prompt for Meta AI Imagine. 3-4 sentences. STRICT FORMAT RULES:\n- NEVER use instruction verbs. Do NOT start with "Generate", "Create", "Draw", "Show", "Depict", "A portrait of", or any command phrase. Begin directly with visual content.\n- Sentence 1: ${member.heroName}'s physical presence — ${member.gender||"hero"} body type${mAgeStage?" ("+mAgeStage+" physique)":""}, confident heroic stance, full body visible. Then exact costume: specific materials, armor shape, color zones using ${member.color} as the dominant tone.\n- Sentence 2: Power effects ACTIVELY firing — describe exactly what the powers look like: color ${member.color}, glowing aura, energy particles, light emanating from hands/body/costume. Be specific and visual.\n- Sentence 3: Nighttime urban environment — specific details like rain-slicked streets below, distant neon signs, rooftop edge or alley, deep shadows with highlights from the power glow.\n- Sentence 4: Comma-separated style tags — photorealistic digital painting, cinematic dramatic lighting, full body portrait orientation, high detail, ${style||"comic book illustration style"}.\ntripo3D = 1 sentence FDM mesh prompt with separate color regions.\n\n{"metaAI":"...","tripo3D":"..."}`,null,500);
-      setPResult({member,...p});
+      const colorName=hexToColorName(member.color);
+      const fxDesc=member.powerFX||colorName+" energy";
+      const platInstr=pPlatform==="midjourney"
+        ?`metaAI = Midjourney /imagine prompt. Comma-separated visual descriptors ONLY — no sentences, no instruction verbs, no filler words.\nFORMAT: [hero name], [${member.gender||"hero"} physique${mAgeStage?", "+mAgeStage+" body frame":""}], [exact costume — material, armor shape, dominant ${colorName} with named accent colors], [power FX ACTIVELY firing — name every color: glow, particles, aura], [environment: specific nighttime urban detail — rooftop edge / rain-slicked alley / city below, neon signs], [dramatic rim lighting from power glow, deep shadows], [style descriptors] --ar 2:3 --v 6.1 --style raw --q 2\nNEVER use hex codes — name all colors (e.g. "${colorName}"). Keep it punchy and visual.`
+        :pPlatform==="dalle"
+        ?`metaAI = DALL-E 3 prompt. 3-4 detailed prose sentences.\n- Start with: "A dramatic full-body portrait of ${member.heroName}..." — NEVER use verbs like "Generate", "Create", "Draw".\n- Sentence 1: Physical presence — ${member.gender||"hero"} build${mAgeStage?", "+mAgeStage+" proportions":""}, heroic stance, full body visible. Exact costume: materials, armor shape, dominant ${colorName} with named accent colors.\n- Sentence 2: Power effects ACTIVELY firing — exact color names for glow, energy particles, aura from hands/body/costume. Specific and visual.\n- Sentence 3: Nighttime urban environment — rain-slicked streets, neon sign reflections, rooftop edge, deep shadows, power glow as only light source.\n- Sentence 4: "${style||"digital painting, cinematic dramatic lighting, full body portrait orientation, high detail, comic book illustration style"}"`
+        :`metaAI = Direct visual image prompt for Meta AI Imagine. 3-4 sentences. STRICT RULES:\n- NEVER use instruction verbs. Do NOT start with "Generate", "Create", "Draw", "Show", or any command. Begin directly with visual content.\n- Sentence 1: ${member.heroName}'s physical presence — ${member.gender||"hero"} body type${mAgeStage?", "+mAgeStage+" physique":""}, confident heroic stance, full body visible. Exact costume: materials, armor shape, dominant ${colorName} with named accent colors.\n- Sentence 2: Power effects ACTIVELY firing — ${colorName} glow, energy particles, aura radiating from hands/body. Name every color. No hex codes.\n- Sentence 3: Nighttime urban environment — rain-slicked streets below, neon signs, rooftop edge or alley, deep shadows with power glow as primary light.\n- Sentence 4: Comma-separated style tags — photorealistic digital painting, cinematic dramatic lighting, full body portrait orientation, high detail, ${style||"comic book illustration style"}.`;
+      const p=await callAI(`JSON only. Reply with exactly this format, no other text:\n{"metaAI":"...","tripo3D":"..."}\n\n${refNote}Character: ${member.heroName} (${member.realName}), ${member.gender||"Unknown"} ${raceLabel(member.race)||member.species||"Human"}${member.age?", age "+member.age:""}${mAgeStage?" ("+mAgeStage+")":""}.\nTeam: ${activeTeam.name}. Style: ${style}.\nCostume: ${member.costumeDesc||"dramatic suit"}. Primary color: ${colorName}. Power FX: ${fxDesc}.\nDesign rules: ${member.consistencyNotes||"consistent accent color"}.\nPronouns: ${mPronoun}.${mAgeStage?"\nAge presentation: "+mAgeStage+" — physique, face, and body proportions must visually match this life stage.":""}\n\n${platInstr}\ntripo3D = 1 sentence FDM mesh prompt with separate color regions.\n\n{"metaAI":"...","tripo3D":"..."}`,null,500);
+      setPResult({member,...p,platform:pPlatform});
     }catch(e){setPResult({error:true,msg:e.message});}
     setPLoading(false);
   };
@@ -727,14 +736,24 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     const style=ART_STYLES.find(a=>a.id===pStyle)?.text||"";
     const n=activeRoster.length;
     const pos=n===2?["left","right"]:n===3?["left","center","right"]:["far left","center-left","center-right","far right"];
-    const charLines=activeRoster.map((m,i)=>{
-      const race=raceLabel(m.race)||m.species||"Human";
-      const notes=m.consistencyNotes?` ${m.consistencyNotes}`:"";
-      const gs=ageStage(m.age);
-      return `• ${m.heroName} [${pos[Math.min(i,pos.length-1)]}]: ${m.gender||"hero"}, ${race}${gs?", "+gs:""}. Costume: ${m.costumeDesc||"superhero suit"}. Accent color: ${m.color}. Power FX: ${m.powerFX||m.color+" energy"}.${notes}`;
-    }).join("\n");
-    const metaAI=`Referencing the uploaded character sheet strictly — do not redesign any character. Every face, costume, and color must match the reference images exactly.\n\n${charLines}\n\nAll ${n} members of ${activeTeam.name} in a wide cinematic group shot — dynamic heroic poses, ${style?style+", ":""}photorealistic, dramatic cinematic lighting, nighttime city backdrop, full bodies visible.\n\nDO NOT alter any character's face, costume, colors, or power effects. Match the reference sheet exactly.`;
-    setPResult({group:true,teamName:activeTeam.name,metaAI});
+    let metaAI;
+    if(pPlatform==="midjourney"){
+      const chars=activeRoster.map((m,i)=>{
+        const cn=hexToColorName(m.color);const gs=ageStage(m.age);
+        return `${m.heroName} [${pos[Math.min(i,pos.length-1)]}]${gs?" "+gs+" frame":""} in ${m.costumeDesc||"superhero suit"} dominant ${cn}, ${m.powerFX||cn+" energy"} actively glowing`;
+      }).join(", ");
+      metaAI=`${activeTeam.name} group shot, ${chars}, dynamic heroic poses, nighttime city skyline backdrop, rain-slicked rooftop, dramatic rim lighting from power glows, ${style||"photorealistic digital painting, cinematic lighting, comic book illustration style"}, all heroes fully visible --ar 16:9 --v 6.1 --style raw`;
+    } else {
+      const charLines=activeRoster.map((m,i)=>{
+        const cn=hexToColorName(m.color);
+        const race=raceLabel(m.race)||m.species||"Human";
+        const notes=m.consistencyNotes?` ${m.consistencyNotes}`:"";
+        const gs=ageStage(m.age);
+        return `• ${m.heroName} [${pos[Math.min(i,pos.length-1)]}]: ${m.gender||"hero"}, ${race}${gs?", "+gs:""}. Costume: ${m.costumeDesc||"superhero suit"}. Accent color: ${cn}. Power FX: ${m.powerFX||cn+" energy"}.${notes}`;
+      }).join("\n");
+      metaAI=`Referencing the uploaded character sheet strictly — do not redesign any character. Every face, costume, and color must match the reference images exactly.\n\n${charLines}\n\nAll ${n} members of ${activeTeam.name} in a wide cinematic group shot — dynamic heroic poses, ${style?style+", ":""}photorealistic, dramatic cinematic lighting, nighttime city backdrop, full bodies visible.\n\nDO NOT alter any character's face, costume, colors, or power effects. Match the reference sheet exactly.`;
+    }
+    setPResult({group:true,teamName:activeTeam.name,metaAI,platform:pPlatform});
     setPLoading(false);
   };
 
@@ -743,14 +762,21 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     if(!a||!b)return;
     setPSelected("duo");setPLoading(true);setPResult(null);
     const style=ART_STYLES.find(x=>x.id===pStyle)?.text||"";
-    const desc=m=>{
-      const race=raceLabel(m.race)||m.species||"Human";
-      const notes=m.consistencyNotes?` ${m.consistencyNotes}`:"";
-      const ds=ageStage(m.age);
-      return `${m.heroName}: ${m.gender||"hero"}, ${race}${ds?", "+ds:""}. Costume: ${m.costumeDesc||"superhero suit"}. Accent color: ${m.color}. Power FX: ${m.powerFX||m.color+" energy"}.${notes}`;
-    };
-    const metaAI=`Referencing the uploaded character sheet strictly — do not redesign either character. Every face, costume, and color must match the reference images exactly.\n\n[LEFT] ${desc(a)}\n\n[RIGHT] ${desc(b)}\n\n${a.heroName} and ${b.heroName} from ${activeTeam.name} — dynamic duo pose, both heroes facing slightly inward, ${style?style+", ":""}photorealistic, dramatic cinematic lighting, nighttime city backdrop, both fully visible, portrait or square format.\n\nDO NOT alter either character's face, costume, colors, or power effects. Match the reference sheet exactly.`;
-    setPResult({duo:true,heroA:a,heroB:b,metaAI});
+    let metaAI;
+    if(pPlatform==="midjourney"){
+      const descMJ=m=>{const cn=hexToColorName(m.color);const ds=ageStage(m.age);return `${m.heroName}${ds?" "+ds+" frame":""} in ${m.costumeDesc||"superhero suit"} dominant ${cn}, ${m.powerFX||cn+" energy"} actively glowing`;};
+      metaAI=`${a.heroName} and ${b.heroName} duo shot, [LEFT] ${descMJ(a)}, [RIGHT] ${descMJ(b)}, both facing slightly inward, dynamic duo heroic stance, nighttime city backdrop, dramatic rim lighting, ${style||"photorealistic digital painting, cinematic lighting, comic book illustration style"}, both fully visible --ar 2:3 --v 6.1 --style raw`;
+    } else {
+      const desc=m=>{
+        const cn=hexToColorName(m.color);
+        const race=raceLabel(m.race)||m.species||"Human";
+        const notes=m.consistencyNotes?` ${m.consistencyNotes}`:"";
+        const ds=ageStage(m.age);
+        return `${m.heroName}: ${m.gender||"hero"}, ${race}${ds?", "+ds:""}. Costume: ${m.costumeDesc||"superhero suit"}. Accent color: ${cn}. Power FX: ${m.powerFX||cn+" energy"}.${notes}`;
+      };
+      metaAI=`Referencing the uploaded character sheet strictly — do not redesign either character. Every face, costume, and color must match the reference images exactly.\n\n[LEFT] ${desc(a)}\n\n[RIGHT] ${desc(b)}\n\n${a.heroName} and ${b.heroName} from ${activeTeam.name} — dynamic duo pose, both heroes facing slightly inward, ${style?style+", ":""}photorealistic, dramatic cinematic lighting, nighttime city backdrop, both fully visible, portrait or square format.\n\nDO NOT alter either character's face, costume, colors, or power effects. Match the reference sheet exactly.`;
+    }
+    setPResult({duo:true,heroA:a,heroB:b,metaAI,platform:pPlatform});
     setPLoading(false);
   };
 
@@ -1316,11 +1342,23 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
           <strong style={{color:G,display:"block",marginBottom:3}}>Consistency Lock · {activeTeam.name}</strong>
           Prompts include exact costume specs and design rules. Reference images lock the prompt to that specific design.
         </div>
-        {/* Meta AI preference toggle */}
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 14px",background:"rgba(30,144,255,0.06)",border:"1px solid rgba(30,144,255,0.2)",borderRadius:8,marginBottom:14}}>
+        {/* Platform selector */}
+        <div style={{...s.card,marginBottom:14}}>
+          <span style={s.lbl}>Image Platform</span>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+            {[["meta-ai","Meta AI"],["midjourney","Midjourney"],["dalle","DALL-E 3"]].map(([id,label])=>(
+              <button key={id} onClick={()=>{setPPlatform(id);persist("forge-prompt-platform",id);setPResult(null);}} style={s.chip(pPlatform===id)}>{label}</button>
+            ))}
+          </div>
+          <div style={{fontSize:9,color:"var(--text3)",marginTop:7}}>
+            {pPlatform==="midjourney"?"Paste into Discord /imagine — best quality for detailed characters. Optimal for Midjourney v6.":pPlatform==="dalle"?"Works in ChatGPT (DALL-E 3) — excellent at following detailed descriptions. Requires ChatGPT Plus.":"Paste into Meta AI Imagine — best with reference image uploaded alongside the prompt."}
+          </div>
+        </div>
+        {/* Meta AI account toggle — only relevant for Meta AI platform */}
+        {pPlatform==="meta-ai"&&<div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 14px",background:"rgba(30,144,255,0.06)",border:"1px solid rgba(30,144,255,0.2)",borderRadius:8,marginBottom:14}}>
           <div><div style={{fontSize:11,fontWeight:"bold",color:"#5EB1FF",marginBottom:2}}>Meta AI Account</div><div style={{fontSize:10,color:"var(--text2)"}}>Enable "Copy & Open" buttons that launch meta.ai with your prompt pre-copied</div></div>
           <button onClick={()=>{const v=!hasMetaAI;setHasMetaAI(v);persist("forge-meta-ai-pref",v);}} style={{padding:"6px 14px",background:hasMetaAI?"rgba(30,144,255,0.2)":"var(--bg3)",border:`1px solid ${hasMetaAI?"rgba(30,144,255,0.6)":"var(--text4)"}`,borderRadius:20,cursor:"pointer",color:hasMetaAI?"#5EB1FF":"var(--text2)",fontSize:10,fontFamily:"var(--font-mono)",flexShrink:0,marginLeft:12}}>{hasMetaAI?"ON":"OFF"}</button>
-        </div>
+        </div>}
         <div style={{...s.card,marginBottom:16}}>
           <span style={s.lbl}>Art Style</span>
           <div style={{display:"flex",flexWrap:"wrap",gap:8}}>{ART_STYLES.map(a=><button key={a.id} style={s.chip(pStyle===a.id)} onClick={()=>setPStyle(a.id)}>{a.label}</button>)}</div>
@@ -1354,14 +1392,36 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
         {activeRoster.length>1&&<button style={s.bigBtn(pLoading)} onClick={generateGroupPrompt} disabled={pLoading}>{pLoading&&pSelected==="group"?"Building group shot...":"Generate Full Team Group Shot"}</button>}
         {pResult&&!pResult.error&&(<div ref={pResultRef} style={{...s.card,marginTop:16}}>
           <div style={{fontSize:12,fontWeight:"bold",color:pResult.group||pResult.duo?G:pResult.member?.color||G,marginBottom:10}}>{pResult.group?`Group Shot — ${pResult.teamName||activeTeam.name}`:pResult.duo?`Duo Shot — ${pResult.heroA?.heroName} + ${pResult.heroB?.heroName}`:`${pResult.member?.heroName} · Image Prompts`}</div>
-          {pResult.metaAI&&<><span style={s.lbl}>Meta AI Image Prompt</span><div style={s.pBox}>{pResult.metaAI}</div>{hasMetaAI?<MetaAILauncher prompt={pResult.metaAI} label="Meta AI" copied={copied.pmeta} onCopy={()=>copy("pmeta",pResult.metaAI)}/>:<div style={{display:"flex",justifyContent:"flex-end",marginTop:6,marginBottom:12}}><button style={s.cpyBtn(copied.pmeta)} onClick={()=>copy("pmeta",pResult.metaAI)}>{copied.pmeta?"Copied!":"Copy"}</button></div>}</>}
+          {pResult.metaAI&&<>
+            <span style={s.lbl}>{(pResult.platform||pPlatform)==="midjourney"?"Midjourney /imagine Prompt":(pResult.platform||pPlatform)==="dalle"?"DALL-E 3 Prompt":"Meta AI Image Prompt"}</span>
+            <div style={s.pBox}>{pResult.metaAI}</div>
+            {(pResult.platform||pPlatform)==="midjourney"?(
+              <div style={{display:"flex",alignItems:"center",gap:8,marginTop:8,marginBottom:12}}>
+                <div style={{fontSize:9,color:"var(--text3)",flex:1}}>Paste into Discord with /imagine</div>
+                <button style={s.cpyBtn(copied.pmeta)} onClick={()=>copy("pmeta",pResult.metaAI)}>{copied.pmeta?"Copied!":"Copy Prompt"}</button>
+              </div>
+            ):(pResult.platform||pPlatform)==="dalle"?(
+              <div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap",marginBottom:12}}>
+                <button style={s.cpyBtn(copied.pmeta)} onClick={()=>copy("pmeta",pResult.metaAI)}>{copied.pmeta?"Copied!":"Copy"}</button>
+                <button onClick={()=>{navigator.clipboard.writeText(pResult.metaAI).then(()=>{copy("pmeta",pResult.metaAI);window.open("https://chat.openai.com/","_blank");});}} style={{padding:"5px 14px",background:"rgba(16,163,127,0.12)",border:"1px solid rgba(16,163,127,0.4)",borderRadius:6,cursor:"pointer",fontSize:10,color:"#10A37F",fontFamily:"var(--font-mono)",display:"flex",alignItems:"center",gap:5}}>
+                  <span style={{fontSize:12}}>✦</span> Copy & Open ChatGPT
+                </button>
+              </div>
+            ):(
+              hasMetaAI?<MetaAILauncher prompt={pResult.metaAI} label="Meta AI" copied={copied.pmeta} onCopy={()=>copy("pmeta",pResult.metaAI)}/>:<div style={{display:"flex",justifyContent:"flex-end",marginTop:6,marginBottom:12}}><button style={s.cpyBtn(copied.pmeta)} onClick={()=>copy("pmeta",pResult.metaAI)}>{copied.pmeta?"Copied!":"Copy"}</button></div>
+            )}
+          </>}
           {(pResult.group||pResult.duo)&&<div style={{marginTop:12}}>
             <button style={{...s.bigBtn(sheetLoading),background:sheetLoading?"var(--bg3)":"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.15)"}} onClick={()=>downloadTeamSheet(pResult.duo?[pResult.heroA,pResult.heroB]:undefined)} disabled={sheetLoading}>{sheetLoading?"Building reference sheet…":"📎 Download Reference Sheet"}</button>
-            <div style={{fontSize:9,color:"var(--text3)",textAlign:"center",marginTop:6}}>Upload this image alongside the prompt in Meta AI for best accuracy</div>
+            <div style={{fontSize:9,color:"var(--text3)",textAlign:"center",marginTop:6}}>
+              {(pResult.platform||pPlatform)==="midjourney"?"Use as reference with --cref [image-url] for character consistency":(pResult.platform||pPlatform)==="dalle"?"Upload alongside the prompt in ChatGPT for best accuracy":"Upload alongside the prompt in Meta AI for best accuracy"}
+            </div>
           </div>}
           {!pResult.group&&!pResult.duo&&pResult.member&&images[pResult.member.id]&&<div style={{marginTop:12}}>
             <button style={{...s.bigBtn(false),background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.15)"}} onClick={()=>downloadImg(pResult.member.id,pResult.member.heroName)}>📎 Download Reference Image</button>
-            <div style={{fontSize:9,color:"var(--text3)",textAlign:"center",marginTop:6}}>Upload this image alongside the prompt in Meta AI for best accuracy</div>
+            <div style={{fontSize:9,color:"var(--text3)",textAlign:"center",marginTop:6}}>
+              {(pResult.platform||pPlatform)==="midjourney"?"Use as reference with --cref [image-url] for character consistency":(pResult.platform||pPlatform)==="dalle"?"Upload alongside the prompt in ChatGPT for best accuracy":"Upload alongside the prompt in Meta AI for best accuracy"}
+            </div>
           </div>}
           {pResult.tripo3D&&<><span style={s.lbl}>Tripo3D Model Prompt</span><div style={s.pBox}>{pResult.tripo3D}</div><Tripo3DLauncher prompt={pResult.tripo3D} copied={copied.ptripo} onCopy={()=>copy("ptripo",pResult.tripo3D)}/></>}
         </div>)}
