@@ -2,20 +2,27 @@ import { useState } from 'react';
 import { G } from '../constants/index.js';
 
 export default function RemotePanel({remoteInfo,setRemoteInfo,onClose,s,forgeVersion,setAppAlert}){
-  const[rpin,setRpin]=useState(()=>remoteInfo?.pin_set?"••••":"");
+  const[rusername,setRusername]=useState(remoteInfo?.username||"");
+  const[rpassword,setRpassword]=useState("");
+  const[rconfirm,setRconfirm]=useState("");
   const[rdomain,setRdomain]=useState(remoteInfo?.duck_domain||"");
   const[rtoken,setRtoken]=useState("");
   const[saving,setSaving]=useState(false);
+  const[pwErr,setPwErr]=useState("");
   const saveRemote=async(enabled)=>{
+    if(rpassword&&rpassword!==rconfirm){setPwErr("Passwords do not match.");return;}
+    setPwErr("");
     setSaving(true);
     const body={remote_enabled:enabled};
-    if(rpin&&rpin!=="••••")body.remote_pin=rpin;
+    if(rusername)body.remote_username=rusername;
+    if(rpassword)body.remote_password=rpassword;
     if(rdomain)body.duck_domain=rdomain;
     if(rtoken)body.duck_token=rtoken;
     const cr=await fetch("/api/config",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
     const cd=await cr.json();
     if(cd.needs_restart&&setAppAlert)setAppAlert({type:"restart",msg:"Restart required — Flask needs to rebind to all interfaces to activate remote access. DuckDNS is already updating your IP."});
     const r=await fetch("/api/remote");setRemoteInfo(await r.json());
+    setRpassword("");setRconfirm("");
     setSaving(false);
   };
   return(<div style={{background:"var(--bg2)",borderBottom:"1px solid var(--border)",padding:"14px 22px"}}>
@@ -28,7 +35,7 @@ export default function RemotePanel({remoteInfo,setRemoteInfo,onClose,s,forgeVer
         const statusLabel=live?"LIVE · ACCESSIBLE":needsRestart?"RESTART REQUIRED":remoteInfo?.enabled?"INCOMPLETE SETUP":"DISABLED";
         const checks=[
           {ok:!!remoteInfo?.cloudflared,label:"cloudflared installed",fix:"Mac: brew install cloudflared · Windows: winget install cloudflare.cloudflared"},
-          {ok:!!remoteInfo?.pin_set,label:"Access PIN set",fix:"Enter a PIN in the Access PIN card and save"},
+          {ok:!!remoteInfo?.auth_set,label:"Login credentials set",fix:"Enter a username and password in the Login Credentials card and save"},
           {ok:!!remoteInfo?.enabled,label:"Remote access enabled",fix:'Click "Enable Remote Access" below'},
           {ok:!!remoteInfo?.url,label:"Tunnel running",fix:remoteInfo?.enabled?(remoteInfo?.cloudflared?"Restart the app to start the tunnel":"Install cloudflared first"):"Enable remote access first"},
         ];
@@ -66,9 +73,12 @@ export default function RemotePanel({remoteInfo,setRemoteInfo,onClose,s,forgeVer
           <div style={{fontSize:9,color:"var(--text4)"}}>Get a free domain at duckdns.org + forward port 7432 on your router</div>
         </div>
         <div style={{padding:"12px 14px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:8}}>
-          <div style={{fontSize:10,fontWeight:"bold",color:"#e74c3c",marginBottom:8}}>Access PIN</div>
-          <input type="password" value={rpin} onChange={e=>setRpin(e.target.value)} placeholder="Set a PIN for remote access" style={{marginBottom:6,fontSize:10}}/>
-          <div style={{fontSize:9,color:"var(--text4)"}}>Remote visitors must enter this PIN. Local access is always unrestricted.</div>
+          <div style={{fontSize:10,fontWeight:"bold",color:"#e74c3c",marginBottom:8}}>Login Credentials {remoteInfo?.auth_set&&<span style={{color:"#5DCAA5",fontWeight:"normal"}}>· set</span>}</div>
+          <input type="text" value={rusername} onChange={e=>setRusername(e.target.value)} placeholder="Username" autoComplete="off" style={{marginBottom:6,fontSize:10}}/>
+          <input type="password" value={rpassword} onChange={e=>setRpassword(e.target.value)} placeholder={remoteInfo?.auth_set?"New password (leave blank to keep)":"Password"} autoComplete="new-password" style={{marginBottom:6,fontSize:10}}/>
+          <input type="password" value={rconfirm} onChange={e=>setRconfirm(e.target.value)} placeholder="Confirm password" autoComplete="new-password" style={{marginBottom:4,fontSize:10}}/>
+          {pwErr&&<div style={{fontSize:9,color:"#e74c3c",marginBottom:4}}>{pwErr}</div>}
+          <div style={{fontSize:9,color:"var(--text4)"}}>Remote visitors must sign in. Local access is always unrestricted.</div>
         </div>
       </div>
       <div style={{display:"flex",gap:10,marginTop:12}}>

@@ -463,44 +463,57 @@ def _cache_headers(response):
     return response
 
 @app.before_request
-def _pin_guard():
+def _auth_guard():
     cfg = load_config()
-    if not cfg.get("remote_enabled") or not cfg.get("remote_pin"):
+    if not cfg.get("remote_enabled") or not (cfg.get("remote_username") and cfg.get("remote_password_hash")):
         return
     if request.remote_addr in ("127.0.0.1", "::1"):
         return
-    if session.get("pin_ok"):
+    if session.get("authenticated"):
         return
-    if request.path in ("/forge-pin", "/api/verify-pin") or \
+    if request.path in ("/forge-login", "/api/login", "/api/logout") or \
        request.path.startswith(("/vendor/", "/api/images/")) or \
        request.path == "/api/images":
         return
     if request.path.startswith("/api/"):
-        return jsonify({"error": "pin_required"}), 401
-    return redirect("/forge-pin")
+        return jsonify({"error": "auth_required"}), 401
+    return redirect("/forge-login")
 
-@app.route("/forge-pin")
-def pin_page():
-    pin_html = """<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Forge — Enter PIN</title>
+@app.route("/forge-login")
+def login_page():
+    login_html = """<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Forge — Sign In</title>
 <style>*{box-sizing:border-box;margin:0;padding:0;}body{background:#09090F;color:#F0EAD6;font-family:'Courier New',monospace;display:flex;align-items:center;justify-content:center;min-height:100vh;}
 .box{width:320px;text-align:center;}.title{font-size:18px;font-weight:bold;letter-spacing:.1em;color:#D4AF37;margin-bottom:6px;}
-.sub{font-size:11px;color:#888;margin-bottom:28px;}input{width:100%;padding:12px;background:#111;border:1px solid #333;border-radius:8px;color:#F0EAD6;font-size:20px;letter-spacing:.3em;text-align:center;margin-bottom:12px;}
+.sub{font-size:11px;color:#888;margin-bottom:28px;}input{width:100%;padding:12px;background:#111;border:1px solid #333;border-radius:8px;color:#F0EAD6;font-size:14px;text-align:left;margin-bottom:10px;outline:none;}
+input:focus{border-color:#D4AF37;}
 button{width:100%;padding:12px;background:#D4AF3720;border:1px solid #D4AF37;border-radius:8px;color:#D4AF37;font-size:12px;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;}
-.err{color:#e74c3c;font-size:11px;margin-top:8px;}</style></head>
-<body><div class="box"><div class="title">SUPERHERO FORGE</div><div class="sub">Remote access — enter PIN to continue</div>
-<input type="password" id="p" placeholder="PIN" autofocus onkeydown="if(event.key==='Enter')submit()"/>
-<button onclick="submit()">Unlock</button><div class="err" id="e"></div></div>
-<script>async function submit(){const r=await fetch('/api/verify-pin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pin:document.getElementById('p').value})});if((await r.json()).ok){location.href='/';}else{document.getElementById('e').textContent='Incorrect PIN.';}}</script></body></html>"""
-    return pin_html
+.err{color:#e74c3c;font-size:11px;margin-top:8px;min-height:16px;}</style></head>
+<body><div class="box"><div class="title">SUPERHERO FORGE</div><div class="sub">Remote access — sign in to continue</div>
+<input type="text" id="u" placeholder="Username" autocomplete="username" autofocus onkeydown="if(event.key==='Enter')document.getElementById('p').focus()"/>
+<input type="password" id="p" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter')login()"/>
+<button onclick="login()">Sign In</button><div class="err" id="e"></div></div>
+<script>async function login(){document.getElementById('e').textContent='';const r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:document.getElementById('u').value,password:document.getElementById('p').value})});if((await r.json()).ok){location.href='/';}else{document.getElementById('e').textContent='Incorrect username or password.';}}</script></body></html>"""
+    return login_html
 
-@app.route("/api/verify-pin", methods=["POST"])
-def verify_pin():
+@app.route("/api/login", methods=["POST"])
+def api_login():
+    from werkzeug.security import check_password_hash
     cfg = load_config()
-    pin = cfg.get("remote_pin", "")
-    if not pin or (request.get_json() or {}).get("pin") == pin:
-        session["pin_ok"] = True
+    data = request.get_json() or {}
+    stored_user = cfg.get("remote_username", "")
+    stored_hash = cfg.get("remote_password_hash", "")
+    if not stored_user or not stored_hash:
+        session["authenticated"] = True
+        return jsonify({"ok": True})
+    if data.get("username") == stored_user and check_password_hash(stored_hash, data.get("password", "")):
+        session["authenticated"] = True
         return jsonify({"ok": True})
     return jsonify({"ok": False}), 401
+
+@app.route("/api/logout", methods=["POST"])
+def api_logout():
+    session.pop("authenticated", None)
+    return jsonify({"ok": True})
 
 # ---------------------------------------------------------------------------
 # Static routes
@@ -536,7 +549,8 @@ def api_remote():
         "enabled": cfg.get("remote_enabled", False),
         "url": TUNNEL_URL,
         "duck_domain": cfg.get("duck_domain", ""),
-        "pin_set": bool(cfg.get("remote_pin", "")),
+        "auth_set": bool(cfg.get("remote_username") and cfg.get("remote_password_hash")),
+        "username": cfg.get("remote_username", ""),
         "cloudflared": bool(_find_cloudflared())
     })
 
@@ -545,7 +559,7 @@ def api_remote():
 # ---------------------------------------------------------------------------
 @app.route("/api/config", methods=["GET"])
 def get_config():
-    safe = {k: v for k, v in config.items() if k not in ("ollama_api_key", "secret_key")}
+    safe = {k: v for k, v in config.items() if k not in ("ollama_api_key", "secret_key", "remote_password_hash", "remote_pin")}
     safe["has_api_key"] = bool(config.get("ollama_api_key"))
     safe["mode"] = "remote" if _is_remote() else "local"
     return jsonify(safe)
@@ -561,6 +575,11 @@ def update_config():
         config["ollama_url"] = data["ollama_url"].rstrip("/")
     if "ollama_api_key" in data:
         config["ollama_api_key"] = data["ollama_api_key"]
+    if "remote_password" in data and data["remote_password"]:
+        from werkzeug.security import generate_password_hash
+        config["remote_password_hash"] = generate_password_hash(data.pop("remote_password"))
+    else:
+        data.pop("remote_password", None)
     for k, v in data.items():
         if k not in ("model", "ollama_url", "ollama_api_key"):
             config[k] = v
