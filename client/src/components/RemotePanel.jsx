@@ -1,12 +1,11 @@
 import { useState } from 'react';
 import { G } from '../constants/index.js';
 
-export default function RemotePanel({remoteInfo,setRemoteInfo,onClose,s,forgeVersion}){
+export default function RemotePanel({remoteInfo,setRemoteInfo,onClose,s,forgeVersion,setAppAlert}){
   const[rpin,setRpin]=useState(()=>remoteInfo?.pin_set?"••••":"");
   const[rdomain,setRdomain]=useState(remoteInfo?.duck_domain||"");
   const[rtoken,setRtoken]=useState("");
   const[saving,setSaving]=useState(false);
-  const[restartNeeded,setRestartNeeded]=useState(false);
   const saveRemote=async(enabled)=>{
     setSaving(true);
     const body={remote_enabled:enabled};
@@ -15,7 +14,7 @@ export default function RemotePanel({remoteInfo,setRemoteInfo,onClose,s,forgeVer
     if(rtoken)body.duck_token=rtoken;
     const cr=await fetch("/api/config",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
     const cd=await cr.json();
-    if(cd.needs_restart)setRestartNeeded(true);
+    if(cd.needs_restart&&setAppAlert)setAppAlert({type:"restart",msg:"Restart required — Flask needs to rebind to all interfaces to activate remote access. DuckDNS is already updating your IP."});
     const r=await fetch("/api/remote");setRemoteInfo(await r.json());
     setSaving(false);
   };
@@ -72,7 +71,6 @@ export default function RemotePanel({remoteInfo,setRemoteInfo,onClose,s,forgeVer
           <div style={{fontSize:9,color:"var(--text4)"}}>Remote visitors must enter this PIN. Local access is always unrestricted.</div>
         </div>
       </div>
-      {restartNeeded&&<div style={{marginTop:10,padding:"8px 13px",background:"rgba(212,175,55,0.08)",border:"1px solid rgba(212,175,55,0.35)",borderRadius:7,fontSize:10,color:"#D4AF37",letterSpacing:"0.04em"}}>⚠ Restart the app to finish enabling remote access — Flask needs to rebind to all interfaces. DuckDNS is already updating your IP in the background.</div>}
       <div style={{display:"flex",gap:10,marginTop:12}}>
         <button onClick={()=>saveRemote(true)} disabled={saving} style={{...s.bigBtn(saving,"#5EB1FF"),width:"auto",padding:"8px 20px",marginTop:0}}>{saving?"Saving...":"Enable Remote Access"}</button>
         <button onClick={()=>saveRemote(false)} disabled={saving} style={{...s.bigBtn(saving),width:"auto",padding:"8px 20px",marginTop:0,color:"var(--text3)"}}>{saving?"...":"Disable"}</button>

@@ -58,6 +58,7 @@ function App(){
   const[remoteInfo,setRemoteInfo]=useState(null);
   const[showRemotePanel,setShowRemotePanel]=useState(false);
   const[updatePulling,setUpdatePulling]=useState(false);
+  const[appAlert,setAppAlert]=useState(null); // {type:"restart"|"reload"|"error", msg:string}
   // ── Villain pool ────────────────────────────────────────────────────────
   const[villainPool,setVillainPool]=useState([]);
   // ── Solo / Independent Heroes ─────────────────────────────────────────────
@@ -1070,7 +1071,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
       </div>
       <div className="fhdr-right" style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
         {saved&&<div style={{fontSize:9,color:"#5DCAA5",padding:"3px 10px",background:"rgba(15,110,86,0.12)",border:"1px solid rgba(15,110,86,0.3)",borderRadius:20}}>✓ Saved</div>}
-        {updateInfo?.has_update&&<div style={{display:"flex",alignItems:"center",gap:6,padding:"4px 11px",background:"rgba(212,175,55,0.12)",border:"1px solid rgba(212,175,55,0.4)",borderRadius:20,cursor:"pointer"}} onClick={async()=>{if(updatePulling)return;setUpdatePulling(true);const r=await fetch("/api/update/pull",{method:"POST"});const d=await r.json();setUpdatePulling(false);if(d.ok){setUpdateInfo(null);alert("Updated! Restart the app to apply changes.");}else{alert("Update failed:\n"+d.output);}}}>
+        {updateInfo?.has_update&&<div style={{display:"flex",alignItems:"center",gap:6,padding:"4px 11px",background:"rgba(212,175,55,0.12)",border:"1px solid rgba(212,175,55,0.4)",borderRadius:20,cursor:"pointer"}} onClick={async()=>{if(updatePulling)return;setUpdatePulling(true);const r=await fetch("/api/update/pull",{method:"POST"});const d=await r.json();setUpdatePulling(false);if(d.ok){setUpdateInfo(null);setAppAlert({type:"restart",msg:"Update applied — restart to load the new version."});}else{setAppAlert({type:"error",msg:"Update failed: "+(d.output||"Unknown error")});}}}>
           <div style={{width:6,height:6,borderRadius:"50%",background:G}}/>
           <span style={{fontSize:9,color:G,fontFamily:"var(--font-mono)"}}>{updatePulling?"Updating...":"Update available — click to pull"}</span>
         </div>}
@@ -1102,7 +1103,24 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     </div>
 
     {/* ── Remote / Settings Panel ────────────────────────────────────── */}
-    {showRemotePanel&&<RemotePanel remoteInfo={remoteInfo} setRemoteInfo={setRemoteInfo} onClose={()=>setShowRemotePanel(false)} G={G} s={s} forgeVersion={forgeVersion}/>}
+    {showRemotePanel&&<RemotePanel remoteInfo={remoteInfo} setRemoteInfo={setRemoteInfo} onClose={()=>setShowRemotePanel(false)} G={G} s={s} forgeVersion={forgeVersion} setAppAlert={setAppAlert}/>}
+
+    {/* ── App Alert Banner ───────────────────────────────────────────── */}
+    {appAlert&&(()=>{
+      const isRestart=appAlert.type==="restart";
+      const isReload=appAlert.type==="reload";
+      const isError=appAlert.type==="error";
+      const bc=isRestart?"#D4AF37":isReload?"#5EB1FF":"#E07070";
+      return(
+        <div style={{display:"flex",alignItems:"center",gap:12,padding:"9px 22px",background:`${bc}0F`,borderBottom:`1px solid ${bc}35`,fontSize:10,color:bc,fontFamily:"var(--font-mono)",letterSpacing:"0.04em"}}>
+          <span style={{flexShrink:0}}>{isRestart?"⚠":isReload?"↻":"✗"}</span>
+          <span style={{flex:1}}>{appAlert.msg}</span>
+          {isRestart&&<button onClick={()=>{fetch("/api/restart",{method:"POST"}).then(()=>{setTimeout(()=>window.location.reload(),1800);});setAppAlert(null);}} style={{padding:"4px 14px",background:`${bc}18`,border:`1px solid ${bc}55`,borderRadius:6,cursor:"pointer",color:bc,fontSize:9,fontFamily:"var(--font-mono)",letterSpacing:"0.1em"}}>RESTART NOW</button>}
+          {isReload&&<button onClick={()=>{window.location.reload();}} style={{padding:"4px 14px",background:`${bc}18`,border:`1px solid ${bc}55`,borderRadius:6,cursor:"pointer",color:bc,fontSize:9,fontFamily:"var(--font-mono)",letterSpacing:"0.1em"}}>RELOAD</button>}
+          <button onClick={()=>setAppAlert(null)} style={{padding:"3px 8px",background:"transparent",border:"none",cursor:"pointer",color:`${bc}99`,fontSize:13,lineHeight:1,fontFamily:"var(--font-mono)"}}>×</button>
+        </div>
+      );
+    })()}
 
     {/* ── PIN Delete Modal ────────────────────────────────────────────── */}
     {pinDialog&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.75)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setPinDialog(null)}>
