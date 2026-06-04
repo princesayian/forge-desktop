@@ -1487,23 +1487,35 @@ if __name__ == "__main__":
             if cfg.get("duck_token") and cfg.get("duck_domain"):
                 duckdns_loop(cfg["duck_token"], cfg["duck_domain"])
         threading.Thread(target=_start_remote, daemon=True).start()
+    def _open_browser(target_url):
+        """Open the browser using the most reliable method for the platform."""
+        import sys as _sys
+        if _sys.platform == "darwin":
+            # Use 'open' directly — avoids AppleScript permission issues
+            subprocess.Popen(["open", target_url],
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        elif _sys.platform == "win32":
+            os.startfile(target_url)
+        else:
+            import webbrowser as _wb
+            _wb.open(target_url)
+
     try:
         import webview
-        import webbrowser
-        print("  Opening native window (minimized) + browser tab...\n")
+        print("  Opening native window (minimized) + browser tab...\n", flush=True)
         _storage = os.path.join(BASE, "webview-data")
         os.makedirs(_storage, exist_ok=True)
         _win = webview.create_window("Superhero Forge", url, width=1280, height=900,
             min_size=(960, 680), background_color="#09090F")
         def _on_started():
+            time.sleep(0.5)  # wait for native window to be ready
             try: _win.minimize()
             except Exception: pass
-            webbrowser.open(url)
+            _open_browser(url)
         webview.start(debug=False, private_mode=False, storage_path=_storage, func=_on_started)
     except ImportError:
-        import webbrowser
-        print("  PyWebView not found — opening in browser.\n")
-        webbrowser.open(url)
+        print("  PyWebView not found — opening in browser.\n", flush=True)
+        _open_browser(url)
         try:
             while True: time.sleep(1)
         except KeyboardInterrupt:
