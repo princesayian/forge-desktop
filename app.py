@@ -447,6 +447,21 @@ app = Flask(__name__, static_folder=STATIC, static_url_path="")
 app.config["JSON_SORT_KEYS"] = False
 app.secret_key = base64.b64decode(config.get("secret_key", base64.b64encode(os.urandom(24)).decode()))
 
+@app.after_request
+def _cache_headers(response):
+    p = request.path
+    # Vite assets have content-hash filenames — safe to cache for 1 year
+    if p.startswith("/assets/"):
+        response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+    # Character/team images — cache 1 hour; re-upload replaces the file
+    elif p.startswith("/api/images/") and request.method == "GET" and response.status_code == 200:
+        response.headers["Cache-Control"] = "public, max-age=3600"
+    # index.html and API — never cache
+    elif p == "/" or p.endswith(".html") or p.startswith("/api/"):
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers.pop("Expires", None)
+    return response
+
 @app.before_request
 def _pin_guard():
     cfg = load_config()
@@ -774,7 +789,13 @@ def get_image(img_id):
     for ext in IMAGE_EXTENSIONS:
         path = os.path.join(IMAGES_DIR, f"{safe_id}{ext}")
         if os.path.exists(path):
-            return send_file(path)
+            mtime = int(os.path.getmtime(path))
+            etag = f'"{safe_id}-{mtime}"'
+            if request.headers.get("If-None-Match") == etag:
+                return Response(status=304)
+            resp = send_file(path)
+            resp.headers["ETag"] = etag
+            return resp
     return jsonify({"error": "not found"}), 404
 
 @app.route("/api/images/<img_id>", methods=["POST"])

@@ -16,6 +16,7 @@ export default function EditPanel({member,onSave,onCancel,callAI,teamName}){
   const[birthYear,setBirthYear]=useState(member.birthYear||"");
   const[age,setAge]=useState(member.birthYear?String(2026-parseInt(member.birthYear)):(member.age||""));
   const[heroType,setHeroType]=useState(member.heroType||"hero");
+  const[powerType,setPowerType]=useState(member.powerType||"powers");
   const[storyDir,setStoryDir]=useState("");
   const[regenLoading,setRegenLoading]=useState(false);
   const c=member.color;
@@ -94,11 +95,30 @@ export default function EditPanel({member,onSave,onCancel,callAI,teamName}){
     </>)}
     <div style={{fontSize:9,letterSpacing:"0.18em",color:`${c}88`,textTransform:"uppercase",marginBottom:8}}>Stats</div>
     <div className="fstats-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:14}}>{Object.entries(stats).map(([k,v])=>(<div key={k}><div style={{fontSize:9,color:"var(--text2)",marginBottom:4,textTransform:"uppercase"}}>{k}</div><input type="number" min="1" max="100" value={v} onChange={e=>setStats(p=>({...p,[k]:Math.min(100,Math.max(1,+e.target.value))}))} style={{padding:"6px 10px"}}/></div>))}</div>
-    <div style={{fontSize:9,letterSpacing:"0.18em",color:`${c}88`,textTransform:"uppercase",marginBottom:8}}>Powers</div>
-    {powers.map((p,i)=>(<div key={i} style={{marginBottom:10}}><input type="text" placeholder="Power name" value={p.name} onChange={e=>setPowers(pw=>pw.map((x,j)=>j===i?{...x,name:e.target.value}:x))} style={{marginBottom:4}}/><input type="text" placeholder="Description" value={p.desc} onChange={e=>setPowers(pw=>pw.map((x,j)=>j===i?{...x,desc:e.target.value}:x))}/></div>))}
+    <div style={{fontSize:9,letterSpacing:"0.18em",color:`${c}88`,textTransform:"uppercase",marginBottom:8}}>Ability Type</div>
+    <div style={{display:"flex",gap:6,marginBottom:12}}>
+      {[{id:"powers",label:"Powers",hint:"Superpowers / mutations"},{id:"equipment",label:"Arsenal",hint:"Gadgets / tech / weapons"},{id:"skills",label:"Skills",hint:"Training / peak human"}].map(pt=>(
+        <button key={pt.id} onClick={()=>setPowerType(pt.id)} title={pt.hint} style={{fontSize:9,padding:"4px 12px",background:powerType===pt.id?`${c}22`:"var(--bg3)",border:`1px solid ${powerType===pt.id?c:"var(--border2)"}`,borderRadius:20,cursor:"pointer",color:powerType===pt.id?c:"var(--text2)",fontFamily:"var(--font-mono)"}}>{pt.label}</button>
+      ))}
+    </div>
+    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+      <div style={{fontSize:9,letterSpacing:"0.18em",color:`${c}88`,textTransform:"uppercase"}}>{powerType==="equipment"?"Arsenal / Gear":powerType==="skills"?"Skills & Abilities":"Powers"}</div>
+      <button onClick={()=>setPowers(p=>[...p,{name:"",desc:""}])} style={{fontSize:8.5,padding:"2px 10px",background:`${c}14`,border:`1px solid ${c}55`,borderRadius:12,cursor:"pointer",color:c,fontFamily:"var(--font-mono)"}}>+ Add</button>
+    </div>
+    {powers.map((p,i)=>(
+      <div key={i} style={{marginBottom:10,position:"relative"}}>
+        <div style={{display:"flex",gap:5,alignItems:"flex-start"}}>
+          <div style={{flex:1}}>
+            <input type="text" placeholder={powerType==="equipment"?"Gadget / weapon name":powerType==="skills"?"Skill / technique name":"Power name"} value={p.name} onChange={e=>setPowers(pw=>pw.map((x,j)=>j===i?{...x,name:e.target.value}:x))} style={{marginBottom:4}}/>
+            <input type="text" placeholder="Description" value={p.desc} onChange={e=>setPowers(pw=>pw.map((x,j)=>j===i?{...x,desc:e.target.value}:x))}/>
+          </div>
+          <button onClick={()=>setPowers(pw=>pw.filter((_,j)=>j!==i))} title="Remove" style={{marginTop:3,flexShrink:0,width:22,height:22,display:"flex",alignItems:"center",justifyContent:"center",background:"transparent",border:`1px solid ${c}30`,borderRadius:5,cursor:"pointer",color:`${c}66`,fontSize:13,fontFamily:"var(--font-mono)",lineHeight:1}}>×</button>
+        </div>
+      </div>
+    ))}
     <div style={{display:"flex",gap:10,marginTop:16}}>
       <button onClick={onCancel} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:11}}>Cancel</button>
-      <button onClick={()=>onSave({heroName,realName,tagline:t,origin:o,stats,powers,nkAlignment:align,teamRank,gender,age,birthYear,race,species:raceLabel(race)||member.species||"",...(!member.isVillain&&{heroType})})} style={{flex:2,padding:"10px",background:`${c}18`,border:`1px solid ${c}`,borderRadius:8,cursor:"pointer",color:c,fontSize:11,letterSpacing:"0.1em",textTransform:"uppercase"}}>Save Changes</button>
+      <button onClick={()=>onSave({heroName,realName,tagline:t,origin:o,stats,powers,nkAlignment:align,teamRank,gender,age,birthYear,race,species:raceLabel(race)||member.species||"",powerType,...(!member.isVillain&&{heroType})})} style={{flex:2,padding:"10px",background:`${c}18`,border:`1px solid ${c}`,borderRadius:8,cursor:"pointer",color:c,fontSize:11,letterSpacing:"0.1em",textTransform:"uppercase"}}>Save Changes</button>
     </div>
   </div>);
 }

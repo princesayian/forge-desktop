@@ -6,11 +6,15 @@ export default function CharacterPage({member,imageUrl,isVillain=false,teamName,
   const c=member.color,cl=member.colorLight||c;
   const tName=teamName||"Unknown Team";
 
-  const calloutPool=(member.costumeDesc||"").split(/[,.]/).map(s=>s.trim()).filter(s=>s.length>8&&s.length<62);
-  const labels=calloutPool.length>=2?calloutPool.slice(0,3):[
+  const pt=member.powerType||"powers";
+  const ptLabel=pt==="equipment"?"ARSENAL":pt==="skills"?"SKILL SET":"KEY STRENGTHS";
+  const ptSection=pt==="equipment"?"Arsenal / Gear":pt==="skills"?"Skills & Abilities":"Powers";
+
+  const powerNames=(member.powers||[]).slice(0,3).map(p=>p.name).filter(s=>s&&s.length>2&&s.length<60);
+  const labels=powerNames.length>=1?powerNames:[
     member.role||"Operative",
     (()=>{const s=raceLabel(member.race)||member.species||"";return s&&s!=="Human"?s:"Enhanced Operative";})(),
-    member.powerFX?(member.powerFX.split(/[,.]/).map(s=>s.trim()).find(s=>s.length>6&&s.length<55)||"Power active"):null
+    member.powerFX?(member.powerFX.split(/[,.]/).map(s=>s.trim()).find(s=>s.length>6&&s.length<55)||null):null
   ].filter(Boolean).slice(0,3);
 
   const keyStrengths=(member.powers||[]).slice(0,3).map(p=>p.name).join(", ");
@@ -57,7 +61,7 @@ export default function CharacterPage({member,imageUrl,isVillain=false,teamName,
           </div>
           <div style={{padding:"8px 10px",display:"flex",flexDirection:"column",gap:4}}>
             <div><span style={{fontSize:8.5,fontWeight:"bold",color:cl,letterSpacing:"0.04em"}}>AFFILIATION: </span><span style={{fontSize:8.5,color:"var(--text2)"}}>{affiliationLine}</span></div>
-            <div><span style={{fontSize:8.5,fontWeight:"bold",color:cl,letterSpacing:"0.04em"}}>KEY STRENGTHS: </span><span style={{fontSize:8.5,color:"var(--text2)"}}>{keyStrengths}</span></div>
+            <div><span style={{fontSize:8.5,fontWeight:"bold",color:cl,letterSpacing:"0.04em"}}>{ptLabel}: </span><span style={{fontSize:8.5,color:"var(--text2)"}}>{keyStrengths}</span></div>
             {(member.gender||member.age||member.birthYear)&&<div><span style={{fontSize:8.5,fontWeight:"bold",color:cl,letterSpacing:"0.04em"}}>PROFILE: </span><span style={{fontSize:8.5,color:"var(--text2)"}}>{[member.gender,member.age&&`Age ${member.age}`,member.birthYear&&`b. ${member.birthYear}`].filter(Boolean).join(" · ")}</span></div>}
             {member.race&&<div><span style={{fontSize:8.5,fontWeight:"bold",color:cl,letterSpacing:"0.04em"}}>RACE: </span><span style={{fontSize:8.5,color:"var(--text2)"}}>{raceLabel(member.race)}</span></div>}
             <div><span style={{fontSize:8.5,fontWeight:"bold",color:cl,letterSpacing:"0.04em"}}>STATUS: </span><span style={{fontSize:8.5,color:isVillain?"#E07070":"var(--text2)"}}>{isVillain?"HIGH PRIORITY THREAT":member.nkAlignment==="base"?"OPERATIVE":"ASSOCIATE"}</span></div>
@@ -66,6 +70,7 @@ export default function CharacterPage({member,imageUrl,isVillain=false,teamName,
       </div>
     </div>
     <div style={{padding:"14px 18px 12px",borderTop:`1px solid ${c}18`,borderBottom:`1px solid ${c}18`}}>
+      <div style={{fontSize:7.5,letterSpacing:"0.22em",color:`${c}77`,textTransform:"uppercase",fontFamily:"var(--font-mono)",marginBottom:10}}>{ptSection}</div>
       <div className="fpowers-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"14px 24px"}}>
         {(member.powers||[]).map((p,i)=>(
           <div key={i}>

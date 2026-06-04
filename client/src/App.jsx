@@ -175,7 +175,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
   const requirePin=(label,action)=>{setPinDialog({label,action});setPinInput("");setPinError(false);};
   const confirmPin=()=>{if(pinInput===DELETE_PIN){pinDialog.action();setPinDialog(null);}else{setPinError(true);setPinInput("");}};
   // ── UI ───────────────────────────────────────────────────────────────────
-  const[tab,setTab]=useState("teams");
+  const[tab,setTab]=useState(()=>{try{return localStorage.getItem("forge-active-tab")||"teams";}catch{return"teams";}});
   const[saved,setSaved]=useState(false);
   const[pdfLoading,setPdfLoading]=useState(false);
   const[lightMode,setLightMode]=useState(()=>{try{return localStorage.getItem("forge-theme")==="light";}catch{return false;}});
@@ -184,6 +184,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     document.body.classList.toggle("light-mode",lightMode);
     try{localStorage.setItem("forge-theme",lightMode?"light":"dark");}catch{}
   },[lightMode]);
+  useEffect(()=>{try{localStorage.setItem("forge-active-tab",tab);}catch{}},[tab]);
   const[copied,setCopied]=useState({});
   const fileRefs=useRef({});const teamLogoRefs=useRef({});
 
@@ -943,24 +944,17 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
         // Real name in accent color
         ctx.fillStyle=m.color;ctx.font="11px monospace";
         ctx.fillText(m.realName||"",cx+14,ip+40);
-        // Costume desc — word-wrap 2 lines
+        // Powers / Arsenal / Skills — list up to 2 names
         ctx.fillStyle="rgba(255,255,255,0.55)";ctx.font="9.5px monospace";
-        const maxTW=CARD_W-28,words=(m.costumeDesc||"").split(" ");
-        let cL1="",cL2="",onL2=false;
-        for(const w of words){
-          if(!onL2){const t=cL1+(cL1?" ":"")+w;if(ctx.measureText(t).width<=maxTW)cL1=t;else{onL2=true;cL2=w;}}
-          else{const t=cL2+(cL2?" ":"")+w;if(ctx.measureText(t).width<=maxTW)cL2=t;else break;}
-        }
-        ctx.fillText(cL1,cx+14,ip+58);
-        if(cL2)ctx.fillText(cL2,cx+14,ip+72);
-        // Color swatch + hex
+        const pNames=(m.powers||[]).slice(0,2).map(p=>p.name).filter(Boolean);
+        if(pNames[0])ctx.fillText(pNames[0].slice(0,42),cx+14,ip+58);
+        if(pNames[1])ctx.fillText(pNames[1].slice(0,42),cx+14,ip+72);
+        // Color swatch (no hex label)
         ctx.fillStyle=m.color;ctx.fillRect(cx+14,ip+82,18,11);
         ctx.strokeStyle="rgba(255,255,255,0.15)";ctx.lineWidth=0.5;ctx.strokeRect(cx+14,ip+82,18,11);
-        ctx.fillStyle="rgba(255,255,255,0.45)";ctx.font="9px monospace";
-        ctx.fillText(m.color,cx+38,ip+92);
         // Power FX
         ctx.fillStyle="rgba(255,255,255,0.35)";ctx.font="8.5px monospace";
-        const fx=(m.powerFX||m.color+" energy").slice(0,58);
+        const fx=(m.powerFX||(pNames[0]||"Energy")+" active").slice(0,58);
         ctx.fillText("FX: "+fx,cx+14,ip+110);
       }
       await new Promise(res=>canvas.toBlob(blob=>{if(!blob){res();return;}const u=URL.createObjectURL(blob);const a=document.createElement("a");a.href=u;a.download=`${activeTeam.name.toLowerCase().replace(/\s+/g,"-")}-reference.png`;document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(()=>URL.revokeObjectURL(u),1000);res();},"image/png"));
@@ -1320,7 +1314,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
       {tab==="roster"&&(<>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:28,gap:16}}>
           <div style={{display:"flex",alignItems:"center",gap:16}}>
-            <TeamLogo team={activeTeam} size={56}/>
+            <TeamLogo team={activeTeam} size={56} imageUrl={images['teamlogo-'+activeTeam.id]}/>
             <div>
               <h2 className="forge-h2" style={{color:activeTeam.color}}>{activeTeam.name}</h2>
               <p style={{fontSize:12.5,color:"var(--text2)",lineHeight:1.5,marginTop:5}}>Upload images, expand to view full pages, or Edit to modify any character.</p>
