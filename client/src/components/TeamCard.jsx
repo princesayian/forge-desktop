@@ -5,7 +5,7 @@ export default function TeamCard({team,isActive,memberCount,onSelect,onEdit,onDe
   const am=ALIGN_META[team.nkAlignment]||ALIGN_META.neutral;
   const type=TEAM_TYPES.find(t=>t.id===team.type);
   return(<div onClick={onSelect} style={{background:isActive?`${team.color}12`:"var(--bg3)",border:`2px solid ${isActive?team.color+"88":"var(--border2)"}`,borderRadius:12,padding:"16px 18px",cursor:"pointer",transition:"all 0.15s",position:"relative"}}>
-    <div style={{display:"flex",gap:12,alignItems:"flex-start"}}>
+    <div style={{display:"flex",gap:12,alignItems:"flex-start",paddingRight:96}}>
       <TeamLogo team={team} size={40} imageUrl={imageUrl}/>
       <div style={{flex:1,minWidth:0}}>
         <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:3}}>
