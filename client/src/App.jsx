@@ -25,6 +25,26 @@ import MetaAILauncher from './components/MetaAILauncher.jsx';
 import Tripo3DLauncher from './components/Tripo3DLauncher.jsx';
 import RemotePanel from './components/RemotePanel.jsx';
 
+// Storage adapter — uses PyWebView's native API in the desktop window,
+// falls back to /api/store HTTP endpoints when running in a plain browser.
+const storage = storage || {
+  get: async (key) => {
+    const r = await fetch(`/api/store/${encodeURIComponent(key)}`);
+    if (!r.ok) return null;
+    return r.json();
+  },
+  set: async (key, value) => {
+    await fetch(`/api/store/${encodeURIComponent(key)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ value }),
+    });
+  },
+  delete: async (key) => {
+    await fetch(`/api/store/${encodeURIComponent(key)}`, { method: 'DELETE' });
+  },
+};
+
 export default
 function App(){
   // ── Team state ──────────────────────────────────────────────────────────
@@ -198,55 +218,55 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
   useEffect(()=>{
     (async()=>{
       const MIGRATE_KEYS=["forge-teams","forge-rosters","forge-edits","forge-villains","forge-removed","forge-meta-ai-pref","nk-edits","nk-villain","nk-recruits"];
-      for(const k of MIGRATE_KEYS){const lv=localStorage.getItem(k);if(lv!=null){try{const ex=await fetch(`/api/store/${encodeURIComponent(k)}`);if(!ex.ok){await window.storage.set(k,lv);}}catch(e){await window.storage.set(k,lv);}localStorage.removeItem(k);}}
+      for(const k of MIGRATE_KEYS){const lv=localStorage.getItem(k);if(lv!=null){try{const ex=await fetch(`/api/store/${encodeURIComponent(k)}`);if(!ex.ok){await storage.set(k,lv);}}catch(e){await storage.set(k,lv);}localStorage.removeItem(k);}}
       // ── v3 migration: move DEFAULT_NK core members from hardcoded to stored roster ──
       try{
-        const migFlag=await window.storage.get("forge-v3").catch(()=>null);
+        const migFlag=await storage.get("forge-v3").catch(()=>null);
         if(!migFlag){
           let mt=[],mr={},me={};
-          try{const d=await window.storage.get("forge-teams");mt=JSON.parse(d.value)||[];}catch(ex){}
-          try{const d=await window.storage.get("forge-rosters");mr=JSON.parse(d.value)||{};}catch(ex){}
-          try{const d=await window.storage.get("forge-edits");me=JSON.parse(d.value)||{};}catch(ex){}
+          try{const d=await storage.get("forge-teams");mt=JSON.parse(d.value)||[];}catch(ex){}
+          try{const d=await storage.get("forge-rosters");mr=JSON.parse(d.value)||{};}catch(ex){}
+          try{const d=await storage.get("forge-edits");me=JSON.parse(d.value)||{};}catch(ex){}
           const hasNKStored=mt.some(t=>t.id==="nocturnal-knights");
           const hasAnyData=mt.length>0||Object.keys(mr).length>0;
           if(hasAnyData){
-            if(!hasNKStored){mt=[NK_TEAM,...mt];await window.storage.set("forge-teams",JSON.stringify(mt));}
+            if(!hasNKStored){mt=[NK_TEAM,...mt];await storage.set("forge-teams",JSON.stringify(mt));}
             const nkR=mr["nocturnal-knights"]||[];
             if(!nkR.some(m=>m.id==="darkstar")){
               const merged=DEFAULT_NK.map(m=>me[m.id]?{...m,...me[m.id]}:m);
               mr["nocturnal-knights"]=[...merged,...nkR];
-              await window.storage.set("forge-rosters",JSON.stringify(mr));
+              await storage.set("forge-rosters",JSON.stringify(mr));
             }
           }
-          await window.storage.set("forge-v3","1");
+          await storage.set("forge-v3","1");
         }
       }catch(ex){}
-      try{const d=await window.storage.get("forge-teams");const saved=JSON.parse(d.value)||[];if(saved.length)setTeams(saved);}catch(e){}
-      try{const d=await window.storage.get("forge-rosters");setTeamRosters(JSON.parse(d.value)||{});}catch(e){}
-      try{const d=await window.storage.get("forge-edits");setSharedEdits(JSON.parse(d.value)||{});}catch(e){
-        try{const d2=await window.storage.get("nk-edits");setSharedEdits(JSON.parse(d2.value)||{});}catch(e2){}
+      try{const d=await storage.get("forge-teams");const saved=JSON.parse(d.value)||[];if(saved.length)setTeams(saved);}catch(e){}
+      try{const d=await storage.get("forge-rosters");setTeamRosters(JSON.parse(d.value)||{});}catch(e){}
+      try{const d=await storage.get("forge-edits");setSharedEdits(JSON.parse(d.value)||{});}catch(e){
+        try{const d2=await storage.get("nk-edits");setSharedEdits(JSON.parse(d2.value)||{});}catch(e2){}
       }
-      try{const d=await window.storage.get("forge-villains");setVillainPool(JSON.parse(d.value)||[]);}catch(e){
-        try{const d2=await window.storage.get("nk-villain");const v=JSON.parse(d2.value);if(v)setVillainPool([v]);}catch(e2){}
+      try{const d=await storage.get("forge-villains");setVillainPool(JSON.parse(d.value)||[]);}catch(e){
+        try{const d2=await storage.get("nk-villain");const v=JSON.parse(d2.value);if(v)setVillainPool([v]);}catch(e2){}
       }
-      try{const d=await window.storage.get("nk-recruits");const rec=JSON.parse(d.value)||[];if(rec.length){setTeamRosters(p=>({...p,"nocturnal-knights":[...(p["nocturnal-knights"]||[]),...rec.map(r=>({...r,teamId:"nocturnal-knights"}))]}))};}catch(e){}
-      try{const d=await window.storage.get("forge-meta-ai-pref");if(d)setHasMetaAI(JSON.parse(d.value));}catch(e){}
-      try{const d=await window.storage.get("forge-prompt-platform");if(d)setPPlatform(JSON.parse(d.value)||"meta-ai");}catch(e){}
-      try{const d=await window.storage.get("forge-family");setFamilyLinks(JSON.parse(d.value)||[]);}catch(e){
-        try{const d2=await window.storage.get("nk-family");setFamilyLinks(JSON.parse(d2.value)||[]);}catch(e2){}
+      try{const d=await storage.get("nk-recruits");const rec=JSON.parse(d.value)||[];if(rec.length){setTeamRosters(p=>({...p,"nocturnal-knights":[...(p["nocturnal-knights"]||[]),...rec.map(r=>({...r,teamId:"nocturnal-knights"}))]}))};}catch(e){}
+      try{const d=await storage.get("forge-meta-ai-pref");if(d)setHasMetaAI(JSON.parse(d.value));}catch(e){}
+      try{const d=await storage.get("forge-prompt-platform");if(d)setPPlatform(JSON.parse(d.value)||"meta-ai");}catch(e){}
+      try{const d=await storage.get("forge-family");setFamilyLinks(JSON.parse(d.value)||[]);}catch(e){
+        try{const d2=await storage.get("nk-family");setFamilyLinks(JSON.parse(d2.value)||[]);}catch(e2){}
       }
-      try{const d=await window.storage.get("forge-hero-assocs");setHeroAssocs(JSON.parse(d.value)||[]);}catch(e){}
-      try{const d=await window.storage.get("forge-removed");setRemovedMembers(JSON.parse(d.value)||{});}catch(e){}
+      try{const d=await storage.get("forge-hero-assocs");setHeroAssocs(JSON.parse(d.value)||[]);}catch(e){}
+      try{const d=await storage.get("forge-removed");setRemovedMembers(JSON.parse(d.value)||{});}catch(e){}
       try{const r=await fetch("/api/images");const ids=await r.json();const loaded={};const t=Date.now();ids.forEach(id=>{loaded[id]=`/api/images/${id}?t=${t}`;});if(Object.keys(loaded).length)setImages(loaded);}catch(e){}
       try{const r=await fetch("/api/update/check");setUpdateInfo(await r.json());}catch(e){}
       try{const r=await fetch("/api/remote");setRemoteInfo(await r.json());}catch(e){}
-      try{const d=await window.storage.get("forge-solo-heroes");setSoloHeroes(JSON.parse(d.value)||[]);}catch(e){}
-      try{const d=await window.storage.get("forge-solo-villains");setSoloVillains(JSON.parse(d.value)||{});}catch(e){}
+      try{const d=await storage.get("forge-solo-heroes");setSoloHeroes(JSON.parse(d.value)||[]);}catch(e){}
+      try{const d=await storage.get("forge-solo-villains");setSoloVillains(JSON.parse(d.value)||{});}catch(e){}
     })();
   },[]);
 
   const persist=useCallback(async(key,data)=>{
-    try{await window.storage.set(key,JSON.stringify(data));setSaved(true);setTimeout(()=>setSaved(false),2000);}catch(e){}
+    try{await storage.set(key,JSON.stringify(data));setSaved(true);setTimeout(()=>setSaved(false),2000);}catch(e){}
   },[]);
 
   // Auto-set activeTeamId when teams load or active team is removed
