@@ -29,50 +29,60 @@
 
 ---
 
-## First Time Setup (do this once)
+## Installation & First Launch
 
-### Step 1 — Install Ollama (local mode only)
+### Option 1: Quick Start (Recommended)
 
-1. Go to **https://ollama.com** and download the installer for your OS
-2. Install and launch Ollama (it runs as a background service)
-3. Open a terminal/command prompt and run:
-   ```
-   ollama pull llama3.2
-   ```
-   This downloads the default AI model (~2GB). Wait for it to finish.
+**Windows:**
+1. Double-click `launcher.bat`
+   - Setup runs automatically on first launch
+   - App opens in a desktop window
 
-### Step 2 — Set up the app
+**macOS/Linux:**
+1. Open Terminal in the app folder
+2. Run: `sh launcher.sh`
+   - Setup runs automatically on first launch
+   - App opens in a desktop window
+
+### Option 2: Manual Setup Then Launch
+
+If you prefer to run setup separately:
 
 **Windows:**
 ```
-python setup.py
+install.bat
 ```
+Then launch with: `launcher.bat` (or `run.bat`)
 
-**Mac:**
+**macOS/Linux:**
 ```
-python3 setup.py
+sh install.sh
 ```
+Then launch with: `sh launcher.sh` (or `sh run.sh`)
 
-This installs Python packages and downloads the frontend libraries (React + ReactDOM). Takes about a minute.
+### Option 3: Direct Python Launch
+
+If you already have Python dependencies installed:
+
+**Windows:** `python app.py`
+
+**macOS/Linux:** `python3 app.py`
 
 ---
 
-## Launching the App
+## Optional: Install Ollama for Local AI (Recommended)
 
-**Windows:** Double-click `run.bat`
+For the best experience with AI generation, install Ollama:
 
-**Mac:** Open Terminal in the folder and run:
-```
-sh run.sh
-```
+1. Download from **https://ollama.com**
+2. Install and launch it (runs as a background service)
+3. Open terminal/command prompt and run:
+   ```
+   ollama pull llama3.2
+   ```
+   This downloads the AI model (~2GB).
 
-Or on either platform:
-```
-python app.py        (Windows)
-python3 app.py       (Mac)
-```
-
-The app opens in its own window via PyWebView. If PyWebView isn't installed, it falls back to your default browser automatically.
+**Note:** The app works without Ollama — you can use remote APIs (OpenAI, etc.) instead via Settings.
 
 ---
 
