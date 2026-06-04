@@ -134,11 +134,41 @@ export const RECRUIT_QUIZ=[
 ];
 
 export const VILLAIN_QUIZ=[
-  {id:"role",question:"Role in the organization?",options:[{id:"architect",label:"The Architect — designed the experiments",value:"mastermind who designed the experiments"},{id:"director",label:"The Director — runs field operations",value:"tactical director, thinks in acceptable losses"},{id:"soldier",label:"The Soldier turned Commander",value:"former field operative, still prefers direct violence"},{id:"scientist",label:"The Scientist — chose org over ethics",value:"genius who chose the org deliberately"},{id:"handler",label:"The Handler — controlled subjects",value:"psychologist who studied and manipulated subjects"},]},
-  {id:"drive",question:"What drives them?",options:[{id:"believer",label:"True believer",value:"genuinely believes the org's work will save the world"},{id:"loss",label:"Lost someone because of the heroes",value:"grief has become a weapon"},{id:"power",label:"Pure hunger for power",value:"uses the org as vehicle for personal power"},{id:"subject",label:"Also a test subject — broken by it",value:"survived the same experiment, shattered"},{id:"protection",label:"Protecting someone inside the org",value:"does terrible things to shield someone they love"},]},
-  {id:"connection",question:"Connection to the heroes?",options:[{id:"creator",label:"Caused or enabled what made the heroes",value:"directly responsible for what the heroes became"},{id:"betrayal",label:"Was once on the team",value:"former ally who knows every weakness"},{id:"counter",label:"Built specifically to counter the heroes",value:"engineered after the heroes became a threat"},{id:"personal",label:"Deep personal history with a hero",value:"deep pre-origin personal history with a hero"},{id:"collateral",label:"Lost someone in the crossfire",value:"civilian caught in the crossfire"},]},
-  {id:"power",question:"Power source?",options:[{id:"corrupted",label:"Mirror power — same source as a hero, corrupted",value:"wields the same power type as the strongest hero, without restraint"},{id:"superior_tech",label:"Tech that makes a hero's feel obsolete",value:"tech so advanced it renders the team's best gadgets obsolete"},{id:"bio_weapon",label:"Weaponized biology",value:"biological weaponry built to neutralize the most powerful hero"},{id:"psychic",label:"Psychic assault",value:"breaks minds, rewrites memories"},{id:"army",label:"Commands an army",value:"commands hundreds of operatives"},]},
-  {id:"flaw",question:"Fatal flaw?",options:[{id:"hero",label:"Believes they are the real hero",value:"genuine conviction they are right"},{id:"grief",label:"Grief made them irrational",value:"the thing they lost has distorted all judgment"},{id:"orders",label:"Following orders they stopped believing",value:"too deep in the org to leave"},{id:"pride",label:"Underestimates the heroes",value:"contempt for the heroes is their blindspot"},{id:"mercy",label:"Still mercy left in them",value:"one hero means something to them — cannot fully commit"},]},
+  {id:"scale",question:"Threat scale — how much damage can they actually do?",options:[
+    {id:"personal",label:"Street-level — hunts individuals, surgical and personal",value:"personal-scale threat — hunts and destroys specific targets with surgical precision, leaves a trail of specific ruined lives"},
+    {id:"city",label:"City-level — destabilizes whole neighborhoods or cities",value:"city-scale threat — commands operations that destabilize cities, controls territory through fear and force"},
+    {id:"systemic",label:"Systemic — corrupts institutions, governments, economies",value:"systemic threat — infiltrates and corrupts governments, economies, and power structures from within"},
+    {id:"apocalyptic",label:"Apocalyptic — mass casualties, global or existential stakes",value:"apocalyptic-scale threat — capable of mass casualties, operates on global or existential stakes, extinction-level ambition"},
+    {id:"shadow",label:"The hand behind every crisis — unseen, never implicated",value:"shadow threat — the unseen architect behind catastrophes, puppeteers events while remaining invisible"},
+  ]},
+  {id:"evil",question:"How evil are they — where is the actual line?",options:[
+    {id:"calculated",label:"Calculated — only destroys what serves the goal, no wasted cruelty",value:"calculated evil — cold and precise, harm is a tool not a pleasure, no unnecessary cruelty"},
+    {id:"absolute",label:"Absolute — no lines remain, will burn everything without hesitation",value:"absolute evil — no moral floor left, destroys anyone and anything that stands in the way without pause or remorse"},
+    {id:"convinced",label:"Convinced they're right — ideological certainty is the most dangerous evil",value:"ideologically certain villain — genuinely believes their cause is just, the conviction makes them incapable of doubt"},
+    {id:"enjoys",label:"Enjoys it — cruelty is not a side effect, it is the point",value:"sadistic villain — derives real satisfaction from suffering, cruelty is the method and the reward"},
+    {id:"reluctant",label:"Reluctant — knows exactly what they are and hates it",value:"reluctant villain — fully aware of their own evil, haunted by it, but cannot or will not stop"},
+  ]},
+  {id:"origin",question:"Root cause — what made them this?",options:[
+    {id:"rage",label:"Rage — something was taken and everything has burned since",value:"rage-origin — something irreplaceable was destroyed, the grief calcified into fury that consumes everything"},
+    {id:"ideology",label:"Ideology — a belief they will end the world to prove right",value:"ideology-driven — operates from a coherent but catastrophically wrong worldview, the cause justifies any atrocity"},
+    {id:"survival",label:"Survival — crossed lines to protect themselves or someone they love",value:"survival-origin — became this to protect what they couldn't lose, crossed lines that could never be uncrossed"},
+    {id:"ambition",label:"Ambition — wanted power and found this was the fastest path",value:"ambition-driven — pure hunger for power and dominance, the evil is just the most efficient route"},
+    {id:"despair",label:"Despair — once believed in something, lost it completely, then broke everything",value:"despair-origin — former idealist who lost faith in the world being good, now actively dismantles what they couldn't save"},
+  ]},
+  {id:"method",question:"Primary weapon — how do they actually operate?",options:[
+    {id:"force",label:"Direct force — overwhelming personal power, removes obstacles visibly",value:"direct-force operator — overwhelming personal power, confronts and destroys obstacles head-on"},
+    {id:"manipulation",label:"Manipulation — uses people against each other, never the last face you see",value:"manipulation-based operator — weaponizes trust and relationships, the real threat is always indirect"},
+    {id:"organization",label:"Organization — commands a network, strength in scale and structure",value:"organizational power — commands a network of operatives and assets, the threat multiplies through numbers"},
+    {id:"terror",label:"Terror — psychological and emotional destruction is the weapon",value:"terror-based operator — psychological obliteration, fear is the primary weapon and the goal"},
+    {id:"systemic",label:"Systematic — erodes safe structures from the inside",value:"systemic operator — dismantles institutions, economies, and stability from within, the enemy of every safe thing"},
+  ]},
+  {id:"selfimage",question:"Do they think they're the villain?",options:[
+    {id:"hero",label:"No — completely convinced they are the hero of this story",value:"self-perceived hero — has fully rewritten their own narrative, their evil is heroism in their mind"},
+    {id:"owns",label:"Yes — and they've made peace with it, the label is liberating",value:"self-aware villain at peace — acknowledges the evil, finds freedom in it, the villain label doesn't sting anymore"},
+    {id:"irrelevant",label:"The label doesn't matter — good and evil are just constraints for the weak",value:"post-moral villain — operates beyond ethics entirely, good and evil are fictions useful for controlling others"},
+    {id:"necessary",label:"Necessary evil — someone has to do what others won't",value:"necessary-evil self-image — believes they are doing what no one else has the stomach for, a burden they carry"},
+    {id:"buried",label:"In too deep — the guilt is there but buried under everything else",value:"buried-guilt villain — knows what they are, suppressed the awareness to function, the guilt is a weapon waiting to be found"},
+  ]},
 ];
 
 export const SCENARIOS=[{id:"ambush",label:"Ambush",icon:"⚡",desc:"Caught off-guard"},{id:"infiltration",label:"Infiltration",icon:"👁",desc:"Stealth mission"},{id:"rescue",label:"Rescue",icon:"🔗",desc:"One hero captured"},{id:"confrontation",label:"Confrontation",icon:"💥",desc:"Direct face-off"},{id:"revelation",label:"Revelation",icon:"📁",desc:"Dark truth surfaces"},{id:"heist",label:"Heist",icon:"🎯",desc:"Extract a target"},{id:"crossover",label:"Crossover",icon:"🌐",desc:"Two teams collide"}];

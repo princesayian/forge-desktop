@@ -731,6 +731,29 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     setPLoading(false);
   };
 
+  const generateVillainPrompt=async(villain)=>{
+    setPSelected(villain.id);setPLoading(true);setPResult(null);
+    const style=ART_STYLES.find(a=>a.id===pStyle)?.text||"";
+    const hasRef=images[villain.id];
+    const refNote=hasRef?"Start the metaAI prompt with: \"Maintaining exact character design from reference image — same face, same costume, same color scheme, same power effects. Do not redesign.\"":"";
+    try{
+      const vPronoun=pronounOf(villain.gender||"");
+      const vAgeStage=ageStage(villain.age);
+      const colorName=hexToColorName(villain.color||"#8B1A1A");
+      const fxDesc=villain.powerFX||colorName+" corruption energy";
+      const costumeDesc=villain.costumeDesc||"dark armored suit";
+      const powerNames=villain.powers?.map(pw=>pw.name).join(", ")||"unknown powers";
+      const platInstr=pPlatform==="midjourney"
+        ?`metaAI = Midjourney /imagine prompt. Comma-separated visual descriptors ONLY — no sentences, no instruction verbs.\nFORMAT: [villain name], [${villain.gender||"villain"} physique${vAgeStage?", "+vAgeStage+" frame":""}, imposing menacing stance, looming dominant presence], [${costumeDesc} dominant ${colorName} with deep shadow accents, dark armor], [${fxDesc} ACTIVELY radiating — name every color: corruption tendrils, malevolent aura, dark glow], [environment: crumbling rooftop or storm-lit ruins or hellish red-lit underground lair, rising smoke and debris], [harsh underlighting, blood-red rim light, deep shadow, stormy sky], [${style||"photorealistic digital painting, dramatic villain portrait, cinematic dark lighting, comic book villain art style"}] --ar 2:3 --v 6.1 --style raw --q 2\nNEVER use hex codes — name all colors. Villain must look threatening, dominant, and dangerous.`
+        :pPlatform==="dalle"
+        ?`metaAI = DALL-E 3 prompt. 3-4 detailed prose sentences.\n- Start with: "A dramatic full-body villain portrait of ${villain.heroName}..." — NEVER use instruction verbs.\n- Sentence 1: ${villain.gender||"villain"} physique${vAgeStage?", "+vAgeStage+" proportions":""}, threatening dominant stance, looming imposing presence, full body visible. Exact costume: ${costumeDesc}, dominant ${colorName} with deep shadow accents.\n- Sentence 2: ${fxDesc} ACTIVELY radiating — ${colorName} corruption aura, dark energy tendrils from hands and body. Name every color. Specific and visual.\n- Sentence 3: Ominous environment — crumbling rooftop or storm-lit industrial ruins, rising smoke, harsh underlighting casting deep shadows upward, blood-red tinged stormy sky.\n- Sentence 4: "${style||"dramatic villain portrait, photorealistic digital painting, harsh underlighting, cinematic dark lighting, full body portrait orientation, high detail, comic book villain art style"}"`
+        :`metaAI = Direct visual image prompt for Meta AI Imagine. 3-4 sentences. STRICT RULES:\n- NEVER use instruction verbs. Do NOT start with "Generate", "Create", "Draw", "Show", or any command. Begin directly with visual content.\n- Sentence 1: ${villain.heroName}'s threatening physical presence — ${villain.gender||"villain"} body type${vAgeStage?", "+vAgeStage+" physique":""}, imposing menacing stance, looming dominant posture, full body visible. Exact costume: ${costumeDesc}, dominant ${colorName} with deep shadow accents.\n- Sentence 2: ${fxDesc} ACTIVELY radiating — ${colorName} corruption aura, dark energy tendrils from hands and body. Name every color. No hex codes.\n- Sentence 3: Ominous environment — crumbling rooftop or storm-lit industrial ruins, rising smoke, harsh underlighting casting deep shadows upward, blood-red tinged stormy sky.\n- Sentence 4: Comma-separated style tags — dramatic villain portrait, photorealistic digital painting, harsh underlighting, cinematic dark lighting, full body portrait orientation, high detail, ${style||"comic book villain art style"}.`;
+      const p=await callAI(`JSON only. Reply with exactly this format, no other text:\n{"metaAI":"...","tripo3D":"..."}\n\n${refNote}Character: ${villain.heroName} (${villain.realName}), ${villain.gender||"Unknown"} VILLAIN${villain.age?", age "+villain.age:""}${vAgeStage?" ("+vAgeStage+")":""}.\nRole: ${villain.role||"Villain"}. Tagline: "${villain.tagline||""}"\nPowers: ${powerNames}.\nCostume: ${costumeDesc}. Primary color: ${colorName}. Power FX: ${fxDesc}.\nThis is a VILLAIN — all visual descriptors must emphasize menace, darkness, and malevolence. NOT heroic.\nPronouns: ${vPronoun}.${vAgeStage?"\nAge presentation: "+vAgeStage+" — physique, face, and body proportions must visually match this life stage.":""}\n\n${platInstr}\ntripo3D = 1 sentence FDM mesh prompt with separate color regions for this villain.\n\n{"metaAI":"...","tripo3D":"..."}`,null,500);
+      setPResult({member:villain,isVillain:true,...p,platform:pPlatform});
+    }catch(e){setPResult({error:true,msg:e.message});}
+    setPLoading(false);
+  };
+
   const generateGroupPrompt=()=>{
     setPSelected("group");setPLoading(true);setPResult(null);
     const style=ART_STYLES.find(a=>a.id===pStyle)?.text||"";
@@ -1374,6 +1397,31 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
             {pLoading&&pSelected===m.id&&<div style={{marginTop:7,fontSize:9,color:G}}>Generating...</div>}
           </div>))}
         </div>
+        {/* ── Villain Portraits ── */}
+        {villainPool.length>0&&<>
+          <div style={{display:"flex",alignItems:"center",gap:10,margin:"20px 0 10px"}}>
+            <div style={{flex:1,height:1,background:"rgba(139,26,26,0.3)"}}/>
+            <span style={{fontSize:9,letterSpacing:"0.2em",color:"rgba(224,112,112,0.7)",textTransform:"uppercase",fontFamily:"var(--font-mono)",whiteSpace:"nowrap"}}>Villain Portraits</span>
+            <div style={{flex:1,height:1,background:"rgba(139,26,26,0.3)"}}/>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(190px,1fr))",gap:10,marginBottom:14}}>
+            {villainPool.map(v=>(
+              <div key={v.id} onClick={()=>generateVillainPrompt(v)} style={{background:pSelected===v.id?"rgba(139,26,26,0.12)":"rgba(139,26,26,0.05)",border:`1px solid ${pSelected===v.id?"rgba(224,112,112,0.4)":"rgba(139,26,26,0.25)"}`,borderRadius:10,padding:"14px 16px",cursor:"pointer",transition:"all 0.15s"}}>
+                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+                  {images[v.id]
+                    ?<div style={{position:"relative",flexShrink:0}}><img src={images[v.id]} alt="" style={{width:30,height:30,borderRadius:"50%",objectFit:"cover",objectPosition:"top"}}/></div>
+                    :<div style={{width:30,height:30,borderRadius:"50%",background:"rgba(139,26,26,0.2)",border:"1px solid rgba(224,112,112,0.3)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:"bold",color:"#E07070",flexShrink:0}}>{v.initials||"??"}</div>}
+                  <div>
+                    <div style={{fontSize:12,fontWeight:"bold",color:"#E07070"}}>{v.heroName}</div>
+                    <div style={{fontSize:9,color:"rgba(224,112,112,0.6)"}}>{v.realName}</div>
+                  </div>
+                </div>
+                <div style={{fontSize:9,color:"rgba(224,112,112,0.45)",fontStyle:"italic",lineHeight:1.4}}>{v.tagline||v.role||"Villain"}</div>
+                {pLoading&&pSelected===v.id&&<div style={{marginTop:7,fontSize:9,color:"#E07070"}}>Generating...</div>}
+              </div>
+            ))}
+          </div>
+        </>}
         {activeRoster.length>=2&&<div style={{...s.card,marginBottom:12}}>
           <div style={{fontSize:10,fontWeight:"bold",color:"var(--text3)",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:10}}>Duo Shot · Pick 2 Heroes</div>
           <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:10}}>
@@ -1391,7 +1439,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
         </div>}
         {activeRoster.length>1&&<button style={s.bigBtn(pLoading)} onClick={generateGroupPrompt} disabled={pLoading}>{pLoading&&pSelected==="group"?"Building group shot...":"Generate Full Team Group Shot"}</button>}
         {pResult&&!pResult.error&&(<div ref={pResultRef} style={{...s.card,marginTop:16}}>
-          <div style={{fontSize:12,fontWeight:"bold",color:pResult.group||pResult.duo?G:pResult.member?.color||G,marginBottom:10}}>{pResult.group?`Group Shot — ${pResult.teamName||activeTeam.name}`:pResult.duo?`Duo Shot — ${pResult.heroA?.heroName} + ${pResult.heroB?.heroName}`:`${pResult.member?.heroName} · Image Prompts`}</div>
+          <div style={{fontSize:12,fontWeight:"bold",color:pResult.group||pResult.duo?G:pResult.isVillain?"#E07070":pResult.member?.color||G,marginBottom:10}}>{pResult.group?`Group Shot — ${pResult.teamName||activeTeam.name}`:pResult.duo?`Duo Shot — ${pResult.heroA?.heroName} + ${pResult.heroB?.heroName}`:pResult.isVillain?`${pResult.member?.heroName} · Villain Portrait`:`${pResult.member?.heroName} · Image Prompts`}</div>
           {pResult.metaAI&&<>
             <span style={s.lbl}>{(pResult.platform||pPlatform)==="midjourney"?"Midjourney /imagine Prompt":(pResult.platform||pPlatform)==="dalle"?"DALL-E 3 Prompt":"Meta AI Image Prompt"}</span>
             <div style={s.pBox}>{pResult.metaAI}</div>
