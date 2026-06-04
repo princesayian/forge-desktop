@@ -25,15 +25,18 @@ import MetaAILauncher from './components/MetaAILauncher.jsx';
 import Tripo3DLauncher from './components/Tripo3DLauncher.jsx';
 import RemotePanel from './components/RemotePanel.jsx';
 
-// Storage adapter — uses PyWebView's native API in the desktop window,
-// falls back to /api/store HTTP endpoints when running in a plain browser.
-const storage = storage || {
+// Storage adapter — checks window.storage at call time so PyWebView has a
+// chance to inject it before any useEffect fires. Falls back to /api/store
+// HTTP endpoints when running in a plain browser.
+const storage = {
   get: async (key) => {
+    if (window.storage) return window.storage.get(key);
     const r = await fetch(`/api/store/${encodeURIComponent(key)}`);
     if (!r.ok) return null;
     return r.json();
   },
   set: async (key, value) => {
+    if (window.storage) return window.storage.set(key, value);
     await fetch(`/api/store/${encodeURIComponent(key)}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -41,6 +44,7 @@ const storage = storage || {
     });
   },
   delete: async (key) => {
+    if (window.storage) return window.storage.delete(key);
     await fetch(`/api/store/${encodeURIComponent(key)}`, { method: 'DELETE' });
   },
 };
