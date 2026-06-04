@@ -15,6 +15,7 @@ export default function EditPanel({member,onSave,onCancel,callAI,teamName}){
   const[race,setRace]=useState(member.race||null);
   const[birthYear,setBirthYear]=useState(member.birthYear||"");
   const[age,setAge]=useState(member.birthYear?String(2026-parseInt(member.birthYear)):(member.age||""));
+  const[heroType,setHeroType]=useState(member.heroType||"hero");
   const[storyDir,setStoryDir]=useState("");
   const[regenLoading,setRegenLoading]=useState(false);
   const c=member.color;
@@ -85,13 +86,19 @@ export default function EditPanel({member,onSave,onCancel,callAI,teamName}){
     <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:14}}>
       {[{id:"base",label:"Member"},...NK_ALIGNMENTS].map(a=><button key={a.id} onClick={()=>setAlign(a.id)} style={{fontSize:9,padding:"3px 10px",background:align===a.id?`${(ALIGN_META[a.id]||{color:G}).color}22`:"var(--bg3)",border:`1px solid ${align===a.id?(ALIGN_META[a.id]||{color:G}).color:"var(--border2)"}`,borderRadius:20,cursor:"pointer",color:align===a.id?(ALIGN_META[a.id]||{color:G}).color:"var(--text2)",fontFamily:"var(--font-mono)"}}>{a.label}</button>)}
     </div>
+    {!member.isVillain&&(<>
+      <div style={{fontSize:9,letterSpacing:"0.18em",color:`${c}88`,textTransform:"uppercase",marginBottom:8}}>Hero Type</div>
+      <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:14}}>
+        {[{id:"hero",label:"Hero"},{id:"anti-hero",label:"Anti-Hero"},{id:"reluctant",label:"Reluctant Hero"}].map(ht=><button key={ht.id} onClick={()=>setHeroType(ht.id)} style={{fontSize:9,padding:"3px 10px",background:heroType===ht.id?`${c}22`:"var(--bg3)",border:`1px solid ${heroType===ht.id?c:"var(--border2)"}`,borderRadius:20,cursor:"pointer",color:heroType===ht.id?c:"var(--text2)",fontFamily:"var(--font-mono)"}}>{ht.label}</button>)}
+      </div>
+    </>)}
     <div style={{fontSize:9,letterSpacing:"0.18em",color:`${c}88`,textTransform:"uppercase",marginBottom:8}}>Stats</div>
     <div className="fstats-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:14}}>{Object.entries(stats).map(([k,v])=>(<div key={k}><div style={{fontSize:9,color:"var(--text2)",marginBottom:4,textTransform:"uppercase"}}>{k}</div><input type="number" min="1" max="100" value={v} onChange={e=>setStats(p=>({...p,[k]:Math.min(100,Math.max(1,+e.target.value))}))} style={{padding:"6px 10px"}}/></div>))}</div>
     <div style={{fontSize:9,letterSpacing:"0.18em",color:`${c}88`,textTransform:"uppercase",marginBottom:8}}>Powers</div>
     {powers.map((p,i)=>(<div key={i} style={{marginBottom:10}}><input type="text" placeholder="Power name" value={p.name} onChange={e=>setPowers(pw=>pw.map((x,j)=>j===i?{...x,name:e.target.value}:x))} style={{marginBottom:4}}/><input type="text" placeholder="Description" value={p.desc} onChange={e=>setPowers(pw=>pw.map((x,j)=>j===i?{...x,desc:e.target.value}:x))}/></div>))}
     <div style={{display:"flex",gap:10,marginTop:16}}>
       <button onClick={onCancel} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:11}}>Cancel</button>
-      <button onClick={()=>onSave({heroName,realName,tagline:t,origin:o,stats,powers,nkAlignment:align,teamRank,gender,age,birthYear,race,species:raceLabel(race)||member.species||""})} style={{flex:2,padding:"10px",background:`${c}18`,border:`1px solid ${c}`,borderRadius:8,cursor:"pointer",color:c,fontSize:11,letterSpacing:"0.1em",textTransform:"uppercase"}}>Save Changes</button>
+      <button onClick={()=>onSave({heroName,realName,tagline:t,origin:o,stats,powers,nkAlignment:align,teamRank,gender,age,birthYear,race,species:raceLabel(race)||member.species||"",...(!member.isVillain&&{heroType})})} style={{flex:2,padding:"10px",background:`${c}18`,border:`1px solid ${c}`,borderRadius:8,cursor:"pointer",color:c,fontSize:11,letterSpacing:"0.1em",textTransform:"uppercase"}}>Save Changes</button>
     </div>
   </div>);
 }
