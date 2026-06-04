@@ -84,9 +84,15 @@ function App(){
   const[scBirthYear,setScBirthYear]=useState("");
   const[scResult,setScResult]=useState(null);
   const[scLoading,setScLoading]=useState(false);
+  const[scDeepMode,setScDeepMode]=useState(false);
+  const[scProfileMode,setScProfileMode]=useState(false);
+  const[scDeepPhase,setScDeepPhase]=useState(0);
+  const[scDeepAnswers,setScDeepAnswers]=useState({});
+  const[scProfileStep,setScProfileStep]=useState(0);
+  const[scProfileAnswers,setScProfileAnswers]=useState({});
   const toggleScColor=hex=>setScColors(prev=>{if(prev.includes(hex)){if(prev.length===1)return prev;return prev.filter(c=>c!==hex);}if(prev.length>=3)return prev;return[...prev,hex];});
   const addCustomScColor=()=>{const h=scCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{6}$/))return;setScColors(prev=>{if(prev.includes(h)||prev.length>=3)return prev;return[...prev,h];});setScCustomHex("#ffffff");};
-  const resetSoloCreator=()=>{setScStep(0);setScAnswers({});setScName("");setScHeroName("");setScGender("Male");setScRace(null);setScColors(["#888780"]);setScCustomHex("#ffffff");setScStoryDir("");setScAge("");setScBirthYear("");setScResult(null);setScLoading(false);};
+  const resetSoloCreator=()=>{setScStep(0);setScAnswers({});setScName("");setScHeroName("");setScGender("Male");setScRace(null);setScColors(["#888780"]);setScCustomHex("#ffffff");setScStoryDir("");setScAge("");setScBirthYear("");setScResult(null);setScLoading(false);setScDeepMode(false);setScProfileMode(false);setScDeepPhase(0);setScDeepAnswers({});setScProfileStep(0);setScProfileAnswers({});};
   // ── Ollama ──────────────────────────────────────────────────────────────
   const[ollamaOk,setOllamaOk]=useState(null);const[groqOk,setGroqOk]=useState(false);
   const[forgeVersion,setForgeVersion]=useState("");
@@ -127,6 +133,12 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
   const[vLoading,setVLoading]=useState(false);const[vResult,setVResult]=useState(null);
   const[editingVillainTarget,setEditingVillainTarget]=useState(null);
   const[vtDraft,setVtDraft]=useState({teams:[],heroes:[]});
+  const[vDeepMode,setVDeepMode]=useState(false);
+  const[vProfileMode,setVProfileMode]=useState(false);
+  const[vDeepPhase,setVDeepPhase]=useState(0);
+  const[vDeepAnswers,setVDeepAnswers]=useState({});
+  const[vProfileStep,setVProfileStep]=useState(0);
+  const[vProfileAnswers,setVProfileAnswers]=useState({});
   const[aiStreamText,setAiStreamText]=useState("");
   const genControllerRef=useRef(null);
   // ── Story ────────────────────────────────────────────────────────────────
@@ -418,6 +430,37 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     }catch(e){if(e.message!=="Generation cancelled.")setScResult({error:true,msg:e.message});}
     setScLoading(false);
   };
+  const generateSoloHeroDeep=async()=>{
+    if(!scName.trim()&&!scHeroName.trim())return;
+    setScLoading(true);setScResult(null);
+    const hex=scColors[0]||"#888780";
+    const colorDesc=scColors.length===1?hex:scColors.map((c,i)=>(["primary","secondary","tertiary"][i])+": "+c).join(", ");
+    const raceStr=raceLabel(scRace);const raceLoreStr=raceLore(scRace);
+    const computedAge=scAge||(scBirthYear?String(2026-parseInt(scBirthYear)):"");
+    const loreContext=DEEP_LORE_PHASES.map(ph=>`== ${ph.title} ==\n`+ph.questions.map(q=>{const opt=q.options?.find(o=>o.id===scDeepAnswers[q.id]);return opt?`${q.label}: ${opt.label}`:""}).filter(Boolean).join("\n")).filter(l=>l.includes(":")).join("\n\n");
+    const dnaInspoOpt=DEEP_LORE_PHASES[0]?.questions?.find(q=>q.id==="keyInspo")?.options?.find(o=>o.id===scDeepAnswers.keyInspo);
+    const dnaUnivOpt=DEEP_LORE_PHASES[0]?.questions?.find(q=>q.id==="universe")?.options?.find(o=>o.id===scDeepAnswers.universe);
+    const dnaFoundation=[dnaInspoOpt?.label,dnaUnivOpt?.label].filter(Boolean).join(", ");
+    try{
+      const p=await callAI(`Create a deeply developed solo independent superhero (no team) using rich comic book lore. JSON only.\n\nReal name: ${scName||"Unknown"}\nGender: ${scGender}\nAge: ${computedAge||"Unknown"}\n${scBirthYear?`Birth year: ${scBirthYear}\n`:""}Race: ${raceStr||"Unspecified"}\n${raceLoreStr?`Race lore (bake into origin): ${raceLoreStr}\n`:""}${scStoryDir.trim()?`Story direction: ${scStoryDir.trim()}\n`:""}Color palette: ${colorDesc}\n${scHeroName?`Hero name: ${scHeroName} (use exactly this name)`:"Hero name: (choose a distinct fitting name)"}\nIMPORTANT: Use correct pronouns (${pronounOf(scGender)}/${pronounOf(scGender)==="they"?"them":pronounOf(scGender)==="she"?"her":"him"}) throughout.\nThis hero operates alone. Personal mission, personal rogues gallery, no team dependency.\n${dnaFoundation?`\nCHARACTER DNA FOUNDATION: ${dnaFoundation}\n`:""}\nFull lore profile:\n${loreContext}\n\n{"heroName":"${scHeroName||"2-word hero name"}","tagline":"one piercing sentence capturing their solo essence","role":"Role · Descriptor (no team)","origin":"3-4 sentences — personal backstory and solo drive, reflecting lore answers and race","powers":[{"name":"Power name","desc":"visual desc"},{"name":"Power name","desc":"visual desc"},{"name":"Power name","desc":"visual desc"},{"name":"Power name","desc":"visual desc"}],"stats":{"Power":75,"Speed":70,"Tech":60,"Intellect":80,"Will":85},"costumeDesc":"costume using color palette ${colorDesc}, reflecting costume philosophy answer","powerFX":"visual power effects using color palette ${colorDesc}, matching FX style answer","consistencyNotes":"2-3 design lock rules","dna":["Primary inspiration","Secondary inspiration"]}`,t=>{});
+      setScResult({id:`solo-${Date.now()}`,solo:true,teamId:null,realName:scName||"Unknown",gender:scGender,age:computedAge,birthYear:scBirthYear||"",race:scRace,species:raceStr||"Human",color:hex,colorPalette:scColors,colorLight:hex+"CC",initials:scName?scName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",isCustom:true,deepLore:scDeepAnswers,...p});
+    }catch(e){if(e.message!=="Generation cancelled.")setScResult({error:true,msg:e.message});}
+    setScLoading(false);
+  };
+  const generateSoloHeroProfile=async()=>{
+    if(!scName.trim()&&!scHeroName.trim())return;
+    setScLoading(true);setScResult(null);
+    const hex=scColors[0]||"#888780";
+    const colorDesc=scColors.length===1?hex:scColors.map((c,i)=>(["primary","secondary","tertiary"][i])+": "+c).join(", ");
+    const raceStr=raceLabel(scRace);const raceLoreStr=raceLore(scRace);
+    const computedAge=scAge||(scBirthYear?String(2026-parseInt(scBirthYear)):"");
+    const profileContext=PERSONAL_PROFILE.map(sec=>`== ${sec.section} ==\n`+sec.questions.map(q=>{const opt=q.options.find(o=>o.id===scProfileAnswers[q.id]);return opt?`${q.q}\n→ ${opt.value}`:""}).filter(Boolean).join("\n")).join("\n\n");
+    try{
+      const p=await callAI(`Create a solo independent superhero (no team) built entirely from this person's real psychological profile. JSON only.\n\nEvery power, origin, and trait must grow directly from who this person actually is.\n\nReal name: ${scName||"Unknown"}\nGender: ${scGender}\nAge: ${computedAge||"Unknown"}\n${scBirthYear?`Birth year: ${scBirthYear}\n`:""}Race: ${raceStr||"Unspecified"}\n${raceLoreStr?`Race lore (bake into origin): ${raceLoreStr}\n`:""}${scStoryDir.trim()?`Story direction: ${scStoryDir.trim()}\n`:""}Color palette: ${colorDesc}\n${scHeroName?`Hero name: ${scHeroName} (use exactly this name)`:""}\nIMPORTANT: Use correct pronouns (${pronounOf(scGender)}/${pronounOf(scGender)==="they"?"them":pronounOf(scGender)==="she"?"her":"him"}) throughout.\nThis hero operates alone. Personal mission, no team dependency.\n\nPERSONAL PROFILE:\n\n${profileContext}\n\n{"heroName":"${scHeroName||"hero name that fits who they actually are"}","tagline":"one sentence capturing their specific truth","role":"Role · Descriptor drawn from their actual function","origin":"3-4 sentences — direct reflection of their wound, proving ground, and what they protect alone","powers":[{"name":"Power name traceable to their specific trait","desc":"How this power looks — directly from who they are"},{"name":"Power name","desc":"visual desc"},{"name":"Power name","desc":"visual desc"},{"name":"Power name","desc":"visual desc"}],"stats":{"Power":75,"Speed":70,"Tech":60,"Intellect":80,"Will":85},"costumeDesc":"Costume from their color and symbol answers using color palette ${colorDesc}","powerFX":"Exact visual FX using color palette ${colorDesc} — matches their power texture answer","consistencyNotes":"Design rules from their identity choices","dna":["Archetype mirroring this profile","Second reference"]}`,t=>{});
+      setScResult({id:`solo-${Date.now()}`,solo:true,teamId:null,realName:scName||"Unknown",gender:scGender,age:computedAge,birthYear:scBirthYear||"",race:scRace,species:raceStr||"Human",color:hex,colorPalette:scColors,colorLight:hex+"CC",initials:scName?scName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",isCustom:true,profileLore:Object.keys(scProfileAnswers).length,...p});
+    }catch(e){if(e.message!=="Generation cancelled.")setScResult({error:true,msg:e.message});}
+    setScLoading(false);
+  };
   const saveSoloHero=()=>{
     if(!scResult||scResult.error)return;
     addSoloHeroFn(scResult);
@@ -680,7 +723,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     }else{
       const newPool=[...villainPool,vResult];setVillainPool(newPool);persist("forge-villains",newPool);
     }
-    setVResult(null);setVAnswers({});setVName("");setVStep(0);setVTargetTeams([]);setVGender("Male");
+    setVResult(null);setVAnswers({});setVName("");setVStep(0);setVTargetTeams([]);setVGender("Male");setVDeepMode(false);setVProfileMode(false);setVDeepPhase(0);setVDeepAnswers({});setVProfileStep(0);setVProfileAnswers({});
   };
 
   const saveBareVillain=()=>{
@@ -690,7 +733,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     }else{
       const newPool=[...villainPool,bare];setVillainPool(newPool);persist("forge-villains",newPool);
     }
-    setVResult(null);setVAnswers({});setVName("");setVStep(0);setVTargetTeams([]);setVGender("Male");
+    setVResult(null);setVAnswers({});setVName("");setVStep(0);setVTargetTeams([]);setVGender("Male");setVDeepMode(false);setVProfileMode(false);setVDeepPhase(0);setVDeepAnswers({});setVProfileStep(0);setVProfileAnswers({});
   };
 
   const removeVillain=id=>{
@@ -703,6 +746,31 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     const updated=villainPool.map(v=>v.id===id?{...v,targetTeams:vtDraft.teams,targetHeroes:vtDraft.heroes}:v);
     setVillainPool(updated);persist("forge-villains",updated);setEditingVillainTarget(null);
   },[villainPool,vtDraft,persist]);
+
+  const generateVillainDeep=async()=>{
+    setVLoading(true);setVResult(null);setAiStreamText("");
+    const targetNames=rogueMode?(soloHeroes.find(h=>h.id===rogueMode)?.heroName||"the solo hero"):vTargetTeams.map(id=>teams.find(t=>t.id===id)?.name||id).join(", ")||(teams[0]?.name||"the heroes");
+    const loreContext=DEEP_LORE_PHASES.map(ph=>`== ${ph.title} ==\n`+ph.questions.map(q=>{const opt=q.options?.find(o=>o.id===vDeepAnswers[q.id]);return opt?`${q.label}: ${opt.label}`:""}).filter(Boolean).join("\n")).filter(l=>l.includes(":")).join("\n\n");
+    const dnaInspoOpt=DEEP_LORE_PHASES[0]?.questions?.find(q=>q.id==="keyInspo")?.options?.find(o=>o.id===vDeepAnswers.keyInspo);
+    const dnaUnivOpt=DEEP_LORE_PHASES[0]?.questions?.find(q=>q.id==="universe")?.options?.find(o=>o.id===vDeepAnswers.universe);
+    const dnaFoundation=[dnaInspoOpt?.label,dnaUnivOpt?.label].filter(Boolean).join(", ");
+    try{
+      const p=await callAI(`Create a deeply developed villain who threatens: ${targetNames}. JSON only — keys: heroName, tagline, role, origin, powers, stats, dna.\n\nName: ${vName||"Unknown"}\nGender: ${vGender}\nIMPORTANT: Use correct pronouns (${pronounOf(vGender)}/${pronounOf(vGender)==="they"?"them":pronounOf(vGender)==="she"?"her":"him"}) throughout.\nTarget: ${targetNames}\n\nThis is a VILLAIN — interpret every lore answer as a dangerous antagonist, not a hero. Archetype becomes threat archetype, drive becomes destructive motivation, visual identity becomes menacing presence.\n${dnaFoundation?`\nVILLAIN DNA FOUNDATION (bake into powers and style invisibly): ${dnaFoundation}\n`:""}\nFull lore profile:\n${loreContext}\n\n{"heroName":"villain codename","tagline":"one chilling sentence","role":"Threat · Descriptor","origin":"3-4 sentences — layered backstory tied to the lore profile and the target","powers":[{"name":"Name","desc":"desc — mirrors or counters a hero ability"},{"name":"Name","desc":"desc"},{"name":"Name","desc":"desc"},{"name":"Name","desc":"desc"}],"stats":{"Power":88,"Speed":78,"Tech":82,"Intellect":90,"Will":88},"costumeDesc":"ominous costume reflecting lore visual answers","powerFX":"dark threatening power FX matching lore style answers","consistencyNotes":"design lock rules","dna":["Villain Inspiration 1","Villain Inspiration 2"]}`,t=>setAiStreamText(t));
+      setVResult({id:`villain-${Date.now()}`,realName:vName||"Unknown",gender:vGender,color:"#8B1A1A",colorLight:"#E07070",initials:vName?vName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",isVillain:true,targetTeams:vTargetTeams.length?vTargetTeams:(teams[0]?[teams[0].id]:[]),deepLore:vDeepAnswers,...p});
+    }catch(e){if(e.message==="Generation cancelled.")setVResult(null);else setVResult({error:true,msg:e.message});}
+    setVLoading(false);setAiStreamText("");
+  };
+
+  const generateVillainProfile=async()=>{
+    setVLoading(true);setVResult(null);setAiStreamText("");
+    const targetNames=rogueMode?(soloHeroes.find(h=>h.id===rogueMode)?.heroName||"the solo hero"):vTargetTeams.map(id=>teams.find(t=>t.id===id)?.name||id).join(", ")||(teams[0]?.name||"the heroes");
+    const profileContext=PERSONAL_PROFILE.map(sec=>`== ${sec.section} ==\n`+sec.questions.map(q=>{const opt=q.options.find(o=>o.id===vProfileAnswers[q.id]);return opt?`${q.q}\n→ ${opt.value}`:""}).filter(Boolean).join("\n")).join("\n\n");
+    try{
+      const p=await callAI(`Create a villain who threatens: ${targetNames}, built from this psychological profile. JSON only — keys: heroName, tagline, role, origin, powers, stats, dna.\n\nName: ${vName||"Unknown"}\nGender: ${vGender}\nIMPORTANT: Use correct pronouns (${pronounOf(vGender)}/${pronounOf(vGender)==="they"?"them":pronounOf(vGender)==="she"?"her":"him"}) throughout.\nTarget: ${targetNames}\n\nThis is a VILLAIN. Interpret every profile answer through a dark lens — their strengths become weapons, their wounds become motivations, their presence becomes a threat.\n\nPERSONAL PROFILE:\n\n${profileContext}\n\n{"heroName":"villain codename fitting their psychological profile","tagline":"one chilling sentence capturing their specific darkness","role":"Threat · Descriptor rooted in their profile","origin":"3-4 sentences — how their psychological wound became a threat to the target","powers":[{"name":"Power emerging from their trait","desc":"How it looks — directly from who they are"},{"name":"Power name","desc":"desc"},{"name":"Power name","desc":"desc"},{"name":"Power name","desc":"desc"}],"stats":{"Power":85,"Speed":78,"Tech":80,"Intellect":92,"Will":90},"costumeDesc":"ominous costume from their visual identity answers","powerFX":"dark power FX matching their power texture answer","consistencyNotes":"design lock rules","dna":["Villain archetype mirroring this profile","Second villain reference"]}`,t=>setAiStreamText(t));
+      setVResult({id:`villain-${Date.now()}`,realName:vName||"Unknown",gender:vGender,color:"#8B1A1A",colorLight:"#E07070",initials:vName?vName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",isVillain:true,targetTeams:vTargetTeams.length?vTargetTeams:(teams[0]?[teams[0].id]:[]),profileLore:Object.keys(vProfileAnswers).length,...p});
+    }catch(e){if(e.message==="Generation cancelled.")setVResult(null);else setVResult({error:true,msg:e.message});}
+    setVLoading(false);setAiStreamText("");
+  };
 
   // ── Story ─────────────────────────────────────────────────────────────────
   const generateStory=async()=>{
@@ -1743,12 +1811,19 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
         </div>
 
         {/* Active villain creator */}
-        {(vStep>0||vResult)&&(<>
+        {(vStep>0||vDeepPhase>0||vProfileStep>0||vResult)&&(<>
           <div style={{marginBottom:20}}>
-            <div style={{height:3,background:"rgba(255,255,255,0.06)",borderRadius:2,marginBottom:6}}><div style={{height:3,width:`${vResult?100:(vStep/(VILLAIN_QUIZ.length+1))*100}%`,background:"#8B1A1A",borderRadius:2}}/></div>
-            <div style={{display:"flex",justifyContent:"space-between"}}><span style={{fontSize:10,color:"var(--text2)"}}>{vResult?"Review villain":`Question ${vStep} of ${VILLAIN_QUIZ.length}`}</span><span style={{fontSize:10,color:"#E07070"}}>{vResult?"Complete":`${Math.round((vStep/(VILLAIN_QUIZ.length+1))*100)}%`}</span></div>
+            <div style={{height:3,background:"rgba(255,255,255,0.06)",borderRadius:2,marginBottom:6}}>
+              <div style={{height:3,background:"#8B1A1A",borderRadius:2,transition:"width 0.3s ease",
+                width:vResult?"100%":vProfileMode?`${(vProfileStep/6)*100}%`:vDeepMode?`${(vDeepPhase/(DEEP_LORE_PHASES.length+1))*100}%`:`${(vStep/(VILLAIN_QUIZ.length+1))*100}%`
+              }}/>
+            </div>
+            <div style={{display:"flex",justifyContent:"space-between"}}>
+              <span style={{fontSize:10,color:"var(--text2)"}}>{vResult?"Review villain":vProfileMode?(vProfileStep===0?"Identity":`${PERSONAL_PROFILE[vProfileStep-1]?.section} — ${vProfileStep} of 5`):vDeepMode?(vDeepPhase===0?"Identity":`Phase ${vDeepPhase} of ${DEEP_LORE_PHASES.length} — ${DEEP_LORE_PHASES[vDeepPhase-1]?.title||""}`):(`Question ${vStep} of ${VILLAIN_QUIZ.length}`)}</span>
+              <span style={{fontSize:10,color:"#E07070"}}>{vResult?"Complete":vProfileMode?`${Math.round((vProfileStep/6)*100)}%`:vDeepMode?`${Math.round((vDeepPhase/(DEEP_LORE_PHASES.length+1))*100)}%`:`${Math.round((vStep/(VILLAIN_QUIZ.length+1))*100)}%`}</span>
+            </div>
           </div>
-          {!vResult&&vStep>=1&&vStep<=VILLAIN_QUIZ.length&&vCurrentQ&&(<div style={s.card}>
+          {!vResult&&!vDeepMode&&!vProfileMode&&vStep>=1&&vStep<=VILLAIN_QUIZ.length&&vCurrentQ&&(<div style={s.card}>
             <div style={{fontSize:15,fontWeight:"bold",color:"var(--text-primary)",marginBottom:18,lineHeight:1.4}}>{vCurrentQ.question}</div>
             {vCurrentQ.options.map(opt=><button key={opt.id} onClick={()=>{setVAnswers(p=>({...p,[vCurrentQ.id]:opt.id}));if(vStep<VILLAIN_QUIZ.length)setVStep(p=>p+1);}} style={s.optBtn(vAnswers[vCurrentQ.id]===opt.id,"#8B1A1A")}>{opt.label}</button>)}
             <div style={{display:"flex",gap:10,marginTop:10}}>
@@ -1756,6 +1831,36 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
               {vStep===VILLAIN_QUIZ.length&&vAnswers[vCurrentQ.id]&&<button onClick={generateVillain} disabled={vLoading} style={{flex:2,...s.bigBtn(vLoading,"#8B1A1A"),marginTop:0}}>{vLoading?"Forging threat...":"Generate Villain →"}</button>}
             </div>
           </div>)}
+          {!vResult&&vDeepMode&&vDeepPhase>=1&&vDeepPhase<=DEEP_LORE_PHASES.length&&(()=>{
+            const ph=DEEP_LORE_PHASES[vDeepPhase-1];
+            const phaseComplete=ph.questions.every(q=>vDeepAnswers[q.id]);
+            const isLast=vDeepPhase===DEEP_LORE_PHASES.length;
+            return(<>
+              <DeepLoreQuiz phase={vDeepPhase-1} answers={vDeepAnswers} onAnswer={(qid,oid)=>setVDeepAnswers(p=>({...p,[qid]:oid}))} accentColor="#8B1A1A"/>
+              <div style={{display:"flex",gap:10,marginTop:14}}>
+                <button onClick={()=>setVDeepPhase(p=>Math.max(0,p-1))} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text3)",fontSize:10.5,fontFamily:"var(--font-mono)"}}>← Back</button>
+                {!isLast&&<button disabled={!phaseComplete} onClick={()=>setVDeepPhase(p=>p+1)} style={{flex:2,...s.bigBtn(!phaseComplete,"#8B1A1A"),marginTop:0}}>{phaseComplete?`Next: ${DEEP_LORE_PHASES[vDeepPhase]?.title||"Generate"} →`:"Answer all questions to continue"}</button>}
+                {isLast&&<button disabled={!phaseComplete||vLoading} onClick={generateVillainDeep} style={{flex:2,...s.bigBtn(!phaseComplete||vLoading,"#8B1A1A"),marginTop:0}}>{vLoading?"Forging threat...":phaseComplete?"Generate Deep Villain →":"Answer all questions"}</button>}
+              </div>
+            </>);
+          })()}
+          {!vResult&&vProfileMode&&vProfileStep>=1&&vProfileStep<=5&&(()=>{
+            const sec=PERSONAL_PROFILE[vProfileStep-1];
+            const secComplete=sec.questions.every(q=>vProfileAnswers[q.id]);
+            const isLast=vProfileStep===5;
+            return(<div style={s.card}>
+              <div style={{fontSize:9,letterSpacing:"0.12em",color:"rgba(139,26,26,0.6)",textTransform:"uppercase",marginBottom:12}}>{sec.section} · {vProfileStep} of 5</div>
+              {sec.questions.map(q=>(<div key={q.id} style={{marginBottom:14}}>
+                <div style={{fontSize:13,fontWeight:"bold",color:"var(--text-primary)",marginBottom:8,lineHeight:1.4}}>{q.q}</div>
+                {q.options.map(opt=><button key={opt.id} onClick={()=>setVProfileAnswers(p=>({...p,[q.id]:opt.id}))} style={s.optBtn(vProfileAnswers[q.id]===opt.id,"#8B1A1A")}>{opt.label}</button>)}
+              </div>))}
+              <div style={{display:"flex",gap:10,marginTop:6}}>
+                <button onClick={()=>setVProfileStep(p=>Math.max(0,p-1))} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text3)",fontSize:10.5,fontFamily:"var(--font-mono)"}}>← Back</button>
+                {!isLast&&<button disabled={!secComplete} onClick={()=>setVProfileStep(p=>p+1)} style={{flex:2,...s.bigBtn(!secComplete,"#8B1A1A"),marginTop:0}}>{secComplete?`Next: ${PERSONAL_PROFILE[vProfileStep]?.section} →`:"Answer all questions to continue"}</button>}
+                {isLast&&<button disabled={!secComplete||vLoading} onClick={generateVillainProfile} style={{flex:2,...s.bigBtn(!secComplete||vLoading,"#8B1A1A"),marginTop:0}}>{vLoading?"Forging threat...":secComplete?"Generate Villain →":"Answer all questions"}</button>}
+              </div>
+            </div>);
+          })()}
           {vLoading&&<div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
             {aiStreamText&&<div style={{flex:1,padding:"10px 12px",background:"var(--bg2)",border:"1px solid rgba(139,26,26,0.3)",borderRadius:8,fontFamily:"var(--font-mono)",fontSize:9,color:"var(--text3)",maxHeight:72,overflowY:"auto",whiteSpace:"pre-wrap",wordBreak:"break-all",lineHeight:1.5}}>{aiStreamText}</div>}
             {!aiStreamText&&<div style={{flex:1,padding:"10px 12px",background:"var(--bg2)",border:"1px solid rgba(139,26,26,0.3)",borderRadius:8,fontSize:9,color:"var(--text3)",fontFamily:"var(--font-mono)"}}>Waiting for model response…</div>}
@@ -1764,7 +1869,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
           {vResult&&!vResult.error&&(<>
             <CharacterPage member={vResult} imageUrl={null} isVillain={true}/>
             <div style={{display:"flex",gap:10,marginTop:14,marginBottom:20}}>
-              <button onClick={()=>{setVResult(null);setVStep(0);setVAnswers({});}} style={{flex:1,padding:"11px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:10.5,fontFamily:"var(--font-mono)"}}>Regenerate</button>
+              <button onClick={()=>{setVResult(null);setVStep(0);setVAnswers({});setVDeepPhase(0);setVDeepAnswers({});setVProfileStep(0);setVProfileAnswers({});}} style={{flex:1,padding:"11px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:10.5,fontFamily:"var(--font-mono)"}}>Regenerate</button>
               <button onClick={addVillain} style={{flex:2,padding:"11px",background:"rgba(139,26,26,0.2)",border:"1px solid #8B1A1A",borderRadius:8,cursor:"pointer",color:"#E07070",fontSize:10.5,letterSpacing:"0.1em",textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>Add to Pool →</button>
             </div>
           </>)}
@@ -1778,10 +1883,24 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
           </div>)}
         </>)}
 
-        {vStep===0&&!vResult&&(<>
+        {vStep===0&&vDeepPhase===0&&vProfileStep===0&&!vResult&&(<>
           {/* Villain creator setup */}
           <div style={{...s.card,marginBottom:20}}>
             <div style={{fontSize:13,fontWeight:"bold",color:"var(--text-primary)",marginBottom:12}}>Create New Villain</div>
+            <div style={{display:"flex",gap:6,marginBottom:14}}>
+              <button onClick={()=>{setVDeepMode(false);setVProfileMode(false);setVAnswers({});setVDeepAnswers({});setVProfileAnswers({});}} style={{flex:1,padding:"8px",background:!vDeepMode&&!vProfileMode?"rgba(139,26,26,0.15)":"var(--bg3)",border:`1px solid ${!vDeepMode&&!vProfileMode?"rgba(139,26,26,0.5)":"var(--border2)"}`,borderRadius:8,cursor:"pointer",fontFamily:"var(--font-mono)",textAlign:"center"}}>
+                <div style={{fontSize:11,fontWeight:"bold",color:!vDeepMode&&!vProfileMode?"#E07070":"var(--text2)"}}>⚡ Quick</div>
+                <div style={{fontSize:8.5,color:"var(--text3)",marginTop:1}}>5 threat questions</div>
+              </button>
+              <button onClick={()=>{setVDeepMode(true);setVProfileMode(false);setVStep(0);setVAnswers({});setVDeepAnswers({});setVProfileAnswers({});}} style={{flex:1,padding:"8px",background:vDeepMode?"rgba(139,26,26,0.15)":"var(--bg3)",border:`1px solid ${vDeepMode?"rgba(139,26,26,0.5)":"var(--border2)"}`,borderRadius:8,cursor:"pointer",fontFamily:"var(--font-mono)",textAlign:"center"}}>
+                <div style={{fontSize:11,fontWeight:"bold",color:vDeepMode?"#E07070":"var(--text2)"}}>📚 Deep Forge</div>
+                <div style={{fontSize:8.5,color:"var(--text3)",marginTop:1}}>7 lore phases</div>
+              </button>
+              <button onClick={()=>{setVProfileMode(true);setVDeepMode(false);setVStep(0);setVAnswers({});setVDeepAnswers({});setVProfileAnswers({});}} style={{flex:1,padding:"8px",background:vProfileMode?"rgba(139,26,26,0.15)":"var(--bg3)",border:`1px solid ${vProfileMode?"rgba(139,26,26,0.5)":"var(--border2)"}`,borderRadius:8,cursor:"pointer",fontFamily:"var(--font-mono)",textAlign:"center"}}>
+                <div style={{fontSize:11,fontWeight:"bold",color:vProfileMode?"#E07070":"var(--text2)"}}>🧬 Personal</div>
+                <div style={{fontSize:8.5,color:"var(--text3)",marginTop:1}}>25-answer profile</div>
+              </button>
+            </div>
             <span style={s.lbl}>Real Name (optional)</span>
             <input type="text" placeholder="e.g. Marcus Vane" value={vName} onChange={e=>setVName(e.target.value)} style={{marginBottom:10}}/>
             <span style={s.lbl}>Gender</span>
@@ -1795,7 +1914,9 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
             <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:14}}>
               {teams.map(t=><button key={t.id} onClick={()=>setVTargetTeams(p=>p.includes(t.id)?p.filter(x=>x!==t.id):[...p,t.id])} style={{display:"flex",alignItems:"center",gap:6,...s.chip(vTargetTeams.includes(t.id),t.color)}}><div style={{width:8,height:8,borderRadius:2,background:t.color,flexShrink:0}}/>{t.abbr}</button>)}
             </div>
-            <button style={s.bigBtn(false,"#8B1A1A")} onClick={()=>setVStep(1)}>Begin Threat Assessment →</button>
+            <button style={s.bigBtn(false,"#8B1A1A")} onClick={()=>vDeepMode?setVDeepPhase(1):vProfileMode?setVProfileStep(1):setVStep(1)}>
+              {vDeepMode?"Begin Deep Forge →":vProfileMode?"Begin Profile →":"Begin Threat Assessment →"}
+            </button>
           </div>
 
           {/* Existing villain pool */}
@@ -2506,12 +2627,29 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
             </div>
             <button onClick={()=>{setShowSoloCreator(false);resetSoloCreator();}} style={{background:"none",border:"none",cursor:"pointer",color:"var(--text3)",fontSize:22,padding:"2px 6px",lineHeight:1,flexShrink:0}}>×</button>
           </div>
+          {/* Mode selector */}
+          {!scResult&&(scStep===0&&scDeepPhase===0&&scProfileStep===0)&&(
+            <div style={{display:"flex",gap:6,marginBottom:14}}>
+              <button onClick={()=>{setScDeepMode(false);setScProfileMode(false);setScStep(0);setScDeepPhase(0);setScProfileStep(0);setScDeepAnswers({});setScProfileAnswers({});}} style={{flex:1,padding:"8px",background:!scDeepMode&&!scProfileMode?"rgba(136,135,128,0.15)":"var(--bg3)",border:`1px solid ${!scDeepMode&&!scProfileMode?"rgba(136,135,128,0.5)":"var(--border2)"}`,borderRadius:8,cursor:"pointer",fontFamily:"var(--font-mono)",textAlign:"center"}}>
+                <div style={{fontSize:11,fontWeight:"bold",color:!scDeepMode&&!scProfileMode?"var(--text-primary)":"var(--text2)"}}>⚡ Quick</div>
+                <div style={{fontSize:8.5,color:"var(--text3)",marginTop:1}}>6 questions</div>
+              </button>
+              <button onClick={()=>{setScDeepMode(true);setScProfileMode(false);setScStep(0);setScDeepPhase(0);setScProfileStep(0);setScAnswers({});setScProfileAnswers({});}} style={{flex:1,padding:"8px",background:scDeepMode?"rgba(136,135,128,0.15)":"var(--bg3)",border:`1px solid ${scDeepMode?"rgba(136,135,128,0.5)":"var(--border2)"}`,borderRadius:8,cursor:"pointer",fontFamily:"var(--font-mono)",textAlign:"center"}}>
+                <div style={{fontSize:11,fontWeight:"bold",color:scDeepMode?"var(--text-primary)":"var(--text2)"}}>📚 Deep Forge</div>
+                <div style={{fontSize:8.5,color:"var(--text3)",marginTop:1}}>7 lore phases</div>
+              </button>
+              <button onClick={()=>{setScProfileMode(true);setScDeepMode(false);setScStep(0);setScDeepPhase(0);setScProfileStep(0);setScAnswers({});setScDeepAnswers({});}} style={{flex:1,padding:"8px",background:scProfileMode?"rgba(136,135,128,0.15)":"var(--bg3)",border:`1px solid ${scProfileMode?"rgba(136,135,128,0.5)":"var(--border2)"}`,borderRadius:8,cursor:"pointer",fontFamily:"var(--font-mono)",textAlign:"center"}}>
+                <div style={{fontSize:11,fontWeight:"bold",color:scProfileMode?"var(--text-primary)":"var(--text2)"}}>🧬 Personal</div>
+                <div style={{fontSize:8.5,color:"var(--text3)",marginTop:1}}>25-answer profile</div>
+              </button>
+            </div>
+          )}
           {/* Progress */}
           <div style={{height:3,background:"rgba(255,255,255,0.06)",borderRadius:2,marginBottom:18}}>
-            <div style={{height:3,width:scResult?`100%`:`${(scStep/(RECRUIT_QUIZ.length+1))*100}%`,background:"#888780",borderRadius:2,transition:"width 0.3s ease"}}/>
+            <div style={{height:3,width:scResult?"100%":scProfileMode?`${(scProfileStep/6)*100}%`:scDeepMode?`${(scDeepPhase/(DEEP_LORE_PHASES.length+1))*100}%`:`${(scStep/(RECRUIT_QUIZ.length+1))*100}%`,background:"#888780",borderRadius:2,transition:"width 0.3s ease"}}/>
           </div>
           {/* Step 0 — Identity */}
-          {!scResult&&scStep===0&&(
+          {!scResult&&scStep===0&&scDeepPhase===0&&scProfileStep===0&&(
             <div>
               <div style={{fontSize:14,fontWeight:"bold",color:"var(--text-primary)",marginBottom:14}}>Who is this hero?</div>
               <span style={s.lbl}>Hero Name <span style={{color:"#E07070"}}>*</span></span>
@@ -2547,11 +2685,13 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                 <input type="text" placeholder="#A3B2C1" value={scCustomHex} onChange={e=>setScCustomHex(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addCustomScColor()} style={{flex:1,padding:"6px 10px",fontFamily:"var(--font-mono)",fontSize:11}}/>
                 <button onClick={addCustomScColor} disabled={scColors.length>=3} style={{padding:"6px 12px",background:scColors.length>=3?"var(--bg3)":`${G}14`,border:`1px solid ${scColors.length>=3?"var(--border2)":G}`,borderRadius:8,cursor:scColors.length>=3?"not-allowed":"pointer",color:scColors.length>=3?"var(--text4)":G,fontSize:10,fontFamily:"var(--font-mono)",flexShrink:0}}>+ Add</button>
               </div>
-              <button onClick={()=>{if(scHeroName.trim()||scName.trim())setScStep(1);}} disabled={!scHeroName.trim()&&!scName.trim()} style={{width:"100%",...s.bigBtn(!scHeroName.trim()&&!scName.trim(),"#888780")}}>Begin Forge →</button>
+              <button onClick={()=>{if(!scHeroName.trim()&&!scName.trim())return;if(scDeepMode)setScDeepPhase(1);else if(scProfileMode)setScProfileStep(1);else setScStep(1);}} disabled={!scHeroName.trim()&&!scName.trim()} style={{width:"100%",...s.bigBtn(!scHeroName.trim()&&!scName.trim(),"#888780")}}>
+                {scDeepMode?"Begin Deep Forge →":scProfileMode?"Begin Profile →":"Begin Forge →"}
+              </button>
             </div>
           )}
-          {/* Quiz steps */}
-          {!scResult&&scStep>=1&&scStep<=RECRUIT_QUIZ.length&&(()=>{const q=RECRUIT_QUIZ[scStep-1];return(
+          {/* Quick quiz steps */}
+          {!scResult&&!scDeepMode&&!scProfileMode&&scStep>=1&&scStep<=RECRUIT_QUIZ.length&&(()=>{const q=RECRUIT_QUIZ[scStep-1];return(
             <div>
               <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}><span style={{fontSize:10,color:"var(--text2)"}}>Question {scStep} of {RECRUIT_QUIZ.length}</span><span style={{fontSize:10,color:"#888780"}}>{Math.round((scStep/(RECRUIT_QUIZ.length+1))*100)}%</span></div>
               <div style={s.card}>
@@ -2564,6 +2704,38 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
               </div>
             </div>
           );})()}
+          {/* Deep Forge phases */}
+          {!scResult&&scDeepMode&&scDeepPhase>=1&&scDeepPhase<=DEEP_LORE_PHASES.length&&(()=>{
+            const ph=DEEP_LORE_PHASES[scDeepPhase-1];
+            const phaseComplete=ph.questions.every(q=>scDeepAnswers[q.id]);
+            const isLast=scDeepPhase===DEEP_LORE_PHASES.length;
+            return(<>
+              <DeepLoreQuiz phase={scDeepPhase-1} answers={scDeepAnswers} onAnswer={(qid,oid)=>setScDeepAnswers(p=>({...p,[qid]:oid}))} accentColor="#888780"/>
+              <div style={{display:"flex",gap:10,marginTop:14}}>
+                <button onClick={()=>setScDeepPhase(p=>Math.max(0,p-1))} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text3)",fontSize:10.5,fontFamily:"var(--font-mono)"}}>← Back</button>
+                {!isLast&&<button disabled={!phaseComplete} onClick={()=>setScDeepPhase(p=>p+1)} style={{flex:2,...s.bigBtn(!phaseComplete,"#888780"),marginTop:0}}>{phaseComplete?`Next: ${DEEP_LORE_PHASES[scDeepPhase]?.title||"Generate"} →`:"Answer all questions to continue"}</button>}
+                {isLast&&<button disabled={!phaseComplete||scLoading} onClick={generateSoloHeroDeep} style={{flex:2,...s.bigBtn(!phaseComplete||scLoading,"#888780"),marginTop:0}}>{scLoading?"Forging hero...":phaseComplete?"Generate Deep Solo Hero →":"Answer all questions"}</button>}
+              </div>
+            </>);
+          })()}
+          {/* Personal Profile sections */}
+          {!scResult&&scProfileMode&&scProfileStep>=1&&scProfileStep<=5&&(()=>{
+            const sec=PERSONAL_PROFILE[scProfileStep-1];
+            const secComplete=sec.questions.every(q=>scProfileAnswers[q.id]);
+            const isLast=scProfileStep===5;
+            return(<div style={s.card}>
+              <div style={{fontSize:9,letterSpacing:"0.12em",color:"rgba(136,135,128,0.7)",textTransform:"uppercase",marginBottom:12}}>{sec.section} · {scProfileStep} of 5</div>
+              {sec.questions.map(q=>(<div key={q.id} style={{marginBottom:14}}>
+                <div style={{fontSize:13,fontWeight:"bold",color:"var(--text-primary)",marginBottom:8,lineHeight:1.4}}>{q.q}</div>
+                {q.options.map(opt=><button key={opt.id} onClick={()=>setScProfileAnswers(p=>({...p,[q.id]:opt.id}))} style={s.optBtn(scProfileAnswers[q.id]===opt.id,"#888780")}>{opt.label}</button>)}
+              </div>))}
+              <div style={{display:"flex",gap:10,marginTop:6}}>
+                <button onClick={()=>setScProfileStep(p=>Math.max(0,p-1))} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text3)",fontSize:10.5,fontFamily:"var(--font-mono)"}}>← Back</button>
+                {!isLast&&<button disabled={!secComplete} onClick={()=>setScProfileStep(p=>p+1)} style={{flex:2,...s.bigBtn(!secComplete,"#888780"),marginTop:0}}>{secComplete?`Next: ${PERSONAL_PROFILE[scProfileStep]?.section} →`:"Answer all questions to continue"}</button>}
+                {isLast&&<button disabled={!secComplete||scLoading} onClick={generateSoloHeroProfile} style={{flex:2,...s.bigBtn(!secComplete||scLoading,"#888780"),marginTop:0}}>{scLoading?"Forging hero...":secComplete?"Generate My Hero →":"Answer all questions"}</button>}
+              </div>
+            </div>);
+          })()}
           {/* Loading */}
           {scLoading&&<div style={{padding:"14px",background:"var(--bg2)",border:"1px solid rgba(136,135,128,0.2)",borderRadius:8,fontSize:10,color:"var(--text3)",fontFamily:"var(--font-mono)",marginTop:10}}>Forging independent hero…</div>}
           {/* Result */}
@@ -2669,7 +2841,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                 {vResult&&!vResult.error&&(<>
                   <CharacterPage member={vResult} imageUrl={null} isVillain={true}/>
                   <div style={{display:"flex",gap:10,marginTop:14,marginBottom:20}}>
-                    <button onClick={()=>{setVResult(null);setVStep(0);setVAnswers({});}} style={{flex:1,padding:"11px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:10.5,fontFamily:"var(--font-mono)"}}>Regenerate</button>
+                    <button onClick={()=>{setVResult(null);setVStep(0);setVAnswers({});setVDeepPhase(0);setVDeepAnswers({});setVProfileStep(0);setVProfileAnswers({});}} style={{flex:1,padding:"11px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:10.5,fontFamily:"var(--font-mono)"}}>Regenerate</button>
                     <button onClick={addVillain} style={{flex:2,padding:"11px",background:"rgba(139,26,26,0.2)",border:"1px solid #8B1A1A",borderRadius:8,cursor:"pointer",color:"#E07070",fontSize:10.5,letterSpacing:"0.1em",textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>Add to Rogues Gallery →</button>
                   </div>
                 </>)}
