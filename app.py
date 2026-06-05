@@ -481,18 +481,27 @@ def _auth_guard():
 
 @app.route("/forge-login")
 def login_page():
-    login_html = """<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Forge — Sign In</title>
-<style>*{box-sizing:border-box;margin:0;padding:0;}body{background:#09090F;color:#F0EAD6;font-family:'Courier New',monospace;display:flex;align-items:center;justify-content:center;min-height:100vh;}
-.box{width:320px;text-align:center;}.title{font-size:18px;font-weight:bold;letter-spacing:.1em;color:#D4AF37;margin-bottom:6px;}
-.sub{font-size:11px;color:#888;margin-bottom:28px;}input{width:100%;padding:12px;background:#111;border:1px solid #333;border-radius:8px;color:#F0EAD6;font-size:14px;text-align:left;margin-bottom:10px;outline:none;}
-input:focus{border-color:#D4AF37;}
-button{width:100%;padding:12px;background:#D4AF3720;border:1px solid #D4AF37;border-radius:8px;color:#D4AF37;font-size:12px;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;}
-.err{color:#e74c3c;font-size:11px;margin-top:8px;min-height:16px;}</style></head>
+    import random
+    a = random.randint(2, 9)
+    b = random.randint(1, 9)
+    session["captcha_answer"] = str(a + b)
+    captcha_q = f"{a} + {b} = ?"
+    login_html = f"""<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Forge — Sign In</title>
+<style>*{{box-sizing:border-box;margin:0;padding:0;}}body{{background:#09090F;color:#F0EAD6;font-family:'Courier New',monospace;display:flex;align-items:center;justify-content:center;min-height:100vh;}}
+.box{{width:320px;text-align:center;}}.title{{font-size:18px;font-weight:bold;letter-spacing:.1em;color:#D4AF37;margin-bottom:6px;}}
+.sub{{font-size:11px;color:#888;margin-bottom:28px;}}input{{width:100%;padding:12px;background:#111;border:1px solid #333;border-radius:8px;color:#F0EAD6;font-size:14px;text-align:left;margin-bottom:10px;outline:none;}}
+input:focus{{border-color:#D4AF37;}}
+.cap-row{{display:flex;align-items:center;gap:10px;margin-bottom:10px;}}
+.cap-q{{font-size:13px;color:#D4AF37;background:#1a1a2e;border:1px solid #D4AF3750;border-radius:8px;padding:10px 14px;white-space:nowrap;flex-shrink:0;}}
+.cap-row input{{margin-bottom:0;flex:1;}}
+button{{width:100%;padding:12px;background:#D4AF3720;border:1px solid #D4AF37;border-radius:8px;color:#D4AF37;font-size:12px;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;}}
+.err{{color:#e74c3c;font-size:11px;margin-top:8px;min-height:16px;}}</style></head>
 <body><div class="box"><div class="title">SUPERHERO FORGE</div><div class="sub">Remote access — sign in to continue</div>
 <input type="text" id="u" placeholder="Username" autocomplete="username" autofocus onkeydown="if(event.key==='Enter')document.getElementById('p').focus()"/>
-<input type="password" id="p" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter')login()"/>
+<input type="password" id="p" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter')document.getElementById('c').focus()"/>
+<div class="cap-row"><div class="cap-q">{captcha_q}</div><input type="text" id="c" placeholder="Answer" autocomplete="off" inputmode="numeric" onkeydown="if(event.key==='Enter')login()"/></div>
 <button onclick="login()">Sign In</button><div class="err" id="e"></div></div>
-<script>async function login(){document.getElementById('e').textContent='';const r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:document.getElementById('u').value,password:document.getElementById('p').value})});if((await r.json()).ok){location.href='/';}else{document.getElementById('e').textContent='Incorrect username or password.';}}</script></body></html>"""
+<script>async function login(){{document.getElementById('e').textContent='';const d=await fetch('/api/login',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{username:document.getElementById('u').value,password:document.getElementById('p').value,captcha:document.getElementById('c').value}})}}).then(r=>r.json());if(d.ok){{location.href='/';}}else if(d.captcha){{document.getElementById('e').textContent='Wrong answer — check your math.';setTimeout(()=>location.reload(),1000);}}else{{document.getElementById('e').textContent='Incorrect username or password.';setTimeout(()=>location.reload(),1200);}}}}</script></body></html>"""
     return login_html
 
 @app.route("/api/login", methods=["POST"])
@@ -505,6 +514,9 @@ def api_login():
     if not stored_user or not stored_hash:
         session["authenticated"] = True
         return jsonify({"ok": True})
+    expected = session.pop("captcha_answer", None)
+    if not expected or data.get("captcha", "").strip() != expected:
+        return jsonify({"ok": False, "captcha": True}), 401
     if data.get("username") == stored_user and check_password_hash(stored_hash, data.get("password", "")):
         session["authenticated"] = True
         return jsonify({"ok": True})

@@ -286,7 +286,7 @@ toc_items = [
     ("10", "Family Web",        "Character relationship mapping"),
     ("11", "Tiers & Universe",  "Power rankings and universe overview"),
     ("12", "Race & Codex",      "Alien species lore and encyclopaedia"),
-    ("13", "Remote Access",     "Cloudflare tunnel, DuckDNS, PIN guard"),
+    ("13", "Remote Access",     "Cloudflare tunnel, DuckDNS, login + CAPTCHA"),
     ("14", "App System",        "Performance, caching, smart notifications"),
     ("CL", "Changelog",         "Major version history"),
 ]
@@ -892,10 +892,14 @@ story.append(two_col(
      bullet("Generates a public HTTPS URL — no port forwarding, no firewall config"),
      bullet("URL shown in the Remote Access panel and copied with one click"),
      Spacer(1, 8),
-     Paragraph("PIN Protection", S_H2),
-     bullet("Set any PIN in the Access PIN card"),
-     bullet("Remote visitors must enter the PIN before accessing any page"),
-     bullet("Local access (127.0.0.1) always bypasses PIN — only remote IPs are gated"),
+     Paragraph("Login Credentials", S_H2),
+     bullet("Set a username and password in the Remote Access settings panel"),
+     bullet("Remote visitors must sign in before accessing any page — local access always unrestricted"),
+     bullet("Password stored as a bcrypt hash — never saved in plaintext"),
+     Spacer(1, 8),
+     Paragraph("CAPTCHA", S_H2),
+     bullet("Math challenge shown on every login page load — blocks automated brute-force bots"),
+     bullet("Challenge answer is consumed once (no replay) — wrong answer auto-reloads with a fresh challenge"),
     ],
     [Paragraph("DuckDNS", S_H2),
      bullet("Optional persistent domain (e.g. yourname.duckdns.org) — free at duckdns.org"),
@@ -1008,6 +1012,7 @@ changelog = [
             "Image ETag support: 304 Not Modified on unchanged images — eliminates redundant data transfer",
             "Character sheet callout labels now source from power/ability names, not costume description",
             "Canvas reference sheet: hex color codes replaced with color swatch; power names replace costume word-wrap",
+            "Login CAPTCHA on remote access sign-in — server-side math challenge blocks automated bots; challenge consumed on use, auto-reloads with fresh challenge on failure",
         ]
     },
     {
@@ -1071,7 +1076,7 @@ changelog = [
         "items": [
             "Cloudflare tunnel integration: auto-starts cloudflared at launch when remote access is enabled",
             "DuckDNS automatic IP updater: background loop refreshes DNS every 5 minutes",
-            "PIN guard: remote visitors must authenticate before accessing any page; local access always unrestricted",
+            "Username / password authentication: login form with bcrypt-hashed password storage and session-based auth; local access always unrestricted",
             "Remote Access panel with live status dashboard and per-check fix instructions",
             "Flask rebind to 0.0.0.0 on remote enable — triggers restart notification via alert system",
         ]
