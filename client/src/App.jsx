@@ -140,6 +140,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
   const[rRace,setRRace]=useState(null);
   const[rStoryDir,setRStoryDir]=useState("");
   const[rLoading,setRLoading]=useState(false);const[rResult,setRResult]=useState(null);
+  const[recruitSuggest,setRecruitSuggest]=useState(null);const[recruitSuggestLoading,setRecruitSuggestLoading]=useState(false);
   const[deepMode,setDeepMode]=useState(false);
   const[deepPhase,setDeepPhase]=useState(0);
   const[deepAnswers,setDeepAnswers]=useState({});
@@ -658,7 +659,21 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
         persist("forge-hero-assocs",updatedAssocs);
       }
     }
-    setRResult(null);setRAnswers({});setRName("");setRHeroName("");setRStep(0);setRNkAlign("neutral");setRTeamRank("operative");setRGender("Male");setRAge("");setRBirthYear("");setRRace(null);setRStoryDir("");setDeepAnswers({});setDeepPhase(0);setProfileAnswers({});setProfileStep(0);setRFamilyCharId("");setRFamilyRelation("parent");setRHeroAssocId("");setRHeroAssocType("sidekick");setTab("roster");
+    setRResult(null);setRAnswers({});setRName("");setRHeroName("");setRStep(0);setRNkAlign("neutral");setRTeamRank("operative");setRGender("Male");setRAge("");setRBirthYear("");setRRace(null);setRStoryDir("");setDeepAnswers({});setDeepPhase(0);setProfileAnswers({});setProfileStep(0);setRFamilyCharId("");setRFamilyRelation("parent");setRHeroAssocId("");setRHeroAssocType("sidekick");setRecruitSuggest(null);setRecruitSuggestLoading(false);setTab("roster");
+  };
+
+  const runAIRecruit=async()=>{
+    const teamNames=[...activeRoster.map(m=>m.heroName),rResult?.heroName].filter(Boolean);
+    setRecruitSuggestLoading(true);setRecruitSuggest(null);
+    try{
+      const r=await fetch("/api/generate/recruit",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({team:teamNames,model:currentModel})});
+      const d=await r.json();
+      setRecruitSuggest(d.error?{_err:d.error}:d);
+    }catch(e){
+      setRecruitSuggest({_err:"Request failed"});
+    }finally{
+      setRecruitSuggestLoading(false);
+    }
   };
 
   const generateDeepRecruit=async()=>{
@@ -1826,8 +1841,21 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
           </div>
           <CharacterPage member={rResult} imageUrl={null} teamName={activeTeam.name} teamColor={activeTeam.color}/>
           <div style={{display:"flex",gap:10,marginTop:14}}>
-            <button onClick={()=>{setRResult(null);setRStep(0);setRAnswers({});setDeepPhase(0);setDeepAnswers({});setProfileStep(0);setProfileAnswers({});setRHeroAssocId("");setRHeroAssocType("sidekick");}} style={{flex:1,padding:"11px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:10.5,fontFamily:"var(--font-mono)"}}>Regenerate</button>
+            <button onClick={()=>{setRResult(null);setRStep(0);setRAnswers({});setDeepPhase(0);setDeepAnswers({});setProfileStep(0);setProfileAnswers({});setRHeroAssocId("");setRHeroAssocType("sidekick");setRecruitSuggest(null);setRecruitSuggestLoading(false);}} style={{flex:1,padding:"11px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:10.5,fontFamily:"var(--font-mono)"}}>Regenerate</button>
             <button onClick={addRecruit} style={{flex:2,padding:"11px",background:`${activeTeam.color}16`,border:`1px solid ${activeTeam.color}`,borderRadius:8,cursor:"pointer",color:activeTeam.color,fontSize:10.5,letterSpacing:"0.1em",textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>Add to {activeTeam.abbr} →</button>
+          </div>
+          <div style={{marginTop:10}}>
+            {!recruitSuggest&&<button onClick={runAIRecruit} disabled={recruitSuggestLoading} style={{width:"100%",padding:"10px",background:"rgba(83,74,183,0.1)",border:"1px solid rgba(83,74,183,0.35)",borderRadius:8,cursor:recruitSuggestLoading?"default":"pointer",color:"#8B82E8",fontSize:10,letterSpacing:"0.1em",textTransform:"uppercase",fontFamily:"var(--font-mono)",opacity:recruitSuggestLoading?0.6:1}}>{recruitSuggestLoading?"Consulting AI...":"AI Suggest Next Recruit →"}</button>}
+            {recruitSuggest&&!recruitSuggest._err&&(<div style={{padding:"12px 14px",background:"rgba(83,74,183,0.08)",border:"1px solid rgba(83,74,183,0.28)",borderRadius:8}}>
+              <div style={{fontSize:9,letterSpacing:"0.14em",color:"rgba(139,130,232,0.65)",textTransform:"uppercase",marginBottom:8}}>AI Recruit Suggestion</div>
+              <div style={{fontSize:15,fontWeight:"bold",color:"var(--text-primary)",marginBottom:2}}>{recruitSuggest.name}</div>
+              {recruitSuggest.real_name&&<div style={{fontSize:10,color:"var(--text3)",marginBottom:4}}>{recruitSuggest.real_name}</div>}
+              {recruitSuggest.role&&<div style={{fontSize:10,color:"#8B82E8",marginBottom:8,fontWeight:"bold"}}>{recruitSuggest.role}</div>}
+              {recruitSuggest.why_recruit&&<div style={{fontSize:10,color:"var(--text2)",marginBottom:8,lineHeight:1.6}}>{recruitSuggest.why_recruit}</div>}
+              {recruitSuggest.powers?.length>0&&<div style={{fontSize:9,color:"var(--text3)",lineHeight:1.6}}>{recruitSuggest.powers.join(" · ")}</div>}
+              <button onClick={()=>setRecruitSuggest(null)} style={{marginTop:10,padding:"5px 12px",background:"transparent",border:"1px solid var(--border2)",borderRadius:6,cursor:"pointer",color:"var(--text3)",fontSize:9,fontFamily:"var(--font-mono)"}}>Dismiss</button>
+            </div>)}
+            {recruitSuggest?._err&&<div style={{fontSize:10,color:"#E07070",padding:"8px 12px",background:"rgba(224,112,112,0.08)",border:"1px solid rgba(224,112,112,0.25)",borderRadius:8}}>{recruitSuggest._err}</div>}
           </div>
         </>)}
         {rResult?.error&&(<div style={{padding:"14px",background:"rgba(192,57,43,0.08)",border:"1px solid rgba(192,57,43,0.28)",borderRadius:10}}>
