@@ -1350,7 +1350,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
       </>)}
 
       {/* ── ROSTER TAB ────────────────────────────────────────────────── */}
-      {tab==="roster"&&(<>
+      {tab==="roster"&&activeTeam&&(<>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:28,gap:16}}>
           <div style={{display:"flex",alignItems:"center",gap:16}}>
             <TeamLogo team={activeTeam} size={56} imageUrl={images['teamlogo-'+activeTeam.id]}/>
@@ -1486,7 +1486,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
       </>)}
 
       {/* ── PROMPTS TAB ───────────────────────────────────────────────── */}
-      {tab==="prompts"&&(<>
+      {tab==="prompts"&&activeTeam&&(<>
         <div style={{padding:"12px 14px",background:"rgba(212,175,55,0.06)",border:"1px solid rgba(212,175,55,0.2)",borderRadius:8,fontSize:11,color:"var(--text2)",lineHeight:1.65,marginBottom:16}}>
           <strong style={{color:G,display:"block",marginBottom:3}}>Consistency Lock · {activeTeam.name}</strong>
           Prompts include exact costume specs and design rules. Reference images lock the prompt to that specific design.
@@ -1603,7 +1603,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
       </>)}
 
       {/* ── RECRUIT TAB ───────────────────────────────────────────────── */}
-      {tab==="recruit"&&(<>
+      {tab==="recruit"&&activeTeam&&(<>
         <div style={{padding:"10px 14px",background:`${activeTeam.color}0A`,border:`1px solid ${activeTeam.color}33`,borderRadius:8,fontSize:11,color:"var(--text2)",marginBottom:18}}>
           Recruiting for: <strong style={{color:activeTeam.color}}>{activeTeam.name}</strong> · Switch teams in the Teams tab to recruit for a different team.
         </div>
