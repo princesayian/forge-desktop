@@ -51,7 +51,7 @@ const storage = {
 
 export default
 function App(){
-  // ── Team state ──────────────────────────────────────────────────────────
+  // ── State ────────────────────────────────────────────────────────────────
   const[teams,setTeams]=useState([]);
   const[activeTeamId,setActiveTeamId]=useState(null);
   const[teamRosters,setTeamRosters]=useState({});
