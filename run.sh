@@ -1,8 +1,8 @@
 #!/bin/bash
 cd "$(dirname "$0")"
 
-# Add local Node installation to PATH if present
-[ -d "$HOME/.local/bin" ] && export PATH="$HOME/.local/bin:$PATH"
+# Ensure common macOS tool locations are on PATH (not set in .app bundles)
+export PATH="/usr/local/bin:/opt/homebrew/bin:/opt/homebrew/sbin:$HOME/.local/bin:$PATH"
 
 # Install npm deps if needed
 if [ -d "client" ] && [ ! -d "client/node_modules" ]; then

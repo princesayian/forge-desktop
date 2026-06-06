@@ -315,25 +315,52 @@ def _remove_lock():
     except OSError:
         pass
 
+def _find_ollama():
+    """Find the ollama binary, checking common macOS install locations beyond PATH."""
+    found = shutil.which("ollama")
+    if found:
+        return found
+    for p in (
+        "/usr/local/bin/ollama",
+        "/opt/homebrew/bin/ollama",
+        "/opt/homebrew/sbin/ollama",
+        "/usr/bin/ollama",
+        os.path.expanduser("~/.ollama/ollama"),
+    ):
+        if os.path.isfile(p) and os.access(p, os.X_OK):
+            return p
+    return None
+
 def ensure_ollama():
     """Check if Ollama is reachable; if not (and local mode), try to start it."""
     if _is_remote():
         return True
     if ollama_is_running():
         return True
-    ollama_bin = shutil.which("ollama")
+    ollama_bin = _find_ollama()
     if not ollama_bin:
+        # Last resort: try launching Ollama.app (macOS GUI install)
+        ollama_app = "/Applications/Ollama.app"
+        if os.path.isdir(ollama_app):
+            try:
+                subprocess.Popen(["open", "-a", "Ollama"], start_new_session=True)
+                for _ in range(40):
+                    time.sleep(0.5)
+                    if ollama_is_running():
+                        return True
+            except Exception:
+                pass
         return False
     try:
         subprocess.Popen(
-            ["ollama", "serve"],
+            [ollama_bin, "serve"],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             start_new_session=True,
         )
     except Exception:
         return False
-    for _ in range(30):
+    for _ in range(40):
         time.sleep(0.5)
         if ollama_is_running():
             return True

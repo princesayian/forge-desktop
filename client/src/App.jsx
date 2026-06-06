@@ -246,8 +246,22 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
           await storage.set("forge-v3","1");
         }
       }catch(ex){}
-      try{const d=await storage.get("forge-teams");const saved=JSON.parse(d.value)||[];if(saved.length)setTeams(saved);}catch(e){}
-      try{const d=await storage.get("forge-rosters");setTeamRosters(JSON.parse(d.value)||{});}catch(e){}
+      let _loadedTeams=[];
+      let _loadedRosters={};
+      try{const d=await storage.get("forge-teams");_loadedTeams=JSON.parse(d.value)||[];}catch(e){}
+      try{const d=await storage.get("forge-rosters");_loadedRosters=JSON.parse(d.value)||{};}catch(e){}
+      // Recover orphaned rosters — any team ID in rosters but absent from teams list gets a stub entry
+      {
+        const _knownIds=new Set(_loadedTeams.map(t=>t.id));
+        const _orphans=Object.keys(_loadedRosters).filter(id=>!_knownIds.has(id));
+        if(_orphans.length){
+          const _stubs=_orphans.map((id,i)=>({id,name:`Recovered Team ${i+1}`,abbr:`R${i+1}`,color:"#5EB1FF",colorLight:"#AFA9ECCC",type:"ground",nkAlignment:"ally",isDefault:false,description:""}));
+          _loadedTeams=[..._loadedTeams,..._stubs];
+          await storage.set("forge-teams",JSON.stringify(_loadedTeams));
+        }
+      }
+      if(_loadedTeams.length)setTeams(_loadedTeams);
+      setTeamRosters(_loadedRosters);
       try{const d=await storage.get("forge-edits");setSharedEdits(JSON.parse(d.value)||{});}catch(e){
         try{const d2=await storage.get("nk-edits");setSharedEdits(JSON.parse(d2.value)||{});}catch(e2){}
       }

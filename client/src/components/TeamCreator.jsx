@@ -50,9 +50,68 @@ export default function TeamCreator({teams,members=[],onSave,onCancel,callAI,oll
       name:name.trim(),abbr:abbr.trim()||autoAbbr(name),color,colorLight:color+"CC",type,nkAlignment:align,description:desc,motto,origin,logoSeed
     });
   };
-  const s2={padding:"12px 16px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:10};
+  const isEdit=!!initialData;
   const lbl={fontSize:9,letterSpacing:"0.18em",color:"rgba(212,175,55,0.75)",textTransform:"uppercase",marginBottom:8,display:"block"};
   const chip=(a,c=G)=>({padding:"6px 12px",background:a?`${c}16`:"var(--bg3)",border:`1px solid ${a?c:"var(--border2)"}`,borderRadius:20,cursor:"pointer",fontSize:10.5,color:a?c:"var(--text3)",fontFamily:"var(--font-mono)",fontWeight:a?"bold":"normal"});
+
+  // ── Edit mode: flat single-page form ────────────────────────────────────────
+  if(isEdit) return(
+    <div style={{background:"var(--bg-card2,#07070E)",border:"1px solid rgba(212,175,55,0.2)",borderRadius:14,overflow:"hidden"}}>
+      <div style={{background:"rgba(212,175,55,0.06)",borderBottom:"1px solid rgba(212,175,55,0.15)",padding:"14px 20px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <div><div style={{fontSize:9,letterSpacing:"0.18em",color:`${G}88`,textTransform:"uppercase",marginBottom:2}}>Edit Team</div><div style={{fontSize:15,fontWeight:"bold",color:"var(--text-primary)"}}>{name||"Untitled Team"}</div></div>
+        <button onClick={onCancel} style={{padding:"5px 12px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:7,cursor:"pointer",color:"var(--text2)",fontSize:10,fontFamily:"var(--font-mono)"}}>Cancel</button>
+      </div>
+      <div style={{padding:"20px",display:"flex",flexDirection:"column",gap:14}}>
+        <div><span style={lbl}>Team Name</span><input type="text" placeholder="Team name" value={name} onChange={e=>handleName(e.target.value)} autoFocus/></div>
+        <div style={{display:"flex",gap:12}}>
+          <div style={{flex:"0 0 auto"}}><span style={lbl}>Abbreviation</span><input type="text" placeholder="e.g. NK" value={abbr} onChange={e=>setAbbr(e.target.value.toUpperCase().slice(0,4))} style={{maxWidth:90}}/></div>
+          <div style={{flex:1}}>
+            <span style={lbl}>Team Color</span>
+            <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+              {TEAM_COLORS.map(tc=><button key={tc.id} onClick={()=>setColor(tc.hex)} style={{display:"flex",alignItems:"center",gap:5,padding:"5px 10px",background:color===tc.hex?`${tc.hex}18`:"var(--bg3)",border:`1px solid ${color===tc.hex?tc.hex:"var(--border2)"}`,borderRadius:20,cursor:"pointer",fontFamily:"var(--font-mono)",fontSize:10,color:color===tc.hex?"var(--text-primary)":"var(--text3)"}}><div style={{width:8,height:8,borderRadius:"50%",background:tc.hex,flexShrink:0}}/>{tc.label}</button>)}
+            </div>
+          </div>
+        </div>
+        <div>
+          <span style={lbl}>Team Logo</span>
+          <div style={{display:"flex",alignItems:"center",gap:14,padding:"10px 14px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:9}}>
+            <TeamLogo team={{id:`preview-${logoSeed}`,color,logoSeed}} size={48}/>
+            <div style={{flex:1}}>
+              <div style={{fontSize:10,color:"var(--text2)",marginBottom:6,fontFamily:"var(--font-mono)"}}>Style {logoSeed+1} of 8</div>
+              <div style={{display:"flex",gap:7}}>
+                <button onClick={()=>setLogoSeed(s=>(s+7)%8)} style={{padding:"4px 10px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:6,cursor:"pointer",color:"var(--text2)",fontSize:10,fontFamily:"var(--font-mono)"}}>← Prev</button>
+                <button onClick={()=>setLogoSeed(s=>(s+1)%8)} style={{padding:"4px 10px",background:`${color}14`,border:`1px solid ${color}55`,borderRadius:6,cursor:"pointer",color,fontSize:10,fontFamily:"var(--font-mono)"}}>Next →</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <span style={lbl}>Team Type</span>
+          <div style={{display:"flex",flexWrap:"wrap",gap:8}}>{TEAM_TYPES.map(tt=><button key={tt.id} style={chip(type===tt.id,color)} onClick={()=>setType(tt.id)}>{tt.label}</button>)}</div>
+        </div>
+        <div>
+          <span style={lbl}>NK Alignment</span>
+          <div style={{display:"flex",flexDirection:"column",gap:7}}>
+            {NK_ALIGNMENTS.map(a=><button key={a.id} onClick={()=>setAlign(a.id)} style={{padding:"9px 14px",background:align===a.id?`${a.color}14`:"var(--bg3)",border:`1px solid ${align===a.id?a.color:"var(--border2)"}`,borderRadius:9,cursor:"pointer",textAlign:"left",fontFamily:"var(--font-mono)"}}>
+              <div style={{fontSize:11,color:"var(--text-primary)",fontWeight:align===a.id?"bold":"normal"}}>{a.label}</div>
+              <div style={{fontSize:9.5,color:"var(--text2)",marginTop:1}}>{a.desc}</div>
+            </button>)}
+          </div>
+        </div>
+        <div style={{background:"rgba(212,175,55,0.04)",border:"1px solid rgba(212,175,55,0.12)",borderRadius:10,padding:"14px"}}>
+          <div style={{fontSize:9,letterSpacing:"0.18em",color:`${G}88`,textTransform:"uppercase",marginBottom:12,fontFamily:"var(--font-mono)"}}>Lore</div>
+          {ollamaOk&&<button onClick={generateLore} disabled={genLoading} style={{width:"100%",padding:"9px",background:genLoading?"var(--bg3)":`${G}0E`,border:`1px solid ${genLoading?"var(--border)":`${G}55`}`,borderRadius:8,cursor:genLoading?"not-allowed":"pointer",color:genLoading?"var(--text3)":G,fontSize:10,fontFamily:"var(--font-mono)",marginBottom:10,letterSpacing:"0.08em"}}>{genLoading?`Generating... (${genElapsed}s)`:"✦ Regenerate lore with AI"}</button>}
+          {genError&&<div style={{fontSize:10,color:"#E07070",background:"rgba(139,26,26,0.12)",border:"1px solid rgba(139,26,26,0.3)",borderRadius:7,padding:"6px 10px",marginBottom:10,fontFamily:"var(--font-mono)"}}>{genError}</div>}
+          <div style={{marginBottom:10}}><span style={lbl}>Description</span><input type="text" placeholder="One sentence about this team" value={desc} onChange={e=>setDesc(e.target.value)}/></div>
+          <div style={{marginBottom:10}}><span style={lbl}>Motto</span><input type="text" placeholder="Team motto or battle cry" value={motto} onChange={e=>setMotto(e.target.value)}/></div>
+          <div><span style={lbl}>Origin</span><textarea style={{height:80}} placeholder="Team backstory..." value={origin} onChange={e=>setOrigin(e.target.value)}/></div>
+        </div>
+        <button disabled={!name.trim()} onClick={handleSave} style={{width:"100%",padding:"12px",background:name.trim()?`${color}18`:"var(--bg3)",border:`1px solid ${name.trim()?color:"var(--border2)"}`,borderRadius:8,cursor:name.trim()?"pointer":"not-allowed",color:name.trim()?color:"var(--text4)",fontSize:10.5,letterSpacing:"0.12em",textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>Save Changes</button>
+      </div>
+    </div>
+  );
+
+  // ── Create mode: 3-step wizard ───────────────────────────────────────────────
   return(<div style={{background:"var(--bg-card2, #07070E)",border:"1px solid rgba(212,175,55,0.2)",borderRadius:14,overflow:"hidden"}}>
     <div style={{background:"rgba(212,175,55,0.06)",borderBottom:"1px solid rgba(212,175,55,0.15)",padding:"14px 20px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
       <div><div style={{fontSize:9,letterSpacing:"0.18em",color:`${G}88`,textTransform:"uppercase",marginBottom:2}}>New Team · Step {step} of 3</div><div style={{fontSize:15,fontWeight:"bold",color:"var(--text-primary)"}}>{step===1?"Identity":step===2?"Alignment & Type":"Lore"}</div></div>
