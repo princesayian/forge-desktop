@@ -474,6 +474,9 @@ app = Flask(__name__, static_folder=STATIC, static_url_path="")
 app.config["JSON_SORT_KEYS"] = False
 app.secret_key = base64.b64decode(config.get("secret_key", base64.b64encode(os.urandom(24)).decode()))
 
+# Nonce-keyed captcha store — avoids relying on session cookies
+_CAPTCHA_STORE: dict = {}  # nonce -> {"answer": str, "exp": float}
+
 @app.after_request
 def _cache_headers(response):
     p = request.path
@@ -508,10 +511,17 @@ def _auth_guard():
 
 @app.route("/forge-login")
 def login_page():
-    import random
+    import random, time
     a = random.randint(2, 9)
     b = random.randint(1, 9)
-    session["captcha_answer"] = str(a + b)
+    answer = str(a + b)
+    nonce = base64.urlsafe_b64encode(os.urandom(18)).decode()
+    # Purge expired entries then store this one (5-minute window)
+    now = time.time()
+    expired = [k for k, v in _CAPTCHA_STORE.items() if v["exp"] < now]
+    for k in expired:
+        _CAPTCHA_STORE.pop(k, None)
+    _CAPTCHA_STORE[nonce] = {"answer": answer, "exp": now + 300}
     captcha_q = f"{a} + {b} = ?"
     login_html = f"""<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Forge — Sign In</title>
 <style>*{{box-sizing:border-box;margin:0;padding:0;}}body{{background:#09090F;color:#F0EAD6;font-family:'Courier New',monospace;display:flex;align-items:center;justify-content:center;min-height:100vh;}}
@@ -528,7 +538,7 @@ button{{width:100%;padding:12px;background:#D4AF3720;border:1px solid #D4AF37;bo
 <input type="password" id="p" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter')document.getElementById('c').focus()"/>
 <div class="cap-row"><div class="cap-q">{captcha_q}</div><input type="text" id="c" placeholder="Answer" autocomplete="off" inputmode="numeric" onkeydown="if(event.key==='Enter')login()"/></div>
 <button onclick="login()">Sign In</button><div class="err" id="e"></div></div>
-<script>async function login(){{document.getElementById('e').textContent='';const d=await fetch('/api/login',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{username:document.getElementById('u').value,password:document.getElementById('p').value,captcha:document.getElementById('c').value}})}}).then(r=>r.json());if(d.ok){{location.href='/';}}else if(d.captcha){{document.getElementById('e').textContent='Wrong answer — check your math.';setTimeout(()=>location.reload(),1000);}}else{{document.getElementById('e').textContent='Incorrect username or password.';setTimeout(()=>location.reload(),1200);}}}}</script></body></html>"""
+<script>const _cn='{nonce}';async function login(){{document.getElementById('e').textContent='';const d=await fetch('/api/login',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{username:document.getElementById('u').value,password:document.getElementById('p').value,captcha:document.getElementById('c').value,captcha_nonce:_cn}})}}).then(r=>r.json());if(d.ok){{location.href='/';}}else if(d.captcha){{document.getElementById('e').textContent='Wrong answer — check your math.';setTimeout(()=>location.reload(),1000);}}else{{document.getElementById('e').textContent='Incorrect username or password.';setTimeout(()=>location.reload(),1200);}}}}</script></body></html>"""
     return login_html
 
 @app.route("/api/login", methods=["POST"])
@@ -541,8 +551,10 @@ def api_login():
     if not stored_user or not stored_hash:
         session["authenticated"] = True
         return jsonify({"ok": True})
-    expected = session.pop("captcha_answer", None)
-    if not expected or data.get("captcha", "").strip() != expected:
+    import time
+    nonce = data.get("captcha_nonce", "")
+    entry = _CAPTCHA_STORE.pop(nonce, None)
+    if not entry or entry["exp"] < time.time() or data.get("captcha", "").strip() != entry["answer"]:
         return jsonify({"ok": False, "captcha": True}), 401
     if data.get("username") == stored_user and check_password_hash(stored_hash, data.get("password", "")):
         session["authenticated"] = True
