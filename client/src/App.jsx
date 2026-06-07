@@ -132,7 +132,7 @@ const toggleRColor=hex=>setRColors(prev=>{if(prev.includes(hex)){if(prev.length=
 const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{6}$/)&&!h.match(/^#[0-9a-fA-F]{3}$/))return;setRColors(prev=>{if(prev.includes(h)||prev.length>=3)return prev;return[...prev,h];});setRCustomHex("#ffffff");};
   const[rNkAlign,setRNkAlign]=useState("neutral");
   const[rTeamRank,setRTeamRank]=useState("operative");
-  const[rFamilyCharId,setRFamilyCharId]=useState("");const[rFamilyRelation,setRFamilyRelation]=useState("parent");
+  const[rFamilyCharId,setRFamilyCharId]=useState("");const[rFamilyRelation,setRFamilyRelation]=useState("parent");const[rFamilyLinks,setRFamilyLinks]=useState([]);
   const[rHeroAssocId,setRHeroAssocId]=useState("");const[rHeroAssocType,setRHeroAssocType]=useState("sidekick");
   const[rGender,setRGender]=useState("Male");
   const[rAge,setRAge]=useState("");
@@ -655,14 +655,9 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     const newRosters={...teamRosters,[activeTeamId]:[...(teamRosters[activeTeamId]||[]),rResult]};
     setTeamRosters(newRosters);
     persist("forge-rosters",newRosters);
-    if(rFamilyCharId){
-      const rel=FAMILY_RELATIONS.find(r=>r.id===rFamilyRelation);
-      if(rel){
-        const newLink={id:`fl-${Date.now()}`,a:rResult.id,b:rFamilyCharId,aRelation:rel.label,bRelation:rel.inverse};
-        const updatedLinks=[...familyLinks,newLink];
-        setFamilyLinks(updatedLinks);
-        persist("forge-family",updatedLinks);
-      }
+    if(rFamilyLinks.length>0){
+      const newLinks=rFamilyLinks.reduce((acc,lk,i)=>{const rel=FAMILY_RELATIONS.find(r=>r.id===lk.relation);if(rel){acc.push({id:`fl-${Date.now()}-${i}`,a:rResult.id,b:lk.charId,aRelation:rel.label,bRelation:rel.inverse});}return acc;},[]);
+      if(newLinks.length>0){const updatedLinks=[...familyLinks,...newLinks];setFamilyLinks(updatedLinks);persist("forge-family",updatedLinks);}
     }
     if(rHeroAssocId){
       const t=HERO_ASSOC_TYPES.find(x=>x.id===rHeroAssocType);
@@ -673,7 +668,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
         persist("forge-hero-assocs",updatedAssocs);
       }
     }
-    setRResult(null);setRAnswers({});setRName("");setRHeroName("");setRStep(0);setRNkAlign("neutral");setRTeamRank("operative");setRGender("Male");setRAge("");setRBirthYear("");setRRace(null);setRStoryDir("");setDeepAnswers({});setDeepPhase(0);setProfileAnswers({});setProfileStep(0);setRFamilyCharId("");setRFamilyRelation("parent");setRHeroAssocId("");setRHeroAssocType("sidekick");setRecruitSuggest(null);setRecruitSuggestLoading(false);setTab("roster");
+    setRResult(null);setRAnswers({});setRName("");setRHeroName("");setRStep(0);setRNkAlign("neutral");setRTeamRank("operative");setRGender("Male");setRAge("");setRBirthYear("");setRRace(null);setRStoryDir("");setDeepAnswers({});setDeepPhase(0);setProfileAnswers({});setProfileStep(0);setRFamilyCharId("");setRFamilyRelation("parent");setRFamilyLinks([]);setRHeroAssocId("");setRHeroAssocType("sidekick");setRecruitSuggest(null);setRecruitSuggestLoading(false);setTab("roster");
   };
 
   const runAIRecruit=async()=>{
@@ -741,9 +736,9 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     const bare={id:`char-${Date.now()}`,teamId:activeTeamId,realName:rName||"Unknown",heroName:rHeroName,gender:rGender,age:computedAge,birthYear:rBirthYear||"",race:rRace,species:raceLabel(rRace)||"Human",color:hex,colorPalette:rColors,colorLight:hex+"CC",initials:rName?rName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",number:num,isCustom:true,nkAlignment:rNkAlign,teamRank:rTeamRank,tagline:"",role:"Hero",origin:"",powers:[],stats:{Power:50,Speed:50,Tech:50,Intellect:50,Will:50},costumeDesc:"",powerFX:"",consistencyNotes:"",dna:[]};
     const newRosters={...teamRosters,[activeTeamId]:[...(teamRosters[activeTeamId]||[]),bare]};
     setTeamRosters(newRosters);persist("forge-rosters",newRosters);
-    if(rFamilyCharId){const rel=FAMILY_RELATIONS.find(r=>r.id===rFamilyRelation);if(rel){const newLink={id:`fl-${Date.now()}`,a:bare.id,b:rFamilyCharId,aRelation:rel.label,bRelation:rel.inverse};const updatedLinks=[...familyLinks,newLink];setFamilyLinks(updatedLinks);persist("forge-family",updatedLinks);}}
+    if(rFamilyLinks.length>0){const newLinks=rFamilyLinks.reduce((acc,lk,i)=>{const rel=FAMILY_RELATIONS.find(r=>r.id===lk.relation);if(rel){acc.push({id:`fl-${Date.now()}-${i}`,a:bare.id,b:lk.charId,aRelation:rel.label,bRelation:rel.inverse});}return acc;},[]);if(newLinks.length>0){const updatedLinks=[...familyLinks,...newLinks];setFamilyLinks(updatedLinks);persist("forge-family",updatedLinks);}}
     if(rHeroAssocId){const t=HERO_ASSOC_TYPES.find(x=>x.id===rHeroAssocType);if(t){const newAssoc={id:`ha-${Date.now()}`,a:bare.id,b:rHeroAssocId,aRelation:t.label,bRelation:t.inverse};const updatedAssocs=[...heroAssocs,newAssoc];setHeroAssocs(updatedAssocs);persist("forge-hero-assocs",updatedAssocs);}}
-    setRResult(null);setRAnswers({});setRName("");setRHeroName("");setRStep(0);setRNkAlign("neutral");setRTeamRank("operative");setRGender("Male");setRAge("");setRBirthYear("");setRRace(null);setRStoryDir("");setDeepAnswers({});setDeepPhase(0);setProfileAnswers({});setProfileStep(0);setRFamilyCharId("");setRFamilyRelation("parent");setRHeroAssocId("");setRHeroAssocType("sidekick");setTab("roster");
+    setRResult(null);setRAnswers({});setRName("");setRHeroName("");setRStep(0);setRNkAlign("neutral");setRTeamRank("operative");setRGender("Male");setRAge("");setRBirthYear("");setRRace(null);setRStoryDir("");setDeepAnswers({});setDeepPhase(0);setProfileAnswers({});setProfileStep(0);setRFamilyCharId("");setRFamilyRelation("parent");setRFamilyLinks([]);setRHeroAssocId("");setRHeroAssocType("sidekick");setTab("roster");
   };
 
   const generateTripo3D=async(member)=>{
@@ -1741,16 +1736,23 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
             const selRel=FAMILY_RELATIONS.find(r=>r.id===rFamilyRelation);
             return(
               <div style={{marginBottom:14}}>
-                <span style={s.lbl}>Family Connection (optional)</span>
+                <span style={s.lbl}>Family Connections (optional)</span>
+                {rFamilyLinks.length>0&&<div style={{display:"flex",flexDirection:"column",gap:4,marginBottom:8}}>
+                  {rFamilyLinks.map((lk,li)=>{const lkChar=uniqueChars.find(c=>c.id===lk.charId);const lkRel=FAMILY_RELATIONS.find(r=>r.id===lk.relation);return lkChar&&lkRel?(<div key={li} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"4px 8px",background:"var(--bg2)",border:"1px solid var(--border2)",borderRadius:7,fontSize:9,fontFamily:"var(--font-mono)",color:"var(--text2)"}}>
+                    <span>{lkChar.heroName} — <strong style={{color:activeTeam.color}}>{lkRel.label}</strong></span>
+                    <button onClick={()=>setRFamilyLinks(p=>p.filter((_,i)=>i!==li))} style={{background:"none",border:"none",cursor:"pointer",color:"#e74c3c",fontSize:12,lineHeight:1,padding:"0 2px"}}>×</button>
+                  </div>):null;})}
+                </div>}
                 <select value={rFamilyCharId} onChange={e=>setRFamilyCharId(e.target.value)} style={{width:"100%",padding:"8px 10px",background:"var(--bg2)",border:"1px solid var(--border2)",borderRadius:7,color:"var(--text-primary)",fontFamily:"var(--font-mono)",fontSize:11,marginTop:6,marginBottom:rFamilyCharId?8:0}}>
-                  <option value="">— No family connection —</option>
+                  <option value="">— Add a family connection —</option>
                   {uniqueChars.map(c=><option key={c.id} value={c.id}>{c.heroName}{c.isVillain?" ⚠":""} ({c.realName||"?"})</option>)}
                 </select>
                 {rFamilyCharId&&(<>
                   <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:6}}>
                     {FAMILY_RELATIONS.map(r=><button key={r.id} onClick={()=>setRFamilyRelation(r.id)} style={{padding:"4px 10px",background:rFamilyRelation===r.id?`${activeTeam.color}18`:"var(--bg3)",border:`1px solid ${rFamilyRelation===r.id?activeTeam.color:"var(--border2)"}`,borderRadius:14,cursor:"pointer",fontSize:9,color:rFamilyRelation===r.id?activeTeam.color:"var(--text2)",fontFamily:"var(--font-mono)"}}>{r.label}</button>)}
                   </div>
-                  {selChar&&selRel&&<div style={{fontSize:9,color:"var(--text3)",fontStyle:"italic"}}>{rHeroName||"New hero"} is {selChar.heroName}'s <strong style={{color:activeTeam.color}}>{selRel.label}</strong> · {selChar.heroName} is their <strong style={{color:activeTeam.color}}>{selRel.inverse}</strong></div>}
+                  {selChar&&selRel&&<div style={{fontSize:9,color:"var(--text3)",fontStyle:"italic",marginBottom:6}}>{rHeroName||"New hero"} is {selChar.heroName}'s <strong style={{color:activeTeam.color}}>{selRel.label}</strong> · {selChar.heroName} is their <strong style={{color:activeTeam.color}}>{selRel.inverse}</strong></div>}
+                  <button onClick={()=>{if(rFamilyCharId&&!rFamilyLinks.some(l=>l.charId===rFamilyCharId)){setRFamilyLinks(p=>[...p,{charId:rFamilyCharId,relation:rFamilyRelation}]);setRFamilyCharId("");setRFamilyRelation("parent");}}} style={{padding:"4px 14px",background:`${activeTeam.color}14`,border:`1px solid ${activeTeam.color}55`,borderRadius:8,cursor:"pointer",color:activeTeam.color,fontSize:9,fontFamily:"var(--font-mono)"}}>+ Add</button>
                 </>)}
               </div>
             );

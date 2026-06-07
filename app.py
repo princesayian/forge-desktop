@@ -1442,13 +1442,19 @@ def health():
 # ---------------------------------------------------------------------------
 # Port & Flask helpers
 # ---------------------------------------------------------------------------
-def find_free_port(preferred=7432):
-    s = socket.socket()
-    try:
-        s.bind(("127.0.0.1", preferred)); s.close(); return preferred
-    except OSError:
-        s.close(); s = socket.socket(); s.bind(("127.0.0.1", 0))
-        port = s.getsockname()[1]; s.close(); return port
+def find_free_port(preferred=7432, retries=10, delay=0.4):
+    for attempt in range(retries):
+        s = socket.socket()
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        try:
+            s.bind(("127.0.0.1", preferred)); s.close(); return preferred
+        except OSError:
+            s.close()
+            if attempt < retries - 1:
+                time.sleep(delay)
+    # Preferred port genuinely occupied — fall back to OS-assigned
+    s = socket.socket(); s.bind(("127.0.0.1", 0))
+    port = s.getsockname()[1]; s.close(); return port
 
 def run_flask(port, host="127.0.0.1"):
     import logging
@@ -1477,6 +1483,7 @@ if __name__ == "__main__":
                 time.sleep(1.2)
                 try: os.kill(existing, signal.SIGKILL)
                 except ProcessLookupError: pass
+                time.sleep(1.0)  # give OS time to release port 7432
             except Exception: pass
         else:
             sys.exit(0)
