@@ -6,6 +6,7 @@ Nocturnal Knights Character System · Remote & Local modes
 
 import os, sys, json, threading, time, socket, base64, io, subprocess, shutil, signal, atexit
 import glob
+_STORE_LOCK = threading.Lock()
 import requests
 from flask import Flask, Response, request, jsonify, send_from_directory, send_file, session, redirect, stream_with_context
 
@@ -831,16 +832,18 @@ def store_get(key):
 def store_set(key):
     body = request.get_json(silent=True) or {}
     value = body.get("value", "")
-    store = _load_store()
-    store[key] = value
-    _save_store(store)
+    with _STORE_LOCK:
+        store = _load_store()
+        store[key] = value
+        _save_store(store)
     return jsonify({"key": key, "value": value})
 
 @app.route("/api/store/<key>", methods=["DELETE"])
 def store_delete(key):
-    store = _load_store()
-    store.pop(key, None)
-    _save_store(store)
+    with _STORE_LOCK:
+        store = _load_store()
+        store.pop(key, None)
+        _save_store(store)
     return jsonify({"key": key, "deleted": True})
 
 @app.route("/api/images", methods=["GET"])
