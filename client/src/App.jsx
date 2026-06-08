@@ -2259,8 +2259,8 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
 
       {/* ── FAMILY TREE TAB ───────────────────────────────────────────── */}
       {tab==="family"&&(()=>{
-        // Gather all characters across active team + all villains
-        const allChars=[...getTeamRoster(activeTeamId),...villainPool];
+        // Gather all characters across all teams + solo heroes + villains (deduped)
+        const allChars=[...allCharacters,...villainPool].filter((c,i,a)=>a.findIndex(x=>x.id===c.id)===i);
         const getChar=id=>allChars.find(c=>c.id===id);
 
         // Build hierarchy from parent-type links for layout
@@ -2279,6 +2279,32 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
         });
 
         const charIds=[...new Set(familyLinks.flatMap(l=>[l.a,l.b]))];
+
+        // Infer implicit relations (aunt/uncle, grandparent, shared-parent siblings)
+        const _infPar={},_infChi={},_infSib={};
+        familyLinks.forEach(link=>{
+          if(link.aRelation==="Parent"||link.aRelation==="Adoptive Parent"){
+            _infPar[link.b]=[...(_infPar[link.b]||[]),link.a];_infChi[link.a]=[...(_infChi[link.a]||[]),link.b];
+          }else if(link.bRelation==="Parent"||link.bRelation==="Adoptive Parent"){
+            _infPar[link.a]=[...(_infPar[link.a]||[]),link.b];_infChi[link.b]=[...(_infChi[link.b]||[]),link.a];
+          }
+          if(link.aRelation==="Sibling"||link.aRelation==="Twin"||link.bRelation==="Sibling"||link.bRelation==="Twin"){
+            _infSib[link.a]=[...(_infSib[link.a]||[]),link.b];_infSib[link.b]=[...(_infSib[link.b]||[]),link.a];
+          }
+        });
+        const derivedLinks=[];
+        const _ad=(a,b,aRel,bRel)=>{
+          if(familyLinks.some(l=>(l.a===a&&l.b===b)||(l.a===b&&l.b===a)))return;
+          if(derivedLinks.some(l=>(l.a===a&&l.b===b)||(l.a===b&&l.b===a)))return;
+          derivedLinks.push({id:`d${derivedLinks.length}`,a,b,aRelation:aRel,bRelation:bRel,derived:true});
+        };
+        Object.entries(_infPar).forEach(([child,pars])=>pars.forEach(par=>{
+          (_infSib[par]||[]).forEach(au=>{if(au!==child)_ad(au,child,"Aunt / Uncle","Niece / Nephew");});
+          (_infPar[par]||[]).forEach(gp=>{if(gp!==child)_ad(gp,child,"Grandparent","Grandchild");});
+        }));
+        Object.entries(_infChi).forEach(([,kids])=>{
+          for(let i=0;i<kids.length;i++)for(let j=i+1;j<kids.length;j++)_ad(kids[i],kids[j],"Sibling","Sibling");
+        });
 
         // BFS to assign generation level (0=oldest)
         const gen={};
@@ -2318,6 +2344,28 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
           {charIds.length>0?(
             <div style={{background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:12,overflow:"hidden",marginBottom:20}}>
               <svg viewBox={`0 0 ${W} ${svgH}`} style={{width:"100%",display:"block"}}>
+                {/* Inferred links (dashed, behind explicit) */}
+                {derivedLinks.map(link=>{
+                  const pa=pos[link.a],pb=pos[link.b];
+                  if(!pa||!pb)return null;
+                  const color=relColor(link.aRelation);
+                  const mx=(pa.x+pb.x)/2,my=(pa.y+pb.y)/2;
+                  const hier=isHierarchical(link.aRelation)||isHierarchical(link.bRelation);
+                  const top=pa.y<pb.y?pa:pb,bot=pa.y<pb.y?pb:pa;
+                  return(
+                    <g key={link.id}>
+                      {hier?(
+                        <path d={`M${top.x},${top.y+nodeR} C${top.x},${my} ${bot.x},${my} ${bot.x},${bot.y-nodeR}`}
+                          fill="none" stroke={color} strokeWidth={1.3} strokeOpacity={0.3} strokeDasharray="4,4"/>
+                      ):(
+                        <line x1={pa.x} y1={pa.y} x2={pb.x} y2={pb.y}
+                          stroke={color} strokeWidth={1.3} strokeOpacity={0.3} strokeDasharray="4,4"/>
+                      )}
+                      <rect x={mx-26} y={my-8} width={52} height={14} rx={4} fill="var(--bg)" opacity={0.55}/>
+                      <text x={mx} y={my+4} textAnchor="middle" fontSize="7" fill={color} fontFamily="monospace" fontStyle="italic" opacity={0.55}>{link.aRelation}</text>
+                    </g>
+                  );
+                })}
                 {/* Links */}
                 {familyLinks.map(link=>{
                   const pa=pos[link.a],pb=pos[link.b];
@@ -2376,6 +2424,12 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                     <span style={{fontSize:8.5,color:"var(--text3)",fontFamily:"var(--font-mono)"}}>{label}</span>
                   </div>
                 ))}
+                {derivedLinks.length>0&&(
+                  <div style={{display:"flex",alignItems:"center",gap:5}}>
+                    <div style={{width:18,height:2,background:"rgba(255,255,255,0.2)",borderRadius:1,backgroundImage:"repeating-linear-gradient(to right,rgba(255,255,255,0.35) 0,rgba(255,255,255,0.35) 3px,transparent 3px,transparent 7px)"}}/>
+                    <span style={{fontSize:8.5,color:"var(--text4)",fontFamily:"var(--font-mono)",fontStyle:"italic"}}>Inferred</span>
+                  </div>
+                )}
               </div>
             </div>
           ):(
@@ -2390,6 +2444,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
             const char=getChar(ftActiveNode);
             if(!char)return null;
             const links=familyLinks.filter(l=>l.a===ftActiveNode||l.b===ftActiveNode);
+            const inferredForNode=derivedLinks.filter(l=>l.a===ftActiveNode||l.b===ftActiveNode);
             return(
               <div style={{marginBottom:20,padding:"14px 16px",background:`${char.color||G}0C`,border:`1px solid ${char.color||G}33`,borderRadius:10}}>
                 <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
@@ -2413,6 +2468,26 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                         </div>
                       );
                     })}
+                  </div>
+                )}
+                {inferredForNode.length>0&&(
+                  <div style={{marginTop:8,paddingTop:8,borderTop:"1px solid rgba(255,255,255,0.06)"}}>
+                    <div style={{fontSize:8,letterSpacing:"0.14em",color:`${G}55`,textTransform:"uppercase",marginBottom:5}}>Inferred</div>
+                    <div style={{display:"flex",flexDirection:"column",gap:4}}>
+                      {inferredForNode.map((link,i)=>{
+                        const otherId=link.a===ftActiveNode?link.b:link.a;
+                        const rel=link.a===ftActiveNode?link.aRelation:link.bRelation;
+                        const other=getChar(otherId);
+                        const color=relColor(rel);
+                        return(
+                          <div key={i} style={{fontSize:10,color:"var(--text3)",display:"flex",alignItems:"center",gap:6}}>
+                            <span style={{color,fontWeight:"bold",opacity:0.7}}>{rel} of</span>
+                            <span style={{color:"var(--text2)"}}>{other?.heroName||otherId}</span>
+                            <span style={{fontSize:8,color:"var(--text4)",fontStyle:"italic"}}>· inferred</span>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
               </div>

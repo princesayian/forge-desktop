@@ -5,6 +5,8 @@ config.json
 .env
 logs/
 .forge.lock
+forge-data.json
+forge-data.json.tmp
 data/
 images/
 .claude/
