@@ -1417,6 +1417,211 @@ def export_pdf():
         as_attachment=True, download_name=f"{team_name.lower().replace(' ','-')}-roster.pdf")
 
 # ---------------------------------------------------------------------------
+# API: Comic PDF Export
+# ---------------------------------------------------------------------------
+@app.route("/api/export-comic-pdf", methods=["POST"])
+def export_comic_pdf():
+    try:
+        from reportlab.lib.pagesizes import letter
+        from reportlab.lib import colors
+        from reportlab.pdfgen import canvas as rl_canvas
+        from reportlab.lib.utils import ImageReader
+    except ImportError:
+        return jsonify({"error": "reportlab not installed. Run: pip install reportlab"}), 500
+
+    data = request.get_json() or {}
+    comic = data.get("comic", {})
+    cast_chars = data.get("castChars", [])
+    tone = data.get("tone", "action")
+
+    title = comic.get("title", "Untitled Comic")
+    tagline = comic.get("tagline", "")
+    pages_data = comic.get("pages", [])
+
+    buf = io.BytesIO()
+    PW, PH = letter   # 612 x 792 pts
+    c = rl_canvas.Canvas(buf, pagesize=letter)
+
+    MARGIN = 28
+    PANEL_GAP = 4
+    PANEL_BORDER = 2
+
+    YELLOW = colors.HexColor("#FFD700")
+    BLACK = colors.black
+    WHITE = colors.white
+    DARK = colors.HexColor("#0d0d1a")
+    GRAY = colors.HexColor("#6B7280")
+    CAP_BG = colors.HexColor("#FFFDE7")
+    CAP_FG = colors.HexColor("#111111")
+
+    def get_panel_image(panel_id):
+        safe_id = os.path.basename(panel_id)
+        for ext in IMAGE_EXTENSIONS:
+            path = os.path.join(IMAGES_DIR, f"{safe_id}{ext}")
+            if os.path.exists(path):
+                return path
+        return None
+
+    def wrap_text(text, max_chars):
+        if not text:
+            return []
+        words = text.split()
+        lines, cur = [], ""
+        for w in words:
+            if len(cur) + len(w) + 1 <= max_chars:
+                cur = (cur + " " + w).strip()
+            else:
+                if cur:
+                    lines.append(cur)
+                cur = w
+        if cur:
+            lines.append(cur)
+        return lines
+
+    def build_rows(panels):
+        rows, i = [], 0
+        while i < len(panels):
+            p = panels[i]
+            if p.get("layout") == "wide":
+                rows.append([p]); i += 1
+            else:
+                row = [p]; i += 1
+                if i < len(panels) and panels[i].get("layout") != "wide":
+                    row.append(panels[i]); i += 1
+                rows.append(row)
+        return rows
+
+    def draw_panel(canvas, x, y, w, h, panel):
+        caption = panel.get("caption", "")
+        dialogue = panel.get("dialogue", [])
+        sfx = panel.get("sfx", "")
+        desc = panel.get("description", "")
+
+        # Outer black border
+        canvas.setFillColor(BLACK)
+        canvas.rect(x, y, w, h, fill=1, stroke=0)
+
+        ix, iy, iw, ih = x + PANEL_BORDER, y + PANEL_BORDER, w - 2*PANEL_BORDER, h - 2*PANEL_BORDER
+
+        img_path = get_panel_image(panel.get("id", ""))
+        if img_path:
+            try:
+                canvas.drawImage(ImageReader(img_path), ix, iy, iw, ih,
+                                 preserveAspectRatio=False, mask='auto')
+            except Exception:
+                canvas.setFillColor(DARK); canvas.rect(ix, iy, iw, ih, fill=1, stroke=0)
+        else:
+            canvas.setFillColor(DARK); canvas.rect(ix, iy, iw, ih, fill=1, stroke=0)
+            if desc:
+                canvas.setFillColor(GRAY)
+                fs = max(5, min(8, int(iw / 25)))
+                canvas.setFont("Helvetica", fs)
+                max_c = max(10, int(iw / (fs * 0.58)))
+                lines = wrap_text(desc, max_c)[:5]
+                ty = iy + ih/2 + len(lines) * (fs + 2) / 2
+                for line in lines:
+                    canvas.drawCentredString(ix + iw/2, ty, line); ty -= fs + 2
+
+        # Caption bar at top
+        if caption:
+            cfs = max(5.5, min(7, int(iw / 30)))
+            cap_lines = wrap_text(caption, max(10, int(iw / (cfs * 0.58))))[:2]
+            cap_h = len(cap_lines) * (cfs + 2) + 6
+            cap_y = iy + ih - cap_h
+            canvas.setFillColor(CAP_BG); canvas.setStrokeColor(BLACK); canvas.setLineWidth(0.5)
+            canvas.rect(ix + 2, cap_y, iw - 4, cap_h, fill=1, stroke=1)
+            canvas.setFillColor(CAP_FG); canvas.setFont("Helvetica", cfs)
+            ly = cap_y + cap_h - cfs - 3
+            for line in cap_lines:
+                canvas.drawCentredString(ix + iw/2, ly, line); ly -= cfs + 2
+
+        # Dialogue bubbles at bottom
+        by = iy + 4
+        for d in dialogue[:2]:
+            char = d.get("character", ""); text = d.get("text", "")
+            if not text: continue
+            bfs = max(5, min(7, int(iw / 30)))
+            full = f"{char}: {text}" if char else text
+            bub_lines = wrap_text(full, max(8, int((iw - 16) / (bfs * 0.58))))[:3]
+            bh = len(bub_lines) * (bfs + 2) + 6
+            bw = min(iw - 8, iw * 0.88)
+            if by + bh > iy + ih - 20: break
+            canvas.setFillColor(WHITE); canvas.setStrokeColor(BLACK); canvas.setLineWidth(0.5)
+            canvas.roundRect(ix + 4, by, bw, bh, 3, fill=1, stroke=1)
+            canvas.setFillColor(CAP_FG); canvas.setFont("Helvetica", bfs)
+            ly2 = by + bh - bfs - 2.5
+            for line in bub_lines:
+                canvas.drawString(ix + 8, ly2, line); ly2 -= bfs + 2
+            by += bh + 3
+
+        # SFX
+        if sfx:
+            sfs = max(10, min(22, int(min(iw, ih) / 5)))
+            canvas.setFillColor(YELLOW); canvas.setFont("Helvetica-Bold", sfs)
+            canvas.drawString(ix + 6, iy + ih/2 - sfs/2, sfx[:12])
+
+    # ── Cover page ────────────────────────────────────────────────────────
+    c.setFillColor(BLACK); c.rect(0, 0, PW, PH, fill=1, stroke=0)
+
+    title_upper = title.upper()
+    ts = max(18, min(54, int(480 / max(len(title_upper), 1))))
+    c.setFillColor(YELLOW); c.setFont("Helvetica-Bold", ts)
+    c.drawCentredString(PW/2, PH * 0.58, title_upper)
+
+    c.setStrokeColor(YELLOW); c.setLineWidth(1.5)
+    c.line(PW * 0.2, PH * 0.53, PW * 0.8, PH * 0.53)
+
+    if tagline:
+        c.setFillColor(WHITE); c.setFont("Helvetica", 12)
+        c.drawCentredString(PW/2, PH * 0.48, tagline)
+
+    if cast_chars:
+        c.setFillColor(colors.HexColor("#888888")); c.setFont("Helvetica", 8)
+        c.drawCentredString(PW/2, PH * 0.42,
+                            "  ·  ".join(m.get("heroName", "") for m in cast_chars[:6]))
+
+    c.setFillColor(colors.HexColor("#444444")); c.setFont("Helvetica", 7)
+    c.drawString(MARGIN, PH - MARGIN + 8, "NOCTURNAL INNOVATIONS'S SUPERHERO FORGE")
+    c.drawRightString(PW - MARGIN, PH - MARGIN + 8, tone.upper())
+
+    c.setFillColor(colors.HexColor("#282828")); c.rect(0, 0, PW, 18, fill=1, stroke=0)
+    c.setFillColor(colors.HexColor("#666666")); c.setFont("Helvetica", 6.5)
+    c.drawCentredString(PW/2, 5, "NOCTURNAL INNOVATIONS'S SUPERHERO FORGE")
+    c.showPage()
+
+    # ── Comic pages ───────────────────────────────────────────────────────
+    inner_w = PW - 2 * MARGIN
+    inner_h = PH - 2 * MARGIN
+
+    for pg_data in pages_data:
+        panels = pg_data.get("panels", [])
+        if not panels: continue
+        page_num = pg_data.get("pageNum", "?")
+
+        c.setFillColor(WHITE); c.rect(0, 0, PW, PH, fill=1, stroke=0)
+
+        rows = build_rows(panels)
+        n_rows = len(rows)
+        row_h = (inner_h - PANEL_GAP * (n_rows - 1)) / n_rows if n_rows else inner_h
+
+        for ri, row_panels in enumerate(rows):
+            y_off = MARGIN + inner_h - (ri + 1) * row_h - ri * PANEL_GAP
+            n_cols = len(row_panels)
+            col_w = (inner_w - PANEL_GAP * (n_cols - 1)) / n_cols if n_cols else inner_w
+            for ci, panel in enumerate(row_panels):
+                draw_panel(c, MARGIN + ci * (col_w + PANEL_GAP), y_off, col_w, row_h, panel)
+
+        c.setFillColor(GRAY); c.setFont("Helvetica", 7)
+        c.drawCentredString(PW/2, MARGIN/2, str(page_num))
+        c.showPage()
+
+    c.save()
+    buf.seek(0)
+    safe = "".join(ch for ch in title if ch.isalnum() or ch in " -_")[:40].strip().replace(" ", "_")
+    return send_file(buf, mimetype="application/pdf",
+                     as_attachment=True, download_name=f"{safe or 'comic'}.pdf")
+
+# ---------------------------------------------------------------------------
 # API: Restart
 # ---------------------------------------------------------------------------
 @app.route("/api/restart", methods=["POST"])

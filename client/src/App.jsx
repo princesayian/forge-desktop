@@ -73,6 +73,19 @@ function App(){
   const[arcTeams,setArcTeams]=useState([]);
   const[arcLoading,setArcLoading]=useState(false);
   const[arcResult,setArcResult]=useState(null);
+  // ── Comic Book ───────────────────────────────────────────────────────────
+  const[comicTitle,setComicTitle]=useState("");
+  const[comicCast,setComicCast]=useState([]);
+  const[comicVillain,setComicVillain]=useState("");
+  const[comicTone,setComicTone]=useState("action");
+  const[comicPageCount,setComicPageCount]=useState(6);
+  const[comicPanelsPerPage,setComicPanelsPerPage]=useState(4);
+  const[comicStyle,setComicStyle]=useState("comic");
+  const[comicLoading,setComicLoading]=useState(false);
+  const[comicResult,setComicResult]=useState(null);
+  const[comicPanelPrompts,setComicPanelPrompts]=useState({});
+  const[comicActivePanelPrompt,setComicActivePanelPrompt]=useState(null);
+  const[comicExporting,setComicExporting]=useState(false);
   const[tierOverrides,setTierOverrides]=useState(()=>{try{return JSON.parse(localStorage.getItem("forge-tiers")||"{}");}catch{return {};}});
   const[switchingMember,setSwitchingMember]=useState(null);
   const[sharingMember,setSharingMember]=useState(null);
@@ -1033,6 +1046,49 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     setArcLoading(false);
   };
 
+  // ── Comic Book ───────────────────────────────────────────────────────────
+  const generateComic=async()=>{
+    setComicLoading(true);setComicResult(null);setComicPanelPrompts({});setComicActivePanelPrompt(null);
+    try{
+      const castChars=[...allCharacters,...villainPool].filter(m=>comicCast.includes(m.id));
+      const castDesc=castChars.map(m=>`${m.heroName} (${m.role||"Hero"}${m.isVillain?" — villain":""})`).join(", ");
+      const villain=comicVillain||(villainPool[0]?.heroName)||"Unknown Threat";
+      const r=await callAI(`Create a ${comicPageCount}-page comic book script. JSON only.\n\nTitle: "${comicTitle||"Untitled"}"\nVillain: ${villain}\nCast: ${castDesc}\nTone: ${comicTone}\n${comicPanelsPerPage} panels per page\n\nRules: exactly ${comicPageCount} pages, exactly ${comicPanelsPerPage} panels per page, panel IDs formatted p1-pan1 through p${comicPageCount}-pan${comicPanelsPerPage}, layout is one of wide/tall/square (wide spans full page width), mix layouts, captions optional per panel, dialogue optional, sfx only when impactful.\n\n{"title":"string","tagline":"punchy cover one-liner","pages":[{"pageNum":1,"panels":[{"id":"p1-pan1","layout":"wide","description":"Cinematic visual scene description for the artist","caption":"Narrative text box (empty string if none)","dialogue":[{"character":"Hero Name","text":"Short punchy line"}],"sfx":"CRASH! or empty string"}]}]}`,t=>setAiStreamText(t));
+      setComicResult(r);
+    }catch(e){setComicResult({error:true,msg:e?.message||"Unknown error"});}
+    setComicLoading(false);
+  };
+
+  const generateComicPanelPrompt=(panel,pageNum)=>{
+    const styleText=ART_STYLES.find(a=>a.id===comicStyle)?.text||"comic book art style";
+    const castChars=[...allCharacters,...villainPool].filter(m=>comicCast.includes(m.id));
+    const mentioned=castChars.filter(m=>panel.description.toLowerCase().includes(m.heroName.toLowerCase()));
+    const charDesc=mentioned.length>0?". "+mentioned.map(m=>`${m.heroName} in ${hexToColorName(m.color)} ${m.costumeDesc||"suit"}`).join(", "):"";
+    const metaAI=`Comic book panel, page ${pageNum}. ${panel.description}${charDesc}. ${styleText}.`;
+    setComicPanelPrompts(p=>({...p,[panel.id]:{metaAI,platform:pPlatform}}));
+    setComicActivePanelPrompt(prev=>prev===panel.id?null:panel.id);
+  };
+
+  const exportComicPDF=async()=>{
+    setComicExporting(true);
+    try{
+      const castChars=[...allCharacters,...villainPool].filter(m=>comicCast.includes(m.id));
+      const panelImageIds=(comicResult.pages||[]).flatMap(pg=>(pg.panels||[]).map(pan=>pan.id)).filter(id=>images[id]);
+      const r=await fetch('/api/export-comic-pdf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+        comic:comicResult,tone:comicTone,style:comicStyle,
+        panelImageIds,
+        castChars:castChars.map(m=>({id:m.id,heroName:m.heroName,color:m.color||"#534AB7",isVillain:!!m.isVillain}))
+      })});
+      if(!r.ok)throw new Error(await r.text());
+      const blob=await r.blob();
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a');a.href=url;
+      a.download=`${(comicResult.title||'comic').replace(/[^a-zA-Z0-9]/g,'-')}.pdf`;
+      a.click();URL.revokeObjectURL(url);
+    }catch(e){console.error('Comic PDF export failed',e);}
+    setComicExporting(false);
+  };
+
   // ── PDF Export ────────────────────────────────────────────────────────────
   const exportPDF=async()=>{
     setPdfLoading(true);
@@ -1146,7 +1202,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
 
       {/* Nav tabs — centered */}
       <div className="ftabs" style={{display:"flex",justifyContent:"center",padding:"0 16px",overflowX:"auto",gap:2,width:"100%",boxSizing:"border-box"}}>
-        {[["teams","Teams"],["roster","Roster"],["team","Team"],["family","Family"],["prompts","Prompts"],["recruit","+ Recruit"],["villains","Villains"],["story","Story"],["battle","⚡ Battle"],["arc","Arc"],["tiers","Tiers"],["universe","Universe"],["codex","Codex"]].map(([id,label])=>{
+        {[["teams","Teams"],["roster","Roster"],["team","Team"],["family","Family"],["prompts","Prompts"],["recruit","+ Recruit"],["villains","Villains"],["story","Story"],["battle","⚡ Battle"],["arc","Arc"],["comic","📖 Comic"],["tiers","Tiers"],["universe","Universe"],["codex","Codex"]].map(([id,label])=>{
           const freeTab=id==="teams"||id==="codex";
           return(<button key={id} className="ftab" style={s.tab(tab===id)} onClick={()=>{if(!activeTeam&&!freeTab)return;setTab(id);}} disabled={!activeTeam&&!freeTab}>{label}</button>);
         })}
@@ -2263,6 +2319,169 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
           </div>
         </div>)}
         {arcResult?.error&&<div style={{marginTop:12,padding:"12px",background:"rgba(192,57,43,0.1)",border:"1px solid rgba(192,57,43,0.28)",borderRadius:8,fontSize:11,color:"#e74c3c"}}>Arc generation failed — check Ollama is running.</div>}
+      </>)}
+
+      {/* ── COMIC TAB ─────────────────────────────────────────────────── */}
+      {tab==="comic"&&(<>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:18,flexWrap:"wrap",gap:8}}>
+          <div>
+            <div style={{fontSize:9,letterSpacing:"0.2em",color:G+"99",textTransform:"uppercase",marginBottom:4}}>Comic Book</div>
+            <div style={{fontSize:12,color:"var(--text2)"}}>Generate a full script from your cast, then add art panel by panel.</div>
+          </div>
+          {comicResult&&!comicResult.error&&<button onClick={exportComicPDF} disabled={comicExporting} style={{...s.bigBtn(comicExporting),padding:"8px 18px",fontSize:10}}>{comicExporting?"Generating PDF...":"Export Comic PDF →"}</button>}
+        </div>
+
+        {/* ── Setup form ── */}
+        {!comicResult&&!comicLoading&&(<div style={s.card}>
+          <div style={{fontSize:13,fontWeight:"bold",color:"var(--text-primary)",marginBottom:14}}>Setup</div>
+
+          <span style={s.lbl}>Title</span>
+          <input type="text" placeholder='"The Night Fracture"' value={comicTitle} onChange={e=>setComicTitle(e.target.value)} style={{marginBottom:14}}/>
+
+          <span style={s.lbl}>Cast</span>
+          <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:14}}>
+            {[...allCharacters,...villainPool].map(m=>(
+              <button key={m.id} onClick={()=>setComicCast(p=>p.includes(m.id)?p.filter(x=>x!==m.id):[...p,m.id])} style={{display:"flex",alignItems:"center",gap:5,...s.chip(comicCast.includes(m.id),m.isVillain?"#8B1A1A":m.color),padding:"5px 10px"}}>
+                {images[m.id]&&<img src={images[m.id]} alt="" style={{width:14,height:14,borderRadius:"50%",objectFit:"cover",objectPosition:"top"}}/>}
+                {m.heroName}{m.isVillain?" ⚠":""}
+              </button>
+            ))}
+          </div>
+
+          <span style={s.lbl}>Main Villain</span>
+          <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:8}}>
+            {villainPool.map(v=><button key={v.id} onClick={()=>setComicVillain(comicVillain===v.heroName?"":v.heroName)} style={{...s.chip(comicVillain===v.heroName,"#8B1A1A"),padding:"5px 12px"}}>{v.heroName}</button>)}
+          </div>
+          <input type="text" value={comicVillain} onChange={e=>setComicVillain(e.target.value)} placeholder="Or type a villain name..." style={{marginBottom:14}}/>
+
+          <span style={s.lbl}>Tone</span>
+          <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:14}}>
+            {TONES.map(t=><button key={t.id} style={s.chip(comicTone===t.id)} onClick={()=>setComicTone(t.id)}>{t.label}</button>)}
+          </div>
+
+          <div style={{display:"flex",gap:16,marginBottom:14,flexWrap:"wrap"}}>
+            <div>
+              <span style={s.lbl}>Pages</span>
+              <div style={{display:"flex",gap:6,marginTop:6}}>
+                {[4,6,8,10].map(n=><button key={n} style={{...s.chip(comicPageCount===n),padding:"6px 14px"}} onClick={()=>setComicPageCount(n)}>{n}</button>)}
+              </div>
+            </div>
+            <div>
+              <span style={s.lbl}>Panels / Page</span>
+              <div style={{display:"flex",gap:6,marginTop:6}}>
+                {[3,4,5,6].map(n=><button key={n} style={{...s.chip(comicPanelsPerPage===n),padding:"6px 14px"}} onClick={()=>setComicPanelsPerPage(n)}>{n}</button>)}
+              </div>
+            </div>
+          </div>
+
+          <span style={s.lbl}>Art Style</span>
+          <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:18}}>
+            {ART_STYLES.map(a=><button key={a.id} style={s.chip(comicStyle===a.id)} onClick={()=>setComicStyle(a.id)}>{a.label}</button>)}
+          </div>
+
+          <button style={s.bigBtn(!ollamaOk||comicCast.length===0)} disabled={!ollamaOk||comicCast.length===0} onClick={generateComic}>
+            {!ollamaOk?"AI Offline":comicCast.length===0?"Select cast to continue":"Generate Comic Script →"}
+          </button>
+        </div>)}
+
+        {/* ── Loading ── */}
+        {comicLoading&&(<div style={s.card}>
+          <div style={{fontSize:12,fontWeight:"bold",color:"var(--text-primary)",marginBottom:10}}>Writing comic script…</div>
+          {aiStreamText&&<div style={{padding:"10px 12px",background:"var(--bg2)",border:`1px solid ${G}22`,borderRadius:8,fontFamily:"var(--font-mono)",fontSize:9,color:"var(--text3)",maxHeight:80,overflowY:"auto",whiteSpace:"pre-wrap",wordBreak:"break-all",lineHeight:1.5,marginBottom:10}}>{aiStreamText}</div>}
+          <button onClick={()=>genControllerRef.current?.abort()} style={{padding:"8px 14px",background:`${G}11`,border:`1px solid ${G}44`,borderRadius:8,cursor:"pointer",color:G,fontSize:9,fontFamily:"var(--font-mono)"}}>✕ Cancel</button>
+        </div>)}
+
+        {/* ── Result ── */}
+        {comicResult&&!comicResult.error&&(<>
+          {/* Header */}
+          <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:14,flexWrap:"wrap",gap:8}}>
+            <div>
+              <div style={{fontSize:20,fontWeight:"bold",color:G,marginBottom:2}}>{comicResult.title}</div>
+              {comicResult.tagline&&<div style={{fontSize:12,color:"var(--text2)",fontStyle:"italic"}}>{comicResult.tagline}</div>}
+            </div>
+            <div style={{display:"flex",gap:8,flexShrink:0}}>
+              <button onClick={()=>{setComicResult(null);setComicPanelPrompts({});setComicActivePanelPrompt(null);}} style={{padding:"8px 14px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:10,fontFamily:"var(--font-mono)"}}>← New</button>
+              <button onClick={exportComicPDF} disabled={comicExporting} style={{...s.bigBtn(comicExporting),padding:"8px 16px",fontSize:10}}>{comicExporting?"Exporting...":"Export PDF →"}</button>
+            </div>
+          </div>
+
+          {/* Style selector */}
+          <div style={{display:"flex",flexWrap:"wrap",gap:5,alignItems:"center",marginBottom:16}}>
+            <span style={{...s.lbl,marginRight:4}}>Art style:</span>
+            {ART_STYLES.map(a=><button key={a.id} style={s.chip(comicStyle===a.id)} onClick={()=>setComicStyle(a.id)}>{a.label}</button>)}
+          </div>
+
+          {/* Pages */}
+          {(comicResult.pages||[]).map(page=>(
+            <div key={page.pageNum} style={{marginBottom:28}}>
+              <div style={{fontSize:9,letterSpacing:"0.15em",color:G+"88",textTransform:"uppercase",marginBottom:8,borderBottom:`1px solid ${G}18`,paddingBottom:4}}>
+                Page {page.pageNum}
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4}}>
+                {(page.panels||[]).map(panel=>{
+                  const isWide=panel.layout==="wide";
+                  const hasImg=!!images[panel.id];
+                  const promptOpen=comicActivePanelPrompt===panel.id;
+                  return(
+                    <div key={panel.id} style={{gridColumn:isWide?"1 / -1":"auto",background:"#09090f",border:"2.5px solid #000",borderRadius:2,overflow:"hidden",display:"flex",flexDirection:"column"}}>
+                      {/* Panel visual area */}
+                      <div style={{position:"relative",aspectRatio:isWide?"21/7":"3/4",background:"#0d0d1a",overflow:"hidden",flexShrink:0}}>
+                        <input type="file" accept="image/*" style={{display:"none"}} ref={el=>fileRefs.current[panel.id]=el} onChange={e=>handleImg(panel.id,e.target.files[0])}/>
+                        {hasImg
+                          ?<img src={images[panel.id]} alt="" style={{width:"100%",height:"100%",objectFit:"cover",objectPosition:"top",display:"block"}}/>
+                          :<div style={{position:"absolute",inset:0,padding:"10px 12px",display:"flex",flexDirection:"column",gap:6,justifyContent:"space-between"}}>
+                            {panel.caption?<div style={{fontSize:8,fontFamily:"var(--font-mono)",color:"#111",background:"rgba(255,255,230,0.93)",padding:"3px 7px",borderRadius:3,lineHeight:1.4,alignSelf:"flex-start",maxWidth:"90%",boxShadow:"0 1px 3px rgba(0,0,0,0.4)"}}>{panel.caption}</div>:<div/>}
+                            <div style={{fontSize:10,color:"rgba(255,255,255,0.4)",lineHeight:1.5,textAlign:"center",flex:1,display:"flex",alignItems:"center",justifyContent:"center",padding:"4px 0"}}>{panel.description}</div>
+                            <div style={{display:"flex",flexDirection:"column",gap:3}}>
+                              {panel.sfx&&<div style={{fontSize:16,fontWeight:"bold",color:"#FFD700",fontStyle:"italic",textShadow:"1px 1px 0 #000",lineHeight:1}}>{panel.sfx}</div>}
+                              {(panel.dialogue||[]).slice(0,2).map((d,i)=>(
+                                <div key={i} style={{fontSize:8.5,color:"#fff",background:"rgba(255,255,255,0.13)",border:"1px solid rgba(255,255,255,0.22)",padding:"3px 8px",borderRadius:8,lineHeight:1.4,alignSelf:"flex-start",maxWidth:"90%"}}>
+                                  <span style={{color:G,fontWeight:"bold"}}>{d.character}: </span>{d.text}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        }
+                        {/* Image overlays when image present */}
+                        {hasImg&&panel.caption&&<div style={{position:"absolute",top:0,left:0,right:0,padding:"5px 8px 12px",background:"linear-gradient(rgba(0,0,0,0.75),transparent)",fontSize:8,fontFamily:"var(--font-mono)",color:"#fff",lineHeight:1.4}}>{panel.caption}</div>}
+                        {hasImg&&(panel.dialogue||[]).length>0&&<div style={{position:"absolute",bottom:0,left:0,right:0,padding:"12px 6px 5px",background:"linear-gradient(transparent,rgba(0,0,0,0.82))",display:"flex",flexDirection:"column",gap:3}}>
+                          {panel.dialogue.slice(0,2).map((d,i)=>(
+                            <div key={i} style={{fontSize:8,color:"#fff",background:"rgba(255,255,255,0.14)",border:"1px solid rgba(255,255,255,0.25)",padding:"2px 7px",borderRadius:8,lineHeight:1.4,alignSelf:"flex-start",maxWidth:"90%"}}>
+                              <span style={{color:G,fontWeight:"bold"}}>{d.character}: </span>{d.text}
+                            </div>
+                          ))}
+                        </div>}
+                        {hasImg&&panel.sfx&&<div style={{position:"absolute",top:"50%",left:8,transform:"translateY(-50%)",fontSize:20,fontWeight:"bold",color:"#FFD700",fontStyle:"italic",textShadow:"2px 2px 0 #000,0 0 14px rgba(255,215,0,0.5)",pointerEvents:"none"}}>{panel.sfx}</div>}
+                        {/* Controls */}
+                        <div style={{position:"absolute",top:4,right:4,display:"flex",gap:3}}>
+                          <button onClick={e=>{e.stopPropagation();fileRefs.current[panel.id]?.click();}} style={{fontSize:7.5,padding:"2px 7px",background:"rgba(0,0,0,0.7)",border:"1px solid rgba(255,255,255,0.2)",borderRadius:4,cursor:"pointer",color:"#fff",fontFamily:"var(--font-mono)",backdropFilter:"blur(4px)"}}>
+                            {hasImg?"↑ Change":"↑ Upload"}
+                          </button>
+                          <button onClick={()=>generateComicPanelPrompt(panel,page.pageNum)} style={{fontSize:7.5,padding:"2px 7px",background:promptOpen?"rgba(212,175,55,0.28)":"rgba(0,0,0,0.7)",border:`1px solid ${promptOpen?G+"88":"rgba(255,255,255,0.2)"}`,borderRadius:4,cursor:"pointer",color:promptOpen?G:"#fff",fontFamily:"var(--font-mono)",backdropFilter:"blur(4px)"}}>🎨</button>
+                        </div>
+                      </div>
+                      {/* Inline prompt */}
+                      {promptOpen&&comicPanelPrompts[panel.id]&&(
+                        <div style={{padding:"8px 10px",borderTop:`1px solid ${G}18`,background:`${G}04`}}>
+                          <div style={{position:"relative"}}>
+                            <textarea readOnly value={comicPanelPrompts[panel.id].metaAI} rows={2} style={{width:"100%",padding:"8px 44px 8px 10px",background:"var(--bg3)",border:`1px solid ${G}22`,borderRadius:6,color:"var(--text-primary)",fontSize:9,fontFamily:"var(--font-mono)",resize:"none",lineHeight:1.5,boxSizing:"border-box"}}/>
+                            <button onClick={()=>navigator.clipboard.writeText(comicPanelPrompts[panel.id].metaAI)} style={{position:"absolute",top:6,right:6,fontSize:7.5,padding:"2px 7px",background:`${G}18`,border:`1px solid ${G}44`,borderRadius:4,cursor:"pointer",color:G,fontFamily:"var(--font-mono)"}}>Copy</button>
+                          </div>
+                          {hasImg&&<div style={{marginTop:4,fontSize:8,color:`${G}66`}}>✓ Reference uploaded — include with prompt for consistency</div>}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </>)}
+
+        {comicResult?.error&&(<div style={{padding:"14px",background:"rgba(192,57,43,0.08)",border:"1px solid rgba(192,57,43,0.28)",borderRadius:10}}>
+          <div style={{fontSize:11,color:"#e74c3c",marginBottom:10}}>Comic generation failed — check Ollama is running and try again.</div>
+          <button onClick={()=>setComicResult(null)} style={{padding:"6px 14px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:6,cursor:"pointer",color:"var(--text2)",fontSize:10,fontFamily:"var(--font-mono)"}}>← Try Again</button>
+        </div>)}
       </>)}
 
       {/* ── TIERS TAB ─────────────────────────────────────────────────── */}
