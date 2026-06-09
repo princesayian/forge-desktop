@@ -806,78 +806,80 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     const castChars=[...allCharacters,...villainPool].filter(m=>sCast.includes(m.id));
     const scene=SCENARIOS.find(s=>s.id===sScenario);
     try{
-      const p=await callAI(`Direct visual image prompt for Meta AI Imagine. JSON only, key "prompt".\n\nCast: ${castChars.map(m=>{const s=ageStage(m.age);const cn=hexToColorName(m.color);return`${m.heroName}${m.isVillain?" (VILLAIN)":""}${s?" ["+s+"]":""} (${m.powerFX||cn+" energy"}, ${m.costumeDesc||"dramatic suit"}, accent color: ${cn})`;}).join("; ")}\nScenario: ${scene?.label} — ${scene?.desc}\nTone: ${sTone}\n\nAge stage is in brackets — physique, face, and proportions must visually match each character's life stage.\n\n{"prompt":"5-6 sentence direct visual prompt. NEVER use instruction verbs — do NOT start with Generate, Create, Draw, Show, or any command. NEVER use hex codes — describe all colors by name. Begin directly with the scene visuals. Sentence 1: Set the scene environment with specific nighttime urban details — exact location, lighting sources, atmosphere matching the tone. Sentence 2-4: Each character described visually — position in scene, exact costume with named colors, power FX actively firing (color names for glow, particles, energy). Sentence 5: Action/interaction between characters matching the scenario. Sentence 6 (style): photorealistic digital painting, cinematic wide shot, all characters fully visible, dramatic lighting, high detail, comic book illustration style."}`);
+      const castDesc=castChars.map(m=>{const cn=hexToColorName(m.color);return`${m.heroName}${m.isVillain?" (villain)":""} in a ${cn} ${m.costumeDesc||"suit"}${m.powerFX?", "+m.powerFX:""}`;}).join("; ");
+      const p=await callAI(`Write a short visual image prompt for Meta AI Imagine. 2-3 sentences describing what the scene looks like. JSON only, key "prompt".\n\nCharacters: ${castDesc}\nScene: ${scene?.label} — ${scene?.desc}\nTone: ${sTone}\n\n{"prompt":"2-3 sentences. Describe the scene visually — characters, environment, action. Keep it simple and direct."}`);
       setSResult(p.prompt||"Generation failed — try again.");
     }catch(e){setSResult("Generation failed: "+e.message);}
     setSLoading(false);
   };
 
   // ── Prompts ───────────────────────────────────────────────────────────────
-  const generateCharPrompt=async(member)=>{
+  const generateCharPrompt=(member)=>{
     setPSelected(member.id);setPLoading(true);setPResult(null);
-    const style=ART_STYLES.find(a=>a.id===pStyle)?.text||"";
+    const style=ART_STYLES.find(a=>a.id===pStyle)?.text||"comic book art style, vibrant colors";
     const hasRef=images[member.id];
-    const refNote=hasRef?"Start the metaAI prompt with: \"Maintaining exact character design from reference image — same face, same costume, same color scheme, same power effects. Do not redesign.\"":"";
-    try{
-      const mPronoun=pronounOf(member.gender||"");
-      const mAgeStage=ageStage(member.age);
-      const colorName=hexToColorName(member.color);
-      const fxDesc=member.powerFX||colorName+" energy";
-      const platInstr=pPlatform==="midjourney"
-        ?`metaAI = Midjourney /imagine prompt. Comma-separated visual descriptors ONLY — no sentences, no instruction verbs, no filler words.\nFORMAT: [hero name], [${member.gender||"hero"} warrior physique${mAgeStage?", "+mAgeStage+" body frame":""}, strong athletic build, confident heroic neutral stance, feet flat on ground], [form-fitting hero suit with subtle surface texture inspired by The Incredibles or Batman — no emblem no cape, dominant ${colorName} with named accent colors], [${member.powerType==="equipment"?fxDesc+" gear — described by material and color name":member.powerType==="skills"?"peak conditioning body language, martial discipline, no power effects":"faint "+colorName+" energy aura tracing suit edges — understated not explosive, all glow colors named"}], [plain clean background — neutral studio gradient complementing costume palette, no environment clutter], [cinematic dramatic lighting, strong front rim light tracing suit surface texture, deep realistic shadows], [full body head to toe, feet fully visible, wide shot generous space below feet, no cropping, ${style||"photorealistic digital painting, highly detailed, realistic style"}] --ar 2:3 --v 6.1 --style raw --q 2\nNEVER use hex codes — name all colors (e.g. "${colorName}"). Keep it punchy and visual.`
-        :pPlatform==="dalle"
-        ?`metaAI = DALL-E 3 prompt. 3-4 detailed prose sentences.\n- Start with: "A dramatic full-body portrait of ${member.heroName}..." — NEVER use verbs like "Generate", "Create", "Draw".\n- Sentence 1: Physical presence — ${member.gender||"hero"} warrior, strong athletic build${mAgeStage?", "+mAgeStage+" proportions":""}, confident heroic yet neutral stance, feet flat on the ground. Form-fitting hero suit with subtle surface texture — clean silhouette and design language inspired by The Incredibles or Batman, no emblem, no cape — dominant ${colorName} with named accent colors. Full body head to toe, feet fully visible, wide shot with generous space below feet, no cropping.\n- Sentence 2: ${member.powerType==="equipment"?`${fxDesc} — gear and equipment described by material and color name, integrated cleanly into the suit design.`:member.powerType==="skills"?"Body language radiates peak conditioning and martial discipline — intense focused expression, no supernatural effects.":"Subtle "+colorName+" power aura traces the suit edges — understated energy presence, every glow color named, not explosively active."}\n- Sentence 3: Plain neutral studio background — clean gradient backdrop that complements and contrasts the costume palette, no environment clutter, hero's full silhouette reads clearly at full scale with open space below feet.\n- Sentence 4: "${style||"photorealistic digital painting, cinematic dramatic lighting from high front angle, strong rim light tracing suit texture, deep realistic shadows, highly detailed, full body portrait orientation, realistic illustration style"}"`
-        :`metaAI = Direct visual image prompt for Meta AI Imagine. STRICT RULES:\n- NEVER use instruction verbs. Do NOT start with "Generate", "Create", "Draw", "Show", or any command. Begin directly with visual content.\n- NEVER use hex codes — name all colors by name.\n\nSentence 1: ${member.heroName} — ${member.gender||"hero"} warrior with a strong, athletic build${mAgeStage?", "+mAgeStage+" proportions":""}, standing in a confident heroic yet neutral stance, feet flat on the ground. Form-fitting hero suit with subtle surface texture — clean silhouette and design language inspired by The Incredibles or Batman, no emblem, no cape — dominant ${colorName} with named accent colors from costume design. Full body visible head to toe, feet fully visible, wide shot with generous open space below feet, absolutely no cropping.\nSentence 2: ${member.powerType==="equipment"?`Detailed view of ${member.heroName}'s gear — ${fxDesc}, described by material and color name, cleanly integrated into the suit.`:member.powerType==="skills"?"Body language and stance radiate peak conditioning and martial discipline — intense composed expression, no supernatural effects.":"A subtle "+colorName+" energy presence — faint power aura at the hands or tracing the suit's edges, understated rather than explosively active. Every glow color named."}\nSentence 3: Plain clean background — neutral studio-quality gradient backdrop that complements and contrasts the costume colors, no environmental clutter, hero's full silhouette reads clearly against the background.\nSentence 4: Cinematic dramatic lighting from a high front angle, strong rim light tracing the form-fitting suit's surface texture, deep realistic shadows, highly detailed, photorealistic digital painting, ${style||"realistic illustration style"}.`;
-      const p=await callAI(`JSON only. Reply with exactly this format, no other text:\n{"metaAI":"...","tripo3D":"..."}\n\n${refNote}Character: ${member.heroName} (${member.realName}), ${member.gender||"Unknown"} ${raceLabel(member.race)||member.species||"Human"}${member.age?", age "+member.age:""}${mAgeStage?" ("+mAgeStage+")":""}.\nTeam: ${activeTeam.name}. Style: ${style}.\nCostume: ${member.costumeDesc||"dramatic suit"}. Primary color: ${colorName}. Power FX: ${fxDesc}.\nDesign rules: ${member.consistencyNotes||"consistent accent color"}.\nPronouns: ${mPronoun}.${mAgeStage?"\nAge presentation: "+mAgeStage+" — physique, face, and body proportions must visually match this life stage.":""}\n\n${platInstr}\ntripo3D = 1 sentence FDM mesh prompt with separate color regions.\n\n{"metaAI":"...","tripo3D":"..."}`,null,500);
-      setPResult({member,...p,platform:pPlatform});
-    }catch(e){setPResult({error:true,msg:e.message});}
+    const colorName=hexToColorName(member.color);
+    const fxDesc=member.powerFX||(colorName+" energy");
+    const ageNote=ageStage(member.age);
+    const agePfx=ageNote?ageNote+" ":"";
+    const costume=member.costumeDesc||(colorName+" superhero suit");
+    const hasPower=member.powerType!=="skills";
+    let metaAI,tripo3D;
+    if(pPlatform==="midjourney"){
+      const power=hasPower?`, ${fxDesc} glow`:"";
+      const ref=hasRef?" --cref [upload reference image]":"";
+      metaAI=`${member.heroName}, ${agePfx}superhero, ${colorName} ${costume}${power}, full body, plain background, ${style} --ar 2:3 --v 6.1${ref}`;
+    } else if(pPlatform==="dalle"){
+      const ref=hasRef?"Based on the reference image, same face and costume. ":"";
+      const power=hasPower?` with ${fxDesc} at the hands`:"";
+      metaAI=`${ref}A full-body portrait of ${member.heroName}, a ${agePfx}superhero in a ${colorName} ${costume}${power}. Full body, plain neutral background. ${style}.`;
+    } else {
+      const ref=hasRef?"Based on reference image, same face and costume. ":"";
+      const power=hasPower?` ${fxDesc} glowing at the hands.`:"";
+      metaAI=`${ref}${member.heroName}, a ${agePfx}superhero in a ${colorName} ${costume}.${power} Full body, plain background. ${style}.`;
+    }
+    tripo3D=`Full-body 3D character model of ${member.heroName} in a ${colorName} superhero suit, neutral A-pose, separate color regions for FDM printing, watertight mesh.`;
+    setPResult({member,metaAI,tripo3D,platform:pPlatform});
     setPLoading(false);
   };
 
-  const generateVillainPrompt=async(villain)=>{
+  const generateVillainPrompt=(villain)=>{
     setPSelected(villain.id);setPLoading(true);setPResult(null);
-    const style=ART_STYLES.find(a=>a.id===pStyle)?.text||"";
+    const style=ART_STYLES.find(a=>a.id===pStyle)?.text||"comic book art style, dramatic lighting";
     const hasRef=images[villain.id];
-    const refNote=hasRef?"Start the metaAI prompt with: \"Maintaining exact character design from reference image — same face, same costume, same color scheme, same power effects. Do not redesign.\"":"";
-    try{
-      const vPronoun=pronounOf(villain.gender||"");
-      const vAgeStage=ageStage(villain.age);
-      const colorName=hexToColorName(villain.color||"#8B1A1A");
-      const fxDesc=villain.powerFX||colorName+" corruption energy";
-      const costumeDesc=villain.costumeDesc||"dark armored suit";
-      const powerNames=villain.powers?.map(pw=>pw.name).join(", ")||"unknown powers";
-      const platInstr=pPlatform==="midjourney"
-        ?`metaAI = Midjourney /imagine prompt. Comma-separated visual descriptors ONLY — no sentences, no instruction verbs.\nFORMAT: [villain name], [${villain.gender||"villain"} physique${vAgeStage?", "+vAgeStage+" frame":""}, powerful imposing build, dominant menacing stance, feet planted on ground], [form-fitting villain suit with subtle surface texture — ${costumeDesc}, dominant ${colorName} with deep shadow accents, dark armor design language], [${fxDesc} ACTIVELY radiating — name every color: corruption tendrils, malevolent aura, dark glow], [ominous environment: crumbling rooftop or storm-lit ruins, rising smoke and debris, blood-red tinged atmosphere], [harsh underlighting from below, blood-red rim light, deep upward shadows, stormy sky], [full body head to toe, feet fully visible, wide shot space below feet, no cropping, ${style||"photorealistic digital painting, dramatic villain portrait, cinematic dark lighting, comic book villain art style"}] --ar 2:3 --v 6.1 --style raw --q 2\nNEVER use hex codes — name all colors. Villain must look threatening, dominant, and dangerous.`
-        :pPlatform==="dalle"
-        ?`metaAI = DALL-E 3 prompt. 3-4 detailed prose sentences.\n- Start with: "A dramatic full-body villain portrait of ${villain.heroName}..." — NEVER use instruction verbs.\n- Sentence 1: ${villain.gender||"villain"} villain, powerful imposing build${vAgeStage?", "+vAgeStage+" proportions":""}, dominant menacing stance with feet planted firmly on the ground, looming threatening presence, full body visible head to toe. Form-fitting villain suit with subtle surface texture — ${costumeDesc}, dominant ${colorName} with deep shadow accents. Wide shot with space below feet, no cropping.\n- Sentence 2: ${fxDesc} ACTIVELY radiating — ${colorName} corruption aura, dark energy tendrils from hands and body. Name every color. No hex codes.\n- Sentence 3: Ominous environment — crumbling rooftop or storm-lit industrial ruins, rising smoke, harsh underlighting casting deep shadows upward, blood-red tinged stormy sky.\n- Sentence 4: "${style||"dramatic villain portrait, photorealistic digital painting, harsh underlighting, cinematic dark lighting, full body portrait orientation, high detail, comic book villain art style"}"`
-        :`metaAI = Direct visual image prompt for Meta AI Imagine. STRICT RULES:\n- NEVER use instruction verbs. Begin directly with visual content.\n- NEVER use hex codes — name all colors by name.\n\nSentence 1: ${villain.heroName} — ${villain.gender||"villain"} with a powerful, imposing build${vAgeStage?", "+vAgeStage+" physique":""}, standing in a dominant menacing stance with feet planted firmly on the ground, looming threatening presence radiating pure menace. Form-fitting villain suit with subtle surface texture — ${costumeDesc}, dominant ${colorName} with deep shadow accents. Full body visible head to toe, feet fully visible, wide shot with generous space below feet, no cropping.\nSentence 2: ${fxDesc} actively radiating — ${colorName} corruption aura, dark energy tendrils from hands and body. Every glow color named. Cold, contemptuous expression.\nSentence 3: Ominous environment — crumbling stone or dark industrial backdrop, rising smoke and debris, harsh underlighting casting deep shadows upward, blood-red tinged atmosphere.\nSentence 4: Dramatic villain portrait, harsh underlighting from below and strong blood-red rim light, cinematic dark lighting, deep realistic shadows, highly detailed, photorealistic digital painting, ${style||"comic book villain art style"}.`;
-      const p=await callAI(`JSON only. Reply with exactly this format, no other text:\n{"metaAI":"...","tripo3D":"..."}\n\n${refNote}Character: ${villain.heroName} (${villain.realName}), ${villain.gender||"Unknown"} VILLAIN${villain.age?", age "+villain.age:""}${vAgeStage?" ("+vAgeStage+")":""}.\nRole: ${villain.role||"Villain"}. Tagline: "${villain.tagline||""}"\nPowers: ${powerNames}.\nCostume: ${costumeDesc}. Primary color: ${colorName}. Power FX: ${fxDesc}.\nThis is a VILLAIN — all visual descriptors must emphasize menace, darkness, and malevolence. NOT heroic.\nPronouns: ${vPronoun}.${vAgeStage?"\nAge presentation: "+vAgeStage+" — physique, face, and body proportions must visually match this life stage.":""}\n\n${platInstr}\ntripo3D = 1 sentence FDM mesh prompt with separate color regions for this villain.\n\n{"metaAI":"...","tripo3D":"..."}`,null,500);
-      setPResult({member:villain,isVillain:true,...p,platform:pPlatform});
-    }catch(e){setPResult({error:true,msg:e.message});}
+    const colorName=hexToColorName(villain.color||"#8B1A1A");
+    const fxDesc=villain.powerFX||(colorName+" energy");
+    const costume=villain.costumeDesc||"dark armored suit";
+    const ageNote=ageStage(villain.age);
+    const agePfx=ageNote?ageNote+" ":"";
+    let metaAI,tripo3D;
+    if(pPlatform==="midjourney"){
+      const ref=hasRef?" --cref [upload reference image]":"";
+      metaAI=`${villain.heroName}, ${agePfx}villain, ${colorName} ${costume}, ${fxDesc} surrounding the figure, full body, dramatic background, ${style} --ar 2:3 --v 6.1${ref}`;
+    } else if(pPlatform==="dalle"){
+      const ref=hasRef?"Based on the reference image, same face and costume. ":"";
+      metaAI=`${ref}A full-body portrait of ${villain.heroName}, a ${agePfx}villain in a ${colorName} ${costume} with ${fxDesc} surrounding the figure. Full body, dramatic dark background. ${style}.`;
+    } else {
+      const ref=hasRef?"Based on reference image, same face and costume. ":"";
+      metaAI=`${ref}${villain.heroName}, a ${agePfx}villain in a ${colorName} ${costume}. ${fxDesc} surrounding the figure. Full body, dramatic background. ${style}.`;
+    }
+    tripo3D=`Full-body 3D character model of ${villain.heroName} in a ${colorName} villain suit, neutral A-pose, separate color regions for FDM printing, watertight mesh.`;
+    setPResult({member:villain,isVillain:true,metaAI,tripo3D,platform:pPlatform});
     setPLoading(false);
   };
 
   const generateGroupPrompt=()=>{
     setPSelected("group");setPLoading(true);setPResult(null);
-    const style=ART_STYLES.find(a=>a.id===pStyle)?.text||"";
-    const n=activeRoster.length;
-    const pos=n===2?["left","right"]:n===3?["left","center","right"]:["far left","center-left","center-right","far right"];
+    const style=ART_STYLES.find(a=>a.id===pStyle)?.text||"comic book art style, vibrant colors";
+    const hasRef=activeRoster.some(m=>images[m.id]);
+    const charList=activeRoster.map(m=>`${m.heroName} in ${hexToColorName(m.color)} ${m.costumeDesc||"superhero suit"}`).join(", ");
     let metaAI;
     if(pPlatform==="midjourney"){
-      const chars=activeRoster.map((m,i)=>{
-        const cn=hexToColorName(m.color);const gs=ageStage(m.age);
-        return `${m.heroName} [${pos[Math.min(i,pos.length-1)]}]${gs?" "+gs+" frame":""} in ${m.costumeDesc||"superhero suit"} dominant ${cn}, ${m.powerFX||cn+" energy"} actively glowing`;
-      }).join(", ");
-      metaAI=`${activeTeam.name} group shot, ${chars}, dynamic heroic poses, nighttime city skyline backdrop, rain-slicked rooftop, dramatic rim lighting from power glows, ${style||"photorealistic digital painting, cinematic lighting, comic book illustration style"}, all heroes fully visible --ar 16:9 --v 6.1 --style raw`;
+      const chars=activeRoster.map(m=>`${m.heroName} (${hexToColorName(m.color)} suit)`).join(", ");
+      metaAI=`${activeTeam.name} hero team: ${chars}, group shot, all heroes fully visible, dynamic poses, ${style} --ar 16:9 --v 6.1`;
     } else {
-      const charLines=activeRoster.map((m,i)=>{
-        const cn=hexToColorName(m.color);
-        const race=raceLabel(m.race)||m.species||"Human";
-        const notes=m.consistencyNotes?` ${m.consistencyNotes}`:"";
-        const gs=ageStage(m.age);
-        return `• ${m.heroName} [${pos[Math.min(i,pos.length-1)]}]: ${m.gender||"hero"}, ${race}${gs?", "+gs:""}. Costume: ${m.costumeDesc||"superhero suit"}. Accent color: ${cn}. Power FX: ${m.powerFX||cn+" energy"}.${notes}`;
-      }).join("\n");
-      metaAI=`Referencing the uploaded character sheet strictly — do not redesign any character. Every face, costume, and color must match the reference images exactly.\n\n${charLines}\n\nAll ${n} members of ${activeTeam.name} in a wide cinematic group shot — dynamic heroic poses, ${style?style+", ":""}photorealistic, dramatic cinematic lighting, nighttime city backdrop, full bodies visible.\n\nDO NOT alter any character's face, costume, colors, or power effects. Match the reference sheet exactly.`;
+      const ref=hasRef?"Based on uploaded character reference sheet, same faces and costumes. ":"";
+      metaAI=`${ref}${activeTeam.name} hero team: ${charList}. All ${activeRoster.length} heroes together in a group portrait, everyone fully visible. ${style}.`;
     }
     setPResult({group:true,teamName:activeTeam.name,metaAI,platform:pPlatform});
     setPLoading(false);
@@ -887,20 +889,14 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     const a=activeRoster.find(m=>m.id===duoA),b=activeRoster.find(m=>m.id===duoB);
     if(!a||!b)return;
     setPSelected("duo");setPLoading(true);setPResult(null);
-    const style=ART_STYLES.find(x=>x.id===pStyle)?.text||"";
+    const style=ART_STYLES.find(x=>x.id===pStyle)?.text||"comic book art style, vibrant colors";
+    const cnA=hexToColorName(a.color),cnB=hexToColorName(b.color);
     let metaAI;
     if(pPlatform==="midjourney"){
-      const descMJ=m=>{const cn=hexToColorName(m.color);const ds=ageStage(m.age);return `${m.heroName}${ds?" "+ds+" frame":""} in ${m.costumeDesc||"superhero suit"} dominant ${cn}, ${m.powerFX||cn+" energy"} actively glowing`;};
-      metaAI=`${a.heroName} and ${b.heroName} duo shot, [LEFT] ${descMJ(a)}, [RIGHT] ${descMJ(b)}, both facing slightly inward, dynamic duo heroic stance, nighttime city backdrop, dramatic rim lighting, ${style||"photorealistic digital painting, cinematic lighting, comic book illustration style"}, both fully visible --ar 2:3 --v 6.1 --style raw`;
+      metaAI=`${a.heroName} and ${b.heroName} duo shot, [LEFT] ${a.heroName} in ${cnA} ${a.costumeDesc||"superhero suit"}, [RIGHT] ${b.heroName} in ${cnB} ${b.costumeDesc||"superhero suit"}, both fully visible, ${style} --ar 2:3 --v 6.1`;
     } else {
-      const desc=m=>{
-        const cn=hexToColorName(m.color);
-        const race=raceLabel(m.race)||m.species||"Human";
-        const notes=m.consistencyNotes?` ${m.consistencyNotes}`:"";
-        const ds=ageStage(m.age);
-        return `${m.heroName}: ${m.gender||"hero"}, ${race}${ds?", "+ds:""}. Costume: ${m.costumeDesc||"superhero suit"}. Accent color: ${cn}. Power FX: ${m.powerFX||cn+" energy"}.${notes}`;
-      };
-      metaAI=`Referencing the uploaded character sheet strictly — do not redesign either character. Every face, costume, and color must match the reference images exactly.\n\n[LEFT] ${desc(a)}\n\n[RIGHT] ${desc(b)}\n\n${a.heroName} and ${b.heroName} from ${activeTeam.name} — dynamic duo pose, both heroes facing slightly inward, ${style?style+", ":""}photorealistic, dramatic cinematic lighting, nighttime city backdrop, both fully visible, portrait or square format.\n\nDO NOT alter either character's face, costume, colors, or power effects. Match the reference sheet exactly.`;
+      const ref=(images[a.id]||images[b.id])?"Based on uploaded reference images, same faces and costumes. ":"";
+      metaAI=`${ref}${a.heroName} in a ${cnA} ${a.costumeDesc||"superhero suit"} and ${b.heroName} in a ${cnB} ${b.costumeDesc||"superhero suit"}, side by side, both fully visible. ${style}.`;
     }
     setPResult({duo:true,heroA:a,heroB:b,metaAI,platform:pPlatform});
     setPLoading(false);
