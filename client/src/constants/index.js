@@ -156,7 +156,14 @@ export const HERO_ASSOC_TYPES=[
   {id:"mentor",    label:"Mentor of",         inverse:"Protégé of"},
   {id:"legacy",    label:"Legacy Ally of",    inverse:"Legacy Predecessor of"},
 ];
-export const ART_STYLES=[{id:"comic",label:"Comic Art",text:"cinematic comic book character art, flat color with sharp ink lines, Marvel/DC quality"},{id:"rendered",label:"3D Render",text:"hyper-realistic CGI character render, cinematic lighting"},{id:"anime",label:"Anime",text:"high-quality anime illustration, dynamic shading, Shonen Jump style"},{id:"statue",label:"Statue",text:"collectible resin statue render, museum-quality painted figurine"}];
+export const ART_STYLES=[{id:"comic",label:"Comic Art",text:"cinematic character concept art, flat color with sharp ink lines, bold graphic novel style"},{id:"rendered",label:"3D Render",text:"hyper-realistic CGI character design render, cinematic studio lighting, photorealistic detail"},{id:"anime",label:"Anime",text:"high-quality anime character illustration, dynamic cel shading, clean linework"},{id:"statue",label:"Statue",text:"collectible resin figurine render, museum-quality hand-painted detail, neutral display pose"}];
+export const POSE_OPTIONS=[
+  {id:"3/4",label:"3/4 Stance",hero:"confident heroic 3/4 stance, feet flat on the ground",villain:"confident commanding 3/4 stance, feet flat on the ground"},
+  {id:"action",label:"Action",hero:"dynamic action pose, body in motion, powerful forward momentum",villain:"aggressive forward stance, body lunging, dominant threatening energy"},
+  {id:"landing",label:"Landing",hero:"hero landing, crouched low with one fist planted on the ground",villain:"dramatic landing crouch, one hand on the ground, heavy impactful weight"},
+  {id:"power",label:"Power Stance",hero:"arms crossed over chest, standing tall, commanding heroic authority",villain:"arms crossed, standing tall, cold dominant authority"},
+  {id:"airborne",label:"Airborne",hero:"hovering just above the ground, arms slightly out, mid-flight posture",villain:"levitating above the ground, arms at sides, imperious floating pose"},
+];
 export const ACCENT_COLORS=[{id:"crimson",label:"Crimson",hex:"#A32D2D"},{id:"jade",label:"Jade",hex:"#1D9E75"},{id:"amber",label:"Amber",hex:"#BA7517"},{id:"silver",label:"Silver",hex:"#888780"},{id:"indigo",label:"Indigo",hex:"#4A3FA0"},{id:"copper",label:"Copper",hex:"#8B4513"},{id:"frost",label:"Frost",hex:"#378ADD"},{id:"violet",label:"Violet",hex:"#8B2FC9"}];
 export const TIER_DEFS=[{id:"S",label:"S",color:"#D4AF37"},{id:"A",label:"A",color:"#5DCAA5"},{id:"B",label:"B",color:"#5EB1FF"},{id:"C",label:"C",color:"#888780"}];
 

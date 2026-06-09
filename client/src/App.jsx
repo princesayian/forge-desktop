@@ -5,7 +5,7 @@ import {
   RACE_TREE, raceLabel, raceLore,
   RECRUIT_QUIZ, VILLAIN_QUIZ, SCENARIOS, TONES,
   TEAM_RANKS, FAMILY_RELATIONS, HERO_ASSOC_TYPES,
-  ART_STYLES, ACCENT_COLORS, TIER_DEFS,
+  ART_STYLES, POSE_OPTIONS, ACCENT_COLORS, TIER_DEFS,
   DEEP_LORE_PHASES, PERSONAL_PROFILE, DEEP_VILLAIN_PHASES, VILLAIN_PERSONAL_PROFILE,
   _rp, _NAMES, _TS, randTeamName, randHeroName,
 } from './constants/index.js';
@@ -181,7 +181,8 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
   const[vGender,setVGender]=useState("Male");
   const[vLoading,setVLoading]=useState(false);const[vResult,setVResult]=useState(null);
   const[editingVillainTarget,setEditingVillainTarget]=useState(null);
-  const[vtDraft,setVtDraft]=useState({teams:[],heroes:[]});
+  const[editingRogueTarget,setEditingRogueTarget]=useState(null);
+  const[vtDraft,setVtDraft]=useState({teams:[],heroes:[],realName:"",heroName:""});
   const[vDeepMode,setVDeepMode]=useState(false);
   const[vProfileMode,setVProfileMode]=useState(false);
   const[vDeepPhase,setVDeepPhase]=useState(0);
@@ -199,6 +200,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
   // ── Prompts ──────────────────────────────────────────────────────────────
   const[pStyle,setPStyle]=useState("comic");
   const[pPlatform,setPPlatform]=useState("meta-ai");
+  const[pPose,setPPose]=useState("3/4");
   const[pSelected,setPSelected]=useState(null);
   const[pLoading,setPLoading]=useState(false);const[pResult,setPResult]=useState(null);const[sheetLoading,setSheetLoading]=useState(false);
   const[duoA,setDuoA]=useState("");const[duoB,setDuoB]=useState("");
@@ -843,9 +845,20 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
   };
 
   const saveVillainTarget=useCallback((id)=>{
-    const updated=villainPool.map(v=>v.id===id?{...v,targetTeams:vtDraft.teams,targetHeroes:vtDraft.heroes}:v);
+    const rn=vtDraft.realName.trim()||undefined;
+    const hn=vtDraft.heroName.trim()||undefined;
+    const initials=rn?rn.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():undefined;
+    const updated=villainPool.map(v=>v.id===id?{...v,targetTeams:vtDraft.teams,targetHeroes:vtDraft.heroes,...(rn?{realName:rn}:{}),... (hn?{heroName:hn}:{}),... (initials?{initials}:{})}:v);
     setVillainPool(updated);persist("forge-villains",updated);setEditingVillainTarget(null);
   },[villainPool,vtDraft,persist]);
+
+  const saveRogueName=useCallback((heroId,rogueId,draft)=>{
+    const rn=draft.realName.trim()||undefined;
+    const hn=draft.heroName.trim()||undefined;
+    const initials=rn?rn.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():undefined;
+    const newRogues={...soloVillains,[heroId]:(soloVillains[heroId]||[]).map(v=>v.id===rogueId?{...v,...(rn?{realName:rn}:{}),... (hn?{heroName:hn}:{}),... (initials?{initials}:{})}:v)};
+    setSoloVillains(newRogues);persist("forge-solo-villains",newRogues);setEditingRogueTarget(null);
+  },[soloVillains,persist]);
 
   const generateVillainDeep=async()=>{
     setVLoading(true);setVResult(null);setAiStreamText("");
@@ -886,84 +899,95 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
   };
 
   // ── Prompts ───────────────────────────────────────────────────────────────
+  // Describe physique from gender/age — avoids explicit gender labels that trip filters
+  const physique=(gender,age)=>{
+    const s=ageStage(age);const pfx=s&&s!=="adult"?s+" ":"";
+    if(gender==="Female")return`${pfx}female with lean athletic build, adult female proportions`;
+    if(gender==="Non-binary"||gender==="Other")return`${pfx}person with lean athletic build, adult proportions`;
+    return`${pfx}male with tall powerful build, adult male proportions`;
+  };
+  // Build color palette description from character palette array
+  const palDesc=(c)=>{
+    const names=(c.colorPalette?.length?c.colorPalette:[c.color||"#888"]).map(hexToColorName).filter(Boolean);
+    if(!names.length)return"";
+    if(names.length===1)return`dominant ${names[0]}`;
+    if(names.length===2)return`dominant ${names[0]} with accent color of ${names[1]}`;
+    return`dominant ${names[0]} with accent colors of ${names[1]}${names[2]?" and "+names[2]:""}`;
+  };
+
   const generateCharPrompt=(member)=>{
     setPSelected(member.id);setPLoading(true);setPResult(null);
-    const style=ART_STYLES.find(a=>a.id===pStyle)?.text||"comic book art style, vibrant colors";
+    const style=ART_STYLES.find(a=>a.id===pStyle)?.text||"character concept art, vibrant colors";
     const hasRef=images[member.id];
-    const colorName=hexToColorName(member.color);
-    const fxDesc=member.powerFX||(colorName+" energy");
-    const ageNote=ageStage(member.age);
-    const agePfx=ageNote?ageNote+" ":"";
-    const costume=member.costumeDesc||(colorName+" superhero suit");
-    const hasPower=member.powerType!=="skills";
+    const refPfx=hasRef?"Based on reference image, same face and build. ":"";
+    const costume=member.costumeDesc||(hexToColorName(member.color)+" suit");
+    const fxNote=member.powerFX?`, subtle ${member.powerFX} accent`:"";
+    const ph=physique(member.gender,member.age);
+    const pal=palDesc(member);
+    const poseText=POSE_OPTIONS.find(p=>p.id===pPose)?.hero||POSE_OPTIONS[0].hero;
     let metaAI,tripo3D;
     if(pPlatform==="midjourney"){
-      const power=hasPower?`, ${fxDesc} glow`:"";
       const ref=hasRef?" --cref [upload reference image]":"";
-      metaAI=`${member.heroName}, ${agePfx}superhero, ${colorName} ${costume}${power}, full body, plain background, ${style} --ar 2:3 --v 6.1${ref}`;
+      metaAI=`${member.heroName}, ${ph}, ${poseText}. ${costume}${fxNote}, ${pal}, plain background, ${style} --ar 2:3 --v 6.1${ref}`;
     } else if(pPlatform==="dalle"){
-      const ref=hasRef?"Based on the reference image, same face and costume. ":"";
-      const power=hasPower?` with ${fxDesc} at the hands`:"";
-      metaAI=`${ref}A full-body portrait of ${member.heroName}, a ${agePfx}superhero in a ${colorName} ${costume}${power}. Full body, plain neutral background. ${style}.`;
+      metaAI=`${refPfx}${ph}, ${poseText}. ${costume}${fxNote}. ${pal}. Plain clean background. ${style}.`;
     } else {
-      const ref=hasRef?"Based on reference image, same face and costume. ":"";
-      const power=hasPower?` ${fxDesc} glowing at the hands.`:"";
-      metaAI=`${ref}${member.heroName}, a ${agePfx}superhero in a ${colorName} ${costume}.${power} Full body, plain background. ${style}.`;
+      metaAI=`${refPfx}${ph}, ${poseText}. ${costume} with clean silhouette and design language inspired by modern superheroes. ${pal}. Plain clean background.`;
     }
-    tripo3D=`Full-body 3D character model of ${member.heroName} in a ${colorName} superhero suit, neutral A-pose, separate color regions for FDM printing, watertight mesh.`;
+    tripo3D=`Full-body 3D character model of ${member.heroName}, ${ph}, ${costume}, neutral A-pose, ${pal}, separate color regions for FDM printing, watertight mesh.`;
     setPResult({member,metaAI,tripo3D,platform:pPlatform});
     setPLoading(false);
   };
 
   const generateVillainPrompt=(villain)=>{
     setPSelected(villain.id);setPLoading(true);setPResult(null);
-    const style=ART_STYLES.find(a=>a.id===pStyle)?.text||"comic book art style, dramatic lighting";
+    const style=ART_STYLES.find(a=>a.id===pStyle)?.text||"character concept art, dramatic lighting";
     const hasRef=images[villain.id];
-    const colorName=hexToColorName(villain.color||"#8B1A1A");
-    const fxDesc=villain.powerFX||(colorName+" energy");
-    const costume=villain.costumeDesc||"dark armored suit";
-    const ageNote=ageStage(villain.age);
-    const agePfx=ageNote?ageNote+" ":"";
+    const refPfx=hasRef?"Based on reference image, same face and build. ":"";
+    const costume=villain.costumeDesc||"dark tailored suit with imposing silhouette";
+    const fxNote=villain.powerFX?`, subtle ${villain.powerFX} effect`:"";
+    const ph=physique(villain.gender,villain.age);
+    const pal=palDesc(villain);
+    const poseText=POSE_OPTIONS.find(p=>p.id===pPose)?.villain||POSE_OPTIONS[0].villain;
     let metaAI,tripo3D;
     if(pPlatform==="midjourney"){
       const ref=hasRef?" --cref [upload reference image]":"";
-      metaAI=`${villain.heroName}, ${agePfx}villain, ${colorName} ${costume}, ${fxDesc} surrounding the figure, full body, dramatic background, ${style} --ar 2:3 --v 6.1${ref}`;
+      metaAI=`${villain.heroName}, ${ph}, ${poseText}. ${costume}${fxNote}, ${pal}, plain background, ${style} --ar 2:3 --v 6.1${ref}`;
     } else if(pPlatform==="dalle"){
-      const ref=hasRef?"Based on the reference image, same face and costume. ":"";
-      metaAI=`${ref}A full-body portrait of ${villain.heroName}, a ${agePfx}villain in a ${colorName} ${costume} with ${fxDesc} surrounding the figure. Full body, dramatic dark background. ${style}.`;
+      metaAI=`${refPfx}${ph}, ${poseText}. ${costume}${fxNote}. ${pal}. Plain clean background. ${style}.`;
     } else {
-      const ref=hasRef?"Based on reference image, same face and costume. ":"";
-      metaAI=`${ref}${villain.heroName}, a ${agePfx}villain in a ${colorName} ${costume}. ${fxDesc} surrounding the figure. Full body, dramatic background. ${style}.`;
+      metaAI=`${refPfx}${ph}, ${poseText}. ${costume} with clean silhouette and design language inspired by modern supervillains. ${pal}. Plain clean background.`;
     }
-    tripo3D=`Full-body 3D character model of ${villain.heroName} in a ${colorName} villain suit, neutral A-pose, separate color regions for FDM printing, watertight mesh.`;
+    tripo3D=`Full-body 3D character model of ${villain.heroName}, ${ph}, ${costume}, neutral A-pose, ${pal}, separate color regions for FDM printing, watertight mesh.`;
     setPResult({member:villain,isVillain:true,metaAI,tripo3D,platform:pPlatform});
     setPLoading(false);
   };
 
-  const generateVillainPromptInline=(villain,overridePlatform,overrideStyle)=>{
+  const generateVillainPromptInline=(villain,overridePlatform,overrideStyle,overridePose)=>{
     const plat=overridePlatform||pPlatform;
-    const styleText=ART_STYLES.find(a=>a.id===(overrideStyle||pStyle))?.text||"comic book art style, dramatic lighting";
+    const styleText=ART_STYLES.find(a=>a.id===(overrideStyle||pStyle))?.text||"character concept art, dramatic lighting";
+    const activePose=overridePose||pPose;
     if(overridePlatform){setPPlatform(overridePlatform);persist("forge-prompt-platform",overridePlatform);}
     if(overrideStyle){setPStyle(overrideStyle);persist("forge-prompt-style",overrideStyle);}
+    if(overridePose){setPPose(overridePose);}
     const hasRef=images[villain.id];
-    const colorName=hexToColorName(villain.color||"#8B1A1A");
-    const fxDesc=villain.powerFX||(colorName+" energy");
-    const costume=villain.costumeDesc||"dark armored suit";
-    const ageNote=ageStage(villain.age);
-    const agePfx=ageNote?ageNote+" ":"";
+    const refPfx=hasRef?"Based on reference image, same face and build. ":"";
+    const costume=villain.costumeDesc||"dark tailored suit with imposing silhouette";
+    const fxNote=villain.powerFX?`, subtle ${villain.powerFX} effect`:"";
+    const ph=physique(villain.gender,villain.age);
+    const pal=palDesc(villain);
+    const poseText=POSE_OPTIONS.find(p=>p.id===activePose)?.villain||POSE_OPTIONS[0].villain;
     let metaAI,tripo3D;
     if(plat==="midjourney"){
       const ref=hasRef?" --cref [upload reference image]":"";
-      metaAI=`${villain.heroName}, ${agePfx}villain, ${colorName} ${costume}, ${fxDesc} surrounding the figure, full body, dramatic background, ${styleText} --ar 2:3 --v 6.1${ref}`;
+      metaAI=`${villain.heroName}, ${ph}, ${poseText}. ${costume}${fxNote}, ${pal}, plain background, ${styleText} --ar 2:3 --v 6.1${ref}`;
     } else if(plat==="dalle"){
-      const ref=hasRef?"Based on the reference image, same face and costume. ":"";
-      metaAI=`${ref}A full-body portrait of ${villain.heroName}, a ${agePfx}villain in a ${colorName} ${costume} with ${fxDesc} surrounding the figure. Full body, dramatic dark background. ${styleText}.`;
+      metaAI=`${refPfx}${ph}, ${poseText}. ${costume}${fxNote}. ${pal}. Plain clean background. ${styleText}.`;
     } else {
-      const ref=hasRef?"Based on reference image, same face and costume. ":"";
-      metaAI=`${ref}${villain.heroName}, a ${agePfx}villain in a ${colorName} ${costume}. ${fxDesc} surrounding the figure. Full body, dramatic background. ${styleText}.`;
+      metaAI=`${refPfx}${ph}, ${poseText}. ${costume} with clean silhouette and design language inspired by modern supervillains. ${pal}. Plain clean background.`;
     }
-    tripo3D=`Full-body 3D character model of ${villain.heroName} in a ${colorName} villain suit, neutral A-pose, separate color regions for FDM printing, watertight mesh.`;
-    setVInlinePrompt({villainId:villain.id,metaAI,tripo3D,platform:plat,styleId:overrideStyle||pStyle});
+    tripo3D=`Full-body 3D character model of ${villain.heroName}, ${ph}, ${costume}, neutral A-pose, ${pal}, separate color regions for FDM printing, watertight mesh.`;
+    setVInlinePrompt({villainId:villain.id,metaAI,tripo3D,platform:plat,styleId:overrideStyle||pStyle,poseId:overridePose||pPose});
   };
 
   const generateGroupPrompt=()=>{
@@ -1635,9 +1659,13 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
           <div><div style={{fontSize:11,fontWeight:"bold",color:"#5EB1FF",marginBottom:2}}>Meta AI Account</div><div style={{fontSize:10,color:"var(--text2)"}}>Enable "Copy & Open" buttons that launch meta.ai with your prompt pre-copied</div></div>
           <button onClick={()=>{const v=!hasMetaAI;setHasMetaAI(v);persist("forge-meta-ai-pref",v);}} style={{padding:"6px 14px",background:hasMetaAI?"rgba(30,144,255,0.2)":"var(--bg3)",border:`1px solid ${hasMetaAI?"rgba(30,144,255,0.6)":"var(--text4)"}`,borderRadius:20,cursor:"pointer",color:hasMetaAI?"#5EB1FF":"var(--text2)",fontSize:10,fontFamily:"var(--font-mono)",flexShrink:0,marginLeft:12}}>{hasMetaAI?"ON":"OFF"}</button>
         </div>}
-        <div style={{...s.card,marginBottom:16}}>
+        <div style={{...s.card,marginBottom:14}}>
           <span style={s.lbl}>Art Style</span>
           <div style={{display:"flex",flexWrap:"wrap",gap:8}}>{ART_STYLES.map(a=><button key={a.id} style={s.chip(pStyle===a.id)} onClick={()=>setPStyle(a.id)}>{a.label}</button>)}</div>
+        </div>
+        <div style={{...s.card,marginBottom:16}}>
+          <span style={s.lbl}>Pose</span>
+          <div style={{display:"flex",flexWrap:"wrap",gap:8}}>{POSE_OPTIONS.map(p=><button key={p.id} style={s.chip(pPose===p.id)} onClick={()=>setPPose(p.id)}>{p.label}</button>)}</div>
         </div>
         {activeRoster.length===0&&<div style={{textAlign:"center",padding:"30px",color:"var(--text3)"}}>No members on {activeTeam.name} yet. Add some via Recruit first.</div>}
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(190px,1fr))",gap:10,marginBottom:14}}>
@@ -2148,7 +2176,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                     <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:8,gap:6}}>
                       <div><div style={{fontSize:13,fontWeight:"bold",color:"var(--text-primary)"}}>{v.heroName}</div><div style={{fontSize:10,color:"var(--text2)"}}>{v.realName} · {v.role}</div></div>
                       <div style={{display:"flex",gap:4,flexWrap:"wrap",justifyContent:"flex-end",flexShrink:0}}>
-                        <button onClick={()=>{if(editingVillainTarget===v.id){setEditingVillainTarget(null);}else{setVtDraft({teams:v.targetTeams||[],heroes:v.targetHeroes||[]});setEditingVillainTarget(v.id);setRedeemingVillain(null);setVInlinePrompt(null);}}} style={{fontSize:9,padding:"3px 9px",background:editingVillainTarget===v.id?"rgba(139,26,26,0.15)":"var(--bg3)",border:`1px solid ${editingVillainTarget===v.id?"rgba(139,26,26,0.5)":"var(--border)"}`,borderRadius:6,cursor:"pointer",color:editingVillainTarget===v.id?"#E07070":"var(--text3)",fontFamily:"var(--font-mono)"}}>Edit</button>
+                        <button onClick={()=>{if(editingVillainTarget===v.id){setEditingVillainTarget(null);}else{setVtDraft({teams:v.targetTeams||[],heroes:v.targetHeroes||[],realName:v.realName||"",heroName:v.heroName||""});setEditingVillainTarget(v.id);setRedeemingVillain(null);setVInlinePrompt(null);}}} style={{fontSize:9,padding:"3px 9px",background:editingVillainTarget===v.id?"rgba(139,26,26,0.15)":"var(--bg3)",border:`1px solid ${editingVillainTarget===v.id?"rgba(139,26,26,0.5)":"var(--border)"}`,borderRadius:6,cursor:"pointer",color:editingVillainTarget===v.id?"#E07070":"var(--text3)",fontFamily:"var(--font-mono)"}}>Edit</button>
                         <button onClick={()=>{setRedeemingVillain(redeemingVillain===v.id?null:v.id);setVInlinePrompt(null);}} style={{fontSize:9,padding:"3px 9px",background:redeemingVillain===v.id?"rgba(93,202,165,0.12)":"var(--bg3)",border:`1px solid ${redeemingVillain===v.id?"rgba(93,202,165,0.4)":"var(--border)"}`,borderRadius:6,cursor:"pointer",color:redeemingVillain===v.id?"#5DCAA5":"var(--text3)",fontFamily:"var(--font-mono)"}}>Recruit</button>
                         <button onClick={()=>{vInlinePrompt?.villainId===v.id?setVInlinePrompt(null):generateVillainPromptInline(v);setEditingVillainTarget(null);setRedeemingVillain(null);}} style={{fontSize:9,padding:"3px 9px",background:vInlinePrompt?.villainId===v.id?"rgba(139,26,26,0.2)":"var(--bg3)",border:`1px solid ${vInlinePrompt?.villainId===v.id?"rgba(224,112,112,0.5)":"var(--border)"}`,borderRadius:6,cursor:"pointer",color:vInlinePrompt?.villainId===v.id?"#E07070":"var(--text3)",fontFamily:"var(--font-mono)"}}>🎨 Prompt</button>
                         <button onClick={()=>startVillainReforge(v)} style={{fontSize:9,padding:"3px 9px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:6,cursor:"pointer",color:"var(--text3)",fontFamily:"var(--font-mono)"}}>Reforge</button>
@@ -2171,6 +2199,10 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                       </div>)}
                     </div>)}
                     {editingVillainTarget===v.id&&(<div style={{borderTop:"1px solid rgba(139,26,26,0.2)",paddingTop:10,marginTop:4}}>
+                      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
+                        <div><div style={{fontSize:9,letterSpacing:"0.12em",color:"rgba(139,26,26,0.6)",textTransform:"uppercase",marginBottom:5}}>Real Name</div><input type="text" value={vtDraft.realName} onChange={e=>setVtDraft(p=>({...p,realName:e.target.value}))} placeholder={v.realName||"Real name"} style={{width:"100%",padding:"6px 8px",background:"var(--bg2)",border:"1px solid rgba(139,26,26,0.3)",borderRadius:6,color:"var(--text-primary)",fontSize:10,fontFamily:"var(--font-mono)",boxSizing:"border-box"}}/></div>
+                        <div><div style={{fontSize:9,letterSpacing:"0.12em",color:"rgba(139,26,26,0.6)",textTransform:"uppercase",marginBottom:5}}>Villain Name</div><input type="text" value={vtDraft.heroName} onChange={e=>setVtDraft(p=>({...p,heroName:e.target.value}))} placeholder={v.heroName||"Villain name"} style={{width:"100%",padding:"6px 8px",background:"var(--bg2)",border:"1px solid rgba(139,26,26,0.3)",borderRadius:6,color:"var(--text-primary)",fontSize:10,fontFamily:"var(--font-mono)",boxSizing:"border-box"}}/></div>
+                      </div>
                       <div style={{fontSize:9,letterSpacing:"0.12em",color:"rgba(139,26,26,0.6)",textTransform:"uppercase",marginBottom:8}}>Target Teams</div>
                       <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:12}}>
                         {teams.map(t=><button key={t.id} onClick={()=>setVtDraft(p=>({...p,teams:p.teams.includes(t.id)?p.teams.filter(x=>x!==t.id):[...p.teams,t.id]}))} style={{fontSize:9,padding:"3px 10px",background:vtDraft.teams.includes(t.id)?`${t.color}22`:"var(--bg3)",border:`1px solid ${vtDraft.teams.includes(t.id)?t.color:"var(--border)"}`,borderRadius:20,cursor:"pointer",color:vtDraft.teams.includes(t.id)?t.color:"var(--text3)",fontFamily:"var(--font-mono)"}}>{t.name}</button>)}
@@ -2199,9 +2231,14 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                       <button key={id} onClick={()=>generateVillainPromptInline(v,id,undefined)} style={{fontSize:9,padding:"3px 10px",background:(vInlinePrompt.platform||pPlatform)===id?"rgba(139,26,26,0.15)":"var(--bg3)",border:`1px solid ${(vInlinePrompt.platform||pPlatform)===id?"rgba(224,112,112,0.5)":"var(--border)"}`,borderRadius:20,cursor:"pointer",color:(vInlinePrompt.platform||pPlatform)===id?"#E07070":"var(--text3)",fontFamily:"var(--font-mono)"}}>{label}</button>
                     ))}
                   </div>
-                  <div style={{display:"flex",gap:5,marginBottom:10,flexWrap:"wrap"}}>
+                  <div style={{display:"flex",gap:5,marginBottom:8,flexWrap:"wrap"}}>
                     {ART_STYLES.map(a=>(
-                      <button key={a.id} onClick={()=>generateVillainPromptInline(v,undefined,a.id)} style={{fontSize:9,padding:"3px 10px",background:(vInlinePrompt.styleId||pStyle)===a.id?"rgba(139,26,26,0.1)":"var(--bg3)",border:`1px solid ${(vInlinePrompt.styleId||pStyle)===a.id?"rgba(224,112,112,0.4)":"var(--border)"}`,borderRadius:20,cursor:"pointer",color:(vInlinePrompt.styleId||pStyle)===a.id?"#E07070":"var(--text3)",fontFamily:"var(--font-mono)"}}>{a.label}</button>
+                      <button key={a.id} onClick={()=>generateVillainPromptInline(v,undefined,a.id)} style={{fontSize:9,padding:"3px 10px",background:(vInlinePrompt.styleId||pStyle)===a.id?"rgba(139,26,26,0.1)":"var(--bg3)",border:`1px solid ${(vInlinePrompt.styleId||pStyle)===a.id?"rgba(224,112,120,0.4)":"var(--border)"}`,borderRadius:20,cursor:"pointer",color:(vInlinePrompt.styleId||pStyle)===a.id?"#E07070":"var(--text3)",fontFamily:"var(--font-mono)"}}>{a.label}</button>
+                    ))}
+                  </div>
+                  <div style={{display:"flex",gap:5,marginBottom:10,flexWrap:"wrap"}}>
+                    {POSE_OPTIONS.map(p=>(
+                      <button key={p.id} onClick={()=>generateVillainPromptInline(v,undefined,undefined,p.id)} style={{fontSize:9,padding:"3px 10px",background:(vInlinePrompt.poseId||pPose)===p.id?"rgba(139,26,26,0.1)":"var(--bg3)",border:`1px solid ${(vInlinePrompt.poseId||pPose)===p.id?"rgba(224,112,112,0.4)":"var(--border)"}`,borderRadius:20,cursor:"pointer",color:(vInlinePrompt.poseId||pPose)===p.id?"#E07070":"var(--text3)",fontFamily:"var(--font-mono)"}}>{p.label}</button>
                     ))}
                   </div>
                   <div style={{position:"relative",marginBottom:10}}>
@@ -3532,10 +3569,21 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                           <div style={{width:36,height:36,borderRadius:"50%",background:"rgba(139,26,26,0.18)",border:"1px solid rgba(139,26,26,0.38)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:"bold",color:"#E07070",flexShrink:0}}>{v.initials}</div>
                           <div><div style={{fontSize:13,fontWeight:"bold",color:"var(--text-primary)"}}>{v.heroName}</div><div style={{fontSize:10,color:"var(--text3)"}}>{v.realName} · {v.role}</div></div>
                         </div>
+                        <button onClick={()=>{if(editingRogueTarget===v.id){setEditingRogueTarget(null);}else{setVtDraft({teams:[],heroes:[],realName:v.realName||"",heroName:v.heroName||""});setEditingRogueTarget(v.id);}}} style={{fontSize:9,padding:"3px 9px",background:editingRogueTarget===v.id?"rgba(139,26,26,0.15)":"rgba(139,26,26,0.08)",border:`1px solid ${editingRogueTarget===v.id?"rgba(139,26,26,0.5)":"rgba(139,26,26,0.25)"}`,borderRadius:6,cursor:"pointer",color:"#E07070",fontFamily:"var(--font-mono)"}}>Edit</button>
                         <button onClick={()=>startVillainReforge(v,activeSoloId)} style={{fontSize:9,padding:"3px 9px",background:"rgba(139,26,26,0.08)",border:"1px solid rgba(139,26,26,0.25)",borderRadius:6,cursor:"pointer",color:"#E07070",fontFamily:"var(--font-mono)"}}>Reforge</button>
                         <button onClick={()=>removeSoloRogueFn(activeSoloId,v.id)} style={{fontSize:9,padding:"3px 9px",background:"rgba(163,45,45,0.08)",border:"1px solid rgba(163,45,45,0.25)",borderRadius:6,cursor:"pointer",color:"#e74c3c",fontFamily:"var(--font-mono)"}}>Remove</button>
                       </div>
                       <div style={{fontSize:11,color:"var(--text3)",fontStyle:"italic",lineHeight:1.5}}>{v.tagline}</div>
+                      {editingRogueTarget===v.id&&(<div style={{borderTop:"1px solid rgba(139,26,26,0.2)",paddingTop:10,marginTop:8}}>
+                        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
+                          <div><div style={{fontSize:9,letterSpacing:"0.12em",color:"rgba(139,26,26,0.6)",textTransform:"uppercase",marginBottom:5}}>Real Name</div><input type="text" value={vtDraft.realName} onChange={e=>setVtDraft(p=>({...p,realName:e.target.value}))} placeholder={v.realName||"Real name"} style={{width:"100%",padding:"6px 8px",background:"var(--bg2)",border:"1px solid rgba(139,26,26,0.3)",borderRadius:6,color:"var(--text-primary)",fontSize:10,fontFamily:"var(--font-mono)",boxSizing:"border-box"}}/></div>
+                          <div><div style={{fontSize:9,letterSpacing:"0.12em",color:"rgba(139,26,26,0.6)",textTransform:"uppercase",marginBottom:5}}>Villain Name</div><input type="text" value={vtDraft.heroName} onChange={e=>setVtDraft(p=>({...p,heroName:e.target.value}))} placeholder={v.heroName||"Villain name"} style={{width:"100%",padding:"6px 8px",background:"var(--bg2)",border:"1px solid rgba(139,26,26,0.3)",borderRadius:6,color:"var(--text-primary)",fontSize:10,fontFamily:"var(--font-mono)",boxSizing:"border-box"}}/></div>
+                        </div>
+                        <div style={{display:"flex",gap:8}}>
+                          <button onClick={()=>setEditingRogueTarget(null)} style={{flex:1,fontSize:9,padding:"6px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:6,cursor:"pointer",color:"var(--text3)",fontFamily:"var(--font-mono)"}}>Cancel</button>
+                          <button onClick={()=>saveRogueName(activeSoloId,v.id,vtDraft)} style={{flex:2,fontSize:9,padding:"6px",background:"rgba(139,26,26,0.15)",border:"1px solid rgba(139,26,26,0.4)",borderRadius:6,cursor:"pointer",color:"#E07070",fontFamily:"var(--font-mono)"}}>Save Names</button>
+                        </div>
+                      </div>)}
                     </div>
                   ))}
                 </div>
