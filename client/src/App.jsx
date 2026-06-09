@@ -1063,33 +1063,14 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
   return(<div style={{background:"var(--bg-base)",color:"var(--text-primary)",minHeight:"100vh",paddingBottom:60}}>
 
     {/* ── Header ─────────────────────────────────────────────────────────── */}
-    <div className="fhdr" style={{borderBottom:"1px solid rgba(212,175,55,0.14)",padding:"0 22px",height:56,display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8,background:"var(--header-bg)",backdropFilter:"blur(12px)",position:"sticky",top:0,zIndex:50}}>
-      <div style={{display:"flex",alignItems:"center",gap:14}}>
+    <div className="fhdr" style={{borderBottom:"1px solid rgba(212,175,55,0.14)",padding:"12px 16px 0",display:"flex",flexDirection:"column",alignItems:"center",background:"var(--header-bg)",backdropFilter:"blur(12px)",position:"sticky",top:0,zIndex:50}}>
 
-        <div style={{display:"flex",alignItems:"center",gap:10}}>
-          <div style={{width:34,height:34,borderRadius:9,background:`linear-gradient(135deg,${G}22,${G}0A)`,border:`1px solid ${G}33`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0,boxShadow:`0 0 18px ${G}1A`}}>⚒</div>
-          <div>
-            <div style={{fontSize:8.5,letterSpacing:"0.3em",color:`${G}70`,textTransform:"uppercase",fontFamily:"var(--font-mono)",marginBottom:1}}>Nocturnal Innovations's Superhero Forge</div>
-            <div style={{display:"flex",alignItems:"baseline",gap:7}}>
-              <div style={{fontSize:17,fontWeight:"800",letterSpacing:"0.04em",color:"var(--text-primary)",fontFamily:"var(--font-mono)",lineHeight:1}}>SUPERHERO FORGE</div>
-              {forgeVersion&&<div style={{fontSize:8,color:"var(--text4)",letterSpacing:"0.12em",fontFamily:"var(--font-mono)"}}>{`v${forgeVersion}`}</div>}
-            </div>
-          </div>
-        </div>
-
-        <div style={{width:1,height:30,background:"var(--border)",flexShrink:0}}/>
-
-        {/* Active team indicator */}
-        {activeTeam&&<div onClick={()=>setTab("teams")} style={{display:"flex",alignItems:"center",gap:7,padding:"5px 12px",background:`${activeTeam.color}10`,border:`1px solid ${activeTeam.color}33`,borderRadius:20,cursor:"pointer"}}>
-          <div style={{width:8,height:8,borderRadius:2,background:activeTeam.color,flexShrink:0,boxShadow:`0 0 6px ${activeTeam.color}88`}}/>
-          <span style={{fontSize:10,color:activeTeam.color,fontFamily:"var(--font-mono)",letterSpacing:"0.07em",fontWeight:"600"}}>{activeTeam.abbr} · {activeTeam.name}</span>
-        </div>}
-      </div>
-      <div className="fhdr-right" style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-        {saved&&<div style={{fontSize:9,color:"#5DCAA5",padding:"3px 10px",background:"rgba(15,110,86,0.12)",border:"1px solid rgba(15,110,86,0.3)",borderRadius:20}}>✓ Saved</div>}
-        {updateInfo?.has_update&&<div style={{display:"flex",alignItems:"center",gap:6,padding:"4px 11px",background:"rgba(212,175,55,0.12)",border:"1px solid rgba(212,175,55,0.4)",borderRadius:20,cursor:"pointer"}} onClick={async()=>{if(updatePulling)return;setUpdatePulling(true);const r=await fetch("/api/update/pull",{method:"POST"});const d=await r.json();setUpdatePulling(false);if(d.ok){setUpdateInfo(null);setAppAlert({type:"restart",msg:"Update applied — restart to load the new version."});}else{setAppAlert({type:"error",msg:"Update failed: "+(d.output||"Unknown error")});}}}>
-          <div style={{width:6,height:6,borderRadius:"50%",background:G}}/>
-          <span style={{fontSize:9,color:G,fontFamily:"var(--font-mono)"}}>{updatePulling?"Updating...":"Update available — click to pull"}</span>
+      {/* Utility controls — top right */}
+      <div style={{position:"absolute",top:8,right:12,display:"flex",alignItems:"center",gap:5,flexWrap:"nowrap"}}>
+        {saved&&<div style={{fontSize:9,color:"#5DCAA5",padding:"3px 8px",background:"rgba(15,110,86,0.12)",border:"1px solid rgba(15,110,86,0.3)",borderRadius:20}}>✓ Saved</div>}
+        {updateInfo?.has_update&&<div style={{display:"flex",alignItems:"center",gap:5,padding:"3px 9px",background:"rgba(212,175,55,0.12)",border:"1px solid rgba(212,175,55,0.4)",borderRadius:20,cursor:"pointer"}} onClick={async()=>{if(updatePulling)return;setUpdatePulling(true);const r=await fetch("/api/update/pull",{method:"POST"});const d=await r.json();setUpdatePulling(false);if(d.ok){setUpdateInfo(null);setAppAlert({type:"restart",msg:"Update applied — restart to load the new version."});}else{setAppAlert({type:"error",msg:"Update failed: "+(d.output||"Unknown error")});}}}>
+          <div style={{width:5,height:5,borderRadius:"50%",background:G}}/>
+          <span style={{fontSize:8,color:G,fontFamily:"var(--font-mono)"}}>{updatePulling?"Updating...":"Update available"}</span>
         </div>}
         {remoteInfo&&(()=>{
           const live=remoteInfo.enabled&&remoteInfo.url;
@@ -1098,24 +1079,52 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
           const bg=live?"rgba(93,202,165,0.08)":partial?"rgba(212,175,55,0.08)":"rgba(136,135,128,0.05)";
           const bd=live?"rgba(93,202,165,0.3)":partial?"rgba(212,175,55,0.3)":"rgba(136,135,128,0.18)";
           return(
-            <div style={{display:"flex",alignItems:"center",gap:5,padding:"4px 11px",background:bg,border:`1px solid ${bd}`,borderRadius:20,cursor:"pointer"}}
+            <div style={{display:"flex",alignItems:"center",gap:4,padding:"3px 9px",background:bg,border:`1px solid ${bd}`,borderRadius:20,cursor:"pointer"}}
               onClick={()=>live?navigator.clipboard.writeText(remoteInfo.url):setShowRemotePanel(p=>!p)}>
-              <div style={{width:6,height:6,borderRadius:"50%",background:sc,boxShadow:live?`0 0 5px ${sc}`:undefined}}/>
-              <span style={{fontSize:9,color:sc,fontFamily:"var(--font-mono)",whiteSpace:"nowrap"}}>{live?"Remote: Live":partial?"Remote: Restart":"Remote: Off"}</span>
-              {live&&<span style={{fontSize:8,color:`${sc}99`,fontFamily:"var(--font-mono)",maxWidth:130,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>· {remoteInfo.url}</span>}
+              <div style={{width:5,height:5,borderRadius:"50%",background:sc,boxShadow:live?`0 0 4px ${sc}`:undefined}}/>
+              <span style={{fontSize:8,color:sc,fontFamily:"var(--font-mono)",whiteSpace:"nowrap"}}>{live?"Remote: Live":partial?"Remote: Restart":"Remote: Off"}</span>
             </div>
           );
         })()}
-        <button onClick={()=>setShowRemotePanel(p=>!p)} title="Remote Access & Settings" style={{padding:"5px 10px",background:showRemotePanel?"rgba(94,177,255,0.12)":"var(--bg3)",border:`1px solid ${showRemotePanel?"rgba(94,177,255,0.4)":"var(--border)"}`,borderRadius:7,cursor:"pointer",color:showRemotePanel?"#5EB1FF":"var(--text2)",fontSize:11}}>⚙</button>
-        <div style={{display:"flex",alignItems:"center",gap:6,padding:"5px 12px",background:"var(--bg3)",border:`1px solid ${groqOk?"rgba(94,177,255,0.3)":ollamaOk?"rgba(15,110,86,0.3)":ollamaOk===false?"rgba(139,26,26,0.4)":"var(--border)"}`,borderRadius:20}}>
-          <div style={{width:7,height:7,borderRadius:"50%",background:groqOk?"#5EB1FF":ollamaOk?"#5DCAA5":ollamaOk===false?"#E07070":"#888780"}}/>
-          <span style={{fontSize:9,color:"var(--text2)"}}>{ollamaOk===null?"Checking...":groqOk?"Groq · "+currentModel:ollamaOk?currentModel:"Offline"}</span>
+        <button onClick={()=>setShowRemotePanel(p=>!p)} title="Remote Access & Settings" style={{padding:"4px 8px",background:showRemotePanel?"rgba(94,177,255,0.12)":"var(--bg3)",border:`1px solid ${showRemotePanel?"rgba(94,177,255,0.4)":"var(--border)"}`,borderRadius:7,cursor:"pointer",color:showRemotePanel?"#5EB1FF":"var(--text2)",fontSize:10}}>⚙</button>
+        <div style={{display:"flex",alignItems:"center",gap:5,padding:"4px 10px",background:"var(--bg3)",border:`1px solid ${groqOk?"rgba(94,177,255,0.3)":ollamaOk?"rgba(15,110,86,0.3)":ollamaOk===false?"rgba(139,26,26,0.4)":"var(--border)"}`,borderRadius:20}}>
+          <div style={{width:6,height:6,borderRadius:"50%",background:groqOk?"#5EB1FF":ollamaOk?"#5DCAA5":ollamaOk===false?"#E07070":"#888780"}}/>
+          <span style={{fontSize:8,color:"var(--text2)"}}>{ollamaOk===null?"Checking...":groqOk?"Groq · "+currentModel:ollamaOk?currentModel:"Offline"}</span>
         </div>
-        {ollamaOk&&models.length>0&&<select className="fhdr-model" value={currentModel} onChange={e=>{setCurrentModel(e.target.value);fetch("/api/config",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:e.target.value})});}} style={{background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:7,padding:"5px 10px",color:"var(--text-primary)",fontSize:10,cursor:"pointer"}}>{models.map(m=><option key={m} value={m}>{m}</option>)}</select>}
-        <button className="fhdr-refresh" onClick={checkOllama} style={{padding:"5px 10px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:7,cursor:"pointer",color:"var(--text2)",fontSize:9,fontFamily:"var(--font-mono)"}}>↻</button>
-        <button className="fhdr-restart" onClick={()=>{fetch("/api/restart",{method:"POST"}).then(()=>{setTimeout(()=>window.location.reload(),1800);});}} title="Restart Forge" style={{padding:"5px 10px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:7,cursor:"pointer",color:"var(--text2)",fontSize:9,fontFamily:"var(--font-mono)"}}>⟳ Restart</button>
-        <button onClick={()=>setLightMode(p=>!p)} title={lightMode?"Switch to Dark Mode":"Switch to Light Mode"} style={{padding:"5px 11px",background:lightMode?"rgba(0,0,0,0.08)":"var(--bg2)",border:`1px solid ${lightMode?"rgba(0,0,0,0.15)":"var(--border)"}`,borderRadius:7,cursor:"pointer",fontSize:13,lineHeight:1,transition:"all 0.2s"}}>{lightMode?"🌙":"☀️"}</button>
+        {ollamaOk&&models.length>0&&<select className="fhdr-model" value={currentModel} onChange={e=>{setCurrentModel(e.target.value);fetch("/api/config",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:e.target.value})});}} style={{background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:7,padding:"4px 8px",color:"var(--text-primary)",fontSize:9,cursor:"pointer"}}>{models.map(m=><option key={m} value={m}>{m}</option>)}</select>}
+        <button className="fhdr-refresh" onClick={checkOllama} style={{padding:"4px 8px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:7,cursor:"pointer",color:"var(--text2)",fontSize:9,fontFamily:"var(--font-mono)"}}>↻</button>
+        <button className="fhdr-restart" onClick={()=>{fetch("/api/restart",{method:"POST"}).then(()=>{setTimeout(()=>window.location.reload(),1800);});}} title="Restart Forge" style={{padding:"4px 8px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:7,cursor:"pointer",color:"var(--text2)",fontSize:8,fontFamily:"var(--font-mono)"}}>⟳</button>
+        <button onClick={()=>setLightMode(p=>!p)} title={lightMode?"Switch to Dark Mode":"Switch to Light Mode"} style={{padding:"4px 9px",background:lightMode?"rgba(0,0,0,0.08)":"var(--bg2)",border:`1px solid ${lightMode?"rgba(0,0,0,0.15)":"var(--border)"}`,borderRadius:7,cursor:"pointer",fontSize:12,lineHeight:1,transition:"all 0.2s"}}>{lightMode?"🌙":"☀️"}</button>
       </div>
+
+      {/* Logo + app name — centered */}
+      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
+        <div style={{width:34,height:34,borderRadius:9,background:`linear-gradient(135deg,${G}22,${G}0A)`,border:`1px solid ${G}33`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0,boxShadow:`0 0 18px ${G}1A`}}>⚒</div>
+        <div>
+          <div style={{fontSize:8.5,letterSpacing:"0.3em",color:`${G}70`,textTransform:"uppercase",fontFamily:"var(--font-mono)",marginBottom:1}}>Nocturnal Innovations's Superhero Forge</div>
+          <div style={{display:"flex",alignItems:"baseline",gap:7}}>
+            <div style={{fontSize:17,fontWeight:"800",letterSpacing:"0.04em",color:"var(--text-primary)",fontFamily:"var(--font-mono)",lineHeight:1}}>SUPERHERO FORGE</div>
+            {forgeVersion&&<div style={{fontSize:8,color:"var(--text4)",letterSpacing:"0.12em",fontFamily:"var(--font-mono)"}}>{`v${forgeVersion}`}</div>}
+          </div>
+        </div>
+      </div>
+
+      {/* Active team — centered */}
+      {activeTeam
+        ?<div onClick={()=>setTab("teams")} style={{display:"flex",alignItems:"center",gap:7,padding:"4px 14px",background:`${activeTeam.color}10`,border:`1px solid ${activeTeam.color}33`,borderRadius:20,cursor:"pointer",marginBottom:10}}>
+          <div style={{width:8,height:8,borderRadius:2,background:activeTeam.color,flexShrink:0,boxShadow:`0 0 6px ${activeTeam.color}88`}}/>
+          <span style={{fontSize:10,color:activeTeam.color,fontFamily:"var(--font-mono)",letterSpacing:"0.07em",fontWeight:"600"}}>{activeTeam.abbr} · {activeTeam.name}</span>
+        </div>
+        :<div style={{height:8}}/>}
+
+      {/* Nav tabs — centered */}
+      <div className="ftabs" style={{display:"flex",justifyContent:"center",padding:"0 16px",overflowX:"auto",gap:2,width:"100%",boxSizing:"border-box"}}>
+        {[["teams","Teams"],["roster","Roster"],["team","Team"],["family","Family"],["prompts","Prompts"],["recruit","+ Recruit"],["villains","Villains"],["story","Story"],["battle","⚡ Battle"],["arc","Arc"],["tiers","Tiers"],["universe","Universe"],["codex","Codex"]].map(([id,label])=>{
+          const freeTab=id==="teams"||id==="codex";
+          return(<button key={id} className="ftab" style={s.tab(tab===id)} onClick={()=>{if(!activeTeam&&!freeTab)return;setTab(id);}} disabled={!activeTeam&&!freeTab}>{label}</button>);
+        })}
+      </div>
+
     </div>
 
     {/* ── Remote / Settings Panel ────────────────────────────────────── */}
@@ -1152,15 +1161,8 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
       </div>
     </div>}
 
-    {/* ── Tabs ───────────────────────────────────────────────────────────── */}
-    <div className="ftabs" style={{display:"flex",borderBottom:"1px solid rgba(212,175,55,0.12)",padding:"0 16px",overflowX:"auto",background:"var(--bg-base)",gap:2}}>
-      {[["teams","Teams"],["roster","Roster"],["team","Team"],["family","Family"],["prompts","Prompts"],["recruit","+ Recruit"],["villains","Villains"],["story","Story"],["battle","⚡ Battle"],["arc","Arc"],["tiers","Tiers"],["universe","Universe"],["codex","Codex"]].map(([id,label])=>{
-        const freeTab=id==="teams"||id==="codex";
-        return(<button key={id} className="ftab" style={s.tab(tab===id)} onClick={()=>{if(!activeTeam&&!freeTab)return;setTab(id);}} disabled={!activeTeam&&!freeTab}>{label}</button>);
-      })}
-    </div>
 
-    <div className="fmain" style={{padding:"28px 26px",maxWidth:960,margin:"0 auto"}}>
+<div className="fmain" style={{padding:"28px 26px",maxWidth:960,margin:"0 auto"}}>
       {ollamaOk===false&&<OllamaGuide/>}
       {!activeTeam&&tab!=="teams"&&tab!=="codex"&&(<div style={{textAlign:"center",padding:"60px 20px"}}><div style={{fontSize:13,color:"var(--text3)",marginBottom:16}}>No team selected.</div><button onClick={()=>setTab("teams")} style={{padding:"9px 22px",background:`${G}14`,border:`1px solid ${G}`,borderRadius:8,cursor:"pointer",color:G,fontSize:11,fontFamily:"var(--font-mono)"}}>Go to Teams</button></div>)}
 
