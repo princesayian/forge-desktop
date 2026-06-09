@@ -205,7 +205,7 @@ story = []
 story.append(Spacer(1, 1.4*inch))
 story.append(Paragraph("SUPERHERO FORGE", S_COVER_TITLE))
 story.append(Spacer(1, 0.1*inch))
-story.append(Paragraph("Feature Reference  ·  Nocturnal Knights Universe", S_COVER_SUB))
+story.append(Paragraph("Feature Reference  ·  Superhero Universe Builder", S_COVER_SUB))
 story.append(Spacer(1, 0.25*inch))
 
 # Divider with accent boxes
@@ -221,49 +221,15 @@ story.append(div_tbl)
 
 story.append(Spacer(1, 0.3*inch))
 story.append(Paragraph(
-    "Local AI-powered character builder for the Nocturnal Knights universe.<br/>"
+    "Local AI-powered superhero character builder.<br/>"
     "No subscriptions. No API keys required. Fully offline-capable.",
     ParagraphStyle("cover_body", fontName="Helvetica", fontSize=12,
                    textColor=TEXT2, leading=20, alignment=TA_CENTER)
 ))
 story.append(Spacer(1, 0.5*inch))
 
-# Core roster table
-roster_data = [
-    [Paragraph("<b>HERO NAME</b>", ParagraphStyle("rh",fontName="Helvetica-Bold",fontSize=8,textColor=GOLD,leading=11,alignment=TA_CENTER)),
-     Paragraph("<b>REAL NAME</b>",  ParagraphStyle("rh",fontName="Helvetica-Bold",fontSize=8,textColor=GOLD,leading=11,alignment=TA_CENTER)),
-     Paragraph("<b>ROLE</b>",       ParagraphStyle("rh",fontName="Helvetica-Bold",fontSize=8,textColor=GOLD,leading=11,alignment=TA_CENTER))],
-    [Paragraph("Wakháŋ",      ParagraphStyle("rc",fontName="Helvetica-Bold",fontSize=9,textColor=colors.HexColor("#AFA9EC"),leading=13,alignment=TA_CENTER)),
-     Paragraph("Kareem Carter",    ParagraphStyle("rc",fontName="Helvetica",fontSize=9,textColor=TEXT2,leading=13,alignment=TA_CENTER)),
-     Paragraph("Leader · Powerhouse", ParagraphStyle("rc",fontName="Helvetica",fontSize=9,textColor=TEXT3,leading=13,alignment=TA_CENTER))],
-    [Paragraph("Null/Void",        ParagraphStyle("rc",fontName="Helvetica-Bold",fontSize=9,textColor=TEAL_LT,leading=13,alignment=TA_CENTER)),
-     Paragraph("Jon Bethea",       ParagraphStyle("rc",fontName="Helvetica",fontSize=9,textColor=TEXT2,leading=13,alignment=TA_CENTER)),
-     Paragraph("2IC · Tech Striker",  ParagraphStyle("rc",fontName="Helvetica",fontSize=9,textColor=TEXT3,leading=13,alignment=TA_CENTER))],
-    [Paragraph("Catalix",          ParagraphStyle("rc",fontName="Helvetica-Bold",fontSize=9,textColor=colors.HexColor("#F0997B"),leading=13,alignment=TA_CENTER)),
-     Paragraph('Jesus "Omar" Fernandez', ParagraphStyle("rc",fontName="Helvetica",fontSize=9,textColor=TEXT2,leading=13,alignment=TA_CENTER)),
-     Paragraph("Scientist · Brawler",   ParagraphStyle("rc",fontName="Helvetica",fontSize=9,textColor=TEXT3,leading=13,alignment=TA_CENTER))],
-    [Paragraph("Bastion Prime",    ParagraphStyle("rc",fontName="Helvetica-Bold",fontSize=9,textColor=colors.HexColor("#5B9FE0"),leading=13,alignment=TA_CENTER)),
-     Paragraph("Mario Richardson", ParagraphStyle("rc",fontName="Helvetica",fontSize=9,textColor=TEXT2,leading=13,alignment=TA_CENTER)),
-     Paragraph("Heart · Clutch Factor", ParagraphStyle("rc",fontName="Helvetica",fontSize=9,textColor=TEXT3,leading=13,alignment=TA_CENTER))],
-]
-rt = Table(roster_data, colWidths=[1.8*inch, 2.0*inch, 2.7*inch])
-rt.setStyle(TableStyle([
-    ("BACKGROUND",(0,0),(-1,0), colors.HexColor("#D4AF3718")),
-    ("BACKGROUND",(0,1),(-1,1), colors.HexColor("#534AB712")),
-    ("BACKGROUND",(0,2),(-1,2), colors.HexColor("#0F6E5612")),
-    ("BACKGROUND",(0,3),(-1,3), colors.HexColor("#993C1D12")),
-    ("BACKGROUND",(0,4),(-1,4), colors.HexColor("#185FA512")),
-    ("BOX",(0,0),(-1,-1),0.5,colors.HexColor("#D4AF3740")),
-    ("INNERGRID",(0,0),(-1,-1),0.3,colors.HexColor("#D4AF3720")),
-    ("TOPPADDING",(0,0),(-1,-1),6), ("BOTTOMPADDING",(0,0),(-1,-1),6),
-    ("LEFTPADDING",(0,0),(-1,-1),10), ("RIGHTPADDING",(0,0),(-1,-1),10),
-    ("ALIGN",(0,0),(-1,-1),"CENTER"), ("VALIGN",(0,0),(-1,-1),"MIDDLE"),
-]))
-story.append(rt)
-
 story.append(Spacer(1, 0.6*inch))
-story.append(Paragraph("NOCTURNAL INC  ·  2026", S_COVER_MONO))
-story.append(Paragraph("Forge Desktop  ·  Local AI  ·  Nocturnal Knights Universe Builder", S_COVER_MONO))
+story.append(Paragraph("Forge Desktop  ·  Local AI  ·  2026", S_COVER_MONO))
 story.append(PageBreak())
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -317,7 +283,7 @@ story.append(Paragraph("01 — TEAMS", S_SECTION))
 story.append(hr())
 story.append(Paragraph(
     "The Teams tab is the home screen and entry point. Every character, villain, story, and arc in the Forge belongs to a team. "
-    "You can run any number of teams simultaneously — the Nocturnal Knights are pre-loaded, but you can create original teams for any concept.",
+    "You can run any number of teams simultaneously — create original teams for any concept.",
     S_BODY))
 story.append(Spacer(1, 6))
 
@@ -328,7 +294,7 @@ story.append(KeepTogether([
     bullet("Generated logo: 8 geometric styles that automatically inherit team color"),
     bullet("Custom logo upload: drag-and-drop replaces the generated icon everywhere in the app"),
     bullet("Team description, motto, and founding origin (optional narrative fields)"),
-    bullet("NK Alignment: defines the team's relationship to the Nocturnal Knights — Allied, Rival, Enemy, Neutral, or Splinter Cell"),
+    bullet("Team Alignment: defines the team's relationship to your primary team — Allied, Rival, Enemy, Neutral, or Splinter Cell"),
     Spacer(1, 6),
 ]))
 
@@ -1093,7 +1059,7 @@ changelog = [
             "Villain forge: targeted antagonist creation with hero roster awareness",
             "Battle engine: AI-simulated 1v1 with narrative output",
             "Arc generator: multi-issue story arcs with villain casting and issue-by-issue breakdown",
-            "Nocturnal Knights pre-loaded with 4 core heroes: Wakháŋ, Null/Void, Catalix, Bastion Prime",
+            "Start with a blank canvas — build your own teams and heroes from scratch",
             "Ollama local AI integration — fully offline, no API keys required",
             "Dark/light theme with localStorage persistence",
             "Single-instance lock, Git update pull, Flask restart endpoint",

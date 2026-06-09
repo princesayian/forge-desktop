@@ -170,7 +170,7 @@ export default function TeamCreator({teams,members=[],onSave,onCancel,callAI,oll
               {members.map(m=>{const sel=relatedMembers.includes(m.id);const mc=m.color||color;return(<button key={m.id} onClick={()=>setRelatedMembers(p=>sel?p.filter(x=>x!==m.id):[...p,m.id])} style={{display:"flex",alignItems:"center",gap:5,...chip(sel,mc)}}><div style={{width:6,height:6,borderRadius:"50%",background:mc,flexShrink:0}}/>{m.heroName}</button>);})}</div>
           </>)}
           <span style={lbl}>Story Direction</span>
-          <textarea style={{height:56,fontSize:11}} placeholder={`E.g. "Splinter group after Wakháŋ's disappearance" · "Built to counter Null/Void's tech" · "Allied through a shared enemy"`} value={loreHint} onChange={e=>setLoreHint(e.target.value)}/>
+          <textarea style={{height:56,fontSize:11}} placeholder={`E.g. "Splinter group after the leader's disappearance" · "Built to counter a rival team's tech" · "Allied through a shared enemy"`} value={loreHint} onChange={e=>setLoreHint(e.target.value)}/>
         </div>
         {ollamaOk&&<button onClick={generateLore} disabled={genLoading} style={{width:"100%",padding:"10px",background:genLoading?"var(--bg3)":`${G}0E`,border:`1px solid ${genLoading?"var(--border)":`${G}55`}`,borderRadius:8,cursor:genLoading?"not-allowed":"pointer",color:genLoading?"var(--text3)":G,fontSize:10.5,fontFamily:"var(--font-mono)",marginBottom:genError?6:14,letterSpacing:"0.08em"}}>{genLoading?`Generating lore... (${genElapsed}s)`:"✦ Generate lore with AI"}</button>}
         {genError&&<div style={{fontSize:10,color:"#E07070",background:"rgba(139,26,26,0.12)",border:"1px solid rgba(139,26,26,0.3)",borderRadius:7,padding:"6px 10px",marginBottom:14,fontFamily:"var(--font-mono)"}}>{genError}</div>}

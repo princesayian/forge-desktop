@@ -1,5 +1,4 @@
 # Superhero Forge — Desktop App
-### Nocturnal Knights Character System
 ### v1.2.0 · Powered by Ollama · Local or Remote API · Runs 100% locally
 
 ---
@@ -99,7 +98,7 @@ The app automatically switches to OpenAI-compatible `/v1/chat/completions` mode 
 
 ---
 
-## Running on Your Plex Server (Windows)
+## Running as a Windows Background Service
 
 To have it start automatically with Windows using NSSM:
 

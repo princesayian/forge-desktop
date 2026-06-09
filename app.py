@@ -1,7 +1,6 @@
 """
 Superhero Forge — Desktop App
 Local AI powered by Ollama. No API keys. No subscriptions.
-Nocturnal Knights Character System · Remote & Local modes
 """
 
 import os, sys, json, threading, time, socket, base64, io, subprocess, shutil, signal, atexit

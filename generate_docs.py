@@ -168,7 +168,7 @@ def build_pdf(screenshots):
     features = [
         ("Teams", [
             "Create, rename, and delete custom hero teams",
-            "Nocturnal Knights is the anchor team (always present)",
+            "Teams are fully custom — create any number of hero teams",
             "Each team has its own roster managed independently",
         ]),
         ("Roster", [
@@ -179,7 +179,7 @@ def build_pdf(screenshots):
             "Flip a hero to villain status (moves to Villain Pool)",
         ]),
         ("Team Dynamics", [
-            "SVG connection graph for Nocturnal Knights internal relationships",
+            "SVG connection graph for team internal relationships",
             "Edges colored by relationship type (ally, rival, mentor, etc.)",
         ]),
         ("Image Prompts", [
@@ -215,7 +215,7 @@ def build_pdf(screenshots):
             "Tier overrides persisted in localStorage",
         ]),
         ("Universe Map", [
-            "SVG visualization of all teams orbiting Nocturnal Knights",
+            "SVG visualization of all teams and their alignment relationships",
             "Relationship lines colored by NK alignment",
             "Member avatar images rendered on the map",
         ]),

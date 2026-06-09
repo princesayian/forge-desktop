@@ -1,9 +1,8 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import './index.css';
 import {
-  G, NK_TEAM, TEAM_COLORS, TEAM_TYPES, NK_ALIGNMENTS, ALIGN_META,
+  G, TEAM_COLORS, TEAM_TYPES, NK_ALIGNMENTS, ALIGN_META,
   RACE_TREE, raceLabel, raceLore,
-  DEFAULT_NK, NK_DYNAMICS,
   RECRUIT_QUIZ, VILLAIN_QUIZ, SCENARIOS, TONES,
   TEAM_RANKS, FAMILY_RELATIONS, HERO_ASSOC_TYPES,
   ART_STYLES, ACCENT_COLORS, TIER_DEFS,
@@ -224,28 +223,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     (async()=>{
       const MIGRATE_KEYS=["forge-teams","forge-rosters","forge-edits","forge-villains","forge-removed","forge-meta-ai-pref","nk-edits","nk-villain","nk-recruits"];
       for(const k of MIGRATE_KEYS){const lv=localStorage.getItem(k);if(lv!=null){try{const ex=await fetch(`/api/store/${encodeURIComponent(k)}`);if(!ex.ok){await storage.set(k,lv);}}catch(e){await storage.set(k,lv);}localStorage.removeItem(k);}}
-      // ── v3 migration: move DEFAULT_NK core members from hardcoded to stored roster ──
-      try{
-        const migFlag=await storage.get("forge-v3").catch(()=>null);
-        if(!migFlag){
-          let mt=[],mr={},me={};
-          try{const d=await storage.get("forge-teams");mt=JSON.parse(d.value)||[];}catch(ex){}
-          try{const d=await storage.get("forge-rosters");mr=JSON.parse(d.value)||{};}catch(ex){}
-          try{const d=await storage.get("forge-edits");me=JSON.parse(d.value)||{};}catch(ex){}
-          const hasNKStored=mt.some(t=>t.id==="nocturnal-knights");
-          const hasAnyData=mt.length>0||Object.keys(mr).length>0;
-          if(hasAnyData){
-            if(!hasNKStored){mt=[NK_TEAM,...mt];await storage.set("forge-teams",JSON.stringify(mt));}
-            const nkR=mr["nocturnal-knights"]||[];
-            if(!nkR.some(m=>m.id==="darkstar")){
-              const merged=DEFAULT_NK.map(m=>me[m.id]?{...m,...me[m.id]}:m);
-              mr["nocturnal-knights"]=[...merged,...nkR];
-              await storage.set("forge-rosters",JSON.stringify(mr));
-            }
-          }
-          await storage.set("forge-v3","1");
-        }
-      }catch(ex){}
+      try{const migFlag=await storage.get("forge-v3").catch(()=>null);if(!migFlag){await storage.set("forge-v3","1");}}catch(ex){}
       let _loadedTeams=[];
       let _loadedRosters={};
       try{const d=await storage.get("forge-teams");_loadedTeams=JSON.parse(d.value)||[];}catch(e){}
@@ -1095,7 +1073,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
         <div style={{display:"flex",alignItems:"center",gap:10}}>
           <div style={{width:34,height:34,borderRadius:9,background:`linear-gradient(135deg,${G}22,${G}0A)`,border:`1px solid ${G}33`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0,boxShadow:`0 0 18px ${G}1A`}}>⚒</div>
           <div>
-            <div style={{fontSize:8.5,letterSpacing:"0.3em",color:`${G}70`,textTransform:"uppercase",fontFamily:"var(--font-mono)",marginBottom:1}}>Nocturnal Inc</div>
+            <div style={{fontSize:8.5,letterSpacing:"0.3em",color:`${G}70`,textTransform:"uppercase",fontFamily:"var(--font-mono)",marginBottom:1}}>Superhero Forge</div>
             <div style={{display:"flex",alignItems:"baseline",gap:7}}>
               <div style={{fontSize:17,fontWeight:"800",letterSpacing:"0.04em",color:"var(--text-primary)",fontFamily:"var(--font-mono)",lineHeight:1}}>SUPERHERO FORGE</div>
               {forgeVersion&&<div style={{fontSize:8,color:"var(--text4)",letterSpacing:"0.12em",fontFamily:"var(--font-mono)"}}>{`v${forgeVersion}`}</div>}
