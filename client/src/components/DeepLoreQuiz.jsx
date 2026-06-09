@@ -1,7 +1,8 @@
 import { DEEP_LORE_PHASES } from '../constants/index.js';
 
-export default function DeepLoreQuiz({phase,answers,onAnswer,accentColor}){
-  const phaseData=DEEP_LORE_PHASES[phase];
+export default function DeepLoreQuiz({phase,phases,answers,onAnswer,accentColor}){
+  const src=phases||DEEP_LORE_PHASES;
+  const phaseData=src[phase];
   if(!phaseData)return null;
   const c=accentColor||"#534AB7";
   return(<div style={{background:"var(--bg3)",border:`1px solid ${c}33`,borderRadius:10,padding:"20px"}}>

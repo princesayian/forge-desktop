@@ -6,7 +6,7 @@ import {
   RECRUIT_QUIZ, VILLAIN_QUIZ, SCENARIOS, TONES,
   TEAM_RANKS, FAMILY_RELATIONS, HERO_ASSOC_TYPES,
   ART_STYLES, ACCENT_COLORS, TIER_DEFS,
-  DEEP_LORE_PHASES, PERSONAL_PROFILE,
+  DEEP_LORE_PHASES, PERSONAL_PROFILE, DEEP_VILLAIN_PHASES, VILLAIN_PERSONAL_PROFILE,
   _rp, _NAMES, _TS, randTeamName, randHeroName,
 } from './constants/index.js';
 import { autoScore, autoTierFn, pronounOf, ageStage, hexToColorName } from './utils/helpers.js';
@@ -98,6 +98,14 @@ function App(){
   // ── Villain pool ────────────────────────────────────────────────────────
   const[villainPool,setVillainPool]=useState([]);
   const[vInlinePrompt,setVInlinePrompt]=useState(null);
+  const[villainSubTab,setVillainSubTab]=useState("pool");
+  const[villainFactions,setVillainFactions]=useState([]);
+  const[villainAlliances,setVillainAlliances]=useState([]);
+  const[creatingFaction,setCreatingFaction]=useState(false);
+  const[editingFactionId,setEditingFactionId]=useState(null);
+  const[factionDraft,setFactionDraft]=useState({name:"",abbr:"",color:"#8B1A1A",purpose:"",memberIds:[]});
+  const[allianceDraft,setAllianceDraft]=useState({factionA:"",factionB:"",type:"united",description:""});
+  const[creatingAlliance,setCreatingAlliance]=useState(false);
   // ── Solo / Independent Heroes ─────────────────────────────────────────────
   const[soloHeroes,setSoloHeroes]=useState([]);
   const[soloVillains,setSoloVillains]=useState({});
@@ -273,6 +281,8 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
       try{const r=await fetch("/api/remote");setRemoteInfo(await r.json());}catch(e){}
       try{const d=await storage.get("forge-solo-heroes");setSoloHeroes(JSON.parse(d.value)||[]);}catch(e){}
       try{const d=await storage.get("forge-solo-villains");setSoloVillains(JSON.parse(d.value)||{});}catch(e){}
+      try{const d=await storage.get("forge-villain-factions");setVillainFactions(JSON.parse(d.value)||[]);}catch(e){}
+      try{const d=await storage.get("forge-villain-alliances");setVillainAlliances(JSON.parse(d.value)||[]);}catch(e){}
     })();
   },[]);
 
@@ -792,9 +802,9 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
   const generateVillainDeep=async()=>{
     setVLoading(true);setVResult(null);setAiStreamText("");
     const targetNames=rogueMode?(soloHeroes.find(h=>h.id===rogueMode)?.heroName||"the solo hero"):vTargetTeams.map(id=>teams.find(t=>t.id===id)?.name||id).join(", ")||(teams[0]?.name||"the heroes");
-    const loreContext=DEEP_LORE_PHASES.map(ph=>`== ${ph.title} ==\n`+ph.questions.map(q=>{const opt=q.options?.find(o=>o.id===vDeepAnswers[q.id]);return opt?`${q.label}: ${opt.label}`:""}).filter(Boolean).join("\n")).filter(l=>l.includes(":")).join("\n\n");
-    const dnaInspoOpt=DEEP_LORE_PHASES[0]?.questions?.find(q=>q.id==="keyInspo")?.options?.find(o=>o.id===vDeepAnswers.keyInspo);
-    const dnaUnivOpt=DEEP_LORE_PHASES[0]?.questions?.find(q=>q.id==="universe")?.options?.find(o=>o.id===vDeepAnswers.universe);
+    const loreContext=DEEP_VILLAIN_PHASES.map(ph=>`== ${ph.title} ==\n`+ph.questions.map(q=>{const opt=q.options?.find(o=>o.id===vDeepAnswers[q.id]);return opt?`${q.label}: ${opt.label}`:""}).filter(Boolean).join("\n")).filter(l=>l.includes(":")).join("\n\n");
+    const dnaInspoOpt=DEEP_VILLAIN_PHASES[0]?.questions?.find(q=>q.id==="keyInspo")?.options?.find(o=>o.id===vDeepAnswers.keyInspo);
+    const dnaUnivOpt=DEEP_VILLAIN_PHASES[0]?.questions?.find(q=>q.id==="universe")?.options?.find(o=>o.id===vDeepAnswers.universe);
     const dnaFoundation=[dnaInspoOpt?.label,dnaUnivOpt?.label].filter(Boolean).join(", ");
     try{
       const p=await callAI(`Create a deeply developed villain who threatens: ${targetNames}. JSON only — keys: heroName, tagline, role, origin, powers, stats, dna.\n\nName: ${vName||"Unknown"}\nGender: ${vGender}\nIMPORTANT: Use correct pronouns (${pronounOf(vGender)}/${pronounOf(vGender)==="they"?"them":pronounOf(vGender)==="she"?"her":"him"}) throughout.\nTarget: ${targetNames}\n\nThis is a VILLAIN — interpret every lore answer as a dangerous antagonist, not a hero. Archetype becomes threat archetype, drive becomes destructive motivation, visual identity becomes menacing presence.\n${dnaFoundation?`\nVILLAIN DNA FOUNDATION (bake into powers and style invisibly): ${dnaFoundation}\n`:""}\nFull lore profile:\n${loreContext}\n\n{"heroName":"villain codename","tagline":"one chilling sentence","role":"Threat · Descriptor","origin":"3-4 sentences — layered backstory tied to the lore profile and the target","powers":[{"name":"Name","desc":"desc — mirrors or counters a hero ability"},{"name":"Name","desc":"desc"},{"name":"Name","desc":"desc"},{"name":"Name","desc":"desc"}],"stats":{"Power":88,"Speed":78,"Tech":82,"Intellect":90,"Will":88},"costumeDesc":"ominous costume reflecting lore visual answers","powerFX":"dark threatening power FX matching lore style answers","consistencyNotes":"design lock rules","dna":["Villain Inspiration 1","Villain Inspiration 2"]}`,t=>setAiStreamText(t));
@@ -806,9 +816,9 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
   const generateVillainProfile=async()=>{
     setVLoading(true);setVResult(null);setAiStreamText("");
     const targetNames=rogueMode?(soloHeroes.find(h=>h.id===rogueMode)?.heroName||"the solo hero"):vTargetTeams.map(id=>teams.find(t=>t.id===id)?.name||id).join(", ")||(teams[0]?.name||"the heroes");
-    const profileContext=PERSONAL_PROFILE.map(sec=>`== ${sec.section} ==\n`+sec.questions.map(q=>{const opt=q.options.find(o=>o.id===vProfileAnswers[q.id]);return opt?`${q.q}\n→ ${opt.value}`:""}).filter(Boolean).join("\n")).join("\n\n");
+    const profileContext=VILLAIN_PERSONAL_PROFILE.map(sec=>`== ${sec.section} ==\n`+sec.questions.map(q=>{const opt=q.options.find(o=>o.id===vProfileAnswers[q.id]);return opt?`${q.q}\n→ ${opt.value}`:""}).filter(Boolean).join("\n")).join("\n\n");
     try{
-      const p=await callAI(`Create a villain who threatens: ${targetNames}, built from this psychological profile. JSON only — keys: heroName, tagline, role, origin, powers, stats, dna.\n\nName: ${vName||"Unknown"}\nGender: ${vGender}\nIMPORTANT: Use correct pronouns (${pronounOf(vGender)}/${pronounOf(vGender)==="they"?"them":pronounOf(vGender)==="she"?"her":"him"}) throughout.\nTarget: ${targetNames}\n\nThis is a VILLAIN. Interpret every profile answer through a dark lens — their strengths become weapons, their wounds become motivations, their presence becomes a threat.\n\nPERSONAL PROFILE:\n\n${profileContext}\n\n{"heroName":"villain codename fitting their psychological profile","tagline":"one chilling sentence capturing their specific darkness","role":"Threat · Descriptor rooted in their profile","origin":"3-4 sentences — how their psychological wound became a threat to the target","powers":[{"name":"Power emerging from their trait","desc":"How it looks — directly from who they are"},{"name":"Power name","desc":"desc"},{"name":"Power name","desc":"desc"},{"name":"Power name","desc":"desc"}],"stats":{"Power":85,"Speed":78,"Tech":80,"Intellect":92,"Will":90},"costumeDesc":"ominous costume from their visual identity answers","powerFX":"dark power FX matching their power texture answer","consistencyNotes":"design lock rules","dna":["Villain archetype mirroring this profile","Second villain reference"]}`,t=>setAiStreamText(t));
+      const p=await callAI(`Create a villain who threatens: ${targetNames}, built from this threat profile. JSON only — keys: heroName, tagline, role, origin, powers, stats, dna. JSON only — keys: heroName, tagline, role, origin, powers, stats, dna.\n\nName: ${vName||"Unknown"}\nGender: ${vGender}\nIMPORTANT: Use correct pronouns (${pronounOf(vGender)}/${pronounOf(vGender)==="they"?"them":pronounOf(vGender)==="she"?"her":"him"}) throughout.\nTarget: ${targetNames}\n\nThis is a VILLAIN. Interpret every profile answer through a dark lens — their strengths become weapons, their wounds become motivations, their presence becomes a threat.\n\nPERSONAL PROFILE:\n\n${profileContext}\n\n{"heroName":"villain codename fitting their psychological profile","tagline":"one chilling sentence capturing their specific darkness","role":"Threat · Descriptor rooted in their profile","origin":"3-4 sentences — how their psychological wound became a threat to the target","powers":[{"name":"Power emerging from their trait","desc":"How it looks — directly from who they are"},{"name":"Power name","desc":"desc"},{"name":"Power name","desc":"desc"},{"name":"Power name","desc":"desc"}],"stats":{"Power":85,"Speed":78,"Tech":80,"Intellect":92,"Will":90},"costumeDesc":"ominous costume from their visual identity answers","powerFX":"dark power FX matching their power texture answer","consistencyNotes":"design lock rules","dna":["Villain archetype mirroring this profile","Second villain reference"]}`,t=>setAiStreamText(t));
       setVResult({id:`villain-${Date.now()}`,realName:vName||"Unknown",gender:vGender,color:"#8B1A1A",colorLight:"#E07070",initials:vName?vName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",isVillain:true,targetTeams:vTargetTeams.length?vTargetTeams:(teams[0]?[teams[0].id]:[]),profileLore:Object.keys(vProfileAnswers).length,...p});
     }catch(e){if(e.message==="Generation cancelled.")setVResult(null);else setVResult({error:true,msg:e.message});}
     setVLoading(false);setAiStreamText("");
@@ -1945,6 +1955,13 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
 
       {/* ── VILLAINS TAB ──────────────────────────────────────────────── */}
       {tab==="villains"&&(<>
+        {/* Sub-tab toggle */}
+        <div style={{display:"flex",gap:6,marginBottom:18}}>
+          {[["pool","☠ Villain Pool"],["factions","⚔ Factions & Alliances"]].map(([id,label])=>(
+            <button key={id} onClick={()=>setVillainSubTab(id)} style={{flex:1,padding:"8px 12px",background:villainSubTab===id?"rgba(139,26,26,0.18)":"var(--bg3)",border:`1px solid ${villainSubTab===id?"rgba(224,112,112,0.5)":"var(--border)"}`,borderRadius:8,cursor:"pointer",color:villainSubTab===id?"#E07070":"var(--text2)",fontSize:11,fontFamily:"var(--font-mono)",fontWeight:villainSubTab===id?"bold":"normal",letterSpacing:"0.03em"}}>{label}</button>
+          ))}
+        </div>
+        {villainSubTab==="pool"&&(<>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}>
           <div><div style={{fontSize:9,letterSpacing:"0.2em",color:"rgba(139,26,26,0.7)",textTransform:"uppercase",marginBottom:4}}>Villain Pool</div><div style={{fontSize:12,color:"var(--text2)"}}>Villains can threaten multiple teams. Create once, assign anywhere.</div></div>
         </div>
@@ -1954,12 +1971,12 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
           <div style={{marginBottom:20}}>
             <div style={{height:3,background:"rgba(255,255,255,0.06)",borderRadius:2,marginBottom:6}}>
               <div style={{height:3,background:"#8B1A1A",borderRadius:2,transition:"width 0.3s ease",
-                width:vResult?"100%":vProfileMode?`${(vProfileStep/6)*100}%`:vDeepMode?`${(vDeepPhase/(DEEP_LORE_PHASES.length+1))*100}%`:`${(vStep/(VILLAIN_QUIZ.length+1))*100}%`
+                width:vResult?"100%":vProfileMode?`${(vProfileStep/VILLAIN_PERSONAL_PROFILE.length)*100}%`:vDeepMode?`${(vDeepPhase/(DEEP_VILLAIN_PHASES.length+1))*100}%`:`${(vStep/(VILLAIN_QUIZ.length+1))*100}%`
               }}/>
             </div>
             <div style={{display:"flex",justifyContent:"space-between"}}>
-              <span style={{fontSize:10,color:"var(--text2)"}}>{vResult?"Review villain":vProfileMode?(vProfileStep===0?"Identity":`${PERSONAL_PROFILE[vProfileStep-1]?.section} — ${vProfileStep} of 5`):vDeepMode?(vDeepPhase===0?"Identity":`Phase ${vDeepPhase} of ${DEEP_LORE_PHASES.length} — ${DEEP_LORE_PHASES[vDeepPhase-1]?.title||""}`):(`Question ${vStep} of ${VILLAIN_QUIZ.length}`)}</span>
-              <span style={{fontSize:10,color:"#E07070"}}>{vResult?"Complete":vProfileMode?`${Math.round((vProfileStep/6)*100)}%`:vDeepMode?`${Math.round((vDeepPhase/(DEEP_LORE_PHASES.length+1))*100)}%`:`${Math.round((vStep/(VILLAIN_QUIZ.length+1))*100)}%`}</span>
+              <span style={{fontSize:10,color:"var(--text2)"}}>{vResult?"Review villain":vProfileMode?(vProfileStep===0?"Presence":`${VILLAIN_PERSONAL_PROFILE[vProfileStep-1]?.section} — ${vProfileStep} of ${VILLAIN_PERSONAL_PROFILE.length}`):vDeepMode?(vDeepPhase===0?"Threat Identity":`Phase ${vDeepPhase} of ${DEEP_VILLAIN_PHASES.length} — ${DEEP_VILLAIN_PHASES[vDeepPhase-1]?.title||""}`):(`Question ${vStep} of ${VILLAIN_QUIZ.length}`)}</span>
+              <span style={{fontSize:10,color:"#E07070"}}>{vResult?"Complete":vProfileMode?`${Math.round((vProfileStep/VILLAIN_PERSONAL_PROFILE.length)*100)}%`:vDeepMode?`${Math.round((vDeepPhase/(DEEP_VILLAIN_PHASES.length+1))*100)}%`:`${Math.round((vStep/(VILLAIN_QUIZ.length+1))*100)}%`}</span>
             </div>
           </div>
           {!vResult&&!vDeepMode&&!vProfileMode&&vStep>=1&&vStep<=VILLAIN_QUIZ.length&&vCurrentQ&&(<div style={s.card}>
@@ -1970,33 +1987,33 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
               {vStep===VILLAIN_QUIZ.length&&vAnswers[vCurrentQ.id]&&<button onClick={generateVillain} disabled={vLoading} style={{flex:2,...s.bigBtn(vLoading,"#8B1A1A"),marginTop:0}}>{vLoading?"Forging threat...":"Generate Villain →"}</button>}
             </div>
           </div>)}
-          {!vResult&&vDeepMode&&vDeepPhase>=1&&vDeepPhase<=DEEP_LORE_PHASES.length&&(()=>{
-            const ph=DEEP_LORE_PHASES[vDeepPhase-1];
+          {!vResult&&vDeepMode&&vDeepPhase>=1&&vDeepPhase<=DEEP_VILLAIN_PHASES.length&&(()=>{
+            const ph=DEEP_VILLAIN_PHASES[vDeepPhase-1];
             const phaseComplete=ph.questions.every(q=>vDeepAnswers[q.id]);
-            const isLast=vDeepPhase===DEEP_LORE_PHASES.length;
+            const isLast=vDeepPhase===DEEP_VILLAIN_PHASES.length;
             return(<>
-              <DeepLoreQuiz phase={vDeepPhase-1} answers={vDeepAnswers} onAnswer={(qid,oid)=>setVDeepAnswers(p=>({...p,[qid]:oid}))} accentColor="#8B1A1A"/>
+              <DeepLoreQuiz phase={vDeepPhase-1} phases={DEEP_VILLAIN_PHASES} answers={vDeepAnswers} onAnswer={(qid,oid)=>setVDeepAnswers(p=>({...p,[qid]:oid}))} accentColor="#8B1A1A"/>
               <div style={{display:"flex",gap:10,marginTop:14}}>
                 <button onClick={()=>setVDeepPhase(p=>Math.max(0,p-1))} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text3)",fontSize:10.5,fontFamily:"var(--font-mono)"}}>← Back</button>
-                {!isLast&&<button disabled={!phaseComplete} onClick={()=>setVDeepPhase(p=>p+1)} style={{flex:2,...s.bigBtn(!phaseComplete,"#8B1A1A"),marginTop:0}}>{phaseComplete?`Next: ${DEEP_LORE_PHASES[vDeepPhase]?.title||"Generate"} →`:"Answer all questions to continue"}</button>}
-                {isLast&&<button disabled={!phaseComplete||vLoading} onClick={generateVillainDeep} style={{flex:2,...s.bigBtn(!phaseComplete||vLoading,"#8B1A1A"),marginTop:0}}>{vLoading?"Forging threat...":phaseComplete?"Generate Deep Villain →":"Answer all questions"}</button>}
+                {!isLast&&<button disabled={!phaseComplete} onClick={()=>setVDeepPhase(p=>p+1)} style={{flex:2,...s.bigBtn(!phaseComplete,"#8B1A1A"),marginTop:0}}>{phaseComplete?`Next: ${DEEP_VILLAIN_PHASES[vDeepPhase]?.title||"Generate"} →`:"Answer all questions to continue"}</button>}
+                {isLast&&<button disabled={!phaseComplete||vLoading} onClick={generateVillainDeep} style={{flex:2,...s.bigBtn(!phaseComplete||vLoading,"#8B1A1A"),marginTop:0}}>{vLoading?"Forging threat...":phaseComplete?"Forge the Threat →":"Answer all questions"}</button>}
               </div>
             </>);
           })()}
-          {!vResult&&vProfileMode&&vProfileStep>=1&&vProfileStep<=5&&(()=>{
-            const sec=PERSONAL_PROFILE[vProfileStep-1];
+          {!vResult&&vProfileMode&&vProfileStep>=1&&vProfileStep<=VILLAIN_PERSONAL_PROFILE.length&&(()=>{
+            const sec=VILLAIN_PERSONAL_PROFILE[vProfileStep-1];
             const secComplete=sec.questions.every(q=>vProfileAnswers[q.id]);
-            const isLast=vProfileStep===5;
+            const isLast=vProfileStep===VILLAIN_PERSONAL_PROFILE.length;
             return(<div style={s.card}>
-              <div style={{fontSize:9,letterSpacing:"0.12em",color:"rgba(139,26,26,0.6)",textTransform:"uppercase",marginBottom:12}}>{sec.section} · {vProfileStep} of 5</div>
+              <div style={{fontSize:9,letterSpacing:"0.12em",color:"rgba(139,26,26,0.6)",textTransform:"uppercase",marginBottom:12}}>{sec.section} · {vProfileStep} of {VILLAIN_PERSONAL_PROFILE.length}</div>
               {sec.questions.map(q=>(<div key={q.id} style={{marginBottom:14}}>
                 <div style={{fontSize:13,fontWeight:"bold",color:"var(--text-primary)",marginBottom:8,lineHeight:1.4}}>{q.q}</div>
                 {q.options.map(opt=><button key={opt.id} onClick={()=>setVProfileAnswers(p=>({...p,[q.id]:opt.id}))} style={s.optBtn(vProfileAnswers[q.id]===opt.id,"#8B1A1A")}>{opt.label}</button>)}
               </div>))}
               <div style={{display:"flex",gap:10,marginTop:6}}>
                 <button onClick={()=>setVProfileStep(p=>Math.max(0,p-1))} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text3)",fontSize:10.5,fontFamily:"var(--font-mono)"}}>← Back</button>
-                {!isLast&&<button disabled={!secComplete} onClick={()=>setVProfileStep(p=>p+1)} style={{flex:2,...s.bigBtn(!secComplete,"#8B1A1A"),marginTop:0}}>{secComplete?`Next: ${PERSONAL_PROFILE[vProfileStep]?.section} →`:"Answer all questions to continue"}</button>}
-                {isLast&&<button disabled={!secComplete||vLoading} onClick={generateVillainProfile} style={{flex:2,...s.bigBtn(!secComplete||vLoading,"#8B1A1A"),marginTop:0}}>{vLoading?"Forging threat...":secComplete?"Generate Villain →":"Answer all questions"}</button>}
+                {!isLast&&<button disabled={!secComplete} onClick={()=>setVProfileStep(p=>p+1)} style={{flex:2,...s.bigBtn(!secComplete,"#8B1A1A"),marginTop:0}}>{secComplete?`Next: ${VILLAIN_PERSONAL_PROFILE[vProfileStep]?.section} →`:"Answer all questions to continue"}</button>}
+                {isLast&&<button disabled={!secComplete||vLoading} onClick={generateVillainProfile} style={{flex:2,...s.bigBtn(!secComplete||vLoading,"#8B1A1A"),marginTop:0}}>{vLoading?"Forging threat...":secComplete?"Forge the Threat →":"Answer all questions"}</button>}
               </div>
             </div>);
           })()}
@@ -2028,16 +2045,16 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
             <div style={{fontSize:13,fontWeight:"bold",color:"var(--text-primary)",marginBottom:12}}>Create New Villain</div>
             <div style={{display:"flex",gap:6,marginBottom:14}}>
               <button onClick={()=>{setVDeepMode(false);setVProfileMode(false);setVAnswers({});setVDeepAnswers({});setVProfileAnswers({});}} style={{flex:1,padding:"8px",background:!vDeepMode&&!vProfileMode?"rgba(139,26,26,0.15)":"var(--bg3)",border:`1px solid ${!vDeepMode&&!vProfileMode?"rgba(139,26,26,0.5)":"var(--border2)"}`,borderRadius:8,cursor:"pointer",fontFamily:"var(--font-mono)",textAlign:"center"}}>
-                <div style={{fontSize:11,fontWeight:"bold",color:!vDeepMode&&!vProfileMode?"#E07070":"var(--text2)"}}>⚡ Quick</div>
+                <div style={{fontSize:11,fontWeight:"bold",color:!vDeepMode&&!vProfileMode?"#E07070":"var(--text2)"}}>⚡ Threat Assessment</div>
                 <div style={{fontSize:8.5,color:"var(--text3)",marginTop:1}}>5 threat questions</div>
               </button>
               <button onClick={()=>{setVDeepMode(true);setVProfileMode(false);setVStep(0);setVAnswers({});setVDeepAnswers({});setVProfileAnswers({});}} style={{flex:1,padding:"8px",background:vDeepMode?"rgba(139,26,26,0.15)":"var(--bg3)",border:`1px solid ${vDeepMode?"rgba(139,26,26,0.5)":"var(--border2)"}`,borderRadius:8,cursor:"pointer",fontFamily:"var(--font-mono)",textAlign:"center"}}>
-                <div style={{fontSize:11,fontWeight:"bold",color:vDeepMode?"#E07070":"var(--text2)"}}>📚 Deep Forge</div>
-                <div style={{fontSize:8.5,color:"var(--text3)",marginTop:1}}>7 lore phases</div>
+                <div style={{fontSize:11,fontWeight:"bold",color:vDeepMode?"#E07070":"var(--text2)"}}>☠ Deep Threat</div>
+                <div style={{fontSize:8.5,color:"var(--text3)",marginTop:1}}>7 villain phases</div>
               </button>
               <button onClick={()=>{setVProfileMode(true);setVDeepMode(false);setVStep(0);setVAnswers({});setVDeepAnswers({});setVProfileAnswers({});}} style={{flex:1,padding:"8px",background:vProfileMode?"rgba(139,26,26,0.15)":"var(--bg3)",border:`1px solid ${vProfileMode?"rgba(139,26,26,0.5)":"var(--border2)"}`,borderRadius:8,cursor:"pointer",fontFamily:"var(--font-mono)",textAlign:"center"}}>
-                <div style={{fontSize:11,fontWeight:"bold",color:vProfileMode?"#E07070":"var(--text2)"}}>🧬 Personal</div>
-                <div style={{fontSize:8.5,color:"var(--text3)",marginTop:1}}>25-answer profile</div>
+                <div style={{fontSize:11,fontWeight:"bold",color:vProfileMode?"#E07070":"var(--text2)"}}>🩸 Threat Profile</div>
+                <div style={{fontSize:8.5,color:"var(--text3)",marginTop:1}}>5 menace dimensions</div>
               </button>
             </div>
             <span style={s.lbl}>Real Name (optional)</span>
@@ -2068,10 +2085,11 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                   {/* Portrait upload */}
                   <div style={{flexShrink:0}}>
                     <input type="file" accept="image/*" style={{display:"none"}} ref={el=>fileRefs.current[v.id]=el} onChange={e=>handleImg(v.id,e.target.files[0])}/>
-                    <div onClick={()=>fileRefs.current[v.id]?.click()} style={{width:52,height:70,borderRadius:8,overflow:"hidden",cursor:"pointer",background:"rgba(139,26,26,0.12)",border:"1px dashed rgba(224,112,112,0.3)",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:4,position:"relative",flexShrink:0}}>
+                    <div onClick={()=>fileRefs.current[v.id]?.click()} style={{width:80,height:108,borderRadius:10,overflow:"hidden",cursor:"pointer",background:"rgba(139,26,26,0.14)",border:`2px dashed ${images[v.id]?"rgba(224,112,112,0.5)":"rgba(224,112,112,0.25)"}`,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:4,position:"relative",flexShrink:0}}>
                       {images[v.id]
-                        ?<><img src={images[v.id]} alt={v.heroName} style={{width:"100%",height:"100%",objectFit:"cover",objectPosition:"top",position:"absolute",inset:0}}/><button onClick={e=>{e.stopPropagation();fileRefs.current[v.id]?.click();}} style={{position:"absolute",bottom:2,right:2,fontSize:7,padding:"2px 5px",background:"rgba(0,0,0,0.65)",border:"none",borderRadius:4,cursor:"pointer",color:"#fff",fontFamily:"var(--font-mono)",lineHeight:1}}>↑</button></>
-                        :<><div style={{fontSize:11,fontWeight:"bold",color:"#E07070"}}>{v.initials}</div><div style={{fontSize:7,color:"rgba(224,112,112,0.45)",textAlign:"center",lineHeight:1.3}}>tap to<br/>upload</div></>
+                        ?<><img src={images[v.id]} alt={v.heroName} style={{width:"100%",height:"100%",objectFit:"cover",objectPosition:"top",position:"absolute",inset:0}}/><div style={{position:"absolute",inset:0,background:"linear-gradient(to top,rgba(0,0,0,0.6) 0%,transparent 50%)"}}/>
+                           <button onClick={e=>{e.stopPropagation();fileRefs.current[v.id]?.click();}} style={{position:"absolute",bottom:4,left:0,right:0,margin:"0 auto",width:"fit-content",fontSize:7,padding:"2px 8px",background:"rgba(0,0,0,0.7)",border:"1px solid rgba(224,112,112,0.4)",borderRadius:4,cursor:"pointer",color:"#E07070",fontFamily:"var(--font-mono)",lineHeight:1.4}}>↑ Change</button></>
+                        :<><div style={{width:36,height:36,borderRadius:"50%",background:"rgba(139,26,26,0.3)",display:"flex",alignItems:"center",justifyContent:"center",marginBottom:2}}><span style={{fontSize:13,fontWeight:"bold",color:"#E07070"}}>{v.initials}</span></div><div style={{fontSize:7.5,color:"rgba(224,112,112,0.55)",textAlign:"center",lineHeight:1.5,letterSpacing:"0.05em"}}>↑ Upload<br/>Portrait</div></>
                       }
                     </div>
                   </div>
@@ -2149,6 +2167,189 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
             </div>
           </>)}
           {villainPool.length===0&&<div style={{textAlign:"center",padding:"30px",color:"var(--text3)",fontSize:12}}>No villains created yet. Every hero team needs an antagonist.</div>}
+        </>)}
+        </>)}
+
+        {/* ── FACTIONS & ALLIANCES ──────────────────────────────────────── */}
+        {villainSubTab==="factions"&&(<>
+          {/* Faction creator */}
+          <div style={{...s.card,marginBottom:20}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+              <div>
+                <div style={{fontSize:9,letterSpacing:"0.2em",color:"rgba(139,26,26,0.7)",textTransform:"uppercase",marginBottom:3}}>Villain Factions</div>
+                <div style={{fontSize:11,color:"var(--text2)"}}>Organize villains into criminal organizations, cabals, or syndicates.</div>
+              </div>
+              <button onClick={()=>{setCreatingFaction(true);setEditingFactionId(null);setFactionDraft({name:"",abbr:"",color:"#8B1A1A",purpose:"",memberIds:[]});}} style={{fontSize:9,padding:"5px 12px",background:"rgba(139,26,26,0.15)",border:"1px solid rgba(139,26,26,0.4)",borderRadius:6,cursor:"pointer",color:"#E07070",fontFamily:"var(--font-mono)",whiteSpace:"nowrap"}}>+ New Faction</button>
+            </div>
+            {(creatingFaction||editingFactionId!==null)&&(<>
+              <div style={{borderTop:"1px solid rgba(139,26,26,0.2)",paddingTop:14,marginTop:4}}>
+                <div style={{fontSize:9,letterSpacing:"0.12em",color:"rgba(139,26,26,0.6)",textTransform:"uppercase",marginBottom:10}}>{editingFactionId!==null?"Edit Faction":"New Faction"}</div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 80px",gap:8,marginBottom:10}}>
+                  <div>
+                    <span style={s.lbl}>Faction Name</span>
+                    <input value={factionDraft.name} onChange={e=>setFactionDraft(p=>({...p,name:e.target.value}))} placeholder="e.g. The Shadow Syndicate" style={{width:"100%",marginTop:4}}/>
+                  </div>
+                  <div>
+                    <span style={s.lbl}>Abbr</span>
+                    <input value={factionDraft.abbr} onChange={e=>setFactionDraft(p=>({...p,abbr:e.target.value.slice(0,4).toUpperCase()}))} placeholder="TSS" maxLength={4} style={{width:"100%",marginTop:4}}/>
+                  </div>
+                </div>
+                <div style={{marginBottom:10}}>
+                  <span style={s.lbl}>Purpose / Threat</span>
+                  <input value={factionDraft.purpose} onChange={e=>setFactionDraft(p=>({...p,purpose:e.target.value}))} placeholder="e.g. Dominate the criminal underworld" style={{width:"100%",marginTop:4}}/>
+                </div>
+                <div style={{marginBottom:12}}>
+                  <span style={s.lbl}>Faction Color</span>
+                  <div style={{display:"flex",gap:6,marginTop:6,flexWrap:"wrap"}}>
+                    {["#8B1A1A","#4A0E6E","#0D3B5E","#1A3A1A","#3D2B00","#2C2C2C","#5C1A4A","#1A2C4A"].map(c=>(
+                      <button key={c} onClick={()=>setFactionDraft(p=>({...p,color:c}))} style={{width:24,height:24,borderRadius:6,background:c,border:`2px solid ${factionDraft.color===c?"#fff":"transparent"}`,cursor:"pointer",flexShrink:0}}/>
+                    ))}
+                    <input type="color" value={factionDraft.color} onChange={e=>setFactionDraft(p=>({...p,color:e.target.value}))} style={{width:24,height:24,borderRadius:6,border:"1px solid var(--border)",padding:1,background:"var(--bg3)",cursor:"pointer"}}/>
+                  </div>
+                </div>
+                {villainPool.length>0&&(<div style={{marginBottom:14}}>
+                  <span style={s.lbl}>Members ({factionDraft.memberIds.length} selected)</span>
+                  <div style={{display:"flex",flexWrap:"wrap",gap:8,marginTop:8}}>
+                    {villainPool.map(v=>{
+                      const sel=factionDraft.memberIds.includes(v.id);
+                      return(<button key={v.id} onClick={()=>setFactionDraft(p=>({...p,memberIds:sel?p.memberIds.filter(x=>x!==v.id):[...p.memberIds,v.id]}))}
+                        style={{display:"flex",alignItems:"center",gap:6,padding:"4px 10px 4px 4px",background:sel?"rgba(139,26,26,0.2)":"var(--bg3)",border:`1px solid ${sel?"rgba(224,112,112,0.5)":"var(--border)"}`,borderRadius:20,cursor:"pointer"}}>
+                        {images[v.id]?<img src={images[v.id]} style={{width:22,height:22,borderRadius:"50%",objectFit:"cover",objectPosition:"top"}}/>:<div style={{width:22,height:22,borderRadius:"50%",background:`${v.color||"#8B1A1A"}22`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:7,fontWeight:"bold",color:v.color||"#E07070"}}>{v.initials}</div>}
+                        <span style={{fontSize:9,color:sel?"#E07070":"var(--text2)",fontFamily:"var(--font-mono)"}}>{v.heroName}</span>
+                      </button>);
+                    })}
+                  </div>
+                </div>)}
+                {villainPool.length===0&&<div style={{fontSize:10,color:"var(--text3)",marginBottom:12,fontStyle:"italic"}}>Add villains to the pool first to assign faction members.</div>}
+                <div style={{display:"flex",gap:8}}>
+                  <button onClick={()=>{setCreatingFaction(false);setEditingFactionId(null);}} style={{flex:1,fontSize:9,padding:"7px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:6,cursor:"pointer",color:"var(--text3)",fontFamily:"var(--font-mono)"}}>Cancel</button>
+                  <button onClick={()=>{
+                    if(!factionDraft.name.trim())return;
+                    if(editingFactionId!==null){
+                      const updated=villainFactions.map(f=>f.id===editingFactionId?{...f,...factionDraft}:f);
+                      setVillainFactions(updated);persist("forge-villain-factions",updated);
+                    } else {
+                      const nf=[...villainFactions,{id:`faction-${Date.now()}`,...factionDraft}];
+                      setVillainFactions(nf);persist("forge-villain-factions",nf);
+                    }
+                    setCreatingFaction(false);setEditingFactionId(null);
+                  }} disabled={!factionDraft.name.trim()} style={{flex:2,fontSize:9,padding:"7px",background:factionDraft.name.trim()?"rgba(139,26,26,0.2)":"var(--bg3)",border:`1px solid ${factionDraft.name.trim()?"rgba(139,26,26,0.5)":"var(--border)"}`,borderRadius:6,cursor:factionDraft.name.trim()?"pointer":"default",color:factionDraft.name.trim()?"#E07070":"var(--text4)",fontFamily:"var(--font-mono)"}}>Save Faction →</button>
+                </div>
+              </div>
+            </>)}
+          </div>
+
+          {/* Faction list */}
+          {villainFactions.length>0&&(<>
+            <div style={{display:"flex",flexDirection:"column",gap:12,marginBottom:28}}>
+              {villainFactions.map(f=>{
+                const members=villainPool.filter(v=>f.memberIds.includes(v.id));
+                return(<div key={f.id} style={{background:`${f.color}10`,border:`1px solid ${f.color}33`,borderRadius:10,padding:"14px 16px"}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
+                    <div style={{display:"flex",alignItems:"center",gap:10}}>
+                      <div style={{width:38,height:38,borderRadius:8,background:f.color,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                        <span style={{fontSize:11,fontWeight:"bold",color:"#fff",letterSpacing:"0.05em"}}>{f.abbr||f.name.slice(0,2).toUpperCase()}</span>
+                      </div>
+                      <div>
+                        <div style={{fontSize:13,fontWeight:"bold",color:"var(--text-primary)"}}>{f.name}</div>
+                        {f.purpose&&<div style={{fontSize:10,color:"var(--text2)",marginTop:2,lineHeight:1.4}}>{f.purpose}</div>}
+                      </div>
+                    </div>
+                    <div style={{display:"flex",gap:5,flexShrink:0}}>
+                      <button onClick={()=>{setEditingFactionId(f.id);setCreatingFaction(false);setFactionDraft({name:f.name,abbr:f.abbr||"",color:f.color,purpose:f.purpose||"",memberIds:f.memberIds||[]});}} style={{fontSize:8,padding:"3px 9px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:5,cursor:"pointer",color:"var(--text3)",fontFamily:"var(--font-mono)"}}>Edit</button>
+                      <button onClick={()=>{const updated=villainFactions.filter(x=>x.id!==f.id);setVillainFactions(updated);persist("forge-villain-factions",updated);const updatedA=villainAlliances.filter(a=>a.factionA!==f.id&&a.factionB!==f.id);setVillainAlliances(updatedA);persist("forge-villain-alliances",updatedA);}} style={{fontSize:8,padding:"3px 9px",background:"rgba(163,45,45,0.1)",border:"1px solid rgba(163,45,45,0.28)",borderRadius:5,cursor:"pointer",color:"#e74c3c",fontFamily:"var(--font-mono)"}}>Remove</button>
+                    </div>
+                  </div>
+                  {members.length>0?(<div>
+                    <div style={{fontSize:8,letterSpacing:"0.12em",color:`${f.color}99`,textTransform:"uppercase",marginBottom:7}}>{members.length} member{members.length!==1?"s":""}</div>
+                    <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                      {members.map(m=>(<div key={m.id} style={{display:"flex",alignItems:"center",gap:6}}>
+                        {images[m.id]?<img src={images[m.id]} style={{width:28,height:28,borderRadius:"50%",objectFit:"cover",objectPosition:"top",border:`1px solid ${f.color}55`}}/>
+                          :<div style={{width:28,height:28,borderRadius:"50%",background:`${m.color||f.color}22`,display:"flex",alignItems:"center",justifyContent:"center",border:`1px solid ${f.color}44`}}><span style={{fontSize:8,fontWeight:"bold",color:m.color||f.color}}>{m.initials}</span></div>}
+                        <span style={{fontSize:9,color:"var(--text2)",fontFamily:"var(--font-mono)"}}>{m.heroName}</span>
+                      </div>))}
+                    </div>
+                  </div>):(<div style={{fontSize:9,color:"var(--text3)",fontStyle:"italic"}}>No members assigned — edit to add villains from the pool.</div>)}
+                </div>);
+              })}
+            </div>
+          </>)}
+          {villainFactions.length===0&&!creatingFaction&&(<div style={{textAlign:"center",padding:"20px 0 28px",color:"var(--text3)",fontSize:11}}>No factions yet. Every major threat has an organization behind it.</div>)}
+
+          {/* ── ALLIANCES ─────────────────────────────────────────────── */}
+          {villainFactions.length>=2&&(<>
+            <div style={{borderTop:"1px solid rgba(139,26,26,0.15)",paddingTop:20,marginBottom:16}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+                <div>
+                  <div style={{fontSize:9,letterSpacing:"0.2em",color:"rgba(139,26,26,0.7)",textTransform:"uppercase",marginBottom:3}}>Inter-Faction Relations</div>
+                  <div style={{fontSize:11,color:"var(--text2)"}}>Define how factions relate — alliances, rivalries, and power dynamics.</div>
+                </div>
+                <button onClick={()=>{setCreatingAlliance(p=>!p);setAllianceDraft({factionA:"",factionB:"",type:"united",description:""}); }} style={{fontSize:9,padding:"5px 12px",background:creatingAlliance?"rgba(139,26,26,0.15)":"var(--bg3)",border:`1px solid ${creatingAlliance?"rgba(139,26,26,0.4)":"var(--border)"}`,borderRadius:6,cursor:"pointer",color:creatingAlliance?"#E07070":"var(--text2)",fontFamily:"var(--font-mono)",whiteSpace:"nowrap"}}>+ Add Relation</button>
+              </div>
+              {creatingAlliance&&(<div style={{...s.card,marginBottom:14}}>
+                <div style={{fontSize:9,letterSpacing:"0.12em",color:"rgba(139,26,26,0.6)",textTransform:"uppercase",marginBottom:10}}>New Relation</div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
+                  <div>
+                    <span style={s.lbl}>Faction A</span>
+                    <select value={allianceDraft.factionA} onChange={e=>setAllianceDraft(p=>({...p,factionA:e.target.value}))} style={{width:"100%",padding:"7px 10px",background:"var(--bg2)",border:"1px solid var(--border2)",borderRadius:7,color:"var(--text-primary)",fontSize:10,marginTop:4}}>
+                      <option value="">Select...</option>
+                      {villainFactions.map(f=><option key={f.id} value={f.id}>{f.name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <span style={s.lbl}>Faction B</span>
+                    <select value={allianceDraft.factionB} onChange={e=>setAllianceDraft(p=>({...p,factionB:e.target.value}))} style={{width:"100%",padding:"7px 10px",background:"var(--bg2)",border:"1px solid var(--border2)",borderRadius:7,color:"var(--text-primary)",fontSize:10,marginTop:4}}>
+                      <option value="">Select...</option>
+                      {villainFactions.filter(f=>f.id!==allianceDraft.factionA).map(f=><option key={f.id} value={f.id}>{f.name}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div style={{marginBottom:10}}>
+                  <span style={s.lbl}>Relationship Type</span>
+                  <div style={{display:"flex",gap:5,flexWrap:"wrap",marginTop:6}}>
+                    {[["united","🤝 United Front","#2d6a4f"],["truce","⚖ Uneasy Truce","#805500"],["rivalry","⚔ Rivalry","#8B1A1A"],["hostile","💥 Open Conflict","#7d0000"],["merged","🔗 Merged","#4A0E6E"]].map(([id,label,col])=>(
+                      <button key={id} onClick={()=>setAllianceDraft(p=>({...p,type:id}))} style={{fontSize:9,padding:"4px 10px",background:allianceDraft.type===id?`${col}22`:"var(--bg3)",border:`1px solid ${allianceDraft.type===id?col:"var(--border)"}`,borderRadius:20,cursor:"pointer",color:allianceDraft.type===id?col:"var(--text3)",fontFamily:"var(--font-mono)"}}>{label}</button>
+                    ))}
+                  </div>
+                </div>
+                <div style={{marginBottom:12}}>
+                  <span style={s.lbl}>Notes (optional)</span>
+                  <input value={allianceDraft.description} onChange={e=>setAllianceDraft(p=>({...p,description:e.target.value}))} placeholder="e.g. Temporarily allied to eliminate the Nocturnal Knights" style={{width:"100%",marginTop:4}}/>
+                </div>
+                <div style={{display:"flex",gap:8}}>
+                  <button onClick={()=>setCreatingAlliance(false)} style={{flex:1,fontSize:9,padding:"7px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:6,cursor:"pointer",color:"var(--text3)",fontFamily:"var(--font-mono)"}}>Cancel</button>
+                  <button onClick={()=>{
+                    if(!allianceDraft.factionA||!allianceDraft.factionB||allianceDraft.factionA===allianceDraft.factionB)return;
+                    const na=[...villainAlliances,{id:`alliance-${Date.now()}`,...allianceDraft}];
+                    setVillainAlliances(na);persist("forge-villain-alliances",na);setCreatingAlliance(false);
+                  }} disabled={!allianceDraft.factionA||!allianceDraft.factionB||allianceDraft.factionA===allianceDraft.factionB}
+                    style={{flex:2,fontSize:9,padding:"7px",background:(allianceDraft.factionA&&allianceDraft.factionB&&allianceDraft.factionA!==allianceDraft.factionB)?"rgba(139,26,26,0.2)":"var(--bg3)",border:`1px solid ${(allianceDraft.factionA&&allianceDraft.factionB&&allianceDraft.factionA!==allianceDraft.factionB)?"rgba(139,26,26,0.5)":"var(--border)"}`,borderRadius:6,cursor:"pointer",color:(allianceDraft.factionA&&allianceDraft.factionB&&allianceDraft.factionA!==allianceDraft.factionB)?"#E07070":"var(--text4)",fontFamily:"var(--font-mono)"}}>Save Relation →</button>
+                </div>
+              </div>)}
+              {villainAlliances.length>0&&(<div style={{display:"flex",flexDirection:"column",gap:8}}>
+                {villainAlliances.map(a=>{
+                  const fA=villainFactions.find(f=>f.id===a.factionA);
+                  const fB=villainFactions.find(f=>f.id===a.factionB);
+                  if(!fA||!fB)return null;
+                  const typeInfo={united:{label:"🤝 United Front",color:"#2d6a4f"},truce:{label:"⚖ Uneasy Truce",color:"#805500"},rivalry:{label:"⚔ Rivalry",color:"#8B1A1A"},hostile:{label:"💥 Open Conflict",color:"#7d0000"},merged:{label:"🔗 Merged",color:"#4A0E6E"}}[a.type]||{label:a.type,color:"#666"};
+                  return(<div key={a.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:8}}>
+                    <div style={{display:"flex",alignItems:"center",gap:6,flex:1,minWidth:0}}>
+                      <div style={{width:10,height:10,borderRadius:2,background:fA.color,flexShrink:0}}/>
+                      <span style={{fontSize:10,color:"var(--text-primary)",fontWeight:"bold",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{fA.name}</span>
+                    </div>
+                    <div style={{padding:"3px 10px",background:`${typeInfo.color}18`,border:`1px solid ${typeInfo.color}44`,borderRadius:20,fontSize:8,color:typeInfo.color,fontFamily:"var(--font-mono)",whiteSpace:"nowrap",flexShrink:0}}>{typeInfo.label}</div>
+                    <div style={{display:"flex",alignItems:"center",gap:6,flex:1,minWidth:0,justifyContent:"flex-end"}}>
+                      <span style={{fontSize:10,color:"var(--text-primary)",fontWeight:"bold",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",textAlign:"right"}}>{fB.name}</span>
+                      <div style={{width:10,height:10,borderRadius:2,background:fB.color,flexShrink:0}}/>
+                    </div>
+                    <button onClick={()=>{const updated=villainAlliances.filter(x=>x.id!==a.id);setVillainAlliances(updated);persist("forge-villain-alliances",updated);}} style={{fontSize:8,padding:"3px 7px",background:"rgba(163,45,45,0.1)",border:"1px solid rgba(163,45,45,0.25)",borderRadius:5,cursor:"pointer",color:"#e74c3c",fontFamily:"var(--font-mono)",flexShrink:0}}>✕</button>
+                  </div>);
+                })}
+              </div>)}
+              {villainAlliances.length===0&&!creatingAlliance&&<div style={{textAlign:"center",padding:"14px 0",color:"var(--text3)",fontSize:10,fontStyle:"italic"}}>No relations defined yet between factions.</div>}
+            </div>
+          </>)}
+          {villainFactions.length<2&&villainFactions.length>0&&(<div style={{marginTop:16,padding:"10px 14px",background:"rgba(139,26,26,0.07)",border:"1px solid rgba(139,26,26,0.15)",borderRadius:8,fontSize:10,color:"var(--text3)"}}>Create at least 2 factions to define inter-faction relations.</div>)}
         </>)}
       </>)}
 
