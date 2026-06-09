@@ -184,7 +184,7 @@ def on_page(canvas, doc):
     # Footer text
     canvas.setFont("Courier", 7)
     canvas.setFillColor(TEXT3)
-    canvas.drawCentredString(W/2, 20, f"SUPERHERO FORGE  ·  NOCTURNAL INC  ·  CLASSIFIED")
+    canvas.drawCentredString(W/2, 20, f"NOCTURNAL INNOVATIONS'S SUPERHERO FORGE  ·  CLASSIFIED")
     canvas.restoreState()
 
 # ── Document ─────────────────────────────────────────────────────────────────
@@ -203,7 +203,7 @@ story = []
 # COVER PAGE
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 story.append(Spacer(1, 1.4*inch))
-story.append(Paragraph("SUPERHERO FORGE", S_COVER_TITLE))
+story.append(Paragraph("NOCTURNAL INNOVATIONS'S SUPERHERO FORGE", S_COVER_TITLE))
 story.append(Spacer(1, 0.1*inch))
 story.append(Paragraph("Feature Reference  ·  Superhero Universe Builder", S_COVER_SUB))
 story.append(Spacer(1, 0.25*inch))
@@ -1089,7 +1089,7 @@ for entry in changelog:
     story.append(hr(colors.HexColor(f"#{hex_c}40"), 0.5, 6, 8))
 
 story.append(Spacer(1, 0.4*inch))
-story.append(Paragraph("SUPERHERO FORGE  ·  NOCTURNAL INC  ·  ALL RIGHTS RESERVED  ·  2026",
+story.append(Paragraph("NOCTURNAL INNOVATIONS'S SUPERHERO FORGE  ·  ALL RIGHTS RESERVED  ·  2026",
     ParagraphStyle("foot",fontName="Courier",fontSize=7.5,textColor=TEXT3,leading=11,alignment=TA_CENTER)))
 
 # ── Build ─────────────────────────────────────────────────────────────────────

@@ -97,7 +97,7 @@ def build_pdf(screenshots):
 
     # ── Cover ────────────────────────────────────────────────────────────────
     story.append(Spacer(1, 1.2*inch))
-    story.append(Paragraph("SUPERHERO FORGE", h1))
+    story.append(Paragraph("NOCTURNAL INNOVATIONS'S SUPERHERO FORGE", h1))
     story.append(Paragraph("v1.1 — Feature Overview &amp; Changelog", style("sub2", fontSize=14, textColor=GOLD, alignment=TA_CENTER, fontName="Helvetica-Bold")))
     story.append(Spacer(1, 0.15*inch))
     story.append(hr(NAVY, 1.5))

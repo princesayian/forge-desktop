@@ -27,7 +27,7 @@ export default function RemotePanel({remoteInfo,setRemoteInfo,onClose,s,forgeVer
   };
   return(<div style={{background:"var(--bg2)",borderBottom:"1px solid var(--border)",padding:"14px 22px"}}>
     <div style={{maxWidth:960,margin:"0 auto"}}>
-      <div style={{fontSize:9,letterSpacing:"0.18em",color:"#5EB1FF88",textTransform:"uppercase",marginBottom:12}}>Remote Access & Settings — Superhero Forge {forgeVersion?`v${forgeVersion}`:""}</div>
+      <div style={{fontSize:9,letterSpacing:"0.18em",color:"#5EB1FF88",textTransform:"uppercase",marginBottom:12}}>Remote Access & Settings — Nocturnal Innovations's Superhero Forge {forgeVersion?`v${forgeVersion}`:""}</div>
       {(()=>{
         const live=remoteInfo?.enabled&&remoteInfo?.url;
         const needsRestart=remoteInfo?.enabled&&!remoteInfo?.url&&remoteInfo?.cloudflared;

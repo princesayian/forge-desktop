@@ -1,4 +1,4 @@
-# Superhero Forge — Desktop App
+# Nocturnal Innovations's Superhero Forge — Desktop App
 ### v1.2.0 · Powered by Ollama · Local or Remote API · Runs 100% locally
 
 ---

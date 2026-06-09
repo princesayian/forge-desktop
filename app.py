@@ -1,5 +1,5 @@
 """
-Superhero Forge — Desktop App
+Nocturnal Innovations's Superhero Forge — Desktop App
 Local AI powered by Ollama. No API keys. No subscriptions.
 """
 

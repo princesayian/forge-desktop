@@ -1073,7 +1073,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
         <div style={{display:"flex",alignItems:"center",gap:10}}>
           <div style={{width:34,height:34,borderRadius:9,background:`linear-gradient(135deg,${G}22,${G}0A)`,border:`1px solid ${G}33`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0,boxShadow:`0 0 18px ${G}1A`}}>⚒</div>
           <div>
-            <div style={{fontSize:8.5,letterSpacing:"0.3em",color:`${G}70`,textTransform:"uppercase",fontFamily:"var(--font-mono)",marginBottom:1}}>Superhero Forge</div>
+            <div style={{fontSize:8.5,letterSpacing:"0.3em",color:`${G}70`,textTransform:"uppercase",fontFamily:"var(--font-mono)",marginBottom:1}}>Nocturnal Innovations's Superhero Forge</div>
             <div style={{display:"flex",alignItems:"baseline",gap:7}}>
               <div style={{fontSize:17,fontWeight:"800",letterSpacing:"0.04em",color:"var(--text-primary)",fontFamily:"var(--font-mono)",lineHeight:1}}>SUPERHERO FORGE</div>
               {forgeVersion&&<div style={{fontSize:8,color:"var(--text4)",letterSpacing:"0.12em",fontFamily:"var(--font-mono)"}}>{`v${forgeVersion}`}</div>}
