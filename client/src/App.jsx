@@ -136,9 +136,10 @@ function App(){
   const[scDeepAnswers,setScDeepAnswers]=useState({});
   const[scProfileStep,setScProfileStep]=useState(0);
   const[scProfileAnswers,setScProfileAnswers]=useState({});
+  const[scReforgeId,setScReforgeId]=useState(null);
   const toggleScColor=hex=>setScColors(prev=>{if(prev.includes(hex)){if(prev.length===1)return prev;return prev.filter(c=>c!==hex);}if(prev.length>=3)return prev;return[...prev,hex];});
   const addCustomScColor=()=>{const h=scCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{6}$/))return;setScColors(prev=>{if(prev.includes(h)||prev.length>=3)return prev;return[...prev,h];});setScCustomHex("#ffffff");};
-  const resetSoloCreator=()=>{setScStep(0);setScAnswers({});setScName("");setScHeroName("");setScGender("Male");setScRace(null);setScColors(["#888780"]);setScCustomHex("#ffffff");setScStoryDir("");setScAge("");setScBirthYear("");setScResult(null);setScLoading(false);setScDeepMode(false);setScProfileMode(false);setScDeepPhase(0);setScDeepAnswers({});setScProfileStep(0);setScProfileAnswers({});};
+  const resetSoloCreator=()=>{setScStep(0);setScAnswers({});setScName("");setScHeroName("");setScGender("Male");setScRace(null);setScColors(["#888780"]);setScCustomHex("#ffffff");setScStoryDir("");setScAge("");setScBirthYear("");setScResult(null);setScLoading(false);setScDeepMode(false);setScProfileMode(false);setScDeepPhase(0);setScDeepAnswers({});setScProfileStep(0);setScProfileAnswers({});setScReforgeId(null);};
   // ── Ollama ──────────────────────────────────────────────────────────────
   const[ollamaOk,setOllamaOk]=useState(null);const[groqOk,setGroqOk]=useState(false);
   const[forgeVersion,setForgeVersion]=useState("");
@@ -161,6 +162,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
   const[rRace,setRRace]=useState(null);
   const[rStoryDir,setRStoryDir]=useState("");
   const[rLoading,setRLoading]=useState(false);const[rResult,setRResult]=useState(null);
+  const[rReforgeId,setRReforgeId]=useState(null);
   const[recruitSuggest,setRecruitSuggest]=useState(null);const[recruitSuggestLoading,setRecruitSuggestLoading]=useState(false);
   const[deepMode,setDeepMode]=useState(false);
   const[deepPhase,setDeepPhase]=useState(0);
@@ -186,6 +188,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
   const[vDeepAnswers,setVDeepAnswers]=useState({});
   const[vProfileStep,setVProfileStep]=useState(0);
   const[vProfileAnswers,setVProfileAnswers]=useState({});
+  const[vReforgeId,setVReforgeId]=useState(null);
   const[aiStreamText,setAiStreamText]=useState("");
   const genControllerRef=useRef(null);
   // ── Story ────────────────────────────────────────────────────────────────
@@ -506,11 +509,22 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
   };
   const saveSoloHero=()=>{
     if(!scResult||scResult.error)return;
-    addSoloHeroFn(scResult);
-    setShowSoloCreator(false);
-    setActiveSoloId(scResult.id);
-    setSoloHeroView("profile");
+    if(scReforgeId){
+      const updated={...scResult,id:scReforgeId};
+      const newHeroes=soloHeroes.map(h=>h.id===scReforgeId?updated:h);
+      setSoloHeroes(newHeroes);persist("forge-solo-heroes",newHeroes);
+      setShowSoloCreator(false);setActiveSoloId(scReforgeId);setSoloHeroView("profile");resetSoloCreator();
+    }else{
+      addSoloHeroFn(scResult);
+      setShowSoloCreator(false);setActiveSoloId(scResult.id);setSoloHeroView("profile");resetSoloCreator();
+    }
+  };
+  const startHeroReforge=(hero)=>{
     resetSoloCreator();
+    setScName(hero.realName||"");setScHeroName(hero.heroName||"");setScGender(hero.gender||"Male");setScAge(hero.age||"");setScBirthYear(hero.birthYear||"");setScRace(hero.race||null);setScColors(hero.colorPalette?.length?hero.colorPalette:hero.color?[hero.color]:["#888780"]);
+    if(hero.deepLore&&typeof hero.deepLore==="object"&&!Array.isArray(hero.deepLore)){setScDeepMode(true);setScDeepAnswers(hero.deepLore);}
+    else if(hero.profileLore){setScProfileMode(true);}
+    setScReforgeId(hero.id);setShowSoloCreator(true);
   };
   const generateSoloStory=async(hero,rogues)=>{
     if(!hero||rogues.length===0)return;
@@ -654,6 +668,13 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
 
   const addRecruit=()=>{
     if(!rResult||rResult.error)return;
+    if(rReforgeId){
+      const updated={...rResult,id:rReforgeId};
+      const newRosters={...teamRosters,[activeTeamId]:(teamRosters[activeTeamId]||[]).map(m=>m.id===rReforgeId?updated:m)};
+      setTeamRosters(newRosters);persist("forge-rosters",newRosters);
+      setRResult(null);setRAnswers({});setRName("");setRHeroName("");setRStep(0);setRNkAlign("neutral");setRTeamRank("operative");setRGender("Male");setRAge("");setRBirthYear("");setRRace(null);setRStoryDir("");setDeepAnswers({});setDeepPhase(0);setProfileAnswers({});setProfileStep(0);setRFamilyCharId("");setRFamilyRelation("parent");setRFamilyLinks([]);setRHeroAssocId("");setRHeroAssocType("sidekick");setRecruitSuggest(null);setRecruitSuggestLoading(false);setRReforgeId(null);setTab("roster");
+      return;
+    }
     const newRosters={...teamRosters,[activeTeamId]:[...(teamRosters[activeTeamId]||[]),rResult]};
     setTeamRosters(newRosters);
     persist("forge-rosters",newRosters);
@@ -671,6 +692,13 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
       }
     }
     setRResult(null);setRAnswers({});setRName("");setRHeroName("");setRStep(0);setRNkAlign("neutral");setRTeamRank("operative");setRGender("Male");setRAge("");setRBirthYear("");setRRace(null);setRStoryDir("");setDeepAnswers({});setDeepPhase(0);setProfileAnswers({});setProfileStep(0);setRFamilyCharId("");setRFamilyRelation("parent");setRFamilyLinks([]);setRHeroAssocId("");setRHeroAssocType("sidekick");setRecruitSuggest(null);setRecruitSuggestLoading(false);setTab("roster");
+  };
+  const startRecruitReforge=(member)=>{
+    setRResult(null);setRAnswers({});setRStep(0);setDeepPhase(0);setDeepAnswers({});setProfileStep(0);setProfileAnswers({});setDeepMode(false);setProfileMode(false);setRecruitSuggest(null);setRecruitSuggestLoading(false);
+    setRName(member.realName||"");setRHeroName(member.heroName||"");setRGender(member.gender||"Male");setRAge(member.age||"");setRBirthYear(member.birthYear||"");setRRace(member.race||null);setRColors(member.colorPalette?.length?member.colorPalette:member.color?[member.color]:["#A32D2D"]);setRNkAlign(member.nkAlignment||"neutral");setRTeamRank(member.teamRank||"operative");setRStoryDir("");
+    if(member.deepLore&&typeof member.deepLore==="object"&&!Array.isArray(member.deepLore)){setDeepMode(true);setDeepAnswers(member.deepLore);setDeepPhase(0);}
+    else if(member.profileLore){setProfileMode(true);}
+    setRReforgeId(member.id);setTab("recruit");
   };
 
   const runAIRecruit=async()=>{
@@ -769,6 +797,18 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
 
   const addVillain=()=>{
     if(!vResult||vResult.error)return;
+    if(vReforgeId){
+      const updated={...vResult,id:vReforgeId};
+      if(rogueMode){
+        const newRogues={...soloVillains,[rogueMode]:(soloVillains[rogueMode]||[]).map(v=>v.id===vReforgeId?{...updated,rogueFor:rogueMode}:v)};
+        setSoloVillains(newRogues);persist("forge-solo-villains",newRogues);
+      }else{
+        const newPool=villainPool.map(v=>v.id===vReforgeId?updated:v);
+        setVillainPool(newPool);persist("forge-villains",newPool);
+      }
+      setVResult(null);setVAnswers({});setVName("");setVStep(0);setVTargetTeams([]);setVGender("Male");setVDeepMode(false);setVProfileMode(false);setVDeepPhase(0);setVDeepAnswers({});setVProfileStep(0);setVProfileAnswers({});setVReforgeId(null);setRogueMode(null);
+      return;
+    }
     if(rogueMode){
       addSoloRogueFn(rogueMode,{...vResult,rogueFor:rogueMode});
       setRogueMode(null);
@@ -776,6 +816,14 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
       const newPool=[...villainPool,vResult];setVillainPool(newPool);persist("forge-villains",newPool);
     }
     setVResult(null);setVAnswers({});setVName("");setVStep(0);setVTargetTeams([]);setVGender("Male");setVDeepMode(false);setVProfileMode(false);setVDeepPhase(0);setVDeepAnswers({});setVProfileStep(0);setVProfileAnswers({});
+  };
+  const startVillainReforge=(villain,heroId=null)=>{
+    setVResult(null);setVAnswers({});setVStep(0);setVDeepPhase(0);setVDeepAnswers({});setVProfileStep(0);setVProfileAnswers({});setVDeepMode(false);setVProfileMode(false);
+    setVName(villain.realName||"");setVGender(villain.gender||"Male");setVTargetTeams(villain.targetTeams||[]);
+    if(villain.deepLore&&typeof villain.deepLore==="object"&&!Array.isArray(villain.deepLore)){setVDeepMode(true);setVDeepAnswers(villain.deepLore);setVDeepPhase(0);}
+    else if(villain.profileLore){setVProfileMode(true);}
+    setVReforgeId(villain.id);
+    if(heroId){setRogueMode(heroId);setSoloHeroView("rogues");}else{setRogueMode(null);setTab("villains");setVillainSubTab("pool");}
   };
 
   const saveBareVillain=()=>{
@@ -1470,6 +1518,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
               </div>
               <div className="froster-actions" style={{display:"flex",gap:7,alignItems:"center"}}>
                 <button onClick={e=>{e.stopPropagation();setEditingChar(p=>({...p,[m.id]:!p[m.id]}));setExpanded(p=>({...p,[m.id]:false}));}} style={{fontSize:10.5,padding:"5px 12px",background:editingChar[m.id]?`${m.color}22`:"var(--bg3)",border:`1px solid ${editingChar[m.id]?m.color:"var(--border)"}`,borderRadius:8,cursor:"pointer",color:editingChar[m.id]?m.color:"var(--text3)",fontFamily:"var(--font-mono)"}}>{editingChar[m.id]?"Close":"Edit"}</button>
+                <button onClick={e=>{e.stopPropagation();startRecruitReforge(m);}} style={{fontSize:10.5,padding:"5px 12px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:8,cursor:"pointer",color:"var(--text3)",fontFamily:"var(--font-mono)"}}>Reforge</button>
                 <button onClick={e=>{e.stopPropagation();setSwitchingMember(switchingMember===m.id?null:m.id);setSharingMember(null);}} style={{fontSize:10.5,padding:"5px 12px",background:switchingMember===m.id?`${m.color}22`:"var(--bg3)",border:`1px solid ${switchingMember===m.id?m.color:"var(--border)"}`,borderRadius:8,cursor:"pointer",color:switchingMember===m.id?m.color:"var(--text3)",fontFamily:"var(--font-mono)"}}>Move</button>
                 <button onClick={e=>{e.stopPropagation();setSharingMember(sharingMember===m.id?null:m.id);setSwitchingMember(null);}} style={{fontSize:10.5,padding:"5px 12px",background:sharingMember===m.id?`${m.color}22`:"var(--bg3)",border:`1px solid ${sharingMember===m.id?m.color:"var(--border)"}`,borderRadius:8,cursor:"pointer",color:sharingMember===m.id?m.color:"var(--text3)",fontFamily:"var(--font-mono)"}}>+Team</button>
                 <button onClick={e=>{e.stopPropagation();requirePin(`Remove ${m.heroName} from roster`,()=>removeMember(activeTeamId,m));}} style={{fontSize:10.5,padding:"5px 12px",background:"rgba(163,45,45,0.1)",border:"1px solid rgba(163,45,45,0.28)",borderRadius:8,cursor:"pointer",color:"#e74c3c",fontFamily:"var(--font-mono)"}}>Remove</button>
@@ -1683,7 +1732,8 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
       {/* ── RECRUIT TAB ───────────────────────────────────────────────── */}
       {tab==="recruit"&&activeTeam&&(<>
         <div style={{padding:"10px 14px",background:`${activeTeam.color}0A`,border:`1px solid ${activeTeam.color}33`,borderRadius:8,fontSize:11,color:"var(--text2)",marginBottom:18}}>
-          Recruiting for: <strong style={{color:activeTeam.color}}>{activeTeam.name}</strong> · Switch teams in the Teams tab to recruit for a different team.
+          {rReforgeId?<>Reforging <strong style={{color:activeTeam.color}}>{rHeroName||"member"}</strong> for {activeTeam.name} — same identity, new generation.<button onClick={()=>{setRReforgeId(null);setRName("");setRHeroName("");setRGender("Male");setRAge("");setRBirthYear("");setRRace(null);setRColors(["#A32D2D"]);setRStoryDir("");setDeepMode(false);setProfileMode(false);setDeepAnswers({});setDeepPhase(0);setProfileAnswers({});setProfileStep(0);}} style={{float:"right",background:"none",border:"none",cursor:"pointer",color:"var(--text4)",fontSize:13}}>×</button></>
+          :<>Recruiting for: <strong style={{color:activeTeam.color}}>{activeTeam.name}</strong> · Switch teams in the Teams tab to recruit for a different team.</>}
         </div>
         {/* Mode toggle */}
         <div style={{display:"flex",gap:8,marginBottom:18}}>
@@ -1927,7 +1977,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
           <CharacterPage member={rResult} imageUrl={null} teamName={activeTeam.name} teamColor={activeTeam.color}/>
           <div style={{display:"flex",gap:10,marginTop:14}}>
             <button onClick={()=>{setRResult(null);setRStep(0);setRAnswers({});setDeepPhase(0);setDeepAnswers({});setProfileStep(0);setProfileAnswers({});setRHeroAssocId("");setRHeroAssocType("sidekick");setRecruitSuggest(null);setRecruitSuggestLoading(false);}} style={{flex:1,padding:"11px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:10.5,fontFamily:"var(--font-mono)"}}>Regenerate</button>
-            <button onClick={addRecruit} style={{flex:2,padding:"11px",background:`${activeTeam.color}16`,border:`1px solid ${activeTeam.color}`,borderRadius:8,cursor:"pointer",color:activeTeam.color,fontSize:10.5,letterSpacing:"0.1em",textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>Add to {activeTeam.abbr} →</button>
+            <button onClick={addRecruit} style={{flex:2,padding:"11px",background:`${activeTeam.color}16`,border:`1px solid ${activeTeam.color}`,borderRadius:8,cursor:"pointer",color:activeTeam.color,fontSize:10.5,letterSpacing:"0.1em",textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>{rReforgeId?"Update Member →":"Add to "+activeTeam.abbr+" →"}</button>
           </div>
           <div style={{marginTop:10}}>
             {!recruitSuggest&&<button onClick={runAIRecruit} disabled={recruitSuggestLoading} style={{width:"100%",padding:"10px",background:"rgba(83,74,183,0.1)",border:"1px solid rgba(83,74,183,0.35)",borderRadius:8,cursor:recruitSuggestLoading?"default":"pointer",color:"#8B82E8",fontSize:10,letterSpacing:"0.1em",textTransform:"uppercase",fontFamily:"var(--font-mono)",opacity:recruitSuggestLoading?0.6:1}}>{recruitSuggestLoading?"Consulting AI...":"AI Suggest Next Recruit →"}</button>}
@@ -2026,7 +2076,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
             <CharacterPage member={vResult} imageUrl={null} isVillain={true}/>
             <div style={{display:"flex",gap:10,marginTop:14,marginBottom:20}}>
               <button onClick={()=>{setVResult(null);setVStep(0);setVAnswers({});setVDeepPhase(0);setVDeepAnswers({});setVProfileStep(0);setVProfileAnswers({});}} style={{flex:1,padding:"11px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:10.5,fontFamily:"var(--font-mono)"}}>Regenerate</button>
-              <button onClick={addVillain} style={{flex:2,padding:"11px",background:"rgba(139,26,26,0.2)",border:"1px solid #8B1A1A",borderRadius:8,cursor:"pointer",color:"#E07070",fontSize:10.5,letterSpacing:"0.1em",textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>Add to Pool →</button>
+              <button onClick={addVillain} style={{flex:2,padding:"11px",background:"rgba(139,26,26,0.2)",border:"1px solid #8B1A1A",borderRadius:8,cursor:"pointer",color:"#E07070",fontSize:10.5,letterSpacing:"0.1em",textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>{vReforgeId?"Update Villain →":"Add to Pool →"}</button>
             </div>
           </>)}
           {vResult?.error&&(<div style={{padding:"14px",background:"rgba(192,57,43,0.08)",border:"1px solid rgba(192,57,43,0.28)",borderRadius:10,marginBottom:16}}>
@@ -2101,6 +2151,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                         <button onClick={()=>{if(editingVillainTarget===v.id){setEditingVillainTarget(null);}else{setVtDraft({teams:v.targetTeams||[],heroes:v.targetHeroes||[]});setEditingVillainTarget(v.id);setRedeemingVillain(null);setVInlinePrompt(null);}}} style={{fontSize:9,padding:"3px 9px",background:editingVillainTarget===v.id?"rgba(139,26,26,0.15)":"var(--bg3)",border:`1px solid ${editingVillainTarget===v.id?"rgba(139,26,26,0.5)":"var(--border)"}`,borderRadius:6,cursor:"pointer",color:editingVillainTarget===v.id?"#E07070":"var(--text3)",fontFamily:"var(--font-mono)"}}>Edit</button>
                         <button onClick={()=>{setRedeemingVillain(redeemingVillain===v.id?null:v.id);setVInlinePrompt(null);}} style={{fontSize:9,padding:"3px 9px",background:redeemingVillain===v.id?"rgba(93,202,165,0.12)":"var(--bg3)",border:`1px solid ${redeemingVillain===v.id?"rgba(93,202,165,0.4)":"var(--border)"}`,borderRadius:6,cursor:"pointer",color:redeemingVillain===v.id?"#5DCAA5":"var(--text3)",fontFamily:"var(--font-mono)"}}>Recruit</button>
                         <button onClick={()=>{vInlinePrompt?.villainId===v.id?setVInlinePrompt(null):generateVillainPromptInline(v);setEditingVillainTarget(null);setRedeemingVillain(null);}} style={{fontSize:9,padding:"3px 9px",background:vInlinePrompt?.villainId===v.id?"rgba(139,26,26,0.2)":"var(--bg3)",border:`1px solid ${vInlinePrompt?.villainId===v.id?"rgba(224,112,112,0.5)":"var(--border)"}`,borderRadius:6,cursor:"pointer",color:vInlinePrompt?.villainId===v.id?"#E07070":"var(--text3)",fontFamily:"var(--font-mono)"}}>🎨 Prompt</button>
+                        <button onClick={()=>startVillainReforge(v)} style={{fontSize:9,padding:"3px 9px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:6,cursor:"pointer",color:"var(--text3)",fontFamily:"var(--font-mono)"}}>Reforge</button>
                         <button onClick={()=>removeVillain(v.id)} style={{fontSize:9,padding:"3px 9px",background:"rgba(163,45,45,0.1)",border:"1px solid rgba(163,45,45,0.28)",borderRadius:6,cursor:"pointer",color:"#e74c3c",fontFamily:"var(--font-mono)"}}>Remove</button>
                       </div>
                     </div>
@@ -3236,9 +3287,9 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
           {/* Header */}
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:22}}>
             <div>
-              <div style={{fontSize:8.5,letterSpacing:"0.24em",color:"rgba(136,135,128,0.65)",textTransform:"uppercase",marginBottom:5,fontFamily:"var(--font-mono)"}}>Independent Hero</div>
+              <div style={{fontSize:8.5,letterSpacing:"0.24em",color:"rgba(136,135,128,0.65)",textTransform:"uppercase",marginBottom:5,fontFamily:"var(--font-mono)"}}>{scReforgeId?"Reforging · Independent Hero":"Independent Hero"}</div>
               <div style={{fontSize:19,fontWeight:"900",color:"var(--text-primary)",letterSpacing:"0.02em"}}>Solo Hero Forge</div>
-              <div style={{fontSize:11,color:"var(--text3)",marginTop:3}}>No team. Personal mission. Their own rogues gallery.</div>
+              <div style={{fontSize:11,color:"var(--text3)",marginTop:3}}>{scReforgeId?`Regenerating ${scHeroName||"hero"} — same identity, new result.`:"No team. Personal mission. Their own rogues gallery."}</div>
             </div>
             <button onClick={()=>{setShowSoloCreator(false);resetSoloCreator();}} style={{background:"none",border:"none",cursor:"pointer",color:"var(--text3)",fontSize:22,padding:"2px 6px",lineHeight:1,flexShrink:0}}>×</button>
           </div>
@@ -3358,7 +3409,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
             <CharacterPage member={scResult} imageUrl={null} isVillain={false} teamName="Independent"/>
             <div style={{display:"flex",gap:10,marginTop:14}}>
               <button onClick={resetSoloCreator} style={{flex:1,padding:"11px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:10.5,fontFamily:"var(--font-mono)"}}>Regenerate</button>
-              <button onClick={saveSoloHero} style={{flex:2,padding:"11px",background:"rgba(136,135,128,0.12)",border:"1px solid rgba(136,135,128,0.4)",borderRadius:8,cursor:"pointer",color:"var(--text-primary)",fontSize:10.5,letterSpacing:"0.1em",textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>Add to Independents →</button>
+              <button onClick={saveSoloHero} style={{flex:2,padding:"11px",background:"rgba(136,135,128,0.12)",border:"1px solid rgba(136,135,128,0.4)",borderRadius:8,cursor:"pointer",color:"var(--text-primary)",fontSize:10.5,letterSpacing:"0.1em",textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>{scReforgeId?"Update Hero →":"Add to Independents →"}</button>
             </div>
           </>)}
           {scResult?.error&&(<div style={{padding:"14px",background:"rgba(192,57,43,0.08)",border:"1px solid rgba(192,57,43,0.28)",borderRadius:10,marginBottom:8}}>
@@ -3392,6 +3443,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                 Upload Image <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>e.target.files?.[0]&&handleImg(hero.id,e.target.files[0])}/>
               </label>
               {images[hero.id]&&<button onClick={()=>downloadImg(hero.id,hero.heroName)} style={{padding:"6px 12px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:8,cursor:"pointer",color:"var(--text3)",fontSize:10,fontFamily:"var(--font-mono)"}}>⬇ Save Image</button>}
+              <button onClick={()=>startHeroReforge(hero)} style={{padding:"6px 12px",background:"rgba(136,135,128,0.08)",border:"1px solid rgba(136,135,128,0.3)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:10,fontFamily:"var(--font-mono)"}}>Reforge</button>
               <button onClick={()=>requirePin(`Delete ${hero.heroName}`,()=>removeSoloHeroFn(hero.id))} style={{padding:"6px 12px",background:"rgba(163,45,45,0.08)",border:"1px solid rgba(163,45,45,0.25)",borderRadius:8,cursor:"pointer",color:"#e74c3c",fontSize:10,fontFamily:"var(--font-mono)"}}>Delete</button>
             </div>
           </div>
@@ -3457,7 +3509,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                   <CharacterPage member={vResult} imageUrl={null} isVillain={true}/>
                   <div style={{display:"flex",gap:10,marginTop:14,marginBottom:20}}>
                     <button onClick={()=>{setVResult(null);setVStep(0);setVAnswers({});setVDeepPhase(0);setVDeepAnswers({});setVProfileStep(0);setVProfileAnswers({});}} style={{flex:1,padding:"11px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:10.5,fontFamily:"var(--font-mono)"}}>Regenerate</button>
-                    <button onClick={addVillain} style={{flex:2,padding:"11px",background:"rgba(139,26,26,0.2)",border:"1px solid #8B1A1A",borderRadius:8,cursor:"pointer",color:"#E07070",fontSize:10.5,letterSpacing:"0.1em",textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>Add to Rogues Gallery →</button>
+                    <button onClick={addVillain} style={{flex:2,padding:"11px",background:"rgba(139,26,26,0.2)",border:"1px solid #8B1A1A",borderRadius:8,cursor:"pointer",color:"#E07070",fontSize:10.5,letterSpacing:"0.1em",textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>{vReforgeId?"Update Rogue →":"Add to Rogues Gallery →"}</button>
                   </div>
                 </>)}
                 {vResult?.error&&(<div style={{padding:"14px",background:"rgba(192,57,43,0.08)",border:"1px solid rgba(192,57,43,0.28)",borderRadius:10,marginBottom:16}}>
@@ -3480,6 +3532,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                           <div style={{width:36,height:36,borderRadius:"50%",background:"rgba(139,26,26,0.18)",border:"1px solid rgba(139,26,26,0.38)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:"bold",color:"#E07070",flexShrink:0}}>{v.initials}</div>
                           <div><div style={{fontSize:13,fontWeight:"bold",color:"var(--text-primary)"}}>{v.heroName}</div><div style={{fontSize:10,color:"var(--text3)"}}>{v.realName} · {v.role}</div></div>
                         </div>
+                        <button onClick={()=>startVillainReforge(v,activeSoloId)} style={{fontSize:9,padding:"3px 9px",background:"rgba(139,26,26,0.08)",border:"1px solid rgba(139,26,26,0.25)",borderRadius:6,cursor:"pointer",color:"#E07070",fontFamily:"var(--font-mono)"}}>Reforge</button>
                         <button onClick={()=>removeSoloRogueFn(activeSoloId,v.id)} style={{fontSize:9,padding:"3px 9px",background:"rgba(163,45,45,0.08)",border:"1px solid rgba(163,45,45,0.25)",borderRadius:6,cursor:"pointer",color:"#e74c3c",fontFamily:"var(--font-mono)"}}>Remove</button>
                       </div>
                       <div style={{fontSize:11,color:"var(--text3)",fontStyle:"italic",lineHeight:1.5}}>{v.tagline}</div>
