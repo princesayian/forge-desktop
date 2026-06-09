@@ -84,6 +84,7 @@ function App(){
   const[appAlert,setAppAlert]=useState(null); // {type:"restart"|"reload"|"error", msg:string}
   // ── Villain pool ────────────────────────────────────────────────────────
   const[villainPool,setVillainPool]=useState([]);
+  const[vInlinePrompt,setVInlinePrompt]=useState(null);
   // ── Solo / Independent Heroes ─────────────────────────────────────────────
   const[soloHeroes,setSoloHeroes]=useState([]);
   const[soloVillains,setSoloVillains]=useState({});
@@ -866,6 +867,32 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     tripo3D=`Full-body 3D character model of ${villain.heroName} in a ${colorName} villain suit, neutral A-pose, separate color regions for FDM printing, watertight mesh.`;
     setPResult({member:villain,isVillain:true,metaAI,tripo3D,platform:pPlatform});
     setPLoading(false);
+  };
+
+  const generateVillainPromptInline=(villain,overridePlatform,overrideStyle)=>{
+    const plat=overridePlatform||pPlatform;
+    const styleText=ART_STYLES.find(a=>a.id===(overrideStyle||pStyle))?.text||"comic book art style, dramatic lighting";
+    if(overridePlatform){setPPlatform(overridePlatform);persist("forge-prompt-platform",overridePlatform);}
+    if(overrideStyle){setPStyle(overrideStyle);persist("forge-prompt-style",overrideStyle);}
+    const hasRef=images[villain.id];
+    const colorName=hexToColorName(villain.color||"#8B1A1A");
+    const fxDesc=villain.powerFX||(colorName+" energy");
+    const costume=villain.costumeDesc||"dark armored suit";
+    const ageNote=ageStage(villain.age);
+    const agePfx=ageNote?ageNote+" ":"";
+    let metaAI,tripo3D;
+    if(plat==="midjourney"){
+      const ref=hasRef?" --cref [upload reference image]":"";
+      metaAI=`${villain.heroName}, ${agePfx}villain, ${colorName} ${costume}, ${fxDesc} surrounding the figure, full body, dramatic background, ${styleText} --ar 2:3 --v 6.1${ref}`;
+    } else if(plat==="dalle"){
+      const ref=hasRef?"Based on the reference image, same face and costume. ":"";
+      metaAI=`${ref}A full-body portrait of ${villain.heroName}, a ${agePfx}villain in a ${colorName} ${costume} with ${fxDesc} surrounding the figure. Full body, dramatic dark background. ${styleText}.`;
+    } else {
+      const ref=hasRef?"Based on reference image, same face and costume. ":"";
+      metaAI=`${ref}${villain.heroName}, a ${agePfx}villain in a ${colorName} ${costume}. ${fxDesc} surrounding the figure. Full body, dramatic background. ${styleText}.`;
+    }
+    tripo3D=`Full-body 3D character model of ${villain.heroName} in a ${colorName} villain suit, neutral A-pose, separate color regions for FDM printing, watertight mesh.`;
+    setVInlinePrompt({villainId:villain.id,metaAI,tripo3D,platform:plat,styleId:overrideStyle||pStyle});
   };
 
   const generateGroupPrompt=()=>{
@@ -1980,50 +2007,87 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
             <div style={{fontSize:9,letterSpacing:"0.2em",color:"rgba(139,26,26,0.7)",textTransform:"uppercase",marginBottom:12}}>Active Threats — {villainPool.length} villain{villainPool.length!==1?"s":""}</div>
             <div style={{display:"flex",flexDirection:"column",gap:10}}>
               {villainPool.map(v=>(<div key={v.id} style={{background:"rgba(139,26,26,0.08)",border:"1px solid rgba(139,26,26,0.25)",borderRadius:10,padding:"14px 16px"}}>
-                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
-                  <div style={{display:"flex",alignItems:"center",gap:10}}>
-                    <div style={{width:36,height:36,borderRadius:"50%",background:"rgba(139,26,26,0.2)",border:"1px solid rgba(139,26,26,0.4)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:"bold",color:"#E07070",flexShrink:0}}>{v.initials}</div>
-                    <div><div style={{fontSize:13,fontWeight:"bold",color:"var(--text-primary)"}}>{v.heroName}</div><div style={{fontSize:10,color:"var(--text2)"}}>{v.realName} · {v.role}</div></div>
+                {/* Image + info row */}
+                <div style={{display:"flex",gap:12,alignItems:"flex-start",marginBottom:8}}>
+                  {/* Portrait upload */}
+                  <div style={{flexShrink:0}}>
+                    <input type="file" accept="image/*" style={{display:"none"}} ref={el=>fileRefs.current[v.id]=el} onChange={e=>handleImg(v.id,e.target.files[0])}/>
+                    <div onClick={()=>fileRefs.current[v.id]?.click()} style={{width:52,height:70,borderRadius:8,overflow:"hidden",cursor:"pointer",background:"rgba(139,26,26,0.12)",border:"1px dashed rgba(224,112,112,0.3)",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:4,position:"relative",flexShrink:0}}>
+                      {images[v.id]
+                        ?<><img src={images[v.id]} alt={v.heroName} style={{width:"100%",height:"100%",objectFit:"cover",objectPosition:"top",position:"absolute",inset:0}}/><button onClick={e=>{e.stopPropagation();fileRefs.current[v.id]?.click();}} style={{position:"absolute",bottom:2,right:2,fontSize:7,padding:"2px 5px",background:"rgba(0,0,0,0.65)",border:"none",borderRadius:4,cursor:"pointer",color:"#fff",fontFamily:"var(--font-mono)",lineHeight:1}}>↑</button></>
+                        :<><div style={{fontSize:11,fontWeight:"bold",color:"#E07070"}}>{v.initials}</div><div style={{fontSize:7,color:"rgba(224,112,112,0.45)",textAlign:"center",lineHeight:1.3}}>tap to<br/>upload</div></>
+                      }
+                    </div>
                   </div>
-                  <div style={{display:"flex",gap:6}}>
-                    <button onClick={()=>{if(editingVillainTarget===v.id){setEditingVillainTarget(null);}else{setVtDraft({teams:v.targetTeams||[],heroes:v.targetHeroes||[]});setEditingVillainTarget(v.id);setRedeemingVillain(null);}}} style={{fontSize:9,padding:"3px 9px",background:editingVillainTarget===v.id?"rgba(139,26,26,0.15)":"var(--bg3)",border:`1px solid ${editingVillainTarget===v.id?"rgba(139,26,26,0.5)":"var(--border)"}`,borderRadius:6,cursor:"pointer",color:editingVillainTarget===v.id?"#E07070":"var(--text3)",fontFamily:"var(--font-mono)"}}>Edit</button>
-                    <button onClick={()=>setRedeemingVillain(redeemingVillain===v.id?null:v.id)} style={{fontSize:9,padding:"3px 9px",background:redeemingVillain===v.id?"rgba(93,202,165,0.12)":"var(--bg3)",border:`1px solid ${redeemingVillain===v.id?"rgba(93,202,165,0.4)":"var(--border)"}`,borderRadius:6,cursor:"pointer",color:redeemingVillain===v.id?"#5DCAA5":"var(--text3)",fontFamily:"var(--font-mono)"}}>Recruit</button>
-                    <button onClick={()=>removeVillain(v.id)} style={{fontSize:9,padding:"3px 9px",background:"rgba(163,45,45,0.1)",border:"1px solid rgba(163,45,45,0.28)",borderRadius:6,cursor:"pointer",color:"#e74c3c",fontFamily:"var(--font-mono)"}}>Remove</button>
+                  {/* Info + actions */}
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:8,gap:6}}>
+                      <div><div style={{fontSize:13,fontWeight:"bold",color:"var(--text-primary)"}}>{v.heroName}</div><div style={{fontSize:10,color:"var(--text2)"}}>{v.realName} · {v.role}</div></div>
+                      <div style={{display:"flex",gap:4,flexWrap:"wrap",justifyContent:"flex-end",flexShrink:0}}>
+                        <button onClick={()=>{if(editingVillainTarget===v.id){setEditingVillainTarget(null);}else{setVtDraft({teams:v.targetTeams||[],heroes:v.targetHeroes||[]});setEditingVillainTarget(v.id);setRedeemingVillain(null);setVInlinePrompt(null);}}} style={{fontSize:9,padding:"3px 9px",background:editingVillainTarget===v.id?"rgba(139,26,26,0.15)":"var(--bg3)",border:`1px solid ${editingVillainTarget===v.id?"rgba(139,26,26,0.5)":"var(--border)"}`,borderRadius:6,cursor:"pointer",color:editingVillainTarget===v.id?"#E07070":"var(--text3)",fontFamily:"var(--font-mono)"}}>Edit</button>
+                        <button onClick={()=>{setRedeemingVillain(redeemingVillain===v.id?null:v.id);setVInlinePrompt(null);}} style={{fontSize:9,padding:"3px 9px",background:redeemingVillain===v.id?"rgba(93,202,165,0.12)":"var(--bg3)",border:`1px solid ${redeemingVillain===v.id?"rgba(93,202,165,0.4)":"var(--border)"}`,borderRadius:6,cursor:"pointer",color:redeemingVillain===v.id?"#5DCAA5":"var(--text3)",fontFamily:"var(--font-mono)"}}>Recruit</button>
+                        <button onClick={()=>{vInlinePrompt?.villainId===v.id?setVInlinePrompt(null):generateVillainPromptInline(v);setEditingVillainTarget(null);setRedeemingVillain(null);}} style={{fontSize:9,padding:"3px 9px",background:vInlinePrompt?.villainId===v.id?"rgba(139,26,26,0.2)":"var(--bg3)",border:`1px solid ${vInlinePrompt?.villainId===v.id?"rgba(224,112,112,0.5)":"var(--border)"}`,borderRadius:6,cursor:"pointer",color:vInlinePrompt?.villainId===v.id?"#E07070":"var(--text3)",fontFamily:"var(--font-mono)"}}>🎨 Prompt</button>
+                        <button onClick={()=>removeVillain(v.id)} style={{fontSize:9,padding:"3px 9px",background:"rgba(163,45,45,0.1)",border:"1px solid rgba(163,45,45,0.28)",borderRadius:6,cursor:"pointer",color:"#e74c3c",fontFamily:"var(--font-mono)"}}>Remove</button>
+                      </div>
+                    </div>
+                    <div style={{fontSize:11,color:"var(--text2)",fontStyle:"italic",lineHeight:1.5,marginBottom:8}}>{v.tagline}</div>
+                    {(v.targetTeams?.length>0||v.targetHeroes?.length>0)&&!editingVillainTarget&&(<div style={{marginBottom:8}}>
+                      {v.targetTeams&&v.targetTeams.length>0&&(<div style={{marginBottom:v.targetHeroes?.length>0?6:0}}>
+                        <div style={{fontSize:9,letterSpacing:"0.12em",color:"rgba(139,26,26,0.6)",textTransform:"uppercase",marginBottom:5}}>Target Teams</div>
+                        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                          {v.targetTeams.map(tid=>{const t=teams.find(x=>x.id===tid);return t?<span key={tid} style={{fontSize:9,padding:"2px 9px",background:`${t.color}14`,border:`1px solid ${t.color}33`,borderRadius:20,color:t.color}}>{t.abbr} · {t.name}</span>:null;})}
+                        </div>
+                      </div>)}
+                      {v.targetHeroes&&v.targetHeroes.length>0&&(<div>
+                        <div style={{fontSize:9,letterSpacing:"0.12em",color:"rgba(139,26,26,0.6)",textTransform:"uppercase",marginBottom:5}}>Targeting</div>
+                        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                          {v.targetHeroes.map(hid=>{const h=allCharacters.find(x=>x.id===hid);return h?<span key={hid} style={{fontSize:9,padding:"2px 9px",background:`${h.color}14`,border:`1px solid ${h.color}33`,borderRadius:20,color:h.color}}>{h.heroName}</span>:null;})}
+                        </div>
+                      </div>)}
+                    </div>)}
+                    {editingVillainTarget===v.id&&(<div style={{borderTop:"1px solid rgba(139,26,26,0.2)",paddingTop:10,marginTop:4}}>
+                      <div style={{fontSize:9,letterSpacing:"0.12em",color:"rgba(139,26,26,0.6)",textTransform:"uppercase",marginBottom:8}}>Target Teams</div>
+                      <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:12}}>
+                        {teams.map(t=><button key={t.id} onClick={()=>setVtDraft(p=>({...p,teams:p.teams.includes(t.id)?p.teams.filter(x=>x!==t.id):[...p.teams,t.id]}))} style={{fontSize:9,padding:"3px 10px",background:vtDraft.teams.includes(t.id)?`${t.color}22`:"var(--bg3)",border:`1px solid ${vtDraft.teams.includes(t.id)?t.color:"var(--border)"}`,borderRadius:20,cursor:"pointer",color:vtDraft.teams.includes(t.id)?t.color:"var(--text3)",fontFamily:"var(--font-mono)"}}>{t.name}</button>)}
+                      </div>
+                      <div style={{fontSize:9,letterSpacing:"0.12em",color:"rgba(139,26,26,0.6)",textTransform:"uppercase",marginBottom:8}}>Specific Heroes</div>
+                      <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:12}}>
+                        {allCharacters.map(h=><button key={h.id} onClick={()=>setVtDraft(p=>({...p,heroes:p.heroes.includes(h.id)?p.heroes.filter(x=>x!==h.id):[...p.heroes,h.id]}))} style={{fontSize:9,padding:"3px 10px",background:vtDraft.heroes.includes(h.id)?`${h.color}22`:"var(--bg3)",border:`1px solid ${vtDraft.heroes.includes(h.id)?h.color:"var(--border)"}`,borderRadius:20,cursor:"pointer",color:vtDraft.heroes.includes(h.id)?h.color:"var(--text3)",fontFamily:"var(--font-mono)"}}>{h.heroName}</button>)}
+                      </div>
+                      <div style={{display:"flex",gap:8}}>
+                        <button onClick={()=>setEditingVillainTarget(null)} style={{flex:1,fontSize:9,padding:"6px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:6,cursor:"pointer",color:"var(--text3)",fontFamily:"var(--font-mono)"}}>Cancel</button>
+                        <button onClick={()=>saveVillainTarget(v.id)} style={{flex:2,fontSize:9,padding:"6px",background:"rgba(139,26,26,0.15)",border:"1px solid rgba(139,26,26,0.4)",borderRadius:6,cursor:"pointer",color:"#E07070",fontFamily:"var(--font-mono)"}}>Save Targets</button>
+                      </div>
+                    </div>)}
+                    {redeemingVillain===v.id&&(<div style={{display:"flex",flexWrap:"wrap",gap:6,padding:"10px 0 2px",alignItems:"center"}}>
+                      <span style={{fontSize:9,color:"#5DCAA5",letterSpacing:"0.1em",marginRight:4}}>RECRUIT TO:</span>
+                      {teams.map(t=><button key={t.id} onClick={()=>redeemVillain(v,t.id)} style={{fontSize:9,padding:"3px 10px",background:`${t.color}14`,border:`1px solid ${t.color}44`,borderRadius:20,cursor:"pointer",color:t.color,fontFamily:"var(--font-mono)"}}>{t.name}</button>)}
+                      <button onClick={()=>setRedeemingVillain(null)} style={{fontSize:9,padding:"3px 8px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:20,cursor:"pointer",color:"var(--text4)",fontFamily:"var(--font-mono)"}}>Cancel</button>
+                    </div>)}
                   </div>
                 </div>
-                <div style={{fontSize:11,color:"var(--text2)",fontStyle:"italic",lineHeight:1.5,marginBottom:8}}>{v.tagline}</div>
-                {(v.targetTeams?.length>0||v.targetHeroes?.length>0)&&!editingVillainTarget&&(<div style={{marginBottom:8}}>
-                  {v.targetTeams&&v.targetTeams.length>0&&(<div style={{marginBottom:v.targetHeroes?.length>0?6:0}}>
-                    <div style={{fontSize:9,letterSpacing:"0.12em",color:"rgba(139,26,26,0.6)",textTransform:"uppercase",marginBottom:5}}>Target Teams</div>
-                    <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                      {v.targetTeams.map(tid=>{const t=teams.find(x=>x.id===tid);return t?<span key={tid} style={{fontSize:9,padding:"2px 9px",background:`${t.color}14`,border:`1px solid ${t.color}33`,borderRadius:20,color:t.color}}>{t.abbr} · {t.name}</span>:null;})}
-                    </div>
-                  </div>)}
-                  {v.targetHeroes&&v.targetHeroes.length>0&&(<div>
-                    <div style={{fontSize:9,letterSpacing:"0.12em",color:"rgba(139,26,26,0.6)",textTransform:"uppercase",marginBottom:5}}>Targeting</div>
-                    <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                      {v.targetHeroes.map(hid=>{const h=allCharacters.find(x=>x.id===hid);return h?<span key={hid} style={{fontSize:9,padding:"2px 9px",background:`${h.color}14`,border:`1px solid ${h.color}33`,borderRadius:20,color:h.color}}>{h.heroName}</span>:null;})}
-                    </div>
-                  </div>)}
-                </div>)}
-                {editingVillainTarget===v.id&&(<div style={{borderTop:"1px solid rgba(139,26,26,0.2)",paddingTop:10,marginTop:4}}>
-                  <div style={{fontSize:9,letterSpacing:"0.12em",color:"rgba(139,26,26,0.6)",textTransform:"uppercase",marginBottom:8}}>Target Teams</div>
-                  <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:12}}>
-                    {teams.map(t=><button key={t.id} onClick={()=>setVtDraft(p=>({...p,teams:p.teams.includes(t.id)?p.teams.filter(x=>x!==t.id):[...p.teams,t.id]}))} style={{fontSize:9,padding:"3px 10px",background:vtDraft.teams.includes(t.id)?`${t.color}22`:"var(--bg3)",border:`1px solid ${vtDraft.teams.includes(t.id)?t.color:"var(--border)"}`,borderRadius:20,cursor:"pointer",color:vtDraft.teams.includes(t.id)?t.color:"var(--text3)",fontFamily:"var(--font-mono)"}}>{t.name}</button>)}
+                {/* Inline prompt panel */}
+                {vInlinePrompt?.villainId===v.id&&(<div style={{borderTop:"1px solid rgba(139,26,26,0.2)",paddingTop:12,marginTop:4}}>
+                  <div style={{fontSize:9,letterSpacing:"0.15em",color:"rgba(224,112,112,0.6)",textTransform:"uppercase",marginBottom:10}}>Image Prompt</div>
+                  <div style={{display:"flex",gap:5,marginBottom:8,flexWrap:"wrap"}}>
+                    {[["meta-ai","Meta AI"],["midjourney","Midjourney"],["dalle","DALL-E"]].map(([id,label])=>(
+                      <button key={id} onClick={()=>generateVillainPromptInline(v,id,undefined)} style={{fontSize:9,padding:"3px 10px",background:(vInlinePrompt.platform||pPlatform)===id?"rgba(139,26,26,0.15)":"var(--bg3)",border:`1px solid ${(vInlinePrompt.platform||pPlatform)===id?"rgba(224,112,112,0.5)":"var(--border)"}`,borderRadius:20,cursor:"pointer",color:(vInlinePrompt.platform||pPlatform)===id?"#E07070":"var(--text3)",fontFamily:"var(--font-mono)"}}>{label}</button>
+                    ))}
                   </div>
-                  <div style={{fontSize:9,letterSpacing:"0.12em",color:"rgba(139,26,26,0.6)",textTransform:"uppercase",marginBottom:8}}>Specific Heroes</div>
-                  <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:12}}>
-                    {allCharacters.map(h=><button key={h.id} onClick={()=>setVtDraft(p=>({...p,heroes:p.heroes.includes(h.id)?p.heroes.filter(x=>x!==h.id):[...p.heroes,h.id]}))} style={{fontSize:9,padding:"3px 10px",background:vtDraft.heroes.includes(h.id)?`${h.color}22`:"var(--bg3)",border:`1px solid ${vtDraft.heroes.includes(h.id)?h.color:"var(--border)"}`,borderRadius:20,cursor:"pointer",color:vtDraft.heroes.includes(h.id)?h.color:"var(--text3)",fontFamily:"var(--font-mono)"}}>{h.heroName}</button>)}
+                  <div style={{display:"flex",gap:5,marginBottom:10,flexWrap:"wrap"}}>
+                    {ART_STYLES.map(a=>(
+                      <button key={a.id} onClick={()=>generateVillainPromptInline(v,undefined,a.id)} style={{fontSize:9,padding:"3px 10px",background:(vInlinePrompt.styleId||pStyle)===a.id?"rgba(139,26,26,0.1)":"var(--bg3)",border:`1px solid ${(vInlinePrompt.styleId||pStyle)===a.id?"rgba(224,112,112,0.4)":"var(--border)"}`,borderRadius:20,cursor:"pointer",color:(vInlinePrompt.styleId||pStyle)===a.id?"#E07070":"var(--text3)",fontFamily:"var(--font-mono)"}}>{a.label}</button>
+                    ))}
                   </div>
-                  <div style={{display:"flex",gap:8}}>
-                    <button onClick={()=>setEditingVillainTarget(null)} style={{flex:1,fontSize:9,padding:"6px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:6,cursor:"pointer",color:"var(--text3)",fontFamily:"var(--font-mono)"}}>Cancel</button>
-                    <button onClick={()=>saveVillainTarget(v.id)} style={{flex:2,fontSize:9,padding:"6px",background:"rgba(139,26,26,0.15)",border:"1px solid rgba(139,26,26,0.4)",borderRadius:6,cursor:"pointer",color:"#E07070",fontFamily:"var(--font-mono)"}}>Save Targets</button>
+                  <div style={{position:"relative",marginBottom:10}}>
+                    <textarea readOnly value={vInlinePrompt.metaAI} rows={3} style={{width:"100%",padding:"10px 44px 10px 12px",background:"var(--bg3)",border:"1px solid rgba(139,26,26,0.3)",borderRadius:8,color:"var(--text-primary)",fontSize:10.5,fontFamily:"var(--font-mono)",resize:"none",lineHeight:1.6,boxSizing:"border-box"}}/>
+                    <button onClick={()=>navigator.clipboard.writeText(vInlinePrompt.metaAI)} style={{position:"absolute",top:8,right:8,fontSize:8,padding:"3px 8px",background:"rgba(139,26,26,0.15)",border:"1px solid rgba(224,112,112,0.35)",borderRadius:6,cursor:"pointer",color:"#E07070",fontFamily:"var(--font-mono)"}}>Copy</button>
                   </div>
-                </div>)}
-                {redeemingVillain===v.id&&(<div style={{display:"flex",flexWrap:"wrap",gap:6,padding:"10px 0 2px",alignItems:"center"}}>
-                  <span style={{fontSize:9,color:"#5DCAA5",letterSpacing:"0.1em",marginRight:4}}>RECRUIT TO:</span>
-                  {teams.map(t=><button key={t.id} onClick={()=>redeemVillain(v,t.id)} style={{fontSize:9,padding:"3px 10px",background:`${t.color}14`,border:`1px solid ${t.color}44`,borderRadius:20,cursor:"pointer",color:t.color,fontFamily:"var(--font-mono)"}}>{t.name}</button>)}
-                  <button onClick={()=>setRedeemingVillain(null)} style={{fontSize:9,padding:"3px 8px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:20,cursor:"pointer",color:"var(--text4)",fontFamily:"var(--font-mono)"}}>Cancel</button>
+                  <div style={{position:"relative"}}>
+                    <textarea readOnly value={vInlinePrompt.tripo3D} rows={2} style={{width:"100%",padding:"10px 44px 10px 12px",background:"var(--bg3)",border:"1px solid rgba(15,110,86,0.2)",borderRadius:8,color:"var(--text-primary)",fontSize:10.5,fontFamily:"var(--font-mono)",resize:"none",lineHeight:1.6,boxSizing:"border-box"}}/>
+                    <button onClick={()=>navigator.clipboard.writeText(vInlinePrompt.tripo3D)} style={{position:"absolute",top:8,right:8,fontSize:8,padding:"3px 8px",background:"rgba(15,110,86,0.1)",border:"1px solid rgba(15,110,86,0.3)",borderRadius:6,cursor:"pointer",color:"#5DCAA5",fontFamily:"var(--font-mono)"}}>Copy</button>
+                  </div>
+                  {images[v.id]&&<div style={{marginTop:8,fontSize:9,color:"rgba(224,112,112,0.55)",lineHeight:1.5}}>✓ Reference image detected — upload alongside the prompt for best results.</div>}
                 </div>)}
               </div>))}
             </div>
