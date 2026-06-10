@@ -13,3 +13,4 @@ images/
 mnt/
 client/node_modules/
 static/assets/
+_.DS_Store
