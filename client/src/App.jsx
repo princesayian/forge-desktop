@@ -906,6 +906,42 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     if(gender==="Non-binary"||gender==="Other")return`${pfx}person with lean athletic build, adult proportions`;
     return`${pfx}male with tall powerful build, adult male proportions`;
   };
+  // Rewrite body-horror / violent descriptors as design-language equivalents so
+  // image platforms don't block the prompt while preserving the visual intent.
+  const sanitizeDesc=(text)=>{
+    if(!text)return text;
+    const rep=(t,from,to)=>t.replace(new RegExp(`\\b${from}\\b`,"gi"),to);
+    let t=text;
+    t=rep(t,"writhing|writhe|writhes","flowing");
+    t=rep(t,"tentacles?","ribbon-like extensions");
+    t=rep(t,"tendrils?","flowing extensions");
+    t=rep(t,"living","dynamic");
+    t=rep(t,"alive","active");
+    t=rep(t,"breathing|breathes|breathe","reactive");
+    t=rep(t,"creature|beast|monster","figure");
+    t=rep(t,"entity","form");
+    t=rep(t,"parasitic","layered");
+    t=rep(t,"symbiote","structured suit");
+    t=rep(t,"consuming|devours?|devoured","enveloping");
+    t=rep(t,"veins?","tracery lines");
+    t=rep(t,"vein-?like","circuit-like tracery");
+    t=rep(t,"grotesque(?:ly)?","striking");
+    t=rep(t,"mutated|mutating","transformed");
+    t=rep(t,"bleeding|bleeds?","dripping");
+    t=rep(t,"gory?","dramatic");
+    t=rep(t,"possessed?","intense");
+    t=t.replace(/body horror/gi,"dark design");
+    t=t.replace(/organic flesh/gi,"biomechanical-inspired material");
+    t=rep(t,"necrotic|necro","dark arcane");
+    t=rep(t,"corruption","dark energy");
+    t=rep(t,"putrid","dark");
+    t=rep(t,"fleshy","textured");
+    t=rep(t,"gore","dramatic detail");
+    t=rep(t,"slimy?","glossy");
+    t=rep(t,"viscous","thick");
+    t=rep(t,"oozing","trailing");
+    return t;
+  };
   // Build color palette description from character palette array
   const palDesc=(c)=>{
     const names=(c.colorPalette?.length?c.colorPalette:[c.color||"#888"]).map(hexToColorName).filter(Boolean);
@@ -920,8 +956,8 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     const style=ART_STYLES.find(a=>a.id===pStyle)?.text||"character concept art, vibrant colors";
     const hasRef=images[member.id];
     const refPfx=hasRef?"Based on reference image, same face and build. ":"";
-    const costume=member.costumeDesc||(hexToColorName(member.color)+" suit");
-    const fxNote=member.powerFX?`, subtle ${member.powerFX} accent`:"";
+    const costume=sanitizeDesc(member.costumeDesc||(hexToColorName(member.color)+" suit"));
+    const fxNote=member.powerFX?`, subtle ${sanitizeDesc(member.powerFX)} accent`:"";
     const ph=physique(member.gender,member.age);
     const pal=palDesc(member);
     const poseText=POSE_OPTIONS.find(p=>p.id===pPose)?.hero||POSE_OPTIONS[0].hero;
@@ -944,8 +980,8 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     const style=ART_STYLES.find(a=>a.id===pStyle)?.text||"character concept art, dramatic lighting";
     const hasRef=images[villain.id];
     const refPfx=hasRef?"Based on reference image, same face and build. ":"";
-    const costume=villain.costumeDesc||"dark tailored suit with imposing silhouette";
-    const fxNote=villain.powerFX?`, subtle ${villain.powerFX} effect`:"";
+    const costume=sanitizeDesc(villain.costumeDesc||"dark tailored suit with imposing silhouette");
+    const fxNote=villain.powerFX?`, subtle ${sanitizeDesc(villain.powerFX)} effect`:"";
     const ph=physique(villain.gender,villain.age);
     const pal=palDesc(villain);
     const poseText=POSE_OPTIONS.find(p=>p.id===pPose)?.villain||POSE_OPTIONS[0].villain;
@@ -972,8 +1008,8 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     if(overridePose){setPPose(overridePose);}
     const hasRef=images[villain.id];
     const refPfx=hasRef?"Based on reference image, same face and build. ":"";
-    const costume=villain.costumeDesc||"dark tailored suit with imposing silhouette";
-    const fxNote=villain.powerFX?`, subtle ${villain.powerFX} effect`:"";
+    const costume=sanitizeDesc(villain.costumeDesc||"dark tailored suit with imposing silhouette");
+    const fxNote=villain.powerFX?`, subtle ${sanitizeDesc(villain.powerFX)} effect`:"";
     const ph=physique(villain.gender,villain.age);
     const pal=palDesc(villain);
     const poseText=POSE_OPTIONS.find(p=>p.id===activePose)?.villain||POSE_OPTIONS[0].villain;
