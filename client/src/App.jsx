@@ -962,13 +962,17 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     const pal=palDesc(member);
     const poseText=POSE_OPTIONS.find(p=>p.id===pPose)?.hero||POSE_OPTIONS[0].hero;
     let metaAI,tripo3D;
+    const metaQuality="Realistic render, full body head to toe, feet fully visible, wide shot with space below feet, no cropping, cinematic dramatic lighting, hero headquarters type background, highly detailed, increase resolution, enhanced quality";
+    const phStripped=ph.replace(/^(?:teen |child |young adult )?(?:male|female|person) /i,"");
     if(pPlatform==="midjourney"){
       const ref=hasRef?" --cref [upload reference image]":"";
       metaAI=`${member.heroName}, ${ph}, ${poseText}. ${costume}${fxNote}, ${pal}, plain background, ${style} --ar 2:3 --v 6.1${ref}`;
     } else if(pPlatform==="dalle"){
       metaAI=`${refPfx}${ph}, ${poseText}. ${costume}${fxNote}. ${pal}. Plain clean background. ${style}.`;
     } else {
-      metaAI=`${refPfx}${ph}, ${poseText}. ${costume} with clean silhouette and design language inspired by modern superheroes. ${pal}. Plain clean background.`;
+      metaAI=hasRef
+        ?`Using this reference for face and likeness, transform into a person with ${phStripped}, ${poseText}. ${costume}${fxNote}, ${pal}. ${metaQuality}.`
+        :`A ${ph}, ${poseText}. ${costume}${fxNote}, ${pal}. ${metaQuality}.`;
     }
     tripo3D=`Full-body 3D character model of ${member.heroName}, ${ph}, ${costume}, neutral A-pose, ${pal}, separate color regions for FDM printing, watertight mesh.`;
     setPResult({member,metaAI,tripo3D,platform:pPlatform});
@@ -986,13 +990,17 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     const pal=palDesc(villain);
     const poseText=POSE_OPTIONS.find(p=>p.id===pPose)?.villain||POSE_OPTIONS[0].villain;
     let metaAI,tripo3D;
+    const metaQuality="Realistic render, full body head to toe, feet fully visible, wide shot with space below feet, no cropping, cinematic dramatic lighting, world domination lair type background, highly detailed, increase resolution, enhanced quality";
+    const phStripped=ph.replace(/^(?:teen |child |young adult )?(?:male|female|person) /i,"");
     if(pPlatform==="midjourney"){
       const ref=hasRef?" --cref [upload reference image]":"";
       metaAI=`${villain.heroName}, ${ph}, ${poseText}. ${costume}${fxNote}, ${pal}, plain background, ${style} --ar 2:3 --v 6.1${ref}`;
     } else if(pPlatform==="dalle"){
       metaAI=`${refPfx}${ph}, ${poseText}. ${costume}${fxNote}. ${pal}. Plain clean background. ${style}.`;
     } else {
-      metaAI=`${refPfx}${ph}, ${poseText}. ${costume} with clean silhouette and design language inspired by modern supervillains. ${pal}. Plain clean background.`;
+      metaAI=hasRef
+        ?`Using this reference for face and likeness, transform into a person with ${phStripped}, ${poseText}. ${costume}${fxNote}, ${pal}. ${metaQuality}.`
+        :`A ${ph}, ${poseText}. ${costume}${fxNote}, ${pal}. ${metaQuality}.`;
     }
     tripo3D=`Full-body 3D character model of ${villain.heroName}, ${ph}, ${costume}, neutral A-pose, ${pal}, separate color regions for FDM printing, watertight mesh.`;
     setPResult({member:villain,isVillain:true,metaAI,tripo3D,platform:pPlatform});
@@ -1014,13 +1022,17 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     const pal=palDesc(villain);
     const poseText=POSE_OPTIONS.find(p=>p.id===activePose)?.villain||POSE_OPTIONS[0].villain;
     let metaAI,tripo3D;
+    const metaQuality="Realistic render, full body head to toe, feet fully visible, wide shot with space below feet, no cropping, cinematic dramatic lighting, world domination lair type background, highly detailed, increase resolution, enhanced quality";
+    const phStripped=ph.replace(/^(?:teen |child |young adult )?(?:male|female|person) /i,"");
     if(plat==="midjourney"){
       const ref=hasRef?" --cref [upload reference image]":"";
       metaAI=`${villain.heroName}, ${ph}, ${poseText}. ${costume}${fxNote}, ${pal}, plain background, ${styleText} --ar 2:3 --v 6.1${ref}`;
     } else if(plat==="dalle"){
       metaAI=`${refPfx}${ph}, ${poseText}. ${costume}${fxNote}. ${pal}. Plain clean background. ${styleText}.`;
     } else {
-      metaAI=`${refPfx}${ph}, ${poseText}. ${costume} with clean silhouette and design language inspired by modern supervillains. ${pal}. Plain clean background.`;
+      metaAI=hasRef
+        ?`Using this reference for face and likeness, transform into a person with ${phStripped}, ${poseText}. ${costume}${fxNote}, ${pal}. ${metaQuality}.`
+        :`A ${ph}, ${poseText}. ${costume}${fxNote}, ${pal}. ${metaQuality}.`;
     }
     tripo3D=`Full-body 3D character model of ${villain.heroName}, ${ph}, ${costume}, neutral A-pose, ${pal}, separate color regions for FDM printing, watertight mesh.`;
     setVInlinePrompt({villainId:villain.id,metaAI,tripo3D,platform:plat,styleId:overrideStyle||pStyle,poseId:overridePose||pPose});
