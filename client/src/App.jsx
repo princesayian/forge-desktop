@@ -237,7 +237,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
   },[lightMode]);
   useEffect(()=>{try{localStorage.setItem("forge-active-tab",tab);}catch{}},[tab]);
   const[copied,setCopied]=useState({});
-  const fileRefs=useRef({});const teamLogoRefs=useRef({});
+  const fileRefs=useRef({});const teamLogoRefs=useRef({});const factionLogoRefs=useRef({});
 
   // ── Ollama check ─────────────────────────────────────────────────────────
   const checkOllama=useCallback(()=>{
@@ -2343,6 +2343,22 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                     <input type="color" value={factionDraft.color} onChange={e=>setFactionDraft(p=>({...p,color:e.target.value}))} style={{width:24,height:24,borderRadius:6,border:"1px solid var(--border)",padding:1,background:"var(--bg3)",cursor:"pointer"}}/>
                   </div>
                 </div>
+                {editingFactionId!==null&&(()=>{
+                  const fl=images['factionlogo-'+editingFactionId];
+                  return(<div style={{marginBottom:12}}>
+                    <span style={s.lbl}>Faction Logo</span>
+                    <div style={{display:"flex",alignItems:"center",gap:10,marginTop:6}}>
+                      <div style={{width:40,height:40,borderRadius:8,background:fl?"transparent":`${factionDraft.color}22`,border:`1px solid ${factionDraft.color}55`,overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                        {fl?<img src={fl} style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<span style={{fontSize:12,fontWeight:"bold",color:factionDraft.color}}>{factionDraft.abbr||factionDraft.name.slice(0,2).toUpperCase()||"?"}</span>}
+                      </div>
+                      <label style={{fontSize:9,padding:"5px 12px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:6,cursor:"pointer",color:"var(--text2)",fontFamily:"var(--font-mono)"}}>
+                        {fl?"Replace Logo":"Upload Logo"}
+                        <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>e.target.files?.[0]&&handleImg('factionlogo-'+editingFactionId,e.target.files[0])}/>
+                      </label>
+                      {fl&&<button onClick={async()=>{await fetch(`/api/images/factionlogo-${editingFactionId}`,{method:"DELETE"});setImages(p=>{const n={...p};delete n['factionlogo-'+editingFactionId];return n;});}} style={{fontSize:9,padding:"5px 12px",background:"rgba(139,26,26,0.1)",border:"1px solid rgba(139,26,26,0.3)",borderRadius:6,cursor:"pointer",color:"#E07070",fontFamily:"var(--font-mono)"}}>Remove</button>}
+                    </div>
+                  </div>);
+                })()}
                 {villainPool.length>0&&(<div style={{marginBottom:14}}>
                   <span style={s.lbl}>Members ({factionDraft.memberIds.length} selected)</span>
                   <div style={{display:"flex",flexWrap:"wrap",gap:8,marginTop:8}}>
@@ -2380,11 +2396,13 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
             <div style={{display:"flex",flexDirection:"column",gap:12,marginBottom:28}}>
               {villainFactions.map(f=>{
                 const members=villainPool.filter(v=>f.memberIds.includes(v.id));
+                const flImg=images['factionlogo-'+f.id];
                 return(<div key={f.id} style={{background:`${f.color}10`,border:`1px solid ${f.color}33`,borderRadius:10,padding:"14px 16px"}}>
+                  <input type="file" accept="image/*" style={{display:"none"}} ref={el=>factionLogoRefs.current[f.id]=el} onChange={e=>handleImg('factionlogo-'+f.id,e.target.files[0])}/>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
                     <div style={{display:"flex",alignItems:"center",gap:10}}>
-                      <div style={{width:38,height:38,borderRadius:8,background:f.color,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                        <span style={{fontSize:11,fontWeight:"bold",color:"#fff",letterSpacing:"0.05em"}}>{f.abbr||f.name.slice(0,2).toUpperCase()}</span>
+                      <div title="Click to upload faction logo" onClick={()=>factionLogoRefs.current[f.id]?.click()} style={{width:38,height:38,borderRadius:8,background:flImg?"transparent":`${f.color}22`,border:`1px solid ${f.color}55`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,cursor:"pointer",overflow:"hidden",position:"relative"}}>
+                        {flImg?<img src={flImg} style={{width:"100%",height:"100%",objectFit:"cover",objectPosition:"center"}}/>:<span style={{fontSize:11,fontWeight:"bold",color:f.color,letterSpacing:"0.05em"}}>{f.abbr||f.name.slice(0,2).toUpperCase()}</span>}
                       </div>
                       <div>
                         <div style={{fontSize:13,fontWeight:"bold",color:"var(--text-primary)"}}>{f.name}</div>
@@ -3291,6 +3309,39 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
             </div>)}
           </div>
           {otherTeams.length===0&&<div style={{textAlign:"center",padding:"16px",color:"var(--text3)",fontSize:11}}>Create additional teams in the Teams tab to populate the map. The first team ({primaryTeam.name}) anchors the center.</div>}
+
+          {/* ── VILLAIN FACTIONS ──────────────────────────────────────── */}
+          {villainFactions.length>0&&(<>
+            <div style={{display:"flex",alignItems:"center",gap:10,marginTop:24,marginBottom:14}}>
+              <div style={{flex:1,height:1,background:"rgba(139,26,26,0.2)"}}/>
+              <div style={{fontSize:9,letterSpacing:"0.2em",color:"rgba(139,26,26,0.6)",textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>Villain Factions</div>
+              <div style={{flex:1,height:1,background:"rgba(139,26,26,0.2)"}}/>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:10}}>
+              {villainFactions.map(f=>{
+                const fmembers=villainPool.filter(v=>f.memberIds?.includes(v.id));
+                const flImg=images['factionlogo-'+f.id];
+                return(<div key={f.id} style={{background:`${f.color}0D`,border:`1px solid ${f.color}2A`,borderRadius:10,padding:"12px 14px"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:9,marginBottom:fmembers.length>0?10:0}}>
+                    <div style={{width:36,height:36,borderRadius:7,border:`1px solid ${f.color}44`,overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,background:flImg?"transparent":`${f.color}1A`}}>
+                      {flImg?<img src={flImg} style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<span style={{fontSize:10,fontWeight:"bold",color:f.color,letterSpacing:"0.05em"}}>{f.abbr||f.name.slice(0,2).toUpperCase()}</span>}
+                    </div>
+                    <div style={{minWidth:0}}>
+                      <div style={{fontSize:11,fontWeight:"bold",color:"var(--text-primary)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{f.name}</div>
+                      {f.purpose&&<div style={{fontSize:9,color:"var(--text3)",marginTop:1,lineHeight:1.35,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{f.purpose}</div>}
+                    </div>
+                  </div>
+                  {fmembers.length>0&&(<div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+                    {fmembers.slice(0,6).map(m=>(<div key={m.id} title={m.heroName}>
+                      {images[m.id]?<img src={images[m.id]} style={{width:24,height:24,borderRadius:"50%",objectFit:"cover",objectPosition:"top",border:`1px solid ${f.color}44`}}/>
+                        :<div style={{width:24,height:24,borderRadius:"50%",background:`${m.color||f.color}20`,border:`1px solid ${f.color}33`,display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{fontSize:7,fontWeight:"bold",color:m.color||f.color}}>{m.initials}</span></div>}
+                    </div>))}
+                    {fmembers.length>6&&<div style={{width:24,height:24,borderRadius:"50%",background:`${f.color}18`,border:`1px solid ${f.color}33`,display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{fontSize:7,color:f.color}}>+{fmembers.length-6}</span></div>}
+                  </div>)}
+                </div>);
+              })}
+            </div>
+          </>)}
         </>);
       })()}
 
