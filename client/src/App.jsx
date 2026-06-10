@@ -229,6 +229,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
   const[tab,setTab]=useState(()=>{try{return localStorage.getItem("forge-active-tab")||"teams";}catch{return"teams";}});
   const[saved,setSaved]=useState(false);
   const[pdfLoading,setPdfLoading]=useState(false);
+  const[allDossierLoading,setAllDossierLoading]=useState(false);
   const[lightMode,setLightMode]=useState(()=>{try{return localStorage.getItem("forge-theme")==="light";}catch{return false;}});
 
   useEffect(()=>{
@@ -1243,6 +1244,39 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     setPdfLoading(false);
   };
 
+  const exportAllDossiers=async()=>{
+    setAllDossierLoading(true);
+    try{
+      const allIds=[
+        ...teams.flatMap(t=>getTeamRoster(t.id).map(m=>m.id)),
+        ...soloHeroes.map(h=>h.id),
+        ...villainPool.map(v=>v.id),
+      ];
+      const b64Images={};
+      for(const id of allIds){
+        const url=images[id];
+        if(url){try{const res=await fetch(url);const blob=await res.blob();const reader=new FileReader();await new Promise(resolve=>{reader.onload=e=>{b64Images[id]=e.target.result;resolve();};reader.readAsDataURL(blob);});}catch(e){}}
+      }
+      const sections=[];
+      for(const t of teams){
+        const roster=getTeamRoster(t.id);
+        if(roster.length>0)sections.push({type:"team",name:t.name,color:t.color||G,abbr:t.abbr||"",members:roster.map(m=>({...m,teamName:t.name,teamColor:t.color||G,nkAlignment:m.nkAlignment||t.nkAlignment||"base",sharedVillains:villainPool.filter(v=>v.targetTeams?.includes(t.id)).map(v=>v.heroName)}))});
+      }
+      if(soloHeroes.length>0)sections.push({type:"solo",name:"Independent Operatives",color:"#888780",members:soloHeroes.map(h=>({...h,teamName:"Independent",teamColor:h.color,nkAlignment:h.nkAlignment||"neutral",sharedVillains:(soloVillains[h.id]||[]).map(v=>v.heroName)}))});
+      if(villainPool.length>0)sections.push({type:"villains",name:"Threat Registry",color:"#8B1A1A",members:villainPool.map(v=>({...v,teamName:"Classified",teamColor:v.color||"#8B1A1A",nkAlignment:"enemy",sharedVillains:[]}))});
+      const allChars=[
+        ...teams.flatMap(t=>getTeamRoster(t.id).map(m=>({id:m.id,heroName:m.heroName,teamName:t.name}))),
+        ...soloHeroes.map(h=>({id:h.id,heroName:h.heroName,teamName:"Independent"})),
+        ...villainPool.map(v=>({id:v.id,heroName:v.heroName,teamName:"Villain"})),
+      ];
+      const res=await fetch("/api/export-all-pdf",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sections,images:b64Images,familyLinks,heroAssocs,allChars})});
+      if(!res.ok){const err=await res.json();alert("PDF error: "+(err.error||"Unknown error"));setAllDossierLoading(false);return;}
+      const blob=await res.blob();const url=URL.createObjectURL(blob);
+      const a=document.createElement("a");a.href=url;a.download="forge-universe-dossier.pdf";document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+    }catch(e){alert("Export failed: "+e.message);}
+    setAllDossierLoading(false);
+  };
+
   // ── Team Power Index ──────────────────────────────────────────────────────
   const getTeamPower=useCallback((teamId)=>{
     const roster=getTeamRoster(teamId);
@@ -1404,7 +1438,10 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
             )}
             {teams.length>0&&<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
               <div><div style={{fontSize:9,letterSpacing:"0.2em",color:`${G}77`,textTransform:"uppercase",marginBottom:4}}>All Teams</div><div style={{fontSize:13,color:"var(--text2)"}}>Click a team to set it active — all tabs will reflect that team.</div></div>
-              <button onClick={()=>setShowTeamCreator(true)} style={{padding:"9px 18px",background:`${G}14`,border:`1px solid ${G}`,borderRadius:8,cursor:"pointer",color:G,fontSize:10.5,letterSpacing:"0.12em",textTransform:"uppercase",fontFamily:"var(--font-mono)",whiteSpace:"nowrap"}}>+ New Team</button>
+              <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                <button onClick={exportAllDossiers} disabled={allDossierLoading} style={{padding:"9px 16px",background:allDossierLoading?"var(--bg3)":"rgba(139,26,26,0.08)",border:`1px solid ${allDossierLoading?"var(--border2)":"rgba(139,26,26,0.4)"}`,borderRadius:8,cursor:allDossierLoading?"not-allowed":"pointer",color:allDossierLoading?"var(--text4)":"#E07070",fontSize:10.5,letterSpacing:"0.12em",textTransform:"uppercase",fontFamily:"var(--font-mono)",whiteSpace:"nowrap"}}>{allDossierLoading?"Building...":"⬇ Universe Dossier"}</button>
+                <button onClick={()=>setShowTeamCreator(true)} style={{padding:"9px 18px",background:`${G}14`,border:`1px solid ${G}`,borderRadius:8,cursor:"pointer",color:G,fontSize:10.5,letterSpacing:"0.12em",textTransform:"uppercase",fontFamily:"var(--font-mono)",whiteSpace:"nowrap"}}>+ New Team</button>
+              </div>
             </div>}
 
             {/* Team grid */}

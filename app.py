@@ -1417,6 +1417,355 @@ def export_pdf():
         as_attachment=True, download_name=f"{team_name.lower().replace(' ','-')}-roster.pdf")
 
 # ---------------------------------------------------------------------------
+# API: Universe Dossier — all teams, solo heroes, villains, relations
+# ---------------------------------------------------------------------------
+@app.route("/api/export-all-pdf", methods=["POST"])
+def export_all_pdf():
+    try:
+        from reportlab.lib.pagesizes import letter
+        from reportlab.lib import colors
+        from reportlab.lib.units import inch
+        from reportlab.platypus import (SimpleDocTemplate, Paragraph, Spacer,
+                                        Table, TableStyle, HRFlowable, PageBreak)
+        from reportlab.lib.styles import ParagraphStyle
+        from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_RIGHT
+        from reportlab.platypus import Image as RLImage
+    except ImportError:
+        return jsonify({"error": "reportlab not installed. Run: pip install reportlab"}), 500
+
+    data        = request.get_json() or {}
+    sections    = data.get("sections", [])
+    images      = data.get("images", {})
+    family_links = data.get("familyLinks", [])
+    hero_assocs  = data.get("heroAssocs", [])
+    all_chars    = data.get("allChars", [])
+
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=letter,
+        rightMargin=0.6*inch, leftMargin=0.6*inch,
+        topMargin=0.6*inch, bottomMargin=0.6*inch)
+
+    def hex2rgb(h):
+        h = h.lstrip("#")
+        return tuple(int(h[i:i+2], 16)/255 for i in (0, 2, 4))
+    def rcolor(h):
+        try: return colors.Color(*hex2rgb(h))
+        except: return colors.Color(0.33, 0.29, 0.72)
+
+    VOID  = colors.Color(0.04, 0.04, 0.08)
+    LIGHT = colors.Color(0.94, 0.92, 0.85)
+    MUTED = colors.Color(0.55, 0.54, 0.50)
+    GOLD  = colors.Color(0.83, 0.69, 0.22)
+    RED   = colors.Color(0.55, 0.10, 0.10)
+    BLUE  = colors.Color(0.37, 0.64, 1.00)
+
+    ALIGN_COLORS = {
+        "base":"#534AB7","member":"#534AB7","allied":"#0F6E56",
+        "rival":"#BA7517","enemy":"#8B1A1A","neutral":"#888780","splinter":"#993C1D",
+    }
+    ALIGN_LABELS = {
+        "base":"NK Member","member":"NK Member","allied":"Allied with NK",
+        "rival":"NK Rival","enemy":"NK Enemy","neutral":"Neutral","splinter":"NK Splinter",
+    }
+
+    _style_cache = {}
+    def sty(name, size=10, color=LIGHT, bold=False, align=TA_LEFT, leading=None):
+        key = (name, size, color, bold, align, leading)
+        if key not in _style_cache:
+            _style_cache[key] = ParagraphStyle(name, fontSize=size, textColor=color,
+                fontName="Helvetica-Bold" if bold else "Helvetica",
+                alignment=align, leading=leading or size*1.35)
+        return _style_cache[key]
+
+    char_name = {c["id"]: c.get("heroName","Unknown") for c in all_chars}
+
+    story = []
+
+    # ── Universe cover ───────────────────────────────────────────────────────
+    total = sum(len(s.get("members",[])) for s in sections)
+    story.append(Spacer(1, 1.4*inch))
+    story.append(Paragraph("NOCTURNAL KNIGHTS", sty("ucv_title", 28, GOLD, True, TA_CENTER)))
+    story.append(Spacer(1, 0.06*inch))
+    story.append(HRFlowable(width="60%", thickness=1, color=GOLD, hAlign="CENTER"))
+    story.append(Spacer(1, 0.08*inch))
+    story.append(Paragraph("UNIVERSE DOSSIER", sty("ucv_sub", 14, LIGHT, False, TA_CENTER)))
+    story.append(Spacer(1, 0.22*inch))
+    story.append(Paragraph("COMPLETE CHARACTER REGISTRY", sty("ucv_note", 9, MUTED, False, TA_CENTER)))
+    story.append(Spacer(1, 0.18*inch))
+
+    if sections:
+        rows = []
+        for s in sections:
+            sc = rcolor(s.get("color","#888780"))
+            rows.append([
+                Paragraph(s.get("name","").upper(), sty("ucv_sl", 9, sc, True)),
+                Paragraph(f"{len(s.get('members',[]))} characters", sty("ucv_sc", 9, MUTED, False, TA_RIGHT)),
+            ])
+        rows.append([
+            Paragraph("TOTAL", sty("ucv_tot", 9, GOLD, True)),
+            Paragraph(f"{total} characters", sty("ucv_totn", 9, GOLD, True, TA_RIGHT)),
+        ])
+        tbl = Table(rows, colWidths=["70%","30%"])
+        tbl.setStyle(TableStyle([
+            ("TOPPADDING",(0,0),(-1,-1),4),("BOTTOMPADDING",(0,0),(-1,-1),4),
+            ("LEFTPADDING",(0,0),(-1,-1),0),("RIGHTPADDING",(0,0),(-1,-1),0),
+            ("LINEBELOW",(0,0),(-1,-2),0.25,colors.Color(0.18,0.18,0.22)),
+        ]))
+        story.append(tbl)
+
+    story.append(Spacer(1, 1.8*inch))
+    story.append(Paragraph("FOR INTERNAL USE ONLY  ·  CLASSIFIED", sty("ucv_warn", 8, colors.Color(0.4,0.4,0.4), False, TA_CENTER)))
+
+    # ── Member dossier helper ────────────────────────────────────────────────
+    def add_member(member, sec_name, sec_color, idx):
+        story.append(PageBreak())
+        acc   = member.get("color", sec_color)
+        ACC   = rcolor(acc)
+        num   = member.get("number","")
+        name  = member.get("heroName","Unknown")
+        real  = member.get("realName","")
+        role  = member.get("role","")
+        tag   = member.get("tagline","")
+        orig  = member.get("origin","")
+        stats = member.get("stats",{})
+        pows  = member.get("powers",[])
+        dna   = member.get("dna",[])
+        is_v  = member.get("isVillain",False)
+        m_team     = member.get("teamName", sec_name)
+        m_team_c   = member.get("teamColor", sec_color)
+        nk_aln     = member.get("nkAlignment","neutral")
+        affiliations    = member.get("affiliations",[])
+        shared_villains = member.get("sharedVillains",[])
+        appearance      = member.get("appearance","")
+
+        align_color = ALIGN_COLORS.get(nk_aln,"#888780")
+        align_label = ALIGN_LABELS.get(nk_aln,"Neutral")
+        ALIGN_C = rcolor(align_color)
+
+        p = f"m{idx}"
+        hdr_txt = "— CLASSIFIED THREAT —" if is_v else f"{m_team.upper()} · {num}"
+        hd = Table([[
+            Paragraph(hdr_txt, sty(f"{p}h1", 7, rcolor(acc), False, TA_LEFT)),
+            Paragraph(role,    sty(f"{p}h2", 7, MUTED,       False, TA_RIGHT)),
+        ]], colWidths=["60%","40%"])
+        hd.setStyle(TableStyle([
+            ("BACKGROUND",(0,0),(-1,-1), colors.Color(*[x*0.18 for x in hex2rgb(acc)])),
+            ("TOPPADDING",(0,0),(-1,-1),5),("BOTTOMPADDING",(0,0),(-1,-1),5),
+            ("LEFTPADDING",(0,0),(0,-1),8),("RIGHTPADDING",(-1,0),(-1,-1),8),
+            ("VALIGN",(0,0),(-1,-1),"MIDDLE"),
+        ]))
+        story.append(hd)
+        story.append(Spacer(1, 0.1*inch))
+
+        img_cell = Spacer(1,1)
+        img_b64  = images.get(member.get("id",""))
+        if img_b64:
+            try:
+                if "," in img_b64: img_b64 = img_b64.split(",",1)[1]
+                rl_img = RLImage(io.BytesIO(base64.b64decode(img_b64)), width=2.1*inch, height=3.0*inch)
+                rl_img.hAlign = "LEFT"
+                img_cell = rl_img
+            except Exception: pass
+
+        info = []
+        info.append(Paragraph(name, sty(f"{p}n", 22, LIGHT, True)))
+        if real:  info.append(Paragraph(real, sty(f"{p}r", 10, MUTED)))
+        if role:  info.append(Paragraph(role.upper(), sty(f"{p}ro", 8, GOLD, False, TA_LEFT, 12)))
+        info.append(Spacer(1,5))
+        at = Table([[
+            Paragraph("NK ALIGNMENT", sty(f"{p}al", 7, MUTED)),
+            Paragraph(align_label, sty(f"{p}alv", 8, ALIGN_C, True, TA_RIGHT)),
+        ]], colWidths=["50%","50%"])
+        at.setStyle(TableStyle([
+            ("BACKGROUND",(0,0),(-1,-1), colors.Color(*[x*0.12 for x in hex2rgb(align_color)])),
+            ("TOPPADDING",(0,0),(-1,-1),4),("BOTTOMPADDING",(0,0),(-1,-1),4),
+            ("LEFTPADDING",(0,0),(-1,-1),6),("RIGHTPADDING",(0,0),(-1,-1),6),
+        ]))
+        info.append(at)
+        info.append(Spacer(1,6))
+        if tag:
+            info.append(HRFlowable(width="100%", thickness=0.5, color=ACC))
+            info.append(Spacer(1,3))
+            info.append(Paragraph(f'<i>“{tag}”</i>', sty(f"{p}tg", 10, colors.Color(0.8,0.8,0.75), False, TA_LEFT, 14)))
+            info.append(Spacer(1,7))
+        if stats:
+            info.append(Paragraph("COMBAT STATS", sty(f"{p}sl", 7, MUTED)))
+            info.append(Spacer(1,3))
+            for sn, sv in stats.items():
+                rt = Table([[Paragraph(sn.upper(), sty(f"{p}sn{sn}",8,MUTED)), Paragraph(str(sv), sty(f"{p}sv{sn}",8,LIGHT,True,TA_RIGHT))]], colWidths=["60%","40%"])
+                rt.setStyle(TableStyle([("TOPPADDING",(0,0),(-1,-1),0),("BOTTOMPADDING",(0,0),(-1,-1),1),("LEFTPADDING",(0,0),(-1,-1),0),("RIGHTPADDING",(0,0),(-1,-1),0)]))
+                info.append(rt)
+                bw = 3.0*inch
+                fw = max(bw*(sv/100), 0.01)
+                bt = Table([[""]], colWidths=[bw], rowHeights=[3])
+                bt.setStyle(TableStyle([("BACKGROUND",(0,0),(-1,-1),colors.Color(0.12,0.12,0.18)),("TOPPADDING",(0,0),(-1,-1),0),("BOTTOMPADDING",(0,0),(-1,-1),0),("LEFTPADDING",(0,0),(-1,-1),0),("RIGHTPADDING",(0,0),(-1,-1),0)]))
+                ft = Table([[""]], colWidths=[fw], rowHeights=[3])
+                ft.setStyle(TableStyle([("BACKGROUND",(0,0),(-1,-1),ACC),("TOPPADDING",(0,0),(-1,-1),0),("BOTTOMPADDING",(0,0),(-1,-1),0),("LEFTPADDING",(0,0),(-1,-1),0),("RIGHTPADDING",(0,0),(-1,-1),0)]))
+                info.append(bt)
+                info.append(Spacer(1,-3))
+                info.append(ft)
+                info.append(Spacer(1,3))
+
+        mt = Table([[img_cell, info]], colWidths=[2.3*inch, 4.8*inch])
+        mt.setStyle(TableStyle([
+            ("VALIGN",(0,0),(-1,-1),"TOP"),
+            ("LEFTPADDING",(0,0),(0,-1),0),("RIGHTPADDING",(0,0),(0,-1),10),
+            ("LEFTPADDING",(1,0),(1,-1),0),("RIGHTPADDING",(1,0),(1,-1),0),
+            ("TOPPADDING",(0,0),(-1,-1),0),("BOTTOMPADDING",(0,0),(-1,-1),0),
+        ]))
+        story.append(mt)
+        story.append(Spacer(1, 0.14*inch))
+        story.append(HRFlowable(width="100%", thickness=0.5, color=colors.Color(*[x*0.35 for x in hex2rgb(acc)])))
+        story.append(Spacer(1, 0.1*inch))
+
+        if pows:
+            story.append(Paragraph("ABILITIES", sty(f"{p}pl",7,MUTED)))
+            story.append(Spacer(1,5))
+            pr = [[Paragraph(pw.get("name",""), sty(f"{p}pn{i}",10,LIGHT,True)), Paragraph(pw.get("desc",""), sty(f"{p}pd{i}",9,MUTED,False,TA_LEFT,13))] for i,pw in enumerate(pows)]
+            pt = Table(pr, colWidths=[1.8*inch,5.3*inch])
+            pt.setStyle(TableStyle([("VALIGN",(0,0),(-1,-1),"TOP"),("TOPPADDING",(0,0),(-1,-1),3),("BOTTOMPADDING",(0,0),(-1,-1),3),("LEFTPADDING",(0,0),(-1,-1),0),("RIGHTPADDING",(0,0),(-1,-1),0),("LINEBELOW",(0,0),(-1,-2),0.25,colors.Color(0.15,0.15,0.2))]))
+            story.append(pt)
+            story.append(Spacer(1, 0.1*inch))
+        if orig:
+            story.append(Paragraph("ORIGIN", sty(f"{p}ol",7,MUTED)))
+            story.append(Spacer(1,3))
+            story.append(Paragraph(orig, sty(f"{p}ot",9,MUTED,False,TA_LEFT,14)))
+            story.append(Spacer(1, 0.08*inch))
+        if appearance:
+            story.append(Paragraph("APPEARANCE", sty(f"{p}ap",7,MUTED)))
+            story.append(Spacer(1,3))
+            story.append(Paragraph(appearance, sty(f"{p}apt",9,MUTED,False,TA_LEFT,14)))
+            story.append(Spacer(1, 0.08*inch))
+        if dna:
+            story.append(Paragraph("DNA: " + " · ".join(dna), sty(f"{p}dt",8,GOLD)))
+            story.append(Spacer(1, 0.08*inch))
+        if affiliations:
+            story.append(Paragraph("AFFILIATIONS", sty(f"{p}afl",7,MUTED)))
+            story.append(Spacer(1,3))
+            story.append(Paragraph("  ·  ".join([f"{a.get('teamName','')} ({a.get('role','')})" for a in affiliations]), sty(f"{p}afv",8,GOLD)))
+            story.append(Spacer(1, 0.08*inch))
+        if shared_villains:
+            story.append(HRFlowable(width="100%", thickness=0.5, color=RED))
+            story.append(Spacer(1,3))
+            story.append(Paragraph("⚠ SHARED THREAT: " + " · ".join(shared_villains), sty(f"{p}sv",8,colors.Color(0.8,0.2,0.2),True)))
+            story.append(Spacer(1, 0.06*inch))
+
+        story.append(Spacer(1, 0.1*inch))
+        story.append(HRFlowable(width="100%", thickness=0.5, color=colors.Color(*[x*0.22 for x in hex2rgb(acc)])))
+        story.append(Spacer(1,3))
+        ftr = Table([[
+            Paragraph(f"{m_team.upper()} · CLASSIFIED", sty(f"{p}ft",7,colors.Color(0.3,0.3,0.3))),
+            Paragraph(num, sty(f"{p}fn",16,colors.Color(*[x*0.25 for x in hex2rgb(acc)]),True,TA_RIGHT)),
+        ]], colWidths=["85%","15%"])
+        ftr.setStyle(TableStyle([("TOPPADDING",(0,0),(-1,-1),0),("BOTTOMPADDING",(0,0),(-1,-1),0),("LEFTPADDING",(0,0),(-1,-1),0),("RIGHTPADDING",(0,0),(-1,-1),0)]))
+        story.append(ftr)
+
+    # ── Section cover + member pages ─────────────────────────────────────────
+    global_idx = 0
+    for si, section in enumerate(sections):
+        sec_type  = section.get("type","team")
+        sec_name  = section.get("name","Section")
+        sec_color = section.get("color","#888780")
+        members   = section.get("members",[])
+        SEC_C     = rcolor(sec_color)
+
+        story.append(PageBreak())
+        story.append(Spacer(1, 1.8*inch))
+
+        if sec_type == "villains":
+            story.append(Paragraph("THREAT REGISTRY", sty(f"sc{si}t", 24, RED, True, TA_CENTER)))
+            story.append(Spacer(1, 0.1*inch))
+            story.append(HRFlowable(width="50%", thickness=1, color=RED, hAlign="CENTER"))
+            story.append(Spacer(1, 0.1*inch))
+            story.append(Paragraph(f"{len(members)} CLASSIFIED HOSTILE SUBJECTS", sty(f"sc{si}s", 9, MUTED, False, TA_CENTER)))
+        elif sec_type == "solo":
+            story.append(Paragraph("INDEPENDENT OPERATIVES", sty(f"sc{si}t", 22, LIGHT, True, TA_CENTER)))
+            story.append(Spacer(1, 0.1*inch))
+            story.append(HRFlowable(width="50%", thickness=1, color=SEC_C, hAlign="CENTER"))
+            story.append(Spacer(1, 0.1*inch))
+            story.append(Paragraph(f"{len(members)} SOLO OPERATIVES  ·  NO TEAM AFFILIATION", sty(f"sc{si}s", 9, MUTED, False, TA_CENTER)))
+        else:
+            story.append(Paragraph(sec_name.upper(), sty(f"sc{si}t", 26, GOLD, True, TA_CENTER)))
+            story.append(Spacer(1, 0.1*inch))
+            story.append(HRFlowable(width="50%", thickness=1, color=SEC_C, hAlign="CENTER"))
+            story.append(Spacer(1, 0.1*inch))
+            story.append(Paragraph(f"{len(members)} REGISTERED MEMBERS", sty(f"sc{si}s", 9, MUTED, False, TA_CENTER)))
+
+        story.append(Spacer(1, 2.4*inch))
+        story.append(Paragraph(f"SECTION {si+1} OF {len(sections)}", sty(f"sc{si}n", 7, colors.Color(0.3,0.3,0.3), False, TA_CENTER)))
+
+        for member in members:
+            add_member(member, sec_name, sec_color, global_idx)
+            global_idx += 1
+
+    # ── Relations appendix ───────────────────────────────────────────────────
+    if family_links or hero_assocs:
+        story.append(PageBreak())
+        story.append(Spacer(1, 0.5*inch))
+        story.append(Paragraph("RELATIONS REGISTRY", sty("rap_t", 22, GOLD, True, TA_CENTER)))
+        story.append(Spacer(1, 0.08*inch))
+        story.append(HRFlowable(width="55%", thickness=1, color=GOLD, hAlign="CENTER"))
+        story.append(Spacer(1, 0.28*inch))
+
+        if family_links:
+            story.append(Paragraph("FAMILY BONDS", sty("rap_fh", 9, MUTED, True)))
+            story.append(Spacer(1, 8))
+            rows = []
+            for lk in family_links:
+                an = char_name.get(lk.get("a",""), lk.get("a","?"))
+                bn = char_name.get(lk.get("b",""), lk.get("b","?"))
+                lid = lk.get("id","")
+                rows.append([
+                    Paragraph(an, sty(f"fla{lid}", 9, LIGHT, True)),
+                    Paragraph(f"{lk.get('aRelation','')}  /  {lk.get('bRelation','')}", sty(f"flr{lid}", 8, GOLD, False, TA_CENTER)),
+                    Paragraph(bn, sty(f"flb{lid}", 9, LIGHT, True, TA_RIGHT)),
+                ])
+            ft = Table(rows, colWidths=["35%","30%","35%"])
+            ft.setStyle(TableStyle([
+                ("ALIGN",(0,0),(0,-1),"LEFT"),("ALIGN",(2,0),(2,-1),"RIGHT"),
+                ("VALIGN",(0,0),(-1,-1),"MIDDLE"),
+                ("TOPPADDING",(0,0),(-1,-1),5),("BOTTOMPADDING",(0,0),(-1,-1),5),
+                ("LEFTPADDING",(0,0),(-1,-1),4),("RIGHTPADDING",(0,0),(-1,-1),4),
+                ("LINEBELOW",(0,0),(-1,-2),0.25,colors.Color(0.18,0.18,0.22)),
+            ]))
+            story.append(ft)
+            story.append(Spacer(1, 0.3*inch))
+
+        if hero_assocs:
+            story.append(Paragraph("HERO ASSOCIATIONS", sty("rap_hah", 9, MUTED, True)))
+            story.append(Spacer(1, 8))
+            rows2 = []
+            for ha in hero_assocs:
+                an = char_name.get(ha.get("a",""), ha.get("a","?"))
+                bn = char_name.get(ha.get("b",""), ha.get("b","?"))
+                hid = ha.get("id","")
+                rows2.append([
+                    Paragraph(an, sty(f"haa{hid}", 9, LIGHT, True)),
+                    Paragraph(f"{ha.get('aRelation','')}  /  {ha.get('bRelation','')}", sty(f"har{hid}", 8, BLUE, False, TA_CENTER)),
+                    Paragraph(bn, sty(f"hab{hid}", 9, LIGHT, True, TA_RIGHT)),
+                ])
+            ht = Table(rows2, colWidths=["35%","30%","35%"])
+            ht.setStyle(TableStyle([
+                ("ALIGN",(0,0),(0,-1),"LEFT"),("ALIGN",(2,0),(2,-1),"RIGHT"),
+                ("VALIGN",(0,0),(-1,-1),"MIDDLE"),
+                ("TOPPADDING",(0,0),(-1,-1),5),("BOTTOMPADDING",(0,0),(-1,-1),5),
+                ("LEFTPADDING",(0,0),(-1,-1),4),("RIGHTPADDING",(0,0),(-1,-1),4),
+                ("LINEBELOW",(0,0),(-1,-2),0.25,colors.Color(0.18,0.18,0.22)),
+            ]))
+            story.append(ht)
+
+    def bg(canvas, doc):
+        canvas.saveState()
+        canvas.setFillColor(VOID)
+        canvas.rect(0, 0, letter[0], letter[1], fill=1, stroke=0)
+        canvas.restoreState()
+
+    doc.build(story, onFirstPage=bg, onLaterPages=bg)
+    buf.seek(0)
+    return send_file(buf, mimetype="application/pdf",
+        as_attachment=True, download_name="forge-universe-dossier.pdf")
+
+# ---------------------------------------------------------------------------
 # API: Comic PDF Export
 # ---------------------------------------------------------------------------
 @app.route("/api/export-comic-pdf", methods=["POST"])
