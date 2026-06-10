@@ -48,12 +48,12 @@ export const RACE_TREE={
     {id:"accident_mutate",label:"Accident Mutate",lore:"An unplanned event rewrote their biology — disaster became origin, mutation became purpose."},
   ]},
   alien:{label:"Alien",hint:"Not of this world. Power comes from biology, not modification. Three distinct species — each with a different relationship to strength, civilization, and purpose.",subs:[
-    {id:"zyrenian",label:"Zyrenian",lore:"Battle-bred warrior race — power scales with combat experience, pride is genetic, and losing is not in their vocabulary. War is culture.",
-     codex:{homeworld:"Zyrak (destroyed) — high-gravity volcanic world once ruled by 12 warring clans for ten millennia. Two centuries ago the clans escalated past the point of survival and burned the planet uninhabitable. Survivors scattered across the galaxy.",biology:"The Bloodline Response: every time a Zyrenian survives a genuine near-death combat event, their cells encode it — power ceiling increases permanently. A Zyrenian who has never truly been tested is weaker than their age suggests. One who has survived a hundred genuine battles is something else entirely. Atrophy is real: combat is biological fuel. Without conflict stimulus, enhanced capabilities slowly degrade.",culture:"Zyrenians have no word for surrender — only 'strategic withdrawal to return stronger,' which is considered intelligent. What they cannot tolerate is quitting. Deep clan loyalty earned through proven capability; once you've earned it, it is absolute and lifelong. They cannot follow someone they don't respect. But if you earn that respect in battle — or through courage they can read as battle — they will die for you without question.",powers:"Scaling strength ceiling, accelerated regeneration, extreme structural durability, combat-instinct neural processing that reads fights in real time.",note:"Displaced Zyrenians in the NK universe are mercenaries, exiles, or soldiers still searching for something worth fighting for. The rare ones who find a cause and redirect their full biology toward it are among the most dangerous beings on the planet."}},
-    {id:"auranthi",label:"Auranthi",lore:"Solar-absorbing species from a dead world — immense power drawn from starlight, haunted by a lost civilization they carry alone.",
-     codex:{homeworld:"Aureth Prime (destroyed) — twin-sun world whose civilization lasted 40,000 years. The Auranthi did not go to war. They built: libraries, architectures, sciences, medicines. Their civilization was two centuries ahead of any known parallel at the time of the end. The twin suns underwent spectral shift — a natural astronomical event that changed radiation frequency beyond what Auranthi biology could process. There was no enemy. Just physics.",biology:"Auranthi bodies are biological solar cells: they absorb stellar radiation and convert it into metabolic and physical energy. Under a yellow or blue-white star they enter solar saturation — enhanced strength, speed, flight, cellular regeneration, and energy projection. Without solar exposure, these capabilities decay. They do not rely on food as primary fuel. The civilizational archive of Aureth Prime is encoded in Auranthi DNA — not as accessible memory but as intuition. A carrier with no formal education may inexplicably understand advanced physics. The archive speaks through them.",culture:"The survivors carry their grief quietly. They understand on a cellular level that civilization is temporary — which makes them precise about what they do with their time. Many develop deep attachments to the worlds they settle on, not as replacement but as genuine love for what new civilizations can become. They protect what they care about with everything they have.",powers:"Solar saturation under yellow/blue star — flight, enhanced strength and speed, cellular regeneration, solar energy projection. Capabilities scale with star proximity and exposure time.",note:"Auranthi restraint is not weakness. It is philosophy. They have seen what power without purpose looks like. It looks like the spectral shift."}},
-    {id:"dravosi",label:"Dravosi",lore:"Apex-predator empire builders — genetically perfected through 40,000 years of deliberate self-selection, driven by dominance, legacy, and the belief that strength is the only honest currency.",
-     codex:{homeworld:"Dravoss — capital world of the Dravosi Supremacy, a 40-star-system empire that has expanded continuously for eight millennia. Built not on ideology but on one principle: the capable govern the rest.",biology:"Dravosi physiology represents the deliberate peak of biological development — 40,000 years of selective breeding amplified every natural advantage and eliminated every weakness. High-gravity origin gave them dense cellular structure and efficient musculature. Selective pressure removed disease susceptibility, pain tolerance limitations, and regenerative caps. They live 400-600 years aging past 30 almost imperceptibly, maintaining full physical capability until their final decades. They can survive brief vacuum exposure and process damage that would kill most species.",culture:"The Supremacy runs on one axiom: the capable govern the rest. What has no place in Dravosi society is voluntary weakness — failure to improve is a social transgression. What complicates the reading is that many Dravosi genuinely believe they are doing the galaxy a service. Subjugated worlds under the Supremacy are stable. Infrastructure is maintained. They are not wrong that their occupation produces order. They are not capable of understanding why that is insufficient. A Dravosi who encounters genuine resistance escalates immediately — not out of anger but out of curiosity. They want to know where the ceiling is.",powers:"Peak biological performance: strength, speed, and durability at the functional limit of biological life. Extended lifespan, vacuum resistance, rapid cellular repair. No exotic powers — just biology pushed to its absolute ceiling.",note:"Dravosi in the NK universe are scouts, exiles, or defectors. Exiles — cast out for failing the Supremacy's standards — have all the capability and none of the backing. They may be trying to prove something. Or they may have decided the Supremacy was wrong. Both make them unpredictable."}},
+    {id:"zyrenian",label:"Zyrenian",lore:"Battle-bred warrior race — power scales with combat experience, pride is genetic, and losing is not in their vocabulary. War is culture.",powerTier:6,potentialTier:10,
+     codex:{homeworld:"Zyrak (destroyed) — high-gravity volcanic world once ruled by 12 warring clans for ten millennia. Two centuries ago the clans escalated past the point of survival and burned the planet uninhabitable. Survivors scattered across the galaxy.",biology:"The Bloodline Response: every time a Zyrenian survives a genuine near-death combat event, their cells encode it — power ceiling increases permanently. A Zyrenian who has never truly been tested is weaker than their age suggests. One who has survived a hundred genuine battles is something else entirely. Atrophy is real: combat is biological fuel. Without conflict stimulus, enhanced capabilities slowly degrade.",culture:"Zyrenians have no word for surrender — only 'strategic withdrawal to return stronger,' which is considered intelligent. What they cannot tolerate is quitting. Deep clan loyalty earned through proven capability; once you've earned it, it is absolute and lifelong. They cannot follow someone they don't respect. But if you earn that respect in battle — or through courage they can read as battle — they will die for you without question.",powers:"Scaling strength ceiling, accelerated regeneration, extreme structural durability, combat-instinct neural processing that reads fights in real time.",note:"Displaced Zyrenians in the NK universe are mercenaries, exiles, or soldiers still searching for something worth fighting for. The rare ones who find a cause and redirect their full biology toward it are among the most dangerous beings on the planet.",lifespan:"150–400 years — combat-hardened specimens maintain biological prime far longer than untested ones; atrophy accelerates significantly without conflict stimulus."}},
+    {id:"auranthi",label:"Auranthi",lore:"Solar-absorbing species from a dead world — immense power drawn from starlight, haunted by a lost civilization they carry alone.",powerTier:9,potentialTier:8,
+     codex:{homeworld:"Aureth Prime (destroyed) — twin-sun world whose civilization lasted 40,000 years. The Auranthi did not go to war. They built: libraries, architectures, sciences, medicines. Their civilization was two centuries ahead of any known parallel at the time of the end. The twin suns underwent spectral shift — a natural astronomical event that changed radiation frequency beyond what Auranthi biology could process. There was no enemy. Just physics.",biology:"Auranthi bodies are biological solar cells: they absorb stellar radiation and convert it into metabolic and physical energy. Under a yellow or blue-white star they enter solar saturation — enhanced strength, speed, flight, cellular regeneration, and energy projection. Without solar exposure, these capabilities decay. They do not rely on food as primary fuel. The civilizational archive of Aureth Prime is encoded in Auranthi DNA — not as accessible memory but as intuition. A carrier with no formal education may inexplicably understand advanced physics. The archive speaks through them.",culture:"The survivors carry their grief quietly. They understand on a cellular level that civilization is temporary — which makes them precise about what they do with their time. Many develop deep attachments to the worlds they settle on, not as replacement but as genuine love for what new civilizations can become. They protect what they care about with everything they have.",powers:"Solar saturation under yellow/blue star — flight, enhanced strength and speed, cellular regeneration, solar energy projection. Capabilities scale with star proximity and exposure time.",note:"Auranthi restraint is not weakness. It is philosophy. They have seen what power without purpose looks like. It looks like the spectral shift.",lifespan:"600–1,200 years under sustained yellow-star exposure; documented cases under optimal twin-sun conditions exceeded 3,000 years."}},
+    {id:"dravosi",label:"Dravosi",lore:"Apex-predator empire builders — genetically perfected through 40,000 years of deliberate self-selection, driven by dominance, legacy, and the belief that strength is the only honest currency.",powerTier:8,potentialTier:3,
+     codex:{homeworld:"Dravoss — capital world of the Dravosi Supremacy, a 40-star-system empire that has expanded continuously for eight millennia. Built not on ideology but on one principle: the capable govern the rest.",biology:"Dravosi physiology represents the deliberate peak of biological development — 40,000 years of selective breeding amplified every natural advantage and eliminated every weakness. High-gravity origin gave them dense cellular structure and efficient musculature. Selective pressure removed disease susceptibility, pain tolerance limitations, and regenerative caps. They live 400-600 years aging past 30 almost imperceptibly, maintaining full physical capability until their final decades. They can survive brief vacuum exposure and process damage that would kill most species.",culture:"The Supremacy runs on one axiom: the capable govern the rest. What has no place in Dravosi society is voluntary weakness — failure to improve is a social transgression. What complicates the reading is that many Dravosi genuinely believe they are doing the galaxy a service. Subjugated worlds under the Supremacy are stable. Infrastructure is maintained. They are not wrong that their occupation produces order. They are not capable of understanding why that is insufficient. A Dravosi who encounters genuine resistance escalates immediately — not out of anger but out of curiosity. They want to know where the ceiling is.",powers:"Peak biological performance: strength, speed, and durability at the functional limit of biological life. Extended lifespan, vacuum resistance, rapid cellular repair. No exotic powers — just biology pushed to its absolute ceiling.",note:"Dravosi in the NK universe are scouts, exiles, or defectors. Exiles — cast out for failing the Supremacy's standards — have all the capability and none of the backing. They may be trying to prove something. Or they may have decided the Supremacy was wrong. Both make them unpredictable.",lifespan:"400–600 years — full physical capability maintained until the final decades; aging past 30 is nearly imperceptible. They were bred to last, not to grow."}},
   ]},
   hybrid:{label:"Hybrid",hint:"Mixed heritage of two races. Choose both bloodlines — biology and history from each side shape who they are. The combination creates something entirely new.",subs:[]},
 };
@@ -66,7 +66,13 @@ export function raceLabel(r){
     const l2=r.sub2?((RACE_TREE[r.sub2.main]?.subs||[]).find(s=>s.id===r.sub2.sub)?.label||r.sub2.sub||""):"";
     return l1&&l2?`Hybrid (${l1} · ${l2})`:"Hybrid";
   }
-  return(RACE_TREE[r.main]?.subs||[]).find(s=>s.id===r.sub)?.label||r.sub||r.main||"";
+  const base=(RACE_TREE[r.main]?.subs||[]).find(s=>s.id===r.sub)?.label||r.sub||r.main||"";
+  if(r.main==="alien"&&r.bloodPct!=null){
+    if(r.bloodPct===100)return`Full-Blooded ${base}`;
+    if(r.bloodPct===50)return`Half-Blooded ${base}`;
+    return`${r.bloodPct}% ${base}`;
+  }
+  return base;
 }
 export function raceLore(r){
   if(!r||typeof r==="string")return"";
@@ -75,7 +81,12 @@ export function raceLore(r){
     const l2=r.sub2?((RACE_TREE[r.sub2.main]?.subs||[]).find(s=>s.id===r.sub2.sub)?.lore||""):"";
     return[l1,l2].filter(Boolean).join(" Their hybrid heritage blends both bloodlines.");
   }
-  return(RACE_TREE[r.main]?.subs||[]).find(s=>s.id===r.sub)?.lore||"";
+  const base=(RACE_TREE[r.main]?.subs||[]).find(s=>s.id===r.sub)?.lore||"";
+  if(r.main==="alien"&&r.bloodPct!=null&&r.bloodPct<100){
+    const pctNotes={75:"At 75% bloodline — most racial powers manifest; power ceiling is marginally reduced from full-blooded baseline.",50:"At 50% bloodline — roughly half the racial capabilities manifest; unique hybrid expressions can emerge as human and alien biology negotiate.",25:"At 25% bloodline — trace heritage; racial traits are latent and may surface unpredictably under extreme stress."};
+    return base+(pctNotes[r.bloodPct]?" "+pctNotes[r.bloodPct]:"");
+  }
+  return base;
 }
 
 export const RECRUIT_QUIZ=[
@@ -296,6 +307,162 @@ export const PERSONAL_PROFILE=[
     {id:"pp_power_texture",q:"If your power had a material or texture — what is it made of?",options:[{id:"a",label:"Something forged — steel, obsidian, iron",value:"forged material, hard-edged, formed under pressure"},{id:"b",label:"Something living — bone, vine, organism",value:"organic, living material, biological and primal"},{id:"c",label:"Something elemental — fire, void, lightning, water",value:"elemental, ancient force, natural phenomenon as weapon"},{id:"d",label:"Something built — circuitry, data, engineered systems",value:"constructed, technological, engineered precision"}]},
     {id:"pp_symbol",q:"What symbol, shape, or icon captures your identity?",options:[{id:"a",label:"Something unbreakable — shield, wall, anchor",value:"unbreakable symbol, shield or anchor, immovable object"},{id:"b",label:"Something sharp — blade, arrow, fracture line",value:"sharp symbol, blade or fracture, cutting through"},{id:"c",label:"Something in motion — wave, spiral, orbit",value:"kinetic symbol, continuous motion, never at rest"},{id:"d",label:"Something rare — eclipse, storm, singularity",value:"rare phenomenon symbol, unique in the world, singular event"}]}
   ]}
+];
+
+export const POWER_FORGE_PHASES=[
+  {id:"source",phase:1,title:"Power Source",subtitle:"Where does it come from — and what feeds it?",
+   questions:[
+    {id:"pf_origin",q:"Where does your power actually come from?",options:[
+      {id:"a",label:"Rage and emotional intensity that hit a permanent breaking point",value:"rage-origin — emotional intensity beyond the breaking point, power is fueled by feeling pushed past the limit"},
+      {id:"b",label:"A biological event that rewired the body — it's in the cells now",value:"biological origin — the body itself was rewritten, power is cellular and physical, a permanent anatomical change"},
+      {id:"c",label:"Contact with something cosmic — radiation, dimensional energy, foreign matter",value:"cosmic/radiation origin — external cosmic force triggered transformation, energy projection and matter interaction"},
+      {id:"d",label:"Mental discipline pushed past what biology should allow",value:"willpower-forged origin — years of mental discipline exceeding physical limits, psionic or focused-force powers"}]},
+    {id:"pf_first",q:"When you first manifested, what happened in the room?",options:[
+      {id:"a",label:"Something in the environment shattered, scorched, or collapsed outward",value:"destructive AoE burst on first manifestation — uncontrolled force release damaged the surrounding environment"},
+      {id:"b",label:"Time seemed to stop — you moved before your mind caught up",value:"speed or temporal perception manifestation — body acted independently, perception altered permanently"},
+      {id:"c",label:"Everything went dark and silent — then you were somewhere else",value:"void or teleportation manifestation — shadow/darkness absorption, spatial displacement, first power was displacement"},
+      {id:"d",label:"You didn't know it happened until someone told you what they saw",value:"subtle or biological manifestation — body-centered power, first expression was invisible from inside, others saw it before you did"}]},
+    {id:"pf_fuel",q:"What makes your power genuinely stronger in the moment?",options:[
+      {id:"a",label:"The worse the fight — damage in, damage out, it scales with stakes",value:"escalating combat fuel — power ceiling rises with fight duration and damage taken, Fury-type scaling mechanic"},
+      {id:"b",label:"Complete silence inside — chaos cuts the power significantly",value:"mental-discipline gated — power requires total focus, environmental or emotional noise reduces effectiveness significantly"},
+      {id:"c",label:"Anger, grief, or love pushed to its absolute extreme",value:"emotional-spike reactive — power spikes at emotional extremes, strongest when feeling is most acute"},
+      {id:"d",label:"A specific condition — proximity to energy, environment, or biological state",value:"environmental dependency — power scales with a specific input (solar exposure, darkness, heat, electrical proximity)"}]},
+    {id:"pf_cost",q:"What does using your power at full capacity cost you?",options:[
+      {id:"a",label:"Physical exhaustion — the body pays an immediate, measurable price",value:"stamina cost — physical toll, measurable exhaustion, requires recovery window after maximum output"},
+      {id:"b",label:"Emotional hollowness — you feel nothing for hours afterward",value:"emotional drain — psychological cost, emotional numbness following peak use, the quiet after is worse than the act"},
+      {id:"c",label:"Nothing visible — and that's what makes everyone around you nervous",value:"no apparent cost — raw innate power with no observable toll, which is unsettling to observe"},
+      {id:"d",label:"Time — maximum output requires a full buildup before it can fire",value:"charge mechanic — delayed maximum output, requires buildup period, cannot be accessed instantly"}]},
+    {id:"pf_hunger",q:"If your power had a hunger — what would it want?",options:[
+      {id:"a",label:"To escalate — it always pushes for more, bigger, longer, never satisfied",value:"escalation hunger — uncapped drive toward more, power always wants to go further, Fury/infinite-ceiling archetype"},
+      {id:"b",label:"To find the exact right moment and end everything with surgical precision",value:"precision hunger — waits for the perfect window, assassination timing, one moment of clarity over sustained output"},
+      {id:"c",label:"To never stop moving — stillness is danger to it",value:"kinetic hunger — movement-driven power, inertia feeds it, speed and momentum are both fuel and expression"},
+      {id:"d",label:"To protect — it pushes hardest when others are threatened, never for itself",value:"protective hunger — power responds to threat to others more than threat to self, defense is the native language"}]},
+  ]},
+  {id:"combat",phase:2,title:"Combat Signature",subtitle:"Your role in a fight — not what you want to do, what you are.",
+   questions:[
+    {id:"pf_position",q:"In a fight, where do you want to be positioned?",options:[
+      {id:"a",label:"In their face — closing the gap is always the first move",value:"melee aggressor — closes range immediately, contact-range fighter, gap closing is instinct not tactic"},
+      {id:"b",label:"Distance and elevation — reads the full fight before committing",value:"ranged battlefield reader — creates distance deliberately, reads the whole fight, commits from position of control"},
+      {id:"c",label:"Invisible until the moment the fight is already decided",value:"stealth/ambush — never seen until the decision is made, Stalker archetype, the fight ends in the first exchange"},
+      {id:"d",label:"Front line, taking every hit so someone behind them doesn't have to",value:"damage anchor — front-line absorber, Tanker role, the function is to be the thing that gets hit"},
+      {id:"e",label:"Controlling the space — nothing moves without permission",value:"battlefield controller — denies movement and action, nothing happens on this field without this character's permission"}]},
+    {id:"pf_damage",q:"Your damage output pattern is...",options:[
+      {id:"a",label:"Steady and relentless — a pressure that never lets up",value:"sustained output — consistent damage, no peak or valley, the fight is one long continuous pressure"},
+      {id:"b",label:"Builds slowly — starts manageable, ends catastrophic",value:"escalating output — Fury/Brute pattern, starts at a base level and compounds with time and combat"},
+      {id:"c",label:"One decisive strike from concealment — all the risk in one moment",value:"burst/assassination pattern — single high-risk maximum-damage window, Stalker archetype"},
+      {id:"d",label:"Controlled bursts that open specific tactical windows",value:"tactical burst — deliberate pauses between outputs, each strike creates an opportunity rather than sustained pressure"}]},
+    {id:"pf_hit",q:"When something hits you, your response is...",options:[
+      {id:"a",label:"Absorb it and keep moving — the hit was irrelevant",value:"raw durability — Tanker model, hits register but do not alter the output or behavior"},
+      {id:"b",label:"Come back faster than makes sense — the body repairs itself",value:"regeneration — healing factor, rapid cellular repair, durability through recovery speed not resistance"},
+      {id:"c",label:"Convert it — their hit becomes output on the next exchange",value:"damage conversion — incoming hits feed the output, being struck fuels the response"},
+      {id:"d",label:"Never get hit — the entire strategy is that contact doesn't happen",value:"evasion/untouchable — defense through non-contact, everything is about not being there when the hit arrives"}]},
+    {id:"pf_stamina",q:"Your endurance model in a sustained fight is...",options:[
+      {id:"a",label:"Long fights are my advantage — the longer it runs, the worse for you",value:"stamina fighter — built for sustained combat, endurance is the weapon, long fights are favorable"},
+      {id:"b",label:"Explosive early burst, then calculated tactical recovery",value:"burst/recovery cycle — Domination-style, maximum early output then deliberate recovery before the next wave"},
+      {id:"c",label:"The more I've taken the more I can give — attrition builds me",value:"inverse endurance — Fury/escalating, stamina grows with damage absorbed, the fight fuels the fighter"},
+      {id:"d",label:"Every move is calculated for minimum cost — I fight like I have nothing to spare",value:"efficiency fighter — zero wasted motion, each action calculated for maximum output per unit of endurance"}]},
+    {id:"pf_win",q:"What does winning a fight look like for you?",options:[
+      {id:"a",label:"Every threat neutralized — completely, by any means, nothing left",value:"offensive completion — all threats eliminated, aggressive win condition, nothing left standing"},
+      {id:"b",label:"Every ally still standing when it ends",value:"defensive win condition — success is measured by who survived, not what was destroyed"},
+      {id:"c",label:"The enemy is helpless — held, frozen, unable to act",value:"Controller/Dominator win — enemy neutralized without necessarily destroyed, complete battlefield control"},
+      {id:"d",label:"The fight ended before they understood what happened",value:"Stalker/precision win — instant, invisible, the fight was decided before the opponent knew it started"},
+      {id:"e",label:"They gave up because I refused to stop",value:"attrition win — endurance as the weapon, outlasted the opponent's will"}]},
+  ]},
+  {id:"element",phase:3,title:"Element & Expression",subtitle:"What does it look like from the outside.",
+   questions:[
+    {id:"pf_element",q:"What element does your power respond to?",options:[
+      {id:"a",label:"Fire — heat, destruction, passion visible and dangerous",value:"pyrokinesis/fire — heat signature, destructive, passion externalized as thermal energy"},
+      {id:"b",label:"Ice / Cold — stillness imposed, control through temperature",value:"cryokinesis/cold — precise control, stillness imposed on the environment, freezing as a form of dominance"},
+      {id:"c",label:"Lightning / Electric — speed, nervous system, overload",value:"electrical — bio-electric or external, speed and nervous system disruption, overload mechanic"},
+      {id:"d",label:"Shadow / Dark — void, drain, concealment, the gaps between things",value:"dark energy / shadow — void manipulation, light absorption, concealment, drain mechanic"},
+      {id:"e",label:"Force / Gravity — weight, pull, manipulation of movement",value:"kinetics/gravity — force projection, gravity manipulation, weight and momentum control"},
+      {id:"f",label:"Psychic / Mental energy — thought made physical, intention projected",value:"psionic — telekinesis, telepathy, intention projected as physical force"},
+      {id:"g",label:"Earth / Stone — immovable, ancient, crushing patience",value:"geo/seismic — earth manipulation, crushing force, immovability as power expression"},
+      {id:"h",label:"Radiation / Cosmic — cellular disruption, transformation from within",value:"radiation/cosmic — cellular-level disruption, transformation, cosmic energy channeling"}]},
+    {id:"pf_air",q:"At full power, what does the space around you do?",options:[
+      {id:"a",label:"Ignites or shimmers — the air warps visibly from heat",value:"thermal field — air distorts from heat, shimmer effect, thermal visual signature in surrounding space"},
+      {id:"b",label:"Drops to freezing — moisture crystallizes in the air",value:"cold field — ambient temperature drops sharply, ice crystals form in air, frost on surfaces"},
+      {id:"c",label:"Crackles with static — raises hair, electromagnetic presence",value:"electromagnetic field — static charge in air, hair rises, metal objects affected, lightning micro-arcs"},
+      {id:"d",label:"Goes dark — absorbs ambient light, the shadows deepen",value:"void field — light absorption, shadows deepen and move toward them, visible darkness"},
+      {id:"e",label:"Bends — objects shift slightly, light distorts around the edges",value:"gravitational/psionic field — visible spatial distortion, objects drawn or repelled slightly"},
+      {id:"f",label:"Nothing external — the threat lives entirely inside the body",value:"internalized power — no external environmental signature, all power is biological/physical, invisible from outside"}]},
+    {id:"pf_visual",q:"Your active power visual signature is...",options:[
+      {id:"a",label:"Overwhelming — impossible to miss, seen from two blocks away",value:"massive visible signature — AoE visual, fills the space, no chance of concealment when active"},
+      {id:"b",label:"Precise — a single point, a line, a beam, nothing wasted",value:"surgical visual — targeted, narrow, single-point visual, precise visual footprint"},
+      {id:"c",label:"A building field — a haze or pressure that grows over time",value:"aura/field visual — persistent expanding field, thickens with duration, environmental presence"},
+      {id:"d",label:"Silent and sudden — no visual warning, just aftermath",value:"invisible activation — no tells, no visual buildup, power is only visible through what it does to targets"}]},
+    {id:"pf_color",q:"The dominant color of your power at full release is...",options:[
+      {id:"a",label:"Deep crimson or blood red — aggression, heat, war made visible",value:"deep crimson/red power signature — aggressive visual, heat and destruction aesthetic"},
+      {id:"b",label:"Electric blue or white — speed, precision, engineered force",value:"electric blue/white power signature — speed and precision aesthetic, clean energy"},
+      {id:"c",label:"Void black or deep violet — shadow, drain, the weight of what can't be seen",value:"void black/deep violet power signature — dark energy aesthetic, absorption and shadow"},
+      {id:"d",label:"Emerald or toxic green — life, corruption, biology as weapon",value:"emerald/green power signature — biological/nature/radiation aesthetic, organic or corrupting"},
+      {id:"e",label:"Gold or amber — ancient, solar, something that was here before us",value:"gold/amber power signature — solar or ancient energy aesthetic, civilizational weight"},
+      {id:"f",label:"Silver or chrome — engineered precision, constructed, controlled",value:"silver/chrome power signature — technological precision aesthetic, engineered and deliberate"}]},
+    {id:"pf_inside",q:"From the inside, your power at maximum feels like...",options:[
+      {id:"a",label:"Rage you're directing before it directs you — barely contained",value:"barely-contained fury from inside — Fury/Brute internal experience, emotional ceiling, power at the edge of control"},
+      {id:"b",label:"Crystal clarity — your mind becomes the sharpest it's ever been",value:"mental clarity peak — Controller/psionic internal experience, power brings perfect focus not chaos"},
+      {id:"c",label:"Immense weight pressurizing from every direction then releasing",value:"gravity/kinetic pressure internal — weight builds, release is the power expression, pressure as the experience"},
+      {id:"d",label:"Cold certainty — no emotion, no hesitation, just outcome",value:"cold precision internal — Stalker/assassin experience, emotion evacuated, only the result remains"},
+      {id:"e",label:"Heat through every nerve simultaneously",value:"nerve-deep thermal activation — fire/electric hybrid internal, the whole body lights up at once"}]},
+  ]},
+  {id:"scope",phase:4,title:"Power Scope",subtitle:"What it can reach — and where it stops.",
+   questions:[
+    {id:"pf_targets",q:"How many can your power affect simultaneously?",options:[
+      {id:"a",label:"One target — I am a surgeon, not a bomb",value:"single-target precision — surgical output, all power concentrated on one point, zero splash"},
+      {id:"b",label:"Everything in range — I don't do selective",value:"AoE output — area-denial archetype, affects everything in range, mass targeting"},
+      {id:"c",label:"My allies specifically — their performance is an extension of mine",value:"support/buff aura — power directed at allies, team performance multiplier, aura-based"},
+      {id:"d",label:"It scales with what I'm building toward — scope is a choice",value:"adaptive scope — Domination/Controller scaling, single-target or AoE based on build and intent"}]},
+    {id:"pf_limit",q:"What is your power's hardest, most unbreakable limit?",options:[
+      {id:"a",label:"Physical exhaustion — the body has a real ceiling and I've hit it",value:"stamina ceiling — hard physical limit, requires genuine recovery before returning to full output"},
+      {id:"b",label:"Emotional state — it fails when I'm not mentally in the right place",value:"emotion-gated ceiling — mental state is the hard limit, power degrades with emotional instability"},
+      {id:"c",label:"Range — it has to be close, and close is not always possible",value:"proximity-limited — melee dependency, power degrades significantly at range, range is the hard constraint"},
+      {id:"d",label:"I genuinely have not found the limit yet, and that frightens me",value:"uncapped ceiling — no discovered hard limit, theoretically unlimited output, the unknown boundary is the threat"}]},
+    {id:"pf_aoe",q:"Your power's maximum area of effect at peak is...",options:[
+      {id:"a",label:"Contained to exactly what I'm targeting — no collateral, ever",value:"contained AoE — surgical, zero collateral, power affects only designated targets regardless of proximity"},
+      {id:"b",label:"Room-sized or larger — the space itself becomes part of the weapon",value:"environmental AoE — space denial, room-sized or larger at peak, environment becomes dangerous"},
+      {id:"c",label:"Radiating from my body — I become the center and origin",value:"radial/body-origin AoE — power emanates from the body outward, character is the epicenter"},
+      {id:"d",label:"Limited only by how long I hold it — it expands with time",value:"sustained expansion AoE — grows with duration, time is the multiplier on area"}]},
+    {id:"pf_protect",q:"When you're protecting someone, your power shifts to...",options:[
+      {id:"a",label:"Spikes — threaten what I protect and you get something different than you planned",value:"protective spike — threat to protected person triggers escalation beyond normal ceiling, involuntary surge"},
+      {id:"b",label:"Sharpens — more precise, less reckless, more lethal per movement",value:"protective focus — precision increases in protective context, efficiency over force"},
+      {id:"c",label:"Stays constant — emotional context doesn't change the output",value:"constant output — emotional state does not affect power level, same regardless of protective context"},
+      {id:"d",label:"Expands to encompass them — becomes a field, not a weapon",value:"protective expansion — power becomes a shield field encompassing the protected, shifts from offense to aura"}]},
+    {id:"pf_purpose",q:"If you could only use your power for one purpose forever, it would be...",options:[
+      {id:"a",label:"Destroying anything that threatens what I protect — completely, every time",value:"offensive anchor — power purpose is threat elimination, aggressive single-purpose application"},
+      {id:"b",label:"Making sure nothing can reach the people behind me",value:"defensive anchor — power purpose is protection, the front line, ensuring others are never touched"},
+      {id:"c",label:"Controlling the fight so the outcome was never in doubt",value:"control anchor — Controller/Dominator purpose, power exists to make outcomes inevitable, never uncertain"},
+      {id:"d",label:"Being the last one standing when everything else is exhausted",value:"endurance anchor — outlasting everything, Brute/attrition purpose, power is the last thing running"},
+      {id:"e",label:"Moving faster than the problem so it never becomes a crisis",value:"speed/mobility anchor — kinetic purpose, being in position before the problem materializes"}]},
+  ]},
+  {id:"identity",phase:5,title:"Power Identity",subtitle:"Your relationship to what you can do.",
+   questions:[
+    {id:"pf_fear",q:"What does your power make you afraid of becoming?",options:[
+      {id:"a",label:"Too destructive — something no longer safe near the people it protects",value:"collateral fear — power's destructive potential could harm protected people, AoE threat to own allies"},
+      {id:"b",label:"Cold — cutting the human connection that keeps it from becoming pure instrument",value:"dehumanization fear — precision use strips the emotion that provides moral context"},
+      {id:"c",label:"Defined entirely by it — nothing underneath if the power disappeared",value:"identity dependency fear — power has become the self, hollow core beneath the capability"},
+      {id:"d",label:"Consuming — using it until there's nothing left to come back from",value:"self-consumption fear — power is a fire that also burns the user, ceiling involves self-destruction"}]},
+    {id:"pf_spike",q:"When does your power involuntarily activate or spike?",options:[
+      {id:"a",label:"Anger — someone pushes the wrong button and it fires before the decision",value:"rage-triggered spike — Fury/Brute involuntary activation, fires before conscious thought under anger"},
+      {id:"b",label:"Fear — genuine survival threat activates it before conscious choice",value:"survival-triggered spike — fight-or-flight activation, power fires in genuine survival scenarios before decision"},
+      {id:"c",label:"Someone else in danger — the spike is always for them, never for me",value:"protective-triggered spike — involuntary activation when others are threatened, protective instinct as trigger"},
+      {id:"d",label:"It doesn't — I have complete control, which is its own kind of weight",value:"fully controlled — no involuntary activation, complete discipline, the absence of spikes is a burden not a relief"}]},
+    {id:"pf_visible",q:"Is your power visible when you're not actively using it?",options:[
+      {id:"a",label:"Constantly — it shows in my body, my eyes, the space I occupy",value:"permanent aura — always-visible power signature, can never be hidden, the power is the presence"},
+      {id:"b",label:"Only under stress — the cracks show when the pressure is high enough",value:"stress-reactive visibility — hidden at baseline, manifests externally when psychological pressure peaks"},
+      {id:"c",label:"Never — you would not know until I decided",value:"completely hidden — no external tells at baseline, power invisible until activated, stealth archetype"},
+      {id:"d",label:"People sense something even when they can't see it — an unease or pull",value:"psychic/felt presence — not visually obvious but sensorially present, others feel it before they see it"}]},
+    {id:"pf_dormant",q:"What would your power do to you if you never used it again?",options:[
+      {id:"a",label:"Build until something broke — and the release would not be controlled",value:"pressure accumulation — power builds toward involuntary uncontrolled release, use is necessary for safety"},
+      {id:"b",label:"Fade — I would lose it entirely, which is the worst thing I can imagine",value:"use-it-or-lose-it — Zyrenian model, power requires active maintenance, atrophy is real"},
+      {id:"c",label:"Nothing — it is patient, it waits as long as I need",value:"dormant stability — power is stable when not used, returns unchanged, patient by nature"},
+      {id:"d",label:"Consume me — it does not tolerate being contained for long",value:"self-consuming dormancy — suppressing the power damages the user, containment is the cost"}]},
+    {id:"pf_future",q:"Five years from now, your power has grown because...",options:[
+      {id:"a",label:"You survived things that should have killed you — and each time came back different",value:"survival-scaling growth — trauma and near-death are the multiplier, Zyrenian/Fury escalation model"},
+      {id:"b",label:"You understood more about what you are — knowledge became the ceiling-breaker",value:"mastery-scaling growth — mental/psychic model, understanding the power's nature is the growth vector"},
+      {id:"c",label:"You lost something, and the grief rewrote what you were capable of",value:"loss-triggered growth — grief as catalyst, trauma-powered evolution, loss changed the ceiling"},
+      {id:"d",label:"You protected people and the bond made you more than you were alone",value:"bond-powered growth — connection as fuel, power grows through relationship and purpose"},
+      {id:"e",label:"It hasn't — this is what it is, completely mastered, nothing left to unlock",value:"fixed/perfected ceiling — Dravosi model, power is complete and mastered, growth is not the trajectory"}]},
+  ]},
 ];
 
 export const DEEP_VILLAIN_PHASES=[

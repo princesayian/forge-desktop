@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import './index.css';
 import {
   G, TEAM_COLORS, TEAM_TYPES, NK_ALIGNMENTS, ALIGN_META,
-  RACE_TREE, raceLabel, raceLore,
+  RACE_TREE, raceLabel, raceLore, POWER_FORGE_PHASES,
   RECRUIT_QUIZ, VILLAIN_QUIZ, SCENARIOS, TONES,
   TEAM_RANKS, FAMILY_RELATIONS, HERO_ASSOC_TYPES,
   ART_STYLES, POSE_OPTIONS, ACCENT_COLORS, TIER_DEFS,
@@ -61,6 +61,8 @@ function App(){
   const[expanded,setExpanded]=useState({});
   const[editingChar,setEditingChar]=useState({});
   const[images,setImages]=useState({});
+  const[hoveredCard,setHoveredCard]=useState(null);
+  const[imgDefault,setImgDefault]=useState({});
   const[removedMembers,setRemovedMembers]=useState({});
   const[battleA,setBattleA]=useState(null);
   const[battleB,setBattleB]=useState(null);
@@ -136,10 +138,13 @@ function App(){
   const[scDeepAnswers,setScDeepAnswers]=useState({});
   const[scProfileStep,setScProfileStep]=useState(0);
   const[scProfileAnswers,setScProfileAnswers]=useState({});
+  const[scPowerForgeMode,setScPowerForgeMode]=useState(false);
+  const[scPowerForgePhase,setScPowerForgePhase]=useState(0);
+  const[scPowerForgeAnswers,setScPowerForgeAnswers]=useState({});
   const[scReforgeId,setScReforgeId]=useState(null);
   const toggleScColor=hex=>setScColors(prev=>{if(prev.includes(hex)){if(prev.length===1)return prev;return prev.filter(c=>c!==hex);}if(prev.length>=3)return prev;return[...prev,hex];});
   const addCustomScColor=()=>{const h=scCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{6}$/))return;setScColors(prev=>{if(prev.includes(h)||prev.length>=3)return prev;return[...prev,h];});setScCustomHex("#ffffff");};
-  const resetSoloCreator=()=>{setScStep(0);setScAnswers({});setScName("");setScHeroName("");setScGender("Male");setScRace(null);setScColors(["#888780"]);setScCustomHex("#ffffff");setScStoryDir("");setScAge("");setScBirthYear("");setScResult(null);setScLoading(false);setScDeepMode(false);setScProfileMode(false);setScDeepPhase(0);setScDeepAnswers({});setScProfileStep(0);setScProfileAnswers({});setScReforgeId(null);};
+  const resetSoloCreator=()=>{setScStep(0);setScAnswers({});setScName("");setScHeroName("");setScGender("Male");setScRace(null);setScColors(["#888780"]);setScCustomHex("#ffffff");setScStoryDir("");setScAge("");setScBirthYear("");setScResult(null);setScLoading(false);setScDeepMode(false);setScProfileMode(false);setScPowerForgeMode(false);setScDeepPhase(0);setScDeepAnswers({});setScProfileStep(0);setScProfileAnswers({});setScPowerForgePhase(0);setScPowerForgeAnswers({});setScReforgeId(null);};
   // ── Ollama ──────────────────────────────────────────────────────────────
   const[ollamaOk,setOllamaOk]=useState(null);const[groqOk,setGroqOk]=useState(false);
   const[forgeVersion,setForgeVersion]=useState("");
@@ -170,6 +175,9 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
   const[profileMode,setProfileMode]=useState(false);
   const[profileStep,setProfileStep]=useState(0);
   const[profileAnswers,setProfileAnswers]=useState({});
+  const[powerForgeMode,setPowerForgeMode]=useState(false);
+  const[powerForgePhase,setPowerForgePhase]=useState(0);
+  const[powerForgeAnswers,setPowerForgeAnswers]=useState({});
   // ── Meta AI / Tripo3D preferences ────────────────────────────────────────
   const[hasMetaAI,setHasMetaAI]=useState(false);
   const[tripo3DTarget,setTripo3DTarget]=useState(null);
@@ -454,7 +462,8 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
   },[soloHeroes,persist]);
   const removeSoloHeroFn=useCallback((heroId)=>{
     fetch(`/api/images/${heroId}`,{method:"DELETE"}).catch(()=>{});
-    setImages(p=>{const n={...p};delete n[heroId];return n;});
+    fetch(`/api/images/${heroId}-civ`,{method:"DELETE"}).catch(()=>{});
+    setImages(p=>{const n={...p};delete n[heroId];delete n[heroId+"-civ"];return n;});
     const updated=soloHeroes.filter(h=>h.id!==heroId);setSoloHeroes(updated);persist("forge-solo-heroes",updated);
     if(activeSoloId===heroId)setActiveSoloId(null);
   },[soloHeroes,activeSoloId,persist]);
@@ -542,7 +551,8 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
   };
   const removeMember=useCallback((teamId,member)=>{
     fetch(`/api/images/${member.id}`,{method:"DELETE"}).catch(()=>{});
-    setImages(p=>{const n={...p};delete n[member.id];return n;});
+    fetch(`/api/images/${member.id}-civ`,{method:"DELETE"}).catch(()=>{});
+    setImages(p=>{const n={...p};delete n[member.id];delete n[member.id+"-civ"];return n;});
     if(member.isCore){
       const nr={...removedMembers,[teamId]:[...(removedMembers[teamId]||[]),member.id]};
       setRemovedMembers(nr);persist("forge-removed",nr);
@@ -669,13 +679,34 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     setRLoading(false);setAiStreamText("");
   };
 
+  const generatePowerForge=async()=>{
+    setRLoading(true);setRResult(null);setAiStreamText("");
+    const hex=rColors[0]||"#A32D2D";
+    const colorDesc=rColors.length===1?(ACCENT_COLORS.find(a=>a.hex===hex)?.label||hexToColorName(hex)):rColors.map((c,i)=>(["primary","secondary","tertiary"][i]||"tertiary")+": "+(ACCENT_COLORS.find(a=>a.hex===c)?.label||hexToColorName(c))).join(", ");
+    const teamType=TEAM_TYPES.find(t=>t.id===activeTeam.type)?.label||activeTeam.type;
+    const existingNames=activeRoster.map(m=>m.heroName).join(", ");
+    const buildPFContext=()=>POWER_FORGE_PHASES.map(ph=>{
+      const qLines=ph.questions.map(q=>{const opt=q.options.find(o=>o.id===powerForgeAnswers[q.id]);return opt?`${q.q}\n→ ${opt.value}`:null;}).filter(Boolean).join("\n");
+      return`[${ph.title}]\n${qLines}`;
+    }).join("\n\n");
+    const pfContext=buildPFContext();
+    try{
+      const raceStr=raceLabel(rRace);const raceLoreStr=raceLore(rRace);
+      const p=await callAI(`Create a ${activeTeam.name} hero built entirely from their Power Forge profile. JSON only.\n\nEvery power must be a direct expression of the Power Forge answers. The origin, personality, and role should feel like they were shaped toward these specific capabilities — not the reverse.\n\nReal name: ${rName||"Unknown"}\nGender: ${rGender}\nAge: ${rAge||(rBirthYear?String(2026-parseInt(rBirthYear)):"Unknown")}\n${rBirthYear?`Birth year: ${rBirthYear}\n`:""}Race: ${raceStr||"Unspecified"}\n${raceLoreStr?`Race lore: ${raceLoreStr}\n`:""}${rStoryDir.trim()?`Story direction: ${rStoryDir.trim()}\n`:""}Team: ${activeTeam.name} (${teamType})\nColor palette: ${colorDesc}\nTeam alignment: ${rNkAlign}\nExisting names (pick different): ${existingNames||"none yet"}\n${rHeroName?`Hero name: ${rHeroName} (use exactly this name)`:"Hero name: (choose a name that fits the power profile)"}\nIMPORTANT: Use correct pronouns (${pronounOf(rGender)}/${pronounOf(rGender)==="they"?"them":pronounOf(rGender)==="she"?"her":"him"}) throughout.\n\nPOWER FORGE PROFILE:\n${pfContext}\n\nBuild four signature powers as direct expressions of this profile. Costume and power FX must visually match the element, color, and signature answers exactly. The origin should read like someone who was always going to develop exactly these powers.\n\n{"heroName":"${rHeroName||"2-word dark name"}","tagline":"one punchy sentence","role":"Role · Descriptor","origin":"2-3 sentences — how their origin connects to why they have these specific powers","powers":[{"name":"Name","desc":"2-sentence visual desc matching Power Forge answers"},{"name":"Name","desc":"2-sentence visual desc"},{"name":"Name","desc":"2-sentence visual desc"},{"name":"Name","desc":"2-sentence visual desc"}],"stats":{"Power":75,"Speed":70,"Tech":60,"Intellect":80,"Will":85},"costumeDesc":"costume using color palette ${colorDesc}, visually grounded in their power element and signature","powerFX":"power effects matching element and color answers exactly — using color palette ${colorDesc}","consistencyNotes":"design lock rules based on Power Forge profile","dna":["Character whose powers or fighting style matches this Power Forge profile","Character whose arc reflects the Power Identity answers"]}`,t=>setAiStreamText(t));
+      const num=String(activeRoster.length+1).padStart(2,"0");
+      const computedAge=rAge||(rBirthYear?String(2026-parseInt(rBirthYear)):"");
+      setRResult({id:`char-${Date.now()}`,teamId:activeTeamId,realName:rName||"Unknown",gender:rGender,age:computedAge,birthYear:rBirthYear||"",race:rRace,species:raceLabel(rRace)||"Human",color:hex,colorPalette:rColors,colorLight:hex+"CC",initials:rName?rName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",number:num,isCustom:true,nkAlignment:rNkAlign,teamRank:rTeamRank,powerForgeLore:Object.keys(powerForgeAnswers).length,...p});
+    }catch(e){if(e.message==="Generation cancelled.")setRResult(null);else setRResult({error:true,msg:e.message});}
+    setRLoading(false);setAiStreamText("");
+  };
+
   const addRecruit=()=>{
     if(!rResult||rResult.error)return;
     if(rReforgeId){
       const updated={...rResult,id:rReforgeId};
       const newRosters={...teamRosters,[activeTeamId]:(teamRosters[activeTeamId]||[]).map(m=>m.id===rReforgeId?updated:m)};
       setTeamRosters(newRosters);persist("forge-rosters",newRosters);
-      setRResult(null);setRAnswers({});setRName("");setRHeroName("");setRStep(0);setRNkAlign("neutral");setRTeamRank("operative");setRGender("Male");setRAge("");setRBirthYear("");setRRace(null);setRStoryDir("");setDeepAnswers({});setDeepPhase(0);setProfileAnswers({});setProfileStep(0);setRFamilyCharId("");setRFamilyRelation("parent");setRFamilyLinks([]);setRHeroAssocId("");setRHeroAssocType("sidekick");setRecruitSuggest(null);setRecruitSuggestLoading(false);setRReforgeId(null);setTab("roster");
+      setRResult(null);setRAnswers({});setRName("");setRHeroName("");setRStep(0);setRNkAlign("neutral");setRTeamRank("operative");setRGender("Male");setRAge("");setRBirthYear("");setRRace(null);setRStoryDir("");setDeepAnswers({});setDeepPhase(0);setProfileAnswers({});setProfileStep(0);setPowerForgeMode(false);setPowerForgePhase(0);setPowerForgeAnswers({});setRFamilyCharId("");setRFamilyRelation("parent");setRFamilyLinks([]);setRHeroAssocId("");setRHeroAssocType("sidekick");setRecruitSuggest(null);setRecruitSuggestLoading(false);setRReforgeId(null);setTab("roster");
       return;
     }
     const newRosters={...teamRosters,[activeTeamId]:[...(teamRosters[activeTeamId]||[]),rResult]};
@@ -694,10 +725,10 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
         persist("forge-hero-assocs",updatedAssocs);
       }
     }
-    setRResult(null);setRAnswers({});setRName("");setRHeroName("");setRStep(0);setRNkAlign("neutral");setRTeamRank("operative");setRGender("Male");setRAge("");setRBirthYear("");setRRace(null);setRStoryDir("");setDeepAnswers({});setDeepPhase(0);setProfileAnswers({});setProfileStep(0);setRFamilyCharId("");setRFamilyRelation("parent");setRFamilyLinks([]);setRHeroAssocId("");setRHeroAssocType("sidekick");setRecruitSuggest(null);setRecruitSuggestLoading(false);setTab("roster");
+    setRResult(null);setRAnswers({});setRName("");setRHeroName("");setRStep(0);setRNkAlign("neutral");setRTeamRank("operative");setRGender("Male");setRAge("");setRBirthYear("");setRRace(null);setRStoryDir("");setDeepAnswers({});setDeepPhase(0);setProfileAnswers({});setProfileStep(0);setPowerForgeMode(false);setPowerForgePhase(0);setPowerForgeAnswers({});setRFamilyCharId("");setRFamilyRelation("parent");setRFamilyLinks([]);setRHeroAssocId("");setRHeroAssocType("sidekick");setRecruitSuggest(null);setRecruitSuggestLoading(false);setTab("roster");
   };
   const startRecruitReforge=(member)=>{
-    setRResult(null);setRAnswers({});setRStep(0);setDeepPhase(0);setDeepAnswers({});setProfileStep(0);setProfileAnswers({});setDeepMode(false);setProfileMode(false);setRecruitSuggest(null);setRecruitSuggestLoading(false);
+    setRResult(null);setRAnswers({});setRStep(0);setDeepPhase(0);setDeepAnswers({});setProfileStep(0);setProfileAnswers({});setPowerForgeMode(false);setPowerForgePhase(0);setPowerForgeAnswers({});setDeepMode(false);setProfileMode(false);setRecruitSuggest(null);setRecruitSuggestLoading(false);
     setRName(member.realName||"");setRHeroName(member.heroName||"");setRGender(member.gender||"Male");setRAge(member.age||"");setRBirthYear(member.birthYear||"");setRRace(member.race||null);setRColors(member.colorPalette?.length?member.colorPalette:member.color?[member.color]:["#A32D2D"]);setRNkAlign(member.nkAlignment||"neutral");setRTeamRank(member.teamRank||"operative");setRStoryDir("");
     if(member.deepLore&&typeof member.deepLore==="object"&&!Array.isArray(member.deepLore)){setDeepMode(true);setDeepAnswers(member.deepLore);setDeepPhase(0);}
     else if(member.profileLore){setProfileMode(true);}
@@ -1646,12 +1677,47 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
           <button onClick={()=>setTab("recruit")} style={{fontSize:11,padding:"7px 16px",background:`${activeTeam.color}14`,border:`1px solid ${activeTeam.color}55`,borderRadius:20,cursor:"pointer",color:activeTeam.color,fontFamily:"var(--font-mono)"}}>+ Add First Member</button>
         </div>)}
         <div className="fimage-grid" style={{display:"grid",gridTemplateColumns:`repeat(${Math.min(activeRoster.length,4)},1fr)`,gap:10,marginBottom:24}}>
-          {activeRoster.map(m=>(<div key={m.id}>
-            <input type="file" accept="image/*" style={{display:"none"}} ref={el=>fileRefs.current[m.id]=el} onChange={e=>handleImg(m.id,e.target.files[0])}/>
-            <div onClick={!images[m.id]?()=>fileRefs.current[m.id]?.click():undefined} style={{background:images[m.id]?"transparent":`${m.color}08`,border:`1.5px dashed ${images[m.id]?m.color+"66":m.color+"2E"}`,borderRadius:9,overflow:"hidden",cursor:images[m.id]?"default":"pointer",aspectRatio:"3/4",position:"relative",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:6}}>
-              {images[m.id]?(<><img src={images[m.id]} alt={m.heroName} style={{width:"100%",height:"100%",objectFit:"cover",objectPosition:"top",position:"absolute",inset:0}}/><div style={{position:"absolute",inset:0,background:"linear-gradient(transparent 55%,rgba(0,0,0,0.88))"}}/><div style={{position:"absolute",bottom:8,left:8}}><div style={{fontSize:11,fontWeight:"bold",color:"#fff"}}>{m.heroName}</div><div style={{fontSize:8,color:m.colorLight||m.color}}>{m.number}</div></div><div style={{position:"absolute",top:6,right:6,display:"flex",gap:4}}><button onClick={e=>{e.stopPropagation();fileRefs.current[m.id]?.click();}} style={{fontSize:8,padding:"3px 8px",background:"rgba(0,0,0,0.65)",border:`1px solid ${m.color}99`,borderRadius:8,cursor:"pointer",color:"#fff",fontFamily:"var(--font-mono)",backdropFilter:"blur(4px)"}}>↑ Change</button><button onClick={e=>{e.stopPropagation();downloadImg(m.id,m.heroName);}} style={{fontSize:8,padding:"3px 8px",background:"rgba(0,0,0,0.65)",border:`1px solid ${m.color}99`,borderRadius:8,cursor:"pointer",color:"#fff",fontFamily:"var(--font-mono)",backdropFilter:"blur(4px)"}}>↓ Save</button></div></>):(<><div style={{width:34,height:34,borderRadius:"50%",background:`${m.color}14`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:"bold",color:m.color}}>{m.initials}</div><div style={{fontSize:9,color:"var(--text4)",textAlign:"center",lineHeight:1.4}}>{m.heroName}<br/>tap to upload</div></>)}
-            </div>
-          </div>))}
+          {activeRoster.map(m=>{
+            const heroImg=images[m.id];
+            const civImg=images[m.id+"-civ"];
+            const isFlipped=imgDefault[m.id]==="civ";
+            const isHovered=hoveredCard===m.id;
+            const hasBoth=!!(heroImg&&civImg);
+            const hasAny=!!(heroImg||civImg);
+            const layer1=isFlipped?civImg:heroImg;
+            const layer2=isFlipped?heroImg:civImg;
+            const isShowingCiv=hasBoth&&(isFlipped?!isHovered:isHovered);
+            const ob={fontSize:8,padding:"3px 7px",background:"rgba(0,0,0,0.65)",border:`1px solid ${m.color}88`,borderRadius:7,cursor:"pointer",color:"#fff",fontFamily:"var(--font-mono)",backdropFilter:"blur(4px)",whiteSpace:"nowrap"};
+            const obA={...ob,background:`${m.color}44`,border:`1px solid ${m.color}bb`};
+            return(<div key={m.id}>
+              <input type="file" accept="image/*" style={{display:"none"}} ref={el=>fileRefs.current[m.id]=el} onChange={e=>handleImg(m.id,e.target.files[0])}/>
+              <input type="file" accept="image/*" style={{display:"none"}} ref={el=>fileRefs.current[m.id+"-civ"]=el} onChange={e=>handleImg(m.id+"-civ",e.target.files[0])}/>
+              <div
+                onMouseEnter={()=>setHoveredCard(m.id)}
+                onMouseLeave={()=>setHoveredCard(null)}
+                onClick={!hasAny?()=>fileRefs.current[m.id]?.click():undefined}
+                style={{background:hasAny?"transparent":`${m.color}08`,border:`1.5px dashed ${hasAny?m.color+"66":m.color+"2E"}`,borderRadius:9,overflow:"hidden",cursor:hasAny?"default":"pointer",aspectRatio:"3/4",position:"relative",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:6}}>
+                {hasAny?(<>
+                  {layer1&&<img src={layer1} alt={m.heroName} style={{width:"100%",height:"100%",objectFit:"cover",objectPosition:"top",position:"absolute",inset:0,zIndex:1,opacity:hasBoth&&isHovered?0:1,transition:"opacity 0.3s"}}/>}
+                  {layer2&&<img src={layer2} alt={m.heroName} style={{width:"100%",height:"100%",objectFit:"cover",objectPosition:"top",position:"absolute",inset:0,zIndex:2,opacity:hasBoth&&isHovered?1:0,transition:"opacity 0.3s"}}/>}
+                  <div style={{position:"absolute",inset:0,background:"linear-gradient(transparent 55%,rgba(0,0,0,0.88))",zIndex:3,pointerEvents:"none"}}/>
+                  <div style={{position:"absolute",bottom:8,left:8,zIndex:4}}>
+                    <div style={{fontSize:11,fontWeight:"bold",color:"#fff"}}>{m.heroName}</div>
+                    {hasBoth&&<div style={{fontSize:7,color:m.colorLight||m.color,letterSpacing:"0.1em",textTransform:"uppercase",marginTop:1}}>{isShowingCiv?"civilian":"costumed"}</div>}
+                    <div style={{fontSize:8,color:m.colorLight||m.color,marginTop:1}}>{m.number}</div>
+                  </div>
+                  <div style={{position:"absolute",top:6,right:6,zIndex:4,display:"flex",flexDirection:"column",gap:3,alignItems:"flex-end"}}>
+                    <div style={{display:"flex",gap:3}}>
+                      <button onClick={e=>{e.stopPropagation();fileRefs.current[m.id]?.click();}} style={ob}>↑ Hero</button>
+                      <button onClick={e=>{e.stopPropagation();fileRefs.current[m.id+"-civ"]?.click();}} style={ob}>↑ Civ</button>
+                      <button onClick={e=>{e.stopPropagation();downloadImg(m.id,m.heroName);}} style={ob}>↓</button>
+                    </div>
+                    {hasBoth&&<button onClick={e=>{e.stopPropagation();setImgDefault(p=>({...p,[m.id]:p[m.id]==="civ"?"hero":"civ"}));}} style={obA}>⇄ {isFlipped?"Hero":"Civ"} first</button>}
+                  </div>
+                </>):(<><div style={{width:34,height:34,borderRadius:"50%",background:`${m.color}14`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:"bold",color:m.color}}>{m.initials}</div><div style={{fontSize:9,color:"var(--text4)",textAlign:"center",lineHeight:1.4}}>{m.heroName}<br/>tap to upload</div></>)}
+              </div>
+            </div>);
+          })}
         </div>
         <div style={{display:"flex",flexDirection:"column",gap:8}}>
           {activeRoster.map(m=>(<div key={m.id}>
@@ -1891,53 +1957,58 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
           :<>Recruiting for: <strong style={{color:activeTeam.color}}>{activeTeam.name}</strong> · Switch teams in the Teams tab to recruit for a different team.</>}
         </div>
         {/* Mode toggle */}
-        <div style={{display:"flex",gap:8,marginBottom:18}}>
-          <button onClick={()=>{setDeepMode(false);setProfileMode(false);setDeepPhase(0);setDeepAnswers({});setProfileStep(0);setProfileAnswers({});setRStep(0);setRResult(null);}} style={{flex:1,padding:"10px",background:!deepMode&&!profileMode?`${activeTeam.color}16`:"var(--bg3)",border:`1px solid ${!deepMode&&!profileMode?activeTeam.color:"var(--border2)"}`,borderRadius:9,cursor:"pointer",fontFamily:"var(--font-mono)",textAlign:"center"}}>
-            <div style={{fontSize:12,fontWeight:!deepMode&&!profileMode?"bold":"normal",color:!deepMode&&!profileMode?"var(--text-primary)":"var(--text2)"}}>⚡ Quick Forge</div>
-            <div style={{fontSize:9,color:"var(--text3)",marginTop:2}}>6 questions, fast result</div>
-          </button>
-          <button onClick={()=>{setDeepMode(true);setProfileMode(false);setDeepPhase(0);setDeepAnswers({});setProfileStep(0);setProfileAnswers({});setRStep(0);setRResult(null);}} style={{flex:1,padding:"10px",background:deepMode?`${activeTeam.color}16`:"var(--bg3)",border:`1px solid ${deepMode?activeTeam.color:"var(--border2)"}`,borderRadius:9,cursor:"pointer",fontFamily:"var(--font-mono)",textAlign:"center"}}>
-            <div style={{fontSize:12,fontWeight:deepMode?"bold":"normal",color:deepMode?"var(--text-primary)":"var(--text2)"}}>📚 Deep Forge</div>
-            <div style={{fontSize:9,color:"var(--text3)",marginTop:2}}>7 lore phases, richer result</div>
-          </button>
-          <button onClick={()=>{setProfileMode(true);setDeepMode(false);setDeepPhase(0);setDeepAnswers({});setProfileStep(0);setProfileAnswers({});setRStep(0);setRResult(null);}} style={{flex:1,padding:"10px",background:profileMode?`${activeTeam.color}16`:"var(--bg3)",border:`1px solid ${profileMode?activeTeam.color:"var(--border2)"}`,borderRadius:9,cursor:"pointer",fontFamily:"var(--font-mono)",textAlign:"center"}}>
-            <div style={{fontSize:12,fontWeight:profileMode?"bold":"normal",color:profileMode?"var(--text-primary)":"var(--text2)"}}>🧬 Personal Profile</div>
-            <div style={{fontSize:9,color:"var(--text3)",marginTop:2}}>25 questions, built from you</div>
-          </button>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:18}}>
+          {[
+            {id:"quick",label:"⚡ Quick Forge",sub:"6 questions, fast result",active:!deepMode&&!profileMode&&!powerForgeMode,onClick:()=>{setDeepMode(false);setProfileMode(false);setPowerForgeMode(false);setDeepPhase(0);setDeepAnswers({});setProfileStep(0);setProfileAnswers({});setPowerForgePhase(0);setPowerForgeAnswers({});setRStep(0);setRResult(null);}},
+            {id:"deep",label:"📚 Deep Forge",sub:"7 lore phases, richer result",active:deepMode,onClick:()=>{setDeepMode(true);setProfileMode(false);setPowerForgeMode(false);setDeepPhase(0);setDeepAnswers({});setProfileStep(0);setProfileAnswers({});setPowerForgePhase(0);setPowerForgeAnswers({});setRStep(0);setRResult(null);}},
+            {id:"profile",label:"🧬 Personal Profile",sub:"25 questions, built from you",active:profileMode,onClick:()=>{setProfileMode(true);setDeepMode(false);setPowerForgeMode(false);setDeepPhase(0);setDeepAnswers({});setProfileStep(0);setProfileAnswers({});setPowerForgePhase(0);setPowerForgeAnswers({});setRStep(0);setRResult(null);}},
+            {id:"power",label:"⚡ Power Forge",sub:"25 questions, power-first build",active:powerForgeMode,onClick:()=>{setPowerForgeMode(true);setDeepMode(false);setProfileMode(false);setDeepPhase(0);setDeepAnswers({});setProfileStep(0);setProfileAnswers({});setPowerForgePhase(0);setPowerForgeAnswers({});setRStep(0);setRResult(null);}},
+          ].map(m=>(
+            <button key={m.id} onClick={m.onClick} style={{padding:"10px",background:m.active?`${activeTeam.color}16`:"var(--bg3)",border:`1px solid ${m.active?activeTeam.color:"var(--border2)"}`,borderRadius:9,cursor:"pointer",fontFamily:"var(--font-mono)",textAlign:"center"}}>
+              <div style={{fontSize:11.5,fontWeight:m.active?"bold":"normal",color:m.active?"var(--text-primary)":"var(--text2)"}}>{m.label}</div>
+              <div style={{fontSize:8.5,color:"var(--text3)",marginTop:2}}>{m.sub}</div>
+            </button>
+          ))}
         </div>
         <div style={{marginBottom:20}}>
           {/* Progress bar */}
           <div style={{height:3,background:"rgba(255,255,255,0.06)",borderRadius:2,marginBottom:6}}>
             <div style={{height:3,background:activeTeam.color,borderRadius:2,transition:"width 0.3s ease",
-              width:rResult?"100%":profileMode
-                ?`${(profileStep/6)*100}%`
-                :deepMode
-                  ?`${(deepPhase/(DEEP_LORE_PHASES.length+1))*100}%`
-                  :`${(rStep/(RECRUIT_QUIZ.length+1))*100}%`
+              width:rResult?"100%":powerForgeMode
+                ?`${(powerForgePhase/(POWER_FORGE_PHASES.length+1))*100}%`
+                :profileMode
+                  ?`${(profileStep/6)*100}%`
+                  :deepMode
+                    ?`${(deepPhase/(DEEP_LORE_PHASES.length+1))*100}%`
+                    :`${(rStep/(RECRUIT_QUIZ.length+1))*100}%`
             }}/>
           </div>
           <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
             <span style={{fontSize:10,color:"var(--text2)"}}>
-              {rResult?"Review recruit":profileMode
-                ?(profileStep===0?"Identity":`${PERSONAL_PROFILE[profileStep-1]?.section} — ${profileStep} of 5`)
-                :deepMode
-                  ?(deepPhase===0?"Identity":`Phase ${deepPhase} of ${DEEP_LORE_PHASES.length} — ${DEEP_LORE_PHASES[deepPhase-1]?.title||""}`)
-                  :(rStep===0?"Identity":`Question ${rStep} of ${RECRUIT_QUIZ.length}`)
+              {rResult?"Review recruit":powerForgeMode
+                ?(powerForgePhase===0?"Identity":`${POWER_FORGE_PHASES[powerForgePhase-1]?.title||""} — Phase ${powerForgePhase} of ${POWER_FORGE_PHASES.length}`)
+                :profileMode
+                  ?(profileStep===0?"Identity":`${PERSONAL_PROFILE[profileStep-1]?.section} — ${profileStep} of 5`)
+                  :deepMode
+                    ?(deepPhase===0?"Identity":`Phase ${deepPhase} of ${DEEP_LORE_PHASES.length} — ${DEEP_LORE_PHASES[deepPhase-1]?.title||""}`)
+                    :(rStep===0?"Identity":`Question ${rStep} of ${RECRUIT_QUIZ.length}`)
               }
             </span>
             <span style={{fontSize:10,color:activeTeam.color}}>
-              {rResult?"Complete":profileMode
-                ?`${Math.round((profileStep/6)*100)}%`
-                :deepMode
-                  ?`${Math.round((deepPhase/(DEEP_LORE_PHASES.length+1))*100)}%`
-                  :`${Math.round((rStep/(RECRUIT_QUIZ.length+1))*100)}%`
+              {rResult?"Complete":powerForgeMode
+                ?`${Math.round((powerForgePhase/(POWER_FORGE_PHASES.length+1))*100)}%`
+                :profileMode
+                  ?`${Math.round((profileStep/6)*100)}%`
+                  :deepMode
+                    ?`${Math.round((deepPhase/(DEEP_LORE_PHASES.length+1))*100)}%`
+                    :`${Math.round((rStep/(RECRUIT_QUIZ.length+1))*100)}%`
               }
             </span>
           </div>
         </div>
 
         {/* ── Step 0: Identity (all modes) ── */}
-        {!rResult&&((!deepMode&&!profileMode&&rStep===0)||(deepMode&&deepPhase===0)||(profileMode&&profileStep===0))&&(<div style={s.card}>
+        {!rResult&&((!deepMode&&!profileMode&&!powerForgeMode&&rStep===0)||(deepMode&&deepPhase===0)||(profileMode&&profileStep===0)||(powerForgeMode&&powerForgePhase===0))&&(<div style={s.card}>
           <div style={{fontSize:15,fontWeight:"bold",color:"var(--text-primary)",marginBottom:14}}>Who is this recruit?</div>
           <span style={s.lbl}>Hero Name <span style={{color:"#E07070"}}>*</span></span>
           <div style={{display:"flex",gap:6,marginBottom:14}}><input type="text" placeholder="e.g. Ironhawk" value={rHeroName} onChange={e=>setRHeroName(e.target.value)} style={{flex:1,borderColor:!rHeroName.trim()?"rgba(224,112,112,0.5)":undefined}}/><button onClick={()=>setRHeroName(randHeroName(rRace))} title="Random hero name (race-aware)" style={{padding:"0 12px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:16,flexShrink:0}}>⚄</button></div>
@@ -2054,8 +2125,8 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
             );
           })()}
           {(!rHeroName.trim()||!rName.trim()||!rRace)&&<div style={{fontSize:10,color:"#E07070",marginBottom:8,fontFamily:"var(--font-mono)"}}>* Hero Name, Real Name, and Race are required</div>}
-          <button style={s.bigBtn(!rHeroName.trim()||!rName.trim()||!rRace,activeTeam.color)} disabled={!rHeroName.trim()||!rName.trim()||!rRace} onClick={()=>deepMode?setDeepPhase(1):profileMode?setProfileStep(1):setRStep(1)}>
-            {deepMode?"Begin Deep Forge →":profileMode?"Begin Profile →":"Begin Assessment →"}
+          <button style={s.bigBtn(!rHeroName.trim()||!rName.trim()||!rRace,activeTeam.color)} disabled={!rHeroName.trim()||!rName.trim()||!rRace} onClick={()=>deepMode?setDeepPhase(1):profileMode?setProfileStep(1):powerForgeMode?setPowerForgePhase(1):setRStep(1)}>
+            {deepMode?"Begin Deep Forge →":profileMode?"Begin Profile →":powerForgeMode?"Begin Power Forge →":"Begin Assessment →"}
           </button>
         </div>)}
 
@@ -2111,6 +2182,37 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
           </div>);
         })()}
 
+        {/* ── Power Forge phases ── */}
+        {!rResult&&powerForgeMode&&powerForgePhase>=1&&powerForgePhase<=POWER_FORGE_PHASES.length&&(()=>{
+          const ph=POWER_FORGE_PHASES[powerForgePhase-1];
+          const phComplete=ph.questions.every(q=>powerForgeAnswers[q.id]);
+          const isLast=powerForgePhase===POWER_FORGE_PHASES.length;
+          return(<div style={s.card}>
+            <div style={{marginBottom:14}}>
+              <div style={{fontSize:9,letterSpacing:"0.14em",color:`${rHex}77`,textTransform:"uppercase",fontFamily:"var(--font-mono)",marginBottom:3}}>Power Forge · Phase {powerForgePhase} of {POWER_FORGE_PHASES.length}</div>
+              <div style={{fontSize:15,fontWeight:"bold",color:"var(--text-primary)",marginBottom:2}}>{ph.title}</div>
+              <div style={{fontSize:10.5,color:"var(--text3)",fontStyle:"italic"}}>{ph.subtitle}</div>
+            </div>
+            {ph.questions.map(q=>(<div key={q.id} style={{marginBottom:16}}>
+              <div style={{fontSize:12.5,fontWeight:"bold",color:"var(--text-primary)",marginBottom:8,lineHeight:1.4}}>{q.q}</div>
+              <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                {q.options.map(opt=>(
+                  <button key={opt.id} onClick={()=>setPowerForgeAnswers(p=>({...p,[q.id]:opt.id}))} style={{...s.optBtn(powerForgeAnswers[q.id]===opt.id,rHex),textAlign:"left",lineHeight:1.5}}>{opt.label}</button>
+                ))}
+              </div>
+            </div>))}
+            <div style={{display:"flex",gap:10,marginTop:6}}>
+              <button onClick={()=>setPowerForgePhase(p=>Math.max(0,p-1))} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text3)",fontSize:10.5,fontFamily:"var(--font-mono)"}}>← Back</button>
+              {!isLast&&<button disabled={!phComplete} onClick={()=>setPowerForgePhase(p=>p+1)} style={{flex:2,...s.bigBtn(!phComplete,rHex),marginTop:0}}>
+                {phComplete?`Next: ${POWER_FORGE_PHASES[powerForgePhase]?.title} →`:"Answer all questions to continue"}
+              </button>}
+              {isLast&&<button disabled={!phComplete||rLoading} onClick={generatePowerForge} style={{flex:2,...s.bigBtn(!phComplete||rLoading,rHex),marginTop:0}}>
+                {rLoading?"Forging power profile...":phComplete?"Generate Power-Forged Hero →":"Answer all questions"}
+              </button>}
+            </div>
+          </div>);
+        })()}
+
         {rLoading&&<div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
           {aiStreamText&&<div style={{flex:1,padding:"10px 12px",background:"var(--bg2)",border:"1px solid var(--border2)",borderRadius:8,fontFamily:"var(--font-mono)",fontSize:9,color:"var(--text3)",maxHeight:72,overflowY:"auto",whiteSpace:"pre-wrap",wordBreak:"break-all",lineHeight:1.5}}>{aiStreamText}</div>}
           {!aiStreamText&&<div style={{flex:1,padding:"10px 12px",background:"var(--bg2)",border:"1px solid var(--border2)",borderRadius:8,fontSize:9,color:"var(--text3)",fontFamily:"var(--font-mono)"}}>Waiting for model response…</div>}
@@ -2126,12 +2228,13 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
               <div style={{fontSize:11,color:rResult.color,marginTop:2}}>{rResult.realName} · {rResult.role}</div>
               {rResult.deepLore&&<div style={{fontSize:9,color:`${rResult.color}88`,marginTop:3,letterSpacing:"0.08em"}}>DEEP FORGE · {DEEP_LORE_PHASES.length} phases</div>}
               {rResult.profileLore&&<div style={{fontSize:9,color:`${rResult.color}88`,marginTop:3,letterSpacing:"0.08em"}}>🧬 PERSONAL PROFILE · {rResult.profileLore} answers</div>}
+              {rResult.powerForgeLore&&<div style={{fontSize:9,color:`${rResult.color}88`,marginTop:3,letterSpacing:"0.08em"}}>⚡ POWER FORGE · {rResult.powerForgeLore} answers</div>}
             </div>
             {rResult.nkAlignment&&rResult.nkAlignment!=="base"&&<AlignmentBadge alignment={rResult.nkAlignment}/>}
           </div>
           <CharacterPage member={rResult} imageUrl={null} teamName={activeTeam.name} teamColor={activeTeam.color}/>
           <div style={{display:"flex",gap:10,marginTop:14}}>
-            <button onClick={()=>{setRResult(null);setRStep(0);setRAnswers({});setDeepPhase(0);setDeepAnswers({});setProfileStep(0);setProfileAnswers({});setRHeroAssocId("");setRHeroAssocType("sidekick");setRecruitSuggest(null);setRecruitSuggestLoading(false);}} style={{flex:1,padding:"11px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:10.5,fontFamily:"var(--font-mono)"}}>Regenerate</button>
+            <button onClick={()=>{setRResult(null);setRStep(0);setRAnswers({});setDeepPhase(0);setDeepAnswers({});setProfileStep(0);setProfileAnswers({});setPowerForgePhase(0);setPowerForgeAnswers({});setRHeroAssocId("");setRHeroAssocType("sidekick");setRecruitSuggest(null);setRecruitSuggestLoading(false);}} style={{flex:1,padding:"11px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:10.5,fontFamily:"var(--font-mono)"}}>Regenerate</button>
             <button onClick={addRecruit} style={{flex:2,padding:"11px",background:`${activeTeam.color}16`,border:`1px solid ${activeTeam.color}`,borderRadius:8,cursor:"pointer",color:activeTeam.color,fontSize:10.5,letterSpacing:"0.1em",textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>{rReforgeId?"Update Member →":"Add to "+activeTeam.abbr+" →"}</button>
           </div>
           <div style={{marginTop:10}}>
@@ -3460,6 +3563,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
               ["Biology — The Bloodline Response",zyrenian?.codex?.biology],
               ["Culture",zyrenian?.codex?.culture],
               ["Powers",zyrenian?.codex?.powers],
+              ["Average Lifespan",zyrenian?.codex?.lifespan],
               ["In the NK Universe",zyrenian?.codex?.note],
             ]}/>
 
@@ -3470,6 +3574,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
               ["Biology — Solar Saturation",auranthi?.codex?.biology],
               ["Culture",auranthi?.codex?.culture],
               ["Powers",auranthi?.codex?.powers],
+              ["Average Lifespan",auranthi?.codex?.lifespan],
               ["In the NK Universe",auranthi?.codex?.note],
             ]}/>
 
@@ -3480,10 +3585,52 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
               ["Biology — Biological Peak",dravosi?.codex?.biology],
               ["Culture — The Supremacy",dravosi?.codex?.culture],
               ["Powers",dravosi?.codex?.powers],
+              ["Average Lifespan",dravosi?.codex?.lifespan],
               ["In the NK Universe",dravosi?.codex?.note],
             ]}/>
 
-          <div style={{fontSize:10,letterSpacing:"0.18em",textTransform:"uppercase",color:`${G}66`,fontFamily:"var(--font-mono)",marginBottom:12,paddingBottom:6,borderBottom:"1px solid var(--border)",marginTop:8}}>— Genetic Mutations —</div>
+          <div style={{fontSize:10,letterSpacing:"0.18em",textTransform:"uppercase",color:`${G}66`,fontFamily:"var(--font-mono)",marginBottom:12,paddingBottom:6,borderBottom:"1px solid var(--border)",marginTop:8}}>— Species Power Index —</div>
+
+          <div style={{fontSize:10.5,color:"var(--text3)",marginBottom:14,lineHeight:1.6}}>Current peak power vs. growth potential — rated across known full-blooded specimens. Lifespan averaged across documented cases.</div>
+          {[
+            {s:zyrenian,accent:"#B04A1A",badge:null,potBadge:true},
+            {s:auranthi,accent:"#D4A020",badge:true,potBadge:false},
+            {s:dravosi,accent:"#5A5AE0",badge:null,potBadge:false},
+          ].map(({s,accent,badge,potBadge})=>(
+            <div key={s?.id} style={{background:"var(--bg3)",border:`1px solid ${accent}33`,borderRadius:10,padding:"14px 16px",marginBottom:10}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+                <div style={{fontSize:12,fontWeight:"bold",color:accent,fontFamily:"var(--font-mono)",letterSpacing:"0.06em"}}>{s?.label?.toUpperCase()}</div>
+                <div style={{display:"flex",gap:5}}>
+                  {badge&&<div style={{fontSize:7.5,padding:"2px 7px",background:"rgba(212,160,32,0.12)",border:"1px solid rgba(212,160,32,0.35)",borderRadius:10,color:"#D4A020",fontFamily:"var(--font-mono)",letterSpacing:"0.08em",whiteSpace:"nowrap"}}>STRONGEST</div>}
+                  {potBadge&&<div style={{fontSize:7.5,padding:"2px 7px",background:"rgba(83,74,183,0.12)",border:"1px solid rgba(83,74,183,0.35)",borderRadius:10,color:"#9090D8",fontFamily:"var(--font-mono)",letterSpacing:"0.08em",whiteSpace:"nowrap"}}>GREATEST POTENTIAL</div>}
+                </div>
+              </div>
+              <div style={{marginBottom:8}}>
+                <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
+                  <span style={{fontSize:8,letterSpacing:"0.12em",textTransform:"uppercase",color:"var(--text4)",fontFamily:"var(--font-mono)"}}>Peak Power</span>
+                  <span style={{fontSize:8,color:accent,fontFamily:"var(--font-mono)"}}>{s?.powerTier}/10</span>
+                </div>
+                <div style={{height:5,background:"var(--bg2)",borderRadius:3,overflow:"hidden"}}>
+                  <div style={{height:"100%",width:`${(s?.powerTier||0)*10}%`,background:`linear-gradient(90deg,${accent}88,${accent})`,borderRadius:3}}/>
+                </div>
+              </div>
+              <div style={{marginBottom:10}}>
+                <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
+                  <span style={{fontSize:8,letterSpacing:"0.12em",textTransform:"uppercase",color:"var(--text4)",fontFamily:"var(--font-mono)"}}>Growth Potential</span>
+                  <span style={{fontSize:8,color:"#9090D8",fontFamily:"var(--font-mono)"}}>{s?.potentialTier===10?"∞ / 10":`${s?.potentialTier}/10`}</span>
+                </div>
+                <div style={{height:5,background:"var(--bg2)",borderRadius:3,overflow:"hidden"}}>
+                  <div style={{height:"100%",width:`${(s?.potentialTier||0)*10}%`,background:`linear-gradient(90deg,rgba(128,128,216,0.45),#9090D8)`,borderRadius:3}}/>
+                </div>
+              </div>
+              {s?.codex?.lifespan&&<div style={{fontSize:10,color:"var(--text3)"}}>
+                <span style={{fontSize:8,letterSpacing:"0.1em",textTransform:"uppercase",color:"var(--text4)",fontFamily:"var(--font-mono)"}}>Avg. Lifespan — </span>
+                {s.codex.lifespan}
+              </div>}
+            </div>
+          ))}
+
+          <div style={{fontSize:10,letterSpacing:"0.18em",textTransform:"uppercase",color:`${G}66`,fontFamily:"var(--font-mono)",marginBottom:12,paddingBottom:6,borderBottom:"1px solid var(--border)",marginTop:16}}>— Genetic Mutations —</div>
 
           <CodexCard title="A-GENE MUTATION" accent="#0F9E75" tagline="It didn't give them power. It removed the locks on the power they already had."
             sections={[
@@ -3658,7 +3805,10 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
             </div>
             <div style={{display:"flex",gap:8,alignItems:"center"}}>
               <label style={{cursor:"pointer",padding:"6px 12px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:8,fontSize:10,color:"var(--text3)",fontFamily:"var(--font-mono)"}}>
-                Upload Image <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>e.target.files?.[0]&&handleImg(hero.id,e.target.files[0])}/>
+                ↑ Hero <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>e.target.files?.[0]&&handleImg(hero.id,e.target.files[0])}/>
+              </label>
+              <label style={{cursor:"pointer",padding:"6px 12px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:8,fontSize:10,color:"var(--text3)",fontFamily:"var(--font-mono)"}}>
+                ↑ Civilian <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>e.target.files?.[0]&&handleImg(hero.id+"-civ",e.target.files[0])}/>
               </label>
               {images[hero.id]&&<button onClick={()=>downloadImg(hero.id,hero.heroName)} style={{padding:"6px 12px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:8,cursor:"pointer",color:"var(--text3)",fontSize:10,fontFamily:"var(--font-mono)"}}>⬇ Save Image</button>}
               <button onClick={()=>startHeroReforge(hero)} style={{padding:"6px 12px",background:"rgba(136,135,128,0.08)",border:"1px solid rgba(136,135,128,0.3)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:10,fontFamily:"var(--font-mono)"}}>Reforge</button>
