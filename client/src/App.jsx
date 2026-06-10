@@ -1543,6 +1543,47 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
               </div>}
             </div>
 
+            {/* Villain Factions panel */}
+            {villainFactions.length>0&&(<>
+              <div style={{display:"flex",alignItems:"center",gap:10,marginTop:28,marginBottom:16}}>
+                <div style={{flex:1,height:1,background:"rgba(139,26,26,0.2)"}}/>
+                <div style={{fontSize:9,letterSpacing:"0.2em",color:"rgba(139,26,26,0.6)",textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>Villain Factions</div>
+                <div style={{flex:1,height:1,background:"rgba(139,26,26,0.2)"}}/>
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:12,marginBottom:28}}>
+                {villainFactions.map(f=>{
+                  const fmembers=villainPool.filter(v=>f.memberIds?.includes(v.id));
+                  const flImg=images['factionlogo-'+f.id];
+                  return(<div key={f.id} style={{background:`${f.color}0D`,border:`1px solid ${f.color}2A`,borderRadius:10,padding:"14px 16px"}}>
+                    <input type="file" accept="image/*" style={{display:"none"}} ref={el=>factionLogoRefs.current['teams-'+f.id]=el} onChange={e=>handleImg('factionlogo-'+f.id,e.target.files[0])}/>
+                    <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:fmembers.length>0?10:0}}>
+                      <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3,flexShrink:0}}>
+                        <div onClick={()=>factionLogoRefs.current['teams-'+f.id]?.click()} style={{width:40,height:40,borderRadius:8,border:`1px solid ${f.color}44`,overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",background:flImg?"transparent":`${f.color}1A`}}>
+                          {flImg?<img src={flImg} style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<span style={{fontSize:11,fontWeight:"bold",color:f.color,letterSpacing:"0.05em"}}>{f.abbr||f.name.slice(0,2).toUpperCase()}</span>}
+                        </div>
+                        <button onClick={()=>factionLogoRefs.current['teams-'+f.id]?.click()} style={{fontSize:7,padding:"1px 6px",background:`${f.color}18`,border:`1px solid ${f.color}44`,borderRadius:4,cursor:"pointer",color:f.color,fontFamily:"var(--font-mono)",whiteSpace:"nowrap"}}>{flImg?"✎ logo":"↑ logo"}</button>
+                      </div>
+                      <div style={{minWidth:0,flex:1}}>
+                        <div style={{fontSize:12,fontWeight:"bold",color:"var(--text-primary)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{f.name}</div>
+                        {f.abbr&&<div style={{fontSize:9,color:f.color,fontFamily:"var(--font-mono)",letterSpacing:"0.08em",marginTop:1}}>{f.abbr}</div>}
+                        {f.purpose&&<div style={{fontSize:9,color:"var(--text3)",marginTop:3,lineHeight:1.4,overflow:"hidden",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical"}}>{f.purpose}</div>}
+                      </div>
+                    </div>
+                    {fmembers.length>0&&(<>
+                      <div style={{fontSize:7.5,letterSpacing:"0.12em",color:`${f.color}88`,textTransform:"uppercase",marginBottom:6}}>{fmembers.length} member{fmembers.length!==1?"s":""}</div>
+                      <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                        {fmembers.slice(0,7).map(m=>(<div key={m.id} title={m.heroName} style={{display:"flex",alignItems:"center",gap:5}}>
+                          {images[m.id]?<img src={images[m.id]} style={{width:26,height:26,borderRadius:"50%",objectFit:"cover",objectPosition:"top",border:`1px solid ${f.color}44`}}/>
+                            :<div style={{width:26,height:26,borderRadius:"50%",background:`${m.color||f.color}1A`,border:`1px solid ${f.color}33`,display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{fontSize:7.5,fontWeight:"bold",color:m.color||f.color}}>{m.initials}</span></div>}
+                        </div>))}
+                        {fmembers.length>7&&<div style={{width:26,height:26,borderRadius:"50%",background:`${f.color}14`,border:`1px solid ${f.color}2A`,display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{fontSize:7,color:f.color}}>+{fmembers.length-7}</span></div>}
+                      </div>
+                    </>)}
+                  </div>);
+                })}
+              </div>
+            </>)}
+
           </>
         )}
       </>)}
@@ -2401,8 +2442,11 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                   <input type="file" accept="image/*" style={{display:"none"}} ref={el=>factionLogoRefs.current[f.id]=el} onChange={e=>handleImg('factionlogo-'+f.id,e.target.files[0])}/>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
                     <div style={{display:"flex",alignItems:"center",gap:10}}>
-                      <div title="Click to upload faction logo" onClick={()=>factionLogoRefs.current[f.id]?.click()} style={{width:38,height:38,borderRadius:8,background:flImg?"transparent":`${f.color}22`,border:`1px solid ${f.color}55`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,cursor:"pointer",overflow:"hidden",position:"relative"}}>
-                        {flImg?<img src={flImg} style={{width:"100%",height:"100%",objectFit:"cover",objectPosition:"center"}}/>:<span style={{fontSize:11,fontWeight:"bold",color:f.color,letterSpacing:"0.05em"}}>{f.abbr||f.name.slice(0,2).toUpperCase()}</span>}
+                      <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3,flexShrink:0}}>
+                        <div onClick={()=>factionLogoRefs.current[f.id]?.click()} style={{width:38,height:38,borderRadius:8,background:flImg?"transparent":`${f.color}22`,border:`1px solid ${f.color}55`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",overflow:"hidden"}}>
+                          {flImg?<img src={flImg} style={{width:"100%",height:"100%",objectFit:"cover",objectPosition:"center"}}/>:<span style={{fontSize:11,fontWeight:"bold",color:f.color,letterSpacing:"0.05em"}}>{f.abbr||f.name.slice(0,2).toUpperCase()}</span>}
+                        </div>
+                        <button onClick={()=>factionLogoRefs.current[f.id]?.click()} style={{fontSize:7,padding:"1px 6px",background:`${f.color}18`,border:`1px solid ${f.color}44`,borderRadius:4,cursor:"pointer",color:f.color,fontFamily:"var(--font-mono)",whiteSpace:"nowrap"}}>{flImg?"✎ logo":"↑ logo"}</button>
                       </div>
                       <div>
                         <div style={{fontSize:13,fontWeight:"bold",color:"var(--text-primary)"}}>{f.name}</div>
