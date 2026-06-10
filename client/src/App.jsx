@@ -468,7 +468,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     if(!scName.trim()&&!scHeroName.trim())return;
     setScLoading(true);setScResult(null);
     const hex=scColors[0]||"#888780";
-    const colorDesc=scColors.length===1?(ACCENT_COLORS.find(a=>a.hex===hex)?.label||hex):scColors.map((c,i)=>(["primary","secondary","tertiary"][i])+": "+(ACCENT_COLORS.find(a=>a.hex===c)?.label||c)).join(", ");
+    const colorDesc=scColors.length===1?(ACCENT_COLORS.find(a=>a.hex===hex)?.label||hexToColorName(hex)):scColors.map((c,i)=>(["primary","secondary","tertiary"][i])+": "+(ACCENT_COLORS.find(a=>a.hex===c)?.label||hexToColorName(c))).join(", ");
     const answers=RECRUIT_QUIZ.map(q=>{const opt=q.options.find(o=>o.id===scAnswers[q.id]);return opt?`${q.question}: ${opt.value}`:"";}).filter(Boolean).join("\n");
     const raceStr=raceLabel(scRace);const raceLoreStr=raceLore(scRace);
     const computedAge=scAge||(scBirthYear?String(2026-parseInt(scBirthYear)):"");
@@ -482,7 +482,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     if(!scName.trim()&&!scHeroName.trim())return;
     setScLoading(true);setScResult(null);
     const hex=scColors[0]||"#888780";
-    const colorDesc=scColors.length===1?(ACCENT_COLORS.find(a=>a.hex===hex)?.label||hex):scColors.map((c,i)=>(["primary","secondary","tertiary"][i])+": "+(ACCENT_COLORS.find(a=>a.hex===c)?.label||c)).join(", ");
+    const colorDesc=scColors.length===1?(ACCENT_COLORS.find(a=>a.hex===hex)?.label||hexToColorName(hex)):scColors.map((c,i)=>(["primary","secondary","tertiary"][i])+": "+(ACCENT_COLORS.find(a=>a.hex===c)?.label||hexToColorName(c))).join(", ");
     const raceStr=raceLabel(scRace);const raceLoreStr=raceLore(scRace);
     const computedAge=scAge||(scBirthYear?String(2026-parseInt(scBirthYear)):"");
     const loreContext=DEEP_LORE_PHASES.map(ph=>`== ${ph.title} ==\n`+ph.questions.map(q=>{const opt=q.options?.find(o=>o.id===scDeepAnswers[q.id]);return opt?`${q.label}: ${opt.label}`:""}).filter(Boolean).join("\n")).filter(l=>l.includes(":")).join("\n\n");
@@ -499,7 +499,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     if(!scName.trim()&&!scHeroName.trim())return;
     setScLoading(true);setScResult(null);
     const hex=scColors[0]||"#888780";
-    const colorDesc=scColors.length===1?(ACCENT_COLORS.find(a=>a.hex===hex)?.label||hex):scColors.map((c,i)=>(["primary","secondary","tertiary"][i])+": "+(ACCENT_COLORS.find(a=>a.hex===c)?.label||c)).join(", ");
+    const colorDesc=scColors.length===1?(ACCENT_COLORS.find(a=>a.hex===hex)?.label||hexToColorName(hex)):scColors.map((c,i)=>(["primary","secondary","tertiary"][i])+": "+(ACCENT_COLORS.find(a=>a.hex===c)?.label||hexToColorName(c))).join(", ");
     const raceStr=raceLabel(scRace);const raceLoreStr=raceLore(scRace);
     const computedAge=scAge||(scBirthYear?String(2026-parseInt(scBirthYear)):"");
     const profileContext=PERSONAL_PROFILE.map(sec=>`== ${sec.section} ==\n`+sec.questions.map(q=>{const opt=q.options.find(o=>o.id===scProfileAnswers[q.id]);return opt?`${q.q}\n→ ${opt.value}`:""}).filter(Boolean).join("\n")).join("\n\n");
@@ -653,7 +653,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
   // ── Recruit ───────────────────────────────────────────────────────────────
   const generateRecruit=async()=>{
     setRLoading(true);setRResult(null);setAiStreamText("");
-    const hex=rColors[0]||"#A32D2D";const colorDesc=rColors.length===1?(ACCENT_COLORS.find(a=>a.hex===hex)?.label||hex):rColors.map((c,i)=>(["primary","secondary","tertiary"][i]||"tertiary")+": "+(ACCENT_COLORS.find(a=>a.hex===c)?.label||c)).join(", ");
+    const hex=rColors[0]||"#A32D2D";const colorDesc=rColors.length===1?(ACCENT_COLORS.find(a=>a.hex===hex)?.label||hexToColorName(hex)):rColors.map((c,i)=>(["primary","secondary","tertiary"][i]||"tertiary")+": "+(ACCENT_COLORS.find(a=>a.hex===c)?.label||hexToColorName(c))).join(", ");
     const teamType=TEAM_TYPES.find(t=>t.id===activeTeam.type)?.label||activeTeam.type;
     const answers=RECRUIT_QUIZ.map(q=>{const opt=q.options.find(o=>o.id===rAnswers[q.id]);return`${q.question}: ${opt?.value||""}`;}).join("\n");
     const existingNames=activeRoster.map(m=>m.heroName).join(", ");
@@ -719,7 +719,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
 
   const generateDeepRecruit=async()=>{
     setRLoading(true);setRResult(null);setAiStreamText("");
-    const hex=rColors[0]||"#A32D2D";const colorDesc=rColors.length===1?(ACCENT_COLORS.find(a=>a.hex===hex)?.label||hex):rColors.map((c,i)=>(["primary","secondary","tertiary"][i]||"tertiary")+": "+(ACCENT_COLORS.find(a=>a.hex===c)?.label||c)).join(", ");
+    const hex=rColors[0]||"#A32D2D";const colorDesc=rColors.length===1?(ACCENT_COLORS.find(a=>a.hex===hex)?.label||hexToColorName(hex)):rColors.map((c,i)=>(["primary","secondary","tertiary"][i]||"tertiary")+": "+(ACCENT_COLORS.find(a=>a.hex===c)?.label||hexToColorName(c))).join(", ");
     const existingNames=activeRoster.map(m=>m.heroName).join(", ");
     // Build rich context from deep lore answers
     const loreContext=DEEP_LORE_PHASES.map(ph=>{
@@ -746,7 +746,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
 
   const generatePersonalProfile=async()=>{
     setRLoading(true);setRResult(null);setAiStreamText("");
-    const hex=rColors[0]||"#A32D2D";const colorDesc=rColors.length===1?(ACCENT_COLORS.find(a=>a.hex===hex)?.label||hex):rColors.map((c,i)=>(["primary","secondary","tertiary"][i]||"tertiary")+": "+(ACCENT_COLORS.find(a=>a.hex===c)?.label||c)).join(", ");
+    const hex=rColors[0]||"#A32D2D";const colorDesc=rColors.length===1?(ACCENT_COLORS.find(a=>a.hex===hex)?.label||hexToColorName(hex)):rColors.map((c,i)=>(["primary","secondary","tertiary"][i]||"tertiary")+": "+(ACCENT_COLORS.find(a=>a.hex===c)?.label||hexToColorName(c))).join(", ");
     const existingNames=activeRoster.map(m=>m.heroName).join(", ");
     const profileContext=PERSONAL_PROFILE.map(sec=>`== ${sec.section} ==\n`+sec.questions.map(q=>{const opt=q.options.find(o=>o.id===profileAnswers[q.id]);return opt?`${q.q}\n→ ${opt.value}`:"";}).filter(Boolean).join("\n")).join("\n\n");
     const answerCount=Object.keys(profileAnswers).length;
@@ -762,7 +762,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
   };
 
   const saveBareRecruit=()=>{
-    const hex=rColors[0]||"#A32D2D";const colorDesc=rColors.length===1?(ACCENT_COLORS.find(a=>a.hex===hex)?.label||hex):rColors.map((c,i)=>(["primary","secondary","tertiary"][i]||"tertiary")+": "+(ACCENT_COLORS.find(a=>a.hex===c)?.label||c)).join(", ");
+    const hex=rColors[0]||"#A32D2D";const colorDesc=rColors.length===1?(ACCENT_COLORS.find(a=>a.hex===hex)?.label||hexToColorName(hex)):rColors.map((c,i)=>(["primary","secondary","tertiary"][i]||"tertiary")+": "+(ACCENT_COLORS.find(a=>a.hex===c)?.label||hexToColorName(c))).join(", ");
     const num=String(activeRoster.length+1).padStart(2,"0");
     const computedAge=rAge||(rBirthYear?String(2026-parseInt(rBirthYear)):"");
     const bare={id:`char-${Date.now()}`,teamId:activeTeamId,realName:rName||"Unknown",heroName:rHeroName,gender:rGender,age:computedAge,birthYear:rBirthYear||"",race:rRace,species:raceLabel(rRace)||"Human",color:hex,colorPalette:rColors,colorLight:hex+"CC",initials:rName?rName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",number:num,isCustom:true,nkAlignment:rNkAlign,teamRank:rTeamRank,tagline:"",role:"Hero",origin:"",powers:[],stats:{Power:50,Speed:50,Tech:50,Intellect:50,Will:50},costumeDesc:"",powerFX:"",consistencyNotes:"",dna:[]};
@@ -1943,7 +1943,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
             <button onClick={addCustomRColor} disabled={rColors.length>=3} style={{padding:"6px 14px",background:rColors.length>=3?"var(--bg3)":`${G}14`,border:`1px solid ${rColors.length>=3?"var(--border2)":G}`,borderRadius:8,cursor:rColors.length>=3?"not-allowed":"pointer",color:rColors.length>=3?"var(--text4)":G,fontSize:10,fontFamily:"var(--font-mono)",flexShrink:0}}>+ Add</button>
           </div>
           {rColors.length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:14}}>
-            {rColors.map((c,i)=>{const acLabel=ACCENT_COLORS.find(a=>a.hex===c)?.label||"Custom";return(<div key={c} style={{display:"flex",alignItems:"center",gap:5,padding:"4px 10px",background:`${c}14`,border:`1px solid ${c}55`,borderRadius:20}}>
+            {rColors.map((c,i)=>{const acLabel=ACCENT_COLORS.find(a=>a.hex===c)?.label||hexToColorName(c);return(<div key={c} style={{display:"flex",alignItems:"center",gap:5,padding:"4px 10px",background:`${c}14`,border:`1px solid ${c}55`,borderRadius:20}}>
               <div style={{width:8,height:8,borderRadius:"50%",background:c}}/>
               <span style={{fontSize:9,color:c,fontFamily:"var(--font-mono)"}}>{["Primary","Secondary","Tertiary"][i]}: {acLabel}</span>
               {(i>0||rColors.length>1)&&<button onClick={()=>setRColors(prev=>prev.filter(x=>x!==c))} style={{background:"none",border:"none",cursor:"pointer",color:`${c}99`,fontSize:12,padding:0,lineHeight:1,marginLeft:2}}>×</button>}
