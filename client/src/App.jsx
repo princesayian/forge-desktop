@@ -777,7 +777,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     setTripo3DTarget(member.id);setTripo3DLoading(true);setTripo3DPrompt(null);
     try{
       const tAgeStage=ageStage(member.age);
-      const p=await callAI(`Generate a Tripo3D 3D model prompt for this character. JSON only, key "prompt".\n\nCharacter: ${member.heroName}\nCostume: ${member.costumeDesc||"dramatic suit"}\nPower FX: ${member.powerFX||"energy effects"}\nAccent color: ${member.color}${tAgeStage?"\nAge stage: "+tAgeStage+" — body proportions must reflect this ("+tAgeStage+"-appropriate frame, musculature, and scale)":""}\n\n{"prompt":"2-3 sentence Tripo3D prompt. Describe as a 3D model: full-body character standing in neutral A-pose or slight heroic stance. Mention separate color regions for multi-filament FDM printing. Mention watertight mesh, clean topology, no floating geometry. Include character-specific details like costume elements, weapon accessories, or power effect attachments that print as separate pieces."}`);
+      const p=await callAI(`Generate a Tripo3D 3D model prompt for this character. JSON only, key "prompt".\n\nCharacter: ${member.heroName}\nCostume: ${member.costumeDesc||"dramatic suit"}\nPower FX: ${member.powerFX||"energy effects"}\nAccent color: ${hexToColorName(member.color)}${tAgeStage?"\nAge stage: "+tAgeStage+" — body proportions must reflect this ("+tAgeStage+"-appropriate frame, musculature, and scale)":""}\n\n{"prompt":"2-3 sentence Tripo3D prompt. Describe as a 3D model: full-body character standing in neutral A-pose or slight heroic stance. Mention separate color regions for multi-filament FDM printing. Mention watertight mesh, clean topology, no floating geometry. Include character-specific details like costume elements, weapon accessories, or power effect attachments that print as separate pieces."}`);
       setTripo3DPrompt(p.prompt||"Generation failed.");
     }catch(e){setTripo3DPrompt("Generation failed: "+e.message);}
     setTripo3DLoading(false);
@@ -940,6 +940,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     t=rep(t,"slimy?","glossy");
     t=rep(t,"viscous","thick");
     t=rep(t,"oozing","trailing");
+    t=t.replace(/#[0-9A-Fa-f]{6}\b/g,m=>hexToColorName(m));
     return t;
   };
   // Build color palette description from character palette array
