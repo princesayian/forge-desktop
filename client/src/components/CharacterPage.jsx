@@ -2,9 +2,10 @@ import { ALIGN_META, TEAM_RANKS, raceLabel } from '../constants/index.js';
 import AlignmentBadge from './AlignmentBadge.jsx';
 import StatBar from './StatBar.jsx';
 
-export default function CharacterPage({member,imageUrl,isVillain=false,teamName,teamColor}){
+export default function CharacterPage({member,imageUrl,isVillain=false,teamName,teamColor,memberTeams}){
   const c=member.color,cl=member.colorLight||c;
   const tName=teamName||"Unknown Team";
+  const multiTeam=memberTeams&&memberTeams.length>1;
 
   const pt=member.powerType||"powers";
   const ptLabel=pt==="equipment"?"ARSENAL":pt==="skills"?"SKILL SET":"KEY STRENGTHS";
@@ -21,8 +22,15 @@ export default function CharacterPage({member,imageUrl,isVillain=false,teamName,
   const affiliationLine=[tName,member.nkAlignment&&member.nkAlignment!=="base"?(ALIGN_META[member.nkAlignment]?.label||member.nkAlignment):null].filter(Boolean).join(", ");
 
   return(<div style={{background:"#07070E",overflow:"hidden"}}>
-    <div style={{background:isVillain?"rgba(163,45,45,0.18)":`${c}12`,padding:"7px 18px",display:"flex",justifyContent:"space-between",alignItems:"center",borderBottom:`1px solid ${c}20`}}>
-      <div style={{fontSize:7.5,letterSpacing:"0.26em",color:cl,textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>{isVillain?"CLASSIFIED THREAT":tName.toUpperCase()}</div>
+    <div style={{background:isVillain?"rgba(163,45,45,0.18)":`${c}12`,padding:"7px 18px",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:6,borderBottom:`1px solid ${c}20`}}>
+      {isVillain
+        ?<div style={{fontSize:7.5,letterSpacing:"0.26em",color:cl,textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>CLASSIFIED THREAT</div>
+        :multiTeam
+          ?<div style={{display:"flex",gap:5,flexWrap:"wrap",alignItems:"center"}}>
+              {memberTeams.map(t=><span key={t.id} style={{fontSize:7,padding:"2px 9px",background:`${t.color}15`,border:`1px solid ${t.color}44`,borderRadius:20,color:t.color,fontFamily:"var(--font-mono)",whiteSpace:"nowrap",letterSpacing:"0.1em",textTransform:"uppercase"}}>{t.heroRank?.icon?`${t.heroRank.icon} `:""}{t.name}</span>)}
+            </div>
+          :<div style={{fontSize:7.5,letterSpacing:"0.26em",color:cl,textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>{tName.toUpperCase()}</div>
+      }
       <div style={{display:"flex",gap:8,alignItems:"center"}}>
         {(()=>{const rk=TEAM_RANKS.find(r=>r.id===member.teamRank);return rk&&rk.icon?<span style={{fontSize:9,padding:"2px 9px",background:`${rk.color}18`,border:`1px solid ${rk.color}55`,borderRadius:20,color:rk.color,fontFamily:"var(--font-mono)",whiteSpace:"nowrap",fontWeight:"bold"}}>{rk.icon} {rk.label}</span>:null;})()}
         {member.nkAlignment&&member.nkAlignment!=="base"&&<AlignmentBadge alignment={member.nkAlignment}/>}

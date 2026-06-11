@@ -58,6 +58,7 @@ function App(){
   const[editingTeamData,setEditingTeamData]=useState(null);
   // ── Char state ──────────────────────────────────────────────────────────
   const[sharedEdits,setSharedEdits]=useState({});
+  const[teamMemberships,setTeamMemberships]=useState({});
   const[expanded,setExpanded]=useState({});
   const[editingChar,setEditingChar]=useState({});
   const[images,setImages]=useState({});
@@ -290,6 +291,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
       }
       try{const d=await storage.get("forge-hero-assocs");setHeroAssocs(JSON.parse(d.value)||[]);}catch(e){}
       try{const d=await storage.get("forge-removed");setRemovedMembers(JSON.parse(d.value)||{});}catch(e){}
+      try{const d=await storage.get("forge-memberships");setTeamMemberships(JSON.parse(d.value)||{});}catch(e){}
       try{const r=await fetch("/api/images");const ids=await r.json();const loaded={};const t=Date.now();ids.forEach(id=>{loaded[id]=`/api/images/${id}?t=${t}`;});if(Object.keys(loaded).length)setImages(loaded);}catch(e){}
       try{const r=await fetch("/api/update/check");setUpdateInfo(await r.json());}catch(e){}
       try{const r=await fetch("/api/remote");setRemoteInfo(await r.json());}catch(e){}
@@ -359,8 +361,12 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
   const getTeamRoster=useCallback((teamId)=>{
     const removed=removedMembers[teamId]||[];
     const custom=(teamRosters[teamId]||[]).filter(m=>!removed.includes(m.id));
-    return custom.map(m=>sharedEdits[m.id]?{...m,...sharedEdits[m.id]}:m);
-  },[teamRosters,sharedEdits,removedMembers]);
+    return custom.map(m=>{
+      const base=sharedEdits[m.id]?{...m,...sharedEdits[m.id]}:m;
+      const tm=teamMemberships[m.id]?.[teamId];
+      return tm?{...base,...tm}:base;
+    });
+  },[teamRosters,sharedEdits,removedMembers,teamMemberships]);
 
   const activeRoster=useMemo(()=>getTeamRoster(activeTeamId),[getTeamRoster,activeTeamId]);
 
@@ -409,7 +415,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
   },[images]);
   const toggle=useCallback(id=>setExpanded(p=>({...p,[id]:!p[id]})),[]);
 
-  const saveCharEdit=useCallback((id,data)=>{
+  const saveCharEdit=useCallback((id,data,teamId)=>{
     const allRosterChars=Object.values(teamRosters).flat();
     const base=[...allRosterChars,...soloHeroes,...villainPool].find(c=>c.id===id);
     const current=base?(sharedEdits[id]?{...base,...sharedEdits[id]}:base):null;
@@ -436,6 +442,13 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     };
     const editedData={...data};
     if(realChanged&&newRealName)editedData.initials=newRealName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase();
+    // teamRank and nkAlignment are per-team — route to teamMemberships, not sharedEdits
+    const tmData={};
+    ['teamRank','nkAlignment'].forEach(f=>{if(f in editedData){tmData[f]=editedData[f];delete editedData[f];}});
+    if(Object.keys(tmData).length&&teamId){
+      const nm={...teamMemberships,[id]:{...(teamMemberships[id]||{}),[teamId]:{...(teamMemberships[id]?.[teamId]||{}),...tmData}}};
+      setTeamMemberships(nm);persist("forge-memberships",nm);
+    }
     let ne={...sharedEdits,[id]:editedData};
     if(heroChanged||realChanged){
       for(const char of allRosterChars){
@@ -454,7 +467,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
       if(JSON.stringify(updatedVillains)!==JSON.stringify(villainPool)){setVillainPool(updatedVillains);persist("forge-villains",updatedVillains);}
     }
     setEditingChar(p=>({...p,[id]:false}));
-  },[sharedEdits,teamRosters,soloHeroes,villainPool,persist]);
+  },[sharedEdits,teamMemberships,teamRosters,soloHeroes,villainPool,persist]);
 
   // ── Solo hero management ──────────────────────────────────────────────────
   const addSoloHeroFn=useCallback((hero)=>{
@@ -1762,8 +1775,11 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                 <button onClick={()=>setSharingMember(null)} style={{fontSize:10.5,padding:"5px 11px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:20,cursor:"pointer",color:"var(--text4)",fontFamily:"var(--font-mono)",marginLeft:4}}>Cancel</button>
               </div>);
             })()}
-            {editingChar[m.id]&&<EditPanel member={m} onSave={d=>saveCharEdit(m.id,d)} onCancel={()=>setEditingChar(p=>({...p,[m.id]:false}))} callAI={callAI} teamName={activeTeam.name}/>}
-            {expanded[m.id]&&!editingChar[m.id]&&!switchingMember&&!sharingMember&&(<div style={{border:`1px solid ${m.color}44`,borderTop:"none",borderRadius:"0 0 10px 10px",overflow:"hidden"}}><CharacterPage member={m} imageUrl={images[m.id]||null} teamName={activeTeam.name} teamColor={activeTeam.color}/></div>)}
+            {editingChar[m.id]&&<EditPanel member={m} onSave={d=>saveCharEdit(m.id,d,activeTeamId)} onCancel={()=>setEditingChar(p=>({...p,[m.id]:false}))} callAI={callAI} teamName={activeTeam.name}/>}
+            {expanded[m.id]&&!editingChar[m.id]&&!switchingMember&&!sharingMember&&(()=>{
+              const mTeams=(memberTeamMap[m.id]||[m.teamId||activeTeamId]).map(tid=>{const t=teams.find(x=>x.id===tid);if(!t)return null;const tm=teamMemberships[m.id]?.[tid];const rankId=tm?.teamRank||(sharedEdits[m.id]?.teamRank||m.teamRank);const rk=TEAM_RANKS.find(r=>r.id===rankId);return{...t,heroRank:rk||null};}).filter(Boolean);
+              return(<div style={{border:`1px solid ${m.color}44`,borderTop:"none",borderRadius:"0 0 10px 10px",overflow:"hidden"}}><CharacterPage member={m} imageUrl={images[m.id]||null} teamName={activeTeam.name} teamColor={activeTeam.color} memberTeams={mTeams}/></div>);
+            })()}
           </div>))}
         </div>
       </>)}
