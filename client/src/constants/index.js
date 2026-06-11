@@ -547,3 +547,83 @@ export const VILLAIN_PERSONAL_PROFILE=[
   ]},
 ];
 
+export const COSTUME_FORGE_QUESTIONS=[
+  {id:"silhouette",q:"What is the core visual silhouette archetype?",options:[
+    {id:"armored",label:"Armored Knight — full plating, imposing structure (Iron Man, War Machine, Cyborg, Steel)",value:"full armored silhouette — heavy plating, structural bulk, mechanical mass presence"},
+    {id:"acrobat",label:"Lithe Acrobat — tight suit, nothing wasted (Spider-Man, Nightwing, Black Widow, Daredevil)",value:"lithe acrobat silhouette — fitted suit, visible musculature, zero bulk, movement-first design"},
+    {id:"powerhouse",label:"Caped Powerhouse — dominant frame, iconic presence (Superman, Thor, Shazam, Captain Marvel)",value:"caped powerhouse silhouette — wide frame, flowing cape, classic heroic proportions, symbol-driven design"},
+    {id:"vigilante",label:"Dark Vigilante — tactical gear, designed to unsettle (Batman, Moon Knight, Green Arrow, Punisher)",value:"dark vigilante silhouette — all-business, tactical layering, minimal color, built to project danger not inspiration"},
+    {id:"warrior",label:"Warrior-King — cultural armor, regal danger (Black Panther, Shuri, Blade, Storm)",value:"warrior-king silhouette — cultural identity in the design, regal bearing, armor with heritage, functional beauty"},
+    {id:"cosmic",label:"Cosmic Entity — alien geometry, physics-optional (Silver Surfer, Nova, Adam Warlock, Quasar)",value:"cosmic entity silhouette — otherworldly proportions, glowing or metallic surface, silhouette bends around the power"},
+    {id:"street",label:"Street Operative — real clothes elevated (Miles Morales, Luke Cage, Kamala Khan, Cloak)",value:"street-level design — base in real clothing, subtle elevation, looks like a person who became something"},
+    {id:"mystic",label:"Mystical Sorcerer — robes, artifacts, ancient presence (Doctor Strange, Zatanna, Scarlet Witch, Spawn)",value:"mystical design — robes or ritual garb, artifact-heavy, ancient aesthetic, power visible in the materials"},
+  ]},
+  {id:"mask",q:"Mask or head coverage?",options:[
+    {id:"full_face",label:"Full face mask — identity completely hidden (Spider-Man, Deadpool, Moon Knight white wrap)",value:"full face mask — identity fully concealed, expression communicated through body language only"},
+    {id:"cowl",label:"Cowl/open face — face exposed at jaw (Batman, Green Arrow, Robin classic)",value:"cowl design — dramatic head coverage, open face, heavy brow shadow effect"},
+    {id:"helmet",label:"Sealed helmet — full tech enclosure (Iron Man, War Machine, Samus-inspired)",value:"sealed combat helmet — full tech enclosure, HUD-implied, face completely armored"},
+    {id:"domino",label:"Domino/half mask — eyes framed, face readable (Nightwing, Cyclops, Batwoman)",value:"domino or partial mask — upper face covered, mouth and jaw exposed, expression partially readable"},
+    {id:"none",label:"No mask — this face IS the statement (Superman, Thor, Wonder Woman, Luke Cage)",value:"unmasked — face fully exposed, civilian identity either public or irrelevant"},
+  ]},
+  {id:"material",q:"Primary suit construction / material feel?",options:[
+    {id:"hard_armor",label:"Hard armored plating — maximum protection, visible engineering (Iron Man, Cyborg, Blue Beetle Jaime)",value:"hard-plate armor — segmented protective plating, mechanical joints, engineered appearance"},
+    {id:"nanofiber",label:"Nano-tech weave — sleek, near-indestructible flex (Black Panther, Spider-Man 2099, X-Force suits)",value:"nanotech suit — smooth seamless surface, alien-material look, technical perfection that moves like cloth"},
+    {id:"tactical",label:"Military tactical — load-bearing, field-ready (Winter Soldier, Punisher, Nick Fury, Black Widow)",value:"tactical loadout — military-grade gear, visible pouches and holsters, function-first with no decorative elements"},
+    {id:"classic_suit",label:"Classic hero suit — clean lines, bold color blocks (Superman, Flash, Captain America, Shazam)",value:"classic hero suit — fitted, bold color blocking, clean lines, the design is confident and symbol-first"},
+    {id:"ritual_garb",label:"Mystical robes or ritual garb (Doctor Strange, Spawn, Klarion, Phantom Stranger)",value:"ritual garb — robe or ancient clothing structure, artifacts attached, power woven into the fabric literally"},
+    {id:"organic",label:"Biological/organic — the suit IS the power (Venom, Carnage, Man-Thing, Swamp Thing)",value:"organic design — the material is biological or power-generated, no seams, living surface"},
+  ]},
+  {id:"symbol",q:"Chest symbol or body emblem?",options:[
+    {id:"bold_logo",label:"Bold iconic logo — the symbol precedes the name (Superman S, Bat-symbol, Spider-logo)",value:"dominant chest logo — hero's symbol displayed at maximum scale, instantly recognizable at distance"},
+    {id:"geometric",label:"Geometric/tech element — functional object as symbol (Iron Man arc reactor, Cap shield badge)",value:"geometric or tech emblem — functional object centered on chest, power source or device as visual focal point"},
+    {id:"clan_mark",label:"Clan or heritage mark (Black Panther claw lines, Aquaman trident, Thor rune patterns)",value:"heritage emblem — cultural or clan marking, identity expressed through ancestry and belonging"},
+    {id:"no_symbol",label:"No symbol — the silhouette IS the symbol (Daredevil, Moon Knight, Batman classic)",value:"no emblem — design creates recognition without a separate logo, the full silhouette does the work"},
+    {id:"negative_space",label:"Negative space / cutout design (Moon Knight white panels, Nightwing chest stripe)",value:"negative space design — absence of color creates the focal point, white or bare area carries the meaning"},
+  ]},
+  {id:"cape",q:"Cape, wings, or neither?",options:[
+    {id:"long_cape",label:"Long dramatic cape — presence and gravitas (Superman, Batman, Doctor Strange, Thor classic)",value:"long dramatic cape — fabric presence, sweeps the floor, frames the silhouette at full extension"},
+    {id:"short_cape",label:"Short tactical cape — motion not theatrics (Sam Wilson Cap, Thor modern, Storm combat)",value:"short practical cape — shoulder-mounted, motion-functional, cape as statement not drama"},
+    {id:"wings",label:"Actual wings — flight as identity (Angel, Hawkman, Falcon/Sam Wilson, Archangel)",value:"wings — feathered or mechanical, part of the silhouette, flight is identity not just capability"},
+    {id:"cloak",label:"Full hooded cloak — ancient power (Strange's Cloak, Green Arrow, Spawn, Nightwing early)",value:"full hooded cloak — envelopes the form, dramatic mass, ancient feel, hood creates shadowed face effect"},
+    {id:"no_cape",label:"None — the design is complete without it (Iron Man, Daredevil, Luke Cage, Black Widow)",value:"capeless — streamlined design, no fabric extension, presence comes from the suit alone"},
+  ]},
+  {id:"colorDistrib",q:"How are the colors distributed across the design?",options:[
+    {id:"single_dominant",label:"One color dominates 80%+ — maximum visual clarity (The Flash, Daredevil, classic Spider-Man)",value:"single dominant color — one hue at near-total coverage, bold and immediately readable"},
+    {id:"two_tone",label:"Two-tone with strong contrast — dark base, bright accent (Batman, Spider-Man, Nightwing)",value:"two-tone design — strong contrast between base and accent, the secondary color creates the focal points"},
+    {id:"tricolor",label:"Three colors balanced — flag energy (Captain America, Robin, Aquaman modern)",value:"tricolor balanced — three hues in planned proportion, flag-logic design, every color earns its space"},
+    {id:"dark_accents",label:"Dark base with strategic bright accents (Black Panther purple lines, Spawn chains, Batman oval)",value:"dark-dominant with bright accent pops — dark field with one high-contrast accent that draws the eye"},
+    {id:"metallic",label:"Metallic or chrome as primary surface (Silver Surfer, Iron Man chrome, Cyborg plating)",value:"metallic primary surface — chrome, silver, or polished metal as main material, light-reactive surface"},
+    {id:"white_primary",label:"White or light as dominant tone (Moon Knight, White Tiger, Moonstone, Ghost)",value:"white or light dominant — unusual choice, reads as pure or terrifying, high visibility at night"},
+  ]},
+  {id:"powerViz",q:"How do powers look visually when active?",options:[
+    {id:"energy_blasts",label:"Energy projection — beams or blasts from hands or eyes (Cyclops, Iron Man, Captain Marvel, Bishop)",value:"energy projection visual — beam or blast origin from hands, eyes, or body, clean directional energy"},
+    {id:"aura_glow",label:"Full body aura / corona — glow envelops entire form (Thor at full power, Captain Universe, Gladiator)",value:"full body corona — power visible as enveloping glow or aura, entire silhouette lit from within or surrounded"},
+    {id:"shadow_tendrils",label:"Shadow and dark matter — tendrils and void (Venom, Cloak, Spawn, Nightcrawler shadows)",value:"shadow or dark tendrils — visible darkness that moves with intent, void presence, light bends away"},
+    {id:"flame_corona",label:"Fire and heat — corona, trails, scorched environment (Human Torch, Sunfire, Firestar, Magma)",value:"fire visual — flame corona or trails, heat shimmer, environment scorched by proximity"},
+    {id:"lightning",label:"Lightning / electricity — arcs, crackling field (Thor, Static Shock, Black Lightning, Makkari)",value:"electrical visual — micro-arcs in surrounding air, crackling field, speed movement leaves light traces"},
+    {id:"kinetic_force",label:"Kinetic shockwaves — impact creates pressure waves (Hulk, Colossus, Thor hammer impact, Shatterstar)",value:"kinetic force visual — impact creates visible shockwave, ground cracks or compresses, force has visible geometry"},
+  ]},
+  {id:"weapon",q:"Signature weapon or gear?",options:[
+    {id:"blade",label:"Bladed weapon — sword, claws, or bladed staff (Wolverine claws, Blade, Deathstroke, X-23)",value:"bladed weapon — melee blade, whether carried or generated, physical cutting edge is the signature tool"},
+    {id:"ranged",label:"Ranged precision — bow, gun, or thrown weapon (Green Arrow, Hawkeye, Punisher, Deadshot)",value:"ranged weapon — precise long-range tool, physical projectile, trick or specialty ammunition implied"},
+    {id:"shield",label:"Defensive tool — shield or force barrier (Captain America, Doctor Strange shields, Shazam)",value:"defensive weapon — shield or force barrier, weapon and defense in one, blocking is as expressive as striking"},
+    {id:"power_artifact",label:"Energy weapon or cosmic artifact (Green Lantern ring, Thor hammer, Aquaman trident, Mjolnir)",value:"power artifact or energy weapon — channeling tool, the power flows through an object, weapon IS the identity"},
+    {id:"no_weapon",label:"Body is the weapon — nothing else needed (Hulk, Colossus, Luke Cage, Hercules, She-Hulk)",value:"no weapon — the body itself is the complete arsenal, carrying anything would be a downgrade"},
+    {id:"gadgets",label:"Versatile gadget loadout — utility belt logic (Batman, Nightwing, Punisher, Black Widow)",value:"multi-tool loadout — multiple small tools over one large weapon, solutions for every situation, carried kit"},
+  ]},
+  {id:"presence",q:"What emotional tone does the costume project from 50 feet away?",options:[
+    {id:"inspiring",label:"Inspiring hope — people run toward (Superman, Shazam, Captain America, Ms. Marvel)",value:"inspirational presence — the design says 'you are safe now,' warmth and strength in the visual language"},
+    {id:"fear",label:"Commanding fear — people freeze when they see it (Batman, Spawn, Ghost Rider, Punisher skull)",value:"fear-projecting presence — the design is a weapon, silhouette designed to unsettle and stop movement"},
+    {id:"regal",label:"Noble and regal — authority earned, not performed (Black Panther, Thor, Storm, Aquaman)",value:"regal presence — design communicates earned authority, bearing carries weight, power is assumed not announced"},
+    {id:"street",label:"Street-level and gritty — one of us who became more (Daredevil, Luke Cage, Jessica Jones, Blade)",value:"street-level presence — accessible, worn-in quality, the power came from experience not privilege"},
+    {id:"cosmic",label:"Cosmic and otherworldly — not quite what we know (Silver Surfer, Adam Warlock, Captain Universe)",value:"cosmic or alien presence — design suggests a being from somewhere else, beyond familiar reference points"},
+  ]},
+  {id:"aesthetic",q:"Visual era or design aesthetic?",options:[
+    {id:"classic",label:"Classic four-color — bold primaries, clean silhouette (Golden/Silver Age, classic comics feel)",value:"classic comic aesthetic — bold primary palette, clean uncluttered lines, timeless silhouette-first design"},
+    {id:"tactical",label:"Modern tactical — military textures, realistic shading (post-2000s, grounded MCU-influenced)",value:"modern tactical aesthetic — real-world military influence, textured surfaces, material authenticity"},
+    {id:"cosmic_scifi",label:"Cosmic/sci-fi — alien materials, bioluminescence, impossible geometry",value:"cosmic sci-fi aesthetic — alien material language, glowing elements, geometry that doesn't follow Earth logic"},
+    {id:"dark_gritty",label:"Dark and gritty — muted palette, worn textures, world-weary (90s/Vertigo/MAX aesthetic)",value:"dark gritty aesthetic — desaturated palette, wear and damage visible on surfaces, cost of the work on the suit"},
+    {id:"afrofuturist",label:"Afrofuturist — organic tech, cultural symbols, ancestral materials (Wakandan, Milestone, Icon)",value:"afrofuturist aesthetic — organic technology, cultural patterns integrated, ancestral motifs meet advanced function"},
+  ]},
+];
+
