@@ -237,6 +237,8 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
   // ── UI ───────────────────────────────────────────────────────────────────
   const[tab,setTab]=useState(()=>{try{return localStorage.getItem("forge-active-tab")||"teams";}catch{return"teams";}});
   const[universeDossierTarget,setUniverseDossierTarget]=useState(null);
+  const[universeData,setUniverseData]=useState({});
+  const[showWorldBuilder,setShowWorldBuilder]=useState(false);
   const[saved,setSaved]=useState(false);
   const[pdfLoading,setPdfLoading]=useState(false);
   const[allDossierLoading,setAllDossierLoading]=useState(false);
@@ -300,6 +302,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
       try{const d=await storage.get("forge-solo-villains");setSoloVillains(JSON.parse(d.value)||{});}catch(e){}
       try{const d=await storage.get("forge-villain-factions");setVillainFactions(JSON.parse(d.value)||[]);}catch(e){}
       try{const d=await storage.get("forge-villain-alliances");setVillainAlliances(JSON.parse(d.value)||[]);}catch(e){}
+      try{const d=await storage.get("forge-universe");if(d)setUniverseData(JSON.parse(d.value)||{});}catch(e){}
     })();
   },[]);
 
@@ -2670,7 +2673,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                 </div>
                 <div style={{marginBottom:12}}>
                   <span style={s.lbl}>Notes (optional)</span>
-                  <input value={allianceDraft.description} onChange={e=>setAllianceDraft(p=>({...p,description:e.target.value}))} placeholder="e.g. Temporarily allied to eliminate the Nocturnal Knights" style={{width:"100%",marginTop:4}}/>
+                  <input value={allianceDraft.description} onChange={e=>setAllianceDraft(p=>({...p,description:e.target.value}))} placeholder="e.g. Temporarily allied to eliminate a common enemy" style={{width:"100%",marginTop:4}}/>
                 </div>
                 <div style={{display:"flex",gap:8}}>
                   <button onClick={()=>setCreatingAlliance(false)} style={{flex:1,fontSize:9,padding:"7px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:6,cursor:"pointer",color:"var(--text3)",fontFamily:"var(--font-mono)"}}>Cancel</button>
@@ -3517,6 +3520,139 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
         };
 
         return(<>
+          {/* ── WORLD BUILDER ─────────────────────────────────────────── */}
+          {(()=>{
+            const wbField=(field,val)=>{const n={...universeData,[field]:val};setUniverseData(n);persist("forge-universe",n);};
+            const wbChip=(val,cur,field)=>(
+              <button key={val} onClick={()=>wbField(field,cur===val?"":val)} style={{padding:"3px 9px",background:cur===val?`${G}20`:"var(--bg-card)",border:`1px solid ${cur===val?G:"var(--border)"}`,borderRadius:16,cursor:"pointer",color:cur===val?G:"var(--text3)",fontSize:9,fontFamily:"var(--font-mono)",transition:"all 0.1s"}}>{val}</button>
+            );
+            const hasData=!!(universeData.universeName||universeData.worldState||universeData.era);
+            return(
+              <div style={{background:"var(--bg3)",border:`1px solid ${G}22`,borderRadius:12,marginBottom:16,overflow:"hidden"}}>
+                <div onClick={()=>setShowWorldBuilder(p=>!p)} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 14px",cursor:"pointer",borderBottom:showWorldBuilder?`1px solid ${G}18`:"none",userSelect:"none"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:10,minWidth:0}}>
+                    <span style={{fontSize:9,letterSpacing:"0.2em",color:`${G}88`,textTransform:"uppercase",fontFamily:"var(--font-mono)",flexShrink:0}}>
+                      {universeData.universeName||"World Builder"}
+                    </span>
+                    {universeData.era&&<span style={{fontSize:9,color:"var(--text4)",fontFamily:"var(--font-mono)",flexShrink:0}}>— {universeData.era}{universeData.eraNote?` · ${universeData.eraNote}`:""}</span>}
+                    {!hasData&&<span style={{fontSize:9,color:"var(--text4)",fontStyle:"italic"}}>Define your universe</span>}
+                    {universeData.greatestThreat&&!showWorldBuilder&&<span style={{fontSize:9,color:"rgba(224,112,112,0.55)",fontFamily:"var(--font-mono)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>⚠ {universeData.greatestThreat}</span>}
+                  </div>
+                  <span style={{fontSize:9,padding:"3px 10px",background:`${G}12`,border:`1px solid ${G}30`,borderRadius:16,color:G,fontFamily:"var(--font-mono)",flexShrink:0,marginLeft:10}}>
+                    {showWorldBuilder?"↑ Close":"✎ Build World"}
+                  </span>
+                </div>
+                {showWorldBuilder&&(
+                  <div style={{padding:"18px 16px",display:"flex",flexDirection:"column",gap:14}}>
+
+                    <div style={{fontSize:8.5,letterSpacing:"0.18em",color:`${G}66`,textTransform:"uppercase",fontFamily:"var(--font-mono)",borderBottom:`1px solid ${G}18`,paddingBottom:5}}>Foundation</div>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+                      <div>
+                        <div style={{fontSize:9,color:"var(--text3)",marginBottom:5}}>Universe Name</div>
+                        <input value={universeData.universeName||""} onChange={e=>wbField("universeName",e.target.value)} placeholder="e.g. The Fractured Earth" style={{width:"100%"}}/>
+                      </div>
+                      <div>
+                        <div style={{fontSize:9,color:"var(--text3)",marginBottom:5}}>Year / Era Note</div>
+                        <input value={universeData.eraNote||""} onChange={e=>wbField("eraNote",e.target.value)} placeholder="e.g. 2041, post-Collapse" style={{width:"100%"}}/>
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{fontSize:9,color:"var(--text3)",marginBottom:5}}>Time Period</div>
+                      <div style={{display:"flex",flexWrap:"wrap",gap:5}}>{["Modern Day","Near Future","Far Future","Historical","Other"].map(v=>wbChip(v,universeData.era,"era"))}</div>
+                    </div>
+                    <div>
+                      <div style={{fontSize:9,color:"var(--text3)",marginBottom:5}}>Current State of the World</div>
+                      <textarea value={universeData.worldState||""} onChange={e=>wbField("worldState",e.target.value)} placeholder="Describe the overall condition of society, politics, and daily life..." rows={2} style={{width:"100%",resize:"vertical"}}/>
+                    </div>
+                    <div>
+                      <div style={{fontSize:9,color:"var(--text3)",marginBottom:5}}>Who Holds Political Power?</div>
+                      <input value={universeData.powerStructure||""} onChange={e=>wbField("powerStructure",e.target.value)} placeholder="e.g. A coalition of mega-corporations, an elected global council..." style={{width:"100%"}}/>
+                    </div>
+
+                    <div style={{fontSize:8.5,letterSpacing:"0.18em",color:`${G}66`,textTransform:"uppercase",fontFamily:"var(--font-mono)",borderBottom:`1px solid ${G}18`,paddingBottom:5,marginTop:4}}>Superhumans</div>
+                    <div>
+                      <div style={{fontSize:9,color:"var(--text3)",marginBottom:5}}>Public Knowledge of Superhumans</div>
+                      <div style={{display:"flex",flexWrap:"wrap",gap:5}}>{["Openly Known","Publicly Debated","Government Secret","Mostly Unknown"].map(v=>wbChip(v,universeData.superhumanAwareness,"superhumanAwareness"))}</div>
+                    </div>
+                    <div>
+                      <div style={{fontSize:9,color:"var(--text3)",marginBottom:5}}>Origin of Superhuman Abilities</div>
+                      <textarea value={universeData.powerOrigin||""} onChange={e=>wbField("powerOrigin",e.target.value)} placeholder="How did powers first appear in this world? Natural mutation, cosmic event, ancient bloodline..." rows={2} style={{width:"100%",resize:"vertical"}}/>
+                    </div>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+                      <div>
+                        <div style={{fontSize:9,color:"var(--text3)",marginBottom:5}}>Hero Regulation</div>
+                        <div style={{display:"flex",flexWrap:"wrap",gap:5}}>{["Mandatory","Voluntary","Underground","None"].map(v=>wbChip(v,universeData.heroRegulation,"heroRegulation"))}</div>
+                      </div>
+                      <div>
+                        <div style={{fontSize:9,color:"var(--text3)",marginBottom:5}}>Government Stance on Heroes</div>
+                        <div style={{display:"flex",flexWrap:"wrap",gap:5}}>{["Supportive","Hostile","Exploitative","Neutral"].map(v=>wbChip(v,universeData.govtStance,"govtStance"))}</div>
+                      </div>
+                    </div>
+
+                    <div style={{fontSize:8.5,letterSpacing:"0.18em",color:`${G}66`,textTransform:"uppercase",fontFamily:"var(--font-mono)",borderBottom:`1px solid ${G}18`,paddingBottom:5,marginTop:4}}>Conflict & Threats</div>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+                      <div>
+                        <div style={{fontSize:9,color:"var(--text3)",marginBottom:5}}>Greatest Current Threat</div>
+                        <input value={universeData.greatestThreat||""} onChange={e=>wbField("greatestThreat",e.target.value)} placeholder="e.g. Alien invasion, rogue AI, corrupt regime..." style={{width:"100%"}}/>
+                      </div>
+                      <div>
+                        <div style={{fontSize:9,color:"var(--text3)",marginBottom:5}}>Ultimate Danger</div>
+                        <input value={universeData.ultimateThreat||""} onChange={e=>wbField("ultimateThreat",e.target.value)} placeholder="The one thing that could destroy everything..." style={{width:"100%"}}/>
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{fontSize:9,color:"var(--text3)",marginBottom:5}}>Defining Historical Event</div>
+                      <textarea value={universeData.definingEvent||""} onChange={e=>wbField("definingEvent",e.target.value)} placeholder="What event changed this world forever?" rows={2} style={{width:"100%",resize:"vertical"}}/>
+                    </div>
+                    <div>
+                      <div style={{fontSize:9,color:"var(--text3)",marginBottom:5}}>Primary Tensions Among Heroes</div>
+                      <textarea value={universeData.heroConflicts||""} onChange={e=>wbField("heroConflicts",e.target.value)} placeholder="What divides the hero community? Ideology, methods, loyalties..." rows={2} style={{width:"100%",resize:"vertical"}}/>
+                    </div>
+
+                    <div style={{fontSize:8.5,letterSpacing:"0.18em",color:`${G}66`,textTransform:"uppercase",fontFamily:"var(--font-mono)",borderBottom:`1px solid ${G}18`,paddingBottom:5,marginTop:4}}>World Elements</div>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+                      <div>
+                        <div style={{fontSize:9,color:"var(--text3)",marginBottom:5}}>Alien Presence</div>
+                        <div style={{display:"flex",flexWrap:"wrap",gap:5}}>{["Publicly Known","Hidden","None"].map(v=>wbChip(v,universeData.alienPresence,"alienPresence"))}</div>
+                      </div>
+                      <div>
+                        <div style={{fontSize:9,color:"var(--text3)",marginBottom:5}}>Technology Level</div>
+                        <div style={{display:"flex",flexWrap:"wrap",gap:5}}>{["Near-Modern","Advanced","Highly Advanced","Mixed"].map(v=>wbChip(v,universeData.techLevel,"techLevel"))}</div>
+                      </div>
+                      <div>
+                        <div style={{fontSize:9,color:"var(--text3)",marginBottom:5}}>Magic / Mystical Forces</div>
+                        <div style={{display:"flex",flexWrap:"wrap",gap:5}}>{["Open","Hidden","None"].map(v=>wbChip(v,universeData.mysticism,"mysticism"))}</div>
+                      </div>
+                      <div>
+                        <div style={{fontSize:9,color:"var(--text3)",marginBottom:5}}>Public View of Heroes</div>
+                        <div style={{display:"flex",flexWrap:"wrap",gap:5}}>{["Revered","Feared","Controversial","Unknown"].map(v=>wbChip(v,universeData.publicSentiment,"publicSentiment"))}</div>
+                      </div>
+                      <div>
+                        <div style={{fontSize:9,color:"var(--text3)",marginBottom:5}}>Primary Villain Motivation</div>
+                        <div style={{display:"flex",flexWrap:"wrap",gap:5}}>{["Power","Ideology","Trauma","Profit","Survival"].map(v=>wbChip(v,universeData.villainMotivation,"villainMotivation"))}</div>
+                      </div>
+                      <div>
+                        <div style={{fontSize:9,color:"var(--text3)",marginBottom:5}}>Parallel Realities / Dimensions</div>
+                        <div style={{display:"flex",flexWrap:"wrap",gap:5}}>{["Active","Theoretical","None"].map(v=>wbChip(v,universeData.dimensions,"dimensions"))}</div>
+                      </div>
+                    </div>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+                      <div>
+                        <div style={{fontSize:9,color:"var(--text3)",marginBottom:5}}>Social / Class Structure</div>
+                        <input value={universeData.socialStructure||""} onChange={e=>wbField("socialStructure",e.target.value)} placeholder="e.g. Corporate tiers, powered vs. unpowered divide..." style={{width:"100%"}}/>
+                      </div>
+                      <div>
+                        <div style={{fontSize:9,color:"var(--text3)",marginBottom:5}}>Heroes' Moral Code</div>
+                        <input value={universeData.moralCode||""} onChange={e=>wbField("moralCode",e.target.value)} placeholder="The one rule every hero in this world follows..." style={{width:"100%"}}/>
+                      </div>
+                    </div>
+
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
           <div style={{fontSize:9,letterSpacing:"0.2em",color:`${G}77`,textTransform:"uppercase",marginBottom:12}}>Universe Map — All Teams & Relationships</div>
           <div style={{background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:12,overflow:"hidden",marginBottom:12}}>
             <svg viewBox="0 0 800 516" style={{width:"100%",display:"block"}}>
@@ -3662,8 +3798,8 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
         const {zyrenian,auranthi,dravosi}=RACE_TREE.alien.subs.reduce((a,s)=>({...a,[s.id]:s}),{});
         const agene=RACE_TREE.mutate.subs.find(s=>s.id==="a_gene_mutate");
         return(<>
-          <div style={{fontSize:9,letterSpacing:"0.2em",color:`${G}77`,textTransform:"uppercase",marginBottom:4}}>NK Universe Codex</div>
-          <div style={{fontSize:11,color:"var(--text3)",marginBottom:22}}>Canonical lore for the three alien species and the A-Gene mutation. These backstories are original to the NK universe.</div>
+          <div style={{fontSize:9,letterSpacing:"0.2em",color:`${G}77`,textTransform:"uppercase",marginBottom:4}}>{universeData?.universeName?`${universeData.universeName} — `:""}Universe Codex</div>
+          <div style={{fontSize:11,color:"var(--text3)",marginBottom:22}}>Canonical lore for the three alien species and the A-Gene mutation. These backstories are original to this universe.</div>
 
           <div style={{fontSize:10,letterSpacing:"0.18em",textTransform:"uppercase",color:`${G}66`,fontFamily:"var(--font-mono)",marginBottom:12,paddingBottom:6,borderBottom:"1px solid var(--border)"}}>— Alien Species —</div>
 
@@ -3675,7 +3811,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
               ["Culture",zyrenian?.codex?.culture],
               ["Powers",zyrenian?.codex?.powers],
               ["Average Lifespan",zyrenian?.codex?.lifespan],
-              ["In the NK Universe",zyrenian?.codex?.note],
+              ["In This Universe",zyrenian?.codex?.note],
             ]}/>
 
           <CodexCard title="AURANTHI" accent="#D4A020" tagline="They carry a civilization that no longer exists — encoded in their blood."
@@ -3686,7 +3822,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
               ["Culture",auranthi?.codex?.culture],
               ["Powers",auranthi?.codex?.powers],
               ["Average Lifespan",auranthi?.codex?.lifespan],
-              ["In the NK Universe",auranthi?.codex?.note],
+              ["In This Universe",auranthi?.codex?.note],
             ]}/>
 
           <CodexCard title="DRAVOSI" accent="#5A5AE0" tagline="They are not cruel. They are orderly. That distinction makes them more dangerous."
@@ -3697,7 +3833,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
               ["Culture — The Supremacy",dravosi?.codex?.culture],
               ["Powers",dravosi?.codex?.powers],
               ["Average Lifespan",dravosi?.codex?.lifespan],
-              ["In the NK Universe",dravosi?.codex?.note],
+              ["In This Universe",dravosi?.codex?.note],
             ]}/>
 
           <div style={{fontSize:10,letterSpacing:"0.18em",textTransform:"uppercase",color:`${G}66`,fontFamily:"var(--font-mono)",marginBottom:12,paddingBottom:6,borderBottom:"1px solid var(--border)",marginTop:8}}>— Species Power Index —</div>

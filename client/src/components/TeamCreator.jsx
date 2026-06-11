@@ -90,7 +90,7 @@ export default function TeamCreator({teams,members=[],onSave,onCancel,callAI,oll
           <div style={{display:"flex",flexWrap:"wrap",gap:8}}>{TEAM_TYPES.map(tt=><button key={tt.id} style={chip(type===tt.id,color)} onClick={()=>setType(tt.id)}>{tt.label}</button>)}</div>
         </div>
         <div>
-          <span style={lbl}>NK Alignment</span>
+          <span style={lbl}>Alliance Alignment</span>
           <div style={{display:"flex",flexDirection:"column",gap:7}}>
             {NK_ALIGNMENTS.map(a=><button key={a.id} onClick={()=>setAlign(a.id)} style={{padding:"9px 14px",background:align===a.id?`${a.color}14`:"var(--bg3)",border:`1px solid ${align===a.id?a.color:"var(--border2)"}`,borderRadius:9,cursor:"pointer",textAlign:"left",fontFamily:"var(--font-mono)"}}>
               <div style={{fontSize:11,color:"var(--text-primary)",fontWeight:align===a.id?"bold":"normal"}}>{a.label}</div>
