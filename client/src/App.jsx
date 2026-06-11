@@ -236,6 +236,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
   const confirmPin=()=>{if(pinInput===DELETE_PIN){pinDialog.action();setPinDialog(null);}else{setPinError(true);setPinInput("");}};
   // ── UI ───────────────────────────────────────────────────────────────────
   const[tab,setTab]=useState(()=>{try{return localStorage.getItem("forge-active-tab")||"teams";}catch{return"teams";}});
+  const[universeDossierTarget,setUniverseDossierTarget]=useState(null);
   const[saved,setSaved]=useState(false);
   const[pdfLoading,setPdfLoading]=useState(false);
   const[allDossierLoading,setAllDossierLoading]=useState(false);
@@ -1708,8 +1709,8 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
               <div
                 onMouseEnter={()=>setHoveredCard(m.id)}
                 onMouseLeave={()=>setHoveredCard(null)}
-                onClick={!hasAny?()=>fileRefs.current[m.id]?.click():undefined}
-                style={{background:hasAny?"transparent":`${m.color}08`,border:`1.5px dashed ${hasAny?m.color+"66":m.color+"2E"}`,borderRadius:9,overflow:"hidden",cursor:hasAny?"default":"pointer",aspectRatio:"3/4",position:"relative",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:6}}>
+                onClick={!hasAny?()=>fileRefs.current[m.id]?.click():()=>{setTab("universe");setUniverseDossierTarget({type:"hero",id:m.id});}}
+                style={{background:hasAny?"transparent":`${m.color}08`,border:`1.5px dashed ${hasAny?m.color+"66":m.color+"2E"}`,borderRadius:9,overflow:"hidden",cursor:"pointer",aspectRatio:"3/4",position:"relative",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:6}}>
                 {hasAny?(<>
                   {layer1&&<img src={layer1} alt={m.heroName} style={{width:"100%",height:"100%",objectFit:"cover",objectPosition:"top",position:"absolute",inset:0,zIndex:1,opacity:hasBoth&&isHovered?0:1,transition:"opacity 0.3s"}}/>}
                   {layer2&&<img src={layer2} alt={m.heroName} style={{width:"100%",height:"100%",objectFit:"cover",objectPosition:"top",position:"absolute",inset:0,zIndex:2,opacity:hasBoth&&isHovered?1:0,transition:"opacity 0.3s"}}/>}
@@ -2409,7 +2410,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                   {/* Portrait upload */}
                   <div style={{flexShrink:0}}>
                     <input type="file" accept="image/*" style={{display:"none"}} ref={el=>fileRefs.current[v.id]=el} onChange={e=>handleImg(v.id,e.target.files[0])}/>
-                    <div onClick={()=>fileRefs.current[v.id]?.click()} style={{width:80,height:108,borderRadius:10,overflow:"hidden",cursor:"pointer",background:"rgba(139,26,26,0.14)",border:`2px dashed ${images[v.id]?"rgba(224,112,112,0.5)":"rgba(224,112,112,0.25)"}`,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:4,position:"relative",flexShrink:0}}>
+                    <div onClick={()=>{if(images[v.id]){setTab("universe");setUniverseDossierTarget({type:"villain",id:v.id});}else{fileRefs.current[v.id]?.click();}}} style={{width:80,height:108,borderRadius:10,overflow:"hidden",cursor:"pointer",background:"rgba(139,26,26,0.14)",border:`2px dashed ${images[v.id]?"rgba(224,112,112,0.5)":"rgba(224,112,112,0.25)"}`,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:4,position:"relative",flexShrink:0}}>
                       {images[v.id]
                         ?<><img src={images[v.id]} alt={v.heroName} style={{width:"100%",height:"100%",objectFit:"cover",objectPosition:"top",position:"absolute",inset:0}}/><div style={{position:"absolute",inset:0,background:"linear-gradient(to top,rgba(0,0,0,0.6) 0%,transparent 50%)"}}/>
                            <button onClick={e=>{e.stopPropagation();fileRefs.current[v.id]?.click();}} style={{position:"absolute",bottom:4,left:0,right:0,margin:"0 auto",width:"fit-content",fontSize:7,padding:"2px 8px",background:"rgba(0,0,0,0.7)",border:"1px solid rgba(224,112,112,0.4)",borderRadius:4,cursor:"pointer",color:"#E07070",fontFamily:"var(--font-mono)",lineHeight:1.4}}>↑ Change</button></>
@@ -3455,6 +3456,42 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
         const primaryTeam=teams[0];
         const otherTeams=teams.slice(1);
         if(!primaryTeam)return(<div style={{textAlign:"center",padding:"40px",color:"var(--text3)",fontSize:12}}>Create your first team to see the universe map.</div>);
+
+        // ── Dossier view ───────────────────────────────────────────────
+        if(universeDossierTarget){
+          const isVil=universeDossierTarget.type==="villain";
+          let dMember=null,dImg=null,dTeams=[];
+          if(isVil){
+            dMember=villainPool.find(v=>v.id===universeDossierTarget.id);
+            dImg=images[dMember?.id]||null;
+          } else {
+            const did=universeDossierTarget.id;
+            for(const t of teams){const r=getTeamRoster(t.id);const found=r.find(x=>x.id===did);if(found){dMember=found;break;}}
+            if(!dMember)dMember=soloHeroes.find(h=>h.id===did);
+            dImg=images[did]||null;
+            if(dMember){
+              dTeams=(memberTeamMap[did]||[dMember.teamId||teams[0]?.id]).map(tid=>{
+                const t=teams.find(x=>x.id===tid);if(!t)return null;
+                const tm=teamMemberships[did]?.[tid];
+                const rankId=tm?.teamRank||(sharedEdits[did]?.teamRank||dMember.teamRank);
+                const rk=TEAM_RANKS.find(r=>r.id===rankId);
+                return{...t,heroRank:rk||null};
+              }).filter(Boolean);
+            }
+          }
+          if(!dMember)return(<div style={{textAlign:"center",padding:"40px",color:"var(--text3)",fontSize:12}}>Character not found.</div>);
+          const dc=dMember.color;
+          return(<>
+            <button onClick={()=>setUniverseDossierTarget(null)} style={{display:"inline-flex",alignItems:"center",gap:6,padding:"6px 14px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:10.5,fontFamily:"var(--font-mono)",marginBottom:14}}>← Universe</button>
+            <div style={{border:`1px solid ${dc}44`,borderRadius:10,overflow:"hidden"}}>
+              <CharacterPage member={dMember} imageUrl={dImg} isVillain={isVil}
+                teamName={isVil?"Villain":(dTeams[0]?.name||"Independent")}
+                teamColor={isVil?"#8B1A1A":(dTeams[0]?.color||"#555")}
+                memberTeams={isVil?undefined:dTeams}/>
+            </div>
+          </>);
+        }
+
         const pC={x:400,y:258};
         const RAD=188;
         const teamPos=otherTeams.map((t,i)=>{
@@ -3463,6 +3500,22 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
         });
         const primaryRoster=getTeamRoster(primaryTeam.id).slice(0,6);
         const ALINE={allied:"#0F6E56",rival:"#BA7517",enemy:"#8B1A1A",neutral:"#555555",splinter:"#993C1D",base:"#534AB7",member:"#534AB7"};
+
+        // Deduplicated hero list across all teams + soloHeroes
+        const heroesMap={};
+        teams.forEach(t=>getTeamRoster(t.id).forEach(m=>{if(!heroesMap[m.id])heroesMap[m.id]=m;}));
+        soloHeroes.forEach(h=>{if(!heroesMap[h.id])heroesMap[h.id]=h;});
+        const heroesList=Object.values(heroesMap);
+
+        const uRowStyle=(c)=>({display:"flex",alignItems:"center",gap:12,padding:"8px 12px",background:"var(--bg3)",border:`1px solid ${c}22`,borderRadius:8,cursor:"pointer",transition:"background 0.15s"});
+        const uPortrait=(m,isVil=false)=>{
+          const img=images[m.id];
+          const c=m.color||(isVil?"#8B1A1A":"#555");
+          return img
+            ?<img src={img} alt={m.heroName} style={{width:36,height:48,borderRadius:5,objectFit:"cover",objectPosition:"top",border:`1px solid ${c}55`,flexShrink:0}}/>
+            :<div style={{width:36,height:48,borderRadius:5,background:`${c}14`,border:`1px dashed ${c}44`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:"bold",color:c,flexShrink:0}}>{m.initials}</div>;
+        };
+
         return(<>
           <div style={{fontSize:9,letterSpacing:"0.2em",color:`${G}77`,textTransform:"uppercase",marginBottom:12}}>Universe Map — All Teams & Relationships</div>
           <div style={{background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:12,overflow:"hidden",marginBottom:12}}>
@@ -3477,7 +3530,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
               {primaryRoster.map((m,i)=>{
                 const a=(i/Math.max(primaryRoster.length,1))*Math.PI*2-Math.PI/2;
                 const mx=pC.x+Math.cos(a)*45,my=pC.y+Math.sin(a)*45;
-                return(<g key={m.id}>
+                return(<g key={m.id} style={{cursor:"pointer"}} onClick={()=>setUniverseDossierTarget({type:"hero",id:m.id})}>
                   <defs><clipPath id={`um-${m.id}`}><circle cx={mx} cy={my} r={14}/></clipPath></defs>
                   <circle cx={mx} cy={my} r={16} fill={`${m.color}22`} stroke={m.color} strokeWidth={1.2}/>
                   {images[m.id]?<image href={images[m.id]} x={mx-14} y={my-14} width={28} height={28} clipPath={`url(#um-${m.id})`} preserveAspectRatio="xMidYMin slice"/>:<text x={mx} y={my+4} textAnchor="middle" fontSize="7" fontWeight="bold" fill={m.color} fontFamily="monospace">{m.initials}</text>}
@@ -3493,7 +3546,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                   {roster.map((m,i)=>{
                     const a=(i/Math.max(roster.length,1))*Math.PI*2-Math.PI/2;
                     const mx=t.x+Math.cos(a)*30,my=t.y+Math.sin(a)*30;
-                    return(<g key={m.id}>
+                    return(<g key={m.id} style={{cursor:"pointer"}} onClick={()=>setUniverseDossierTarget({type:"hero",id:m.id})}>
                       <defs><clipPath id={`um2-${m.id}`}><circle cx={mx} cy={my} r={10}/></clipPath></defs>
                       <circle cx={mx} cy={my} r={11} fill={`${m.color}20`} stroke={m.color} strokeWidth={0.8}/>
                       {images[m.id]?<image href={images[m.id]} x={mx-10} y={my-10} width={20} height={20} clipPath={`url(#um2-${m.id})`} preserveAspectRatio="xMidYMin slice"/>:<text x={mx} y={my+3} textAnchor="middle" fontSize="5.5" fontWeight="bold" fill={m.color} fontFamily="monospace">{m.initials}</text>}
@@ -3511,9 +3564,51 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
           </div>
           {otherTeams.length===0&&<div style={{textAlign:"center",padding:"16px",color:"var(--text3)",fontSize:11}}>Create additional teams in the Teams tab to populate the map. The first team ({primaryTeam.name}) anchors the center.</div>}
 
+          {/* ── HEROES ────────────────────────────────────────────────── */}
+          {heroesList.length>0&&(<>
+            <div style={{display:"flex",alignItems:"center",gap:10,marginTop:28,marginBottom:14}}>
+              <div style={{flex:1,height:1,background:`${G}18`}}/>
+              <div style={{fontSize:9,letterSpacing:"0.2em",color:`${G}77`,textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>Heroes</div>
+              <div style={{flex:1,height:1,background:`${G}18`}}/>
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:6}}>
+              {heroesList.map(m=>(
+                <div key={m.id} onClick={()=>setUniverseDossierTarget({type:"hero",id:m.id})} style={uRowStyle(m.color)}>
+                  {uPortrait(m)}
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:13,fontWeight:"bold",color:"var(--text-primary)",lineHeight:1.2}}>{m.heroName}</div>
+                    {m.realName&&<div style={{fontSize:10,color:"var(--text3)",marginTop:2}}>{m.realName}</div>}
+                  </div>
+                  <div style={{fontSize:9,color:`${m.color}88`,fontFamily:"var(--font-mono)"}}>→</div>
+                </div>
+              ))}
+            </div>
+          </>)}
+
+          {/* ── VILLAINS ──────────────────────────────────────────────── */}
+          {villainPool.length>0&&(<>
+            <div style={{display:"flex",alignItems:"center",gap:10,marginTop:28,marginBottom:14}}>
+              <div style={{flex:1,height:1,background:"rgba(139,26,26,0.2)"}}/>
+              <div style={{fontSize:9,letterSpacing:"0.2em",color:"rgba(139,26,26,0.6)",textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>Villains</div>
+              <div style={{flex:1,height:1,background:"rgba(139,26,26,0.2)"}}/>
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:6}}>
+              {villainPool.map(v=>(
+                <div key={v.id} onClick={()=>setUniverseDossierTarget({type:"villain",id:v.id})} style={uRowStyle(v.color||"#8B1A1A")}>
+                  {uPortrait(v,true)}
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:13,fontWeight:"bold",color:"var(--text-primary)",lineHeight:1.2}}>{v.heroName}</div>
+                    {v.realName&&<div style={{fontSize:10,color:"var(--text3)",marginTop:2}}>{v.realName}</div>}
+                  </div>
+                  <div style={{fontSize:9,color:"rgba(224,112,112,0.55)",fontFamily:"var(--font-mono)"}}>→</div>
+                </div>
+              ))}
+            </div>
+          </>)}
+
           {/* ── VILLAIN FACTIONS ──────────────────────────────────────── */}
           {villainFactions.length>0&&(<>
-            <div style={{display:"flex",alignItems:"center",gap:10,marginTop:24,marginBottom:14}}>
+            <div style={{display:"flex",alignItems:"center",gap:10,marginTop:28,marginBottom:14}}>
               <div style={{flex:1,height:1,background:"rgba(139,26,26,0.2)"}}/>
               <div style={{fontSize:9,letterSpacing:"0.2em",color:"rgba(139,26,26,0.6)",textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>Villain Factions</div>
               <div style={{flex:1,height:1,background:"rgba(139,26,26,0.2)"}}/>
@@ -3533,7 +3628,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                     </div>
                   </div>
                   {fmembers.length>0&&(<div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
-                    {fmembers.slice(0,6).map(m=>(<div key={m.id} title={m.heroName}>
+                    {fmembers.slice(0,6).map(m=>(<div key={m.id} title={m.heroName} style={{cursor:"pointer"}} onClick={()=>setUniverseDossierTarget({type:"villain",id:m.id})}>
                       {images[m.id]?<img src={images[m.id]} style={{width:24,height:24,borderRadius:"50%",objectFit:"cover",objectPosition:"top",border:`1px solid ${f.color}44`}}/>
                         :<div style={{width:24,height:24,borderRadius:"50%",background:`${m.color||f.color}20`,border:`1px solid ${f.color}33`,display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{fontSize:7,fontWeight:"bold",color:m.color||f.color}}>{m.initials}</span></div>}
                     </div>))}
