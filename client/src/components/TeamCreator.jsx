@@ -18,6 +18,7 @@ export default function TeamCreator({teams,members=[],onSave,onCancel,callAI,oll
   const[logoSeed,setLogoSeed]=useState(initialData?.logoSeed??Math.floor(Math.random()*8));
   const[relatedTeams,setRelatedTeams]=useState([]);
   const[relatedMembers,setRelatedMembers]=useState([]);
+  const[baseOfOps,setBaseOfOps]=useState(initialData?.baseOfOps||"");
   const[loreHint,setLoreHint]=useState("");
   const autoAbbr=n=>n.split(" ").map(w=>w[0]||"").join("").toUpperCase().slice(0,3)||"??";
   const handleName=n=>{setName(n);if(!abbr||abbr===autoAbbr(name))setAbbr(autoAbbr(n));};
@@ -47,7 +48,7 @@ export default function TeamCreator({teams,members=[],onSave,onCancel,callAI,oll
       id:isEdit?initialData.id:`team-${Date.now()}`,
       isDefault:isEdit?initialData.isDefault:false,
       createdAt:isEdit?initialData.createdAt:Date.now(),
-      name:name.trim(),abbr:abbr.trim()||autoAbbr(name),color,colorLight:color+"CC",type,nkAlignment:align,description:desc,motto,origin,logoSeed
+      name:name.trim(),abbr:abbr.trim()||autoAbbr(name),color,colorLight:color+"CC",type,nkAlignment:align,description:desc,motto,origin,logoSeed,baseOfOps:baseOfOps.trim()
     });
   };
   const isEdit=!!initialData;
@@ -104,6 +105,7 @@ export default function TeamCreator({teams,members=[],onSave,onCancel,callAI,oll
           {genError&&<div style={{fontSize:10,color:"#E07070",background:"rgba(139,26,26,0.12)",border:"1px solid rgba(139,26,26,0.3)",borderRadius:7,padding:"6px 10px",marginBottom:10,fontFamily:"var(--font-mono)"}}>{genError}</div>}
           <div style={{marginBottom:10}}><span style={lbl}>Description</span><input type="text" placeholder="One sentence about this team" value={desc} onChange={e=>setDesc(e.target.value)}/></div>
           <div style={{marginBottom:10}}><span style={lbl}>Motto</span><input type="text" placeholder="Team motto or battle cry" value={motto} onChange={e=>setMotto(e.target.value)}/></div>
+          <div style={{marginBottom:10}}><span style={lbl}>Base of Operations</span><input type="text" placeholder="e.g. Midtown, New York · Underground bunker beneath the city" value={baseOfOps} onChange={e=>setBaseOfOps(e.target.value)}/></div>
           <div><span style={lbl}>Origin</span><textarea style={{height:80}} placeholder="Team backstory..." value={origin} onChange={e=>setOrigin(e.target.value)}/></div>
         </div>
         <button disabled={!name.trim()} onClick={handleSave} style={{width:"100%",padding:"12px",background:name.trim()?`${color}18`:"var(--bg3)",border:`1px solid ${name.trim()?color:"var(--border2)"}`,borderRadius:8,cursor:name.trim()?"pointer":"not-allowed",color:name.trim()?color:"var(--text4)",fontSize:10.5,letterSpacing:"0.12em",textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>Save Changes</button>
@@ -176,6 +178,7 @@ export default function TeamCreator({teams,members=[],onSave,onCancel,callAI,oll
         {genError&&<div style={{fontSize:10,color:"#E07070",background:"rgba(139,26,26,0.12)",border:"1px solid rgba(139,26,26,0.3)",borderRadius:7,padding:"6px 10px",marginBottom:14,fontFamily:"var(--font-mono)"}}>{genError}</div>}
         <div style={{marginBottom:12}}><span style={lbl}>Description</span><input type="text" placeholder="One sentence about this team" value={desc} onChange={e=>setDesc(e.target.value)}/></div>
         <div style={{marginBottom:12}}><span style={lbl}>Motto</span><input type="text" placeholder="Team motto or battle cry" value={motto} onChange={e=>setMotto(e.target.value)}/></div>
+        <div style={{marginBottom:12}}><span style={lbl}>Base of Operations</span><input type="text" placeholder="e.g. Midtown, New York · Underground bunker beneath the city" value={baseOfOps} onChange={e=>setBaseOfOps(e.target.value)}/></div>
         <div style={{marginBottom:16}}><span style={lbl}>Origin</span><textarea style={{height:80}} placeholder="Team backstory — or generate above and edit here..." value={origin} onChange={e=>setOrigin(e.target.value)}/></div>
         <div style={{display:"flex",gap:10}}>
           <button onClick={()=>setStep(2)} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text3)",fontSize:10.5,fontFamily:"var(--font-mono)"}}>← Back</button>

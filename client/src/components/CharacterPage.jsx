@@ -2,7 +2,7 @@ import { ALIGN_META, TEAM_RANKS, raceLabel } from '../constants/index.js';
 import AlignmentBadge from './AlignmentBadge.jsx';
 import StatBar from './StatBar.jsx';
 
-export default function CharacterPage({member,imageUrl,isVillain=false,teamName,teamColor,memberTeams}){
+export default function CharacterPage({member,imageUrl,isVillain=false,teamName,teamColor,memberTeams,inherentPowers=[],teamBase=""}){
   const c=member.color,cl=member.colorLight||c;
   const tName=teamName||"Unknown Team";
   const multiTeam=memberTeams&&memberTeams.length>1;
@@ -72,11 +72,32 @@ export default function CharacterPage({member,imageUrl,isVillain=false,teamName,
             <div><span style={{fontSize:8.5,fontWeight:"bold",color:cl,letterSpacing:"0.04em"}}>{ptLabel}: </span><span style={{fontSize:8.5,color:"var(--text2)"}}>{keyStrengths}</span></div>
             {(member.gender||member.age||member.birthYear)&&<div><span style={{fontSize:8.5,fontWeight:"bold",color:cl,letterSpacing:"0.04em"}}>PROFILE: </span><span style={{fontSize:8.5,color:"var(--text2)"}}>{[member.gender,member.age&&`Age ${member.age}`,member.birthYear&&`b. ${member.birthYear}`].filter(Boolean).join(" · ")}</span></div>}
             {member.race&&<div><span style={{fontSize:8.5,fontWeight:"bold",color:cl,letterSpacing:"0.04em"}}>RACE: </span><span style={{fontSize:8.5,color:"var(--text2)"}}>{raceLabel(member.race)}</span></div>}
+            {member.hometown&&<div><span style={{fontSize:8.5,fontWeight:"bold",color:cl,letterSpacing:"0.04em"}}>HOMETOWN: </span><span style={{fontSize:8.5,color:"var(--text2)"}}>{member.hometown}</span></div>}
+            {(member.baseOfOps||teamBase)&&<div><span style={{fontSize:8.5,fontWeight:"bold",color:cl,letterSpacing:"0.04em"}}>BASE: </span><span style={{fontSize:8.5,color:"var(--text2)"}}>{member.baseOfOps||teamBase}{member.baseOfOps&&teamBase&&member.baseOfOps!==teamBase&&<span style={{fontSize:7.5,color:`${cl}66`,marginLeft:4,fontFamily:"var(--font-mono)"}}>(personal)</span>}</span></div>}
             <div><span style={{fontSize:8.5,fontWeight:"bold",color:cl,letterSpacing:"0.04em"}}>STATUS: </span><span style={{fontSize:8.5,color:isVillain?"#E07070":"var(--text2)"}}>{isVillain?"HIGH PRIORITY THREAT":member.nkAlignment==="base"?"OPERATIVE":"ASSOCIATE"}</span></div>
           </div>
         </div>
       </div>
     </div>
+    {inherentPowers.length>0&&(
+      <div style={{padding:"14px 18px 12px",borderTop:`1px solid ${c}18`,borderBottom:`1px solid ${c}18`,background:`${c}04`}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+          <div style={{fontSize:7.5,letterSpacing:"0.22em",color:`${c}99`,textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>Inherent Powers</div>
+          <div style={{height:1,flex:1,background:`${c}18`}}/>
+          <div style={{fontSize:7,color:`${c}66`,fontFamily:"var(--font-mono)",letterSpacing:"0.1em"}}>RACIAL · BLOODLINE</div>
+        </div>
+        <div className="fpowers-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px 24px"}}>
+          {inherentPowers.map((p,i)=>(
+            <div key={i} style={{opacity:p.source==="auranthi-bloodline"?0.75:1}}>
+              <div style={{fontSize:9,fontWeight:900,textTransform:"uppercase",letterSpacing:"0.12em",color:p.source==="auranthi-bloodline"?"#D4A020":cl,marginBottom:3,paddingBottom:2,borderBottom:`1px solid ${p.source==="auranthi-bloodline"?"rgba(212,160,32,0.25)":c+"25"}`}}>
+                {p.name}{p.source==="auranthi-bloodline"&&<span style={{fontSize:7,fontWeight:"normal",color:"rgba(212,160,32,0.65)",marginLeft:5,letterSpacing:"0.08em"}}>BLOODLINE</span>}
+              </div>
+              <div style={{fontSize:9.5,color:"var(--text4)",lineHeight:1.55}}>{p.desc}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )}
     <div style={{padding:"14px 18px 12px",borderTop:`1px solid ${c}18`,borderBottom:`1px solid ${c}18`}}>
       <div style={{fontSize:7.5,letterSpacing:"0.22em",color:`${c}77`,textTransform:"uppercase",fontFamily:"var(--font-mono)",marginBottom:10}}>{ptSection}</div>
       <div className="fpowers-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"14px 24px"}}>

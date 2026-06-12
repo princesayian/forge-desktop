@@ -62,12 +62,15 @@ button[disabled]{opacity:0.45;cursor:not-allowed;}
 .forge-section-label{font-size:11px;letter-spacing:0.18em;text-transform:uppercase;font-family:var(--font-mono);opacity:0.6;display:block;margin-bottom:10px;}
 .forge-h2{font-size:22px;font-weight:800;letter-spacing:0.02em;color:var(--text-primary);margin:0;line-height:1.1;}
 @media (max-width:640px){
-  .fhdr{height:auto!important;padding:8px 12px!important;min-height:50px;}
+  /* Header: pull utility bar out of absolute positioning so it doesn't overlap the logo */
+  .fhdr{height:auto!important;padding:6px 10px 0!important;}
+  .fhdr-utils{position:static!important;top:auto!important;right:auto!important;width:100%!important;justify-content:flex-end!important;flex-wrap:wrap!important;margin-bottom:4px!important;gap:4px!important;}
   .fhdr-right{gap:5px!important;flex-wrap:wrap!important;}
   .fhdr-model,.fhdr-refresh,.fhdr-restart{display:none!important;}
   .fmain{padding:14px 12px!important;}
-  .ftabs{padding:0 4px!important;}
-  .ftab{padding:8px 10px!important;font-size:9.5px!important;}
+  /* Nav tabs: wrap to multiple rows so nothing is cut off */
+  .ftabs{padding:0 2px!important;flex-wrap:wrap!important;justify-content:flex-start!important;overflow-x:visible!important;gap:1px!important;}
+  .ftab{padding:7px 9px!important;font-size:9px!important;flex-shrink:0!important;}
   .fimage-grid{grid-template-columns:repeat(2,1fr)!important;}
   .froster-row{flex-wrap:wrap!important;padding:8px 10px!important;gap:8px!important;}
   .froster-actions{width:100%!important;flex-wrap:wrap!important;padding-top:5px!important;border-top:1px solid var(--border2)!important;}

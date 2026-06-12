@@ -23,6 +23,7 @@ import DeepLoreQuiz from './components/DeepLoreQuiz.jsx';
 import MetaAILauncher from './components/MetaAILauncher.jsx';
 import Tripo3DLauncher from './components/Tripo3DLauncher.jsx';
 import RemotePanel from './components/RemotePanel.jsx';
+import InspirationsField from './components/InspirationsField.jsx';
 
 // Storage adapter — checks window.storage at call time so PyWebView has a
 // chance to inject it before any useEffect fires. Falls back to /api/store
@@ -112,6 +113,7 @@ function App(){
   // ── Solo / Independent Heroes ─────────────────────────────────────────────
   const[soloHeroes,setSoloHeroes]=useState([]);
   const[soloVillains,setSoloVillains]=useState({});
+  const[raceAbilities,setRaceAbilities]=useState({});
   const[activeSoloId,setActiveSoloId]=useState(null);
   const[soloHeroView,setSoloHeroView]=useState("profile");
   const[rogueMode,setRogueMode]=useState(null); // null or heroId — saves villain to rogues gallery
@@ -142,10 +144,12 @@ function App(){
   const[scPowerForgeMode,setScPowerForgeMode]=useState(false);
   const[scPowerForgePhase,setScPowerForgePhase]=useState(0);
   const[scPowerForgeAnswers,setScPowerForgeAnswers]=useState({});
+  const[scPowerReforgeTarget,setScPowerReforgeTarget]=useState(null);
   const[scReforgeId,setScReforgeId]=useState(null);
+  const[scInspirations,setScInspirations]=useState([]);
   const toggleScColor=hex=>setScColors(prev=>{if(prev.includes(hex)){if(prev.length===1)return prev;return prev.filter(c=>c!==hex);}if(prev.length>=3)return prev;return[...prev,hex];});
   const addCustomScColor=()=>{const h=scCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{6}$/))return;setScColors(prev=>{if(prev.includes(h)||prev.length>=3)return prev;return[...prev,h];});setScCustomHex("#ffffff");};
-  const resetSoloCreator=()=>{setScStep(0);setScAnswers({});setScName("");setScHeroName("");setScGender("Male");setScRace(null);setScColors(["#888780"]);setScCustomHex("#ffffff");setScStoryDir("");setScAge("");setScBirthYear("");setScResult(null);setScLoading(false);setScDeepMode(false);setScProfileMode(false);setScPowerForgeMode(false);setScDeepPhase(0);setScDeepAnswers({});setScProfileStep(0);setScProfileAnswers({});setScPowerForgePhase(0);setScPowerForgeAnswers({});setScReforgeId(null);};
+  const resetSoloCreator=()=>{setScStep(0);setScAnswers({});setScName("");setScHeroName("");setScGender("Male");setScRace(null);setScColors(["#888780"]);setScCustomHex("#ffffff");setScStoryDir("");setScAge("");setScBirthYear("");setScResult(null);setScLoading(false);setScDeepMode(false);setScProfileMode(false);setScPowerForgeMode(false);setScDeepPhase(0);setScDeepAnswers({});setScProfileStep(0);setScProfileAnswers({});setScPowerForgePhase(0);setScPowerForgeAnswers({});setScReforgeId(null);setScPowerReforgeTarget(null);setScInspirations([]);};
   // ── Ollama ──────────────────────────────────────────────────────────────
   const[ollamaOk,setOllamaOk]=useState(null);const[groqOk,setGroqOk]=useState(false);
   const[forgeVersion,setForgeVersion]=useState("");
@@ -167,6 +171,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
   const[rBirthYear,setRBirthYear]=useState("");
   const[rRace,setRRace]=useState(null);
   const[rStoryDir,setRStoryDir]=useState("");
+  const[rInspirations,setRInspirations]=useState([]);
   const[rLoading,setRLoading]=useState(false);const[rResult,setRResult]=useState(null);
   const[rReforgeId,setRReforgeId]=useState(null);
   const[recruitSuggest,setRecruitSuggest]=useState(null);const[recruitSuggestLoading,setRecruitSuggestLoading]=useState(false);
@@ -182,6 +187,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
   const[rPipelineStage,setRPipelineStage]=useState(0);// 0=personality,1=power,2=costume,3=done
   const[costumeAnswers,setCostumeAnswers]=useState({});
   const[costumeForgeStep,setCostumeForgeStep]=useState(0);
+  const[rPowerReforgeTarget,setRPowerReforgeTarget]=useState(null);// existing roster member being power-reforged
   // ── Meta AI / Tripo3D preferences ────────────────────────────────────────
   const[hasMetaAI,setHasMetaAI]=useState(false);
   const[tripo3DTarget,setTripo3DTarget]=useState(null);
@@ -191,10 +197,11 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
   const[vStep,setVStep]=useState(0);const[vAnswers,setVAnswers]=useState({});
   const[vName,setVName]=useState("");const[vTargetTeams,setVTargetTeams]=useState([]);
   const[vGender,setVGender]=useState("Male");
+  const[vInspirations,setVInspirations]=useState([]);
   const[vLoading,setVLoading]=useState(false);const[vResult,setVResult]=useState(null);
   const[editingVillainTarget,setEditingVillainTarget]=useState(null);
   const[editingRogueTarget,setEditingRogueTarget]=useState(null);
-  const[vtDraft,setVtDraft]=useState({teams:[],heroes:[],realName:"",heroName:""});
+  const[vtDraft,setVtDraft]=useState({teams:[],heroes:[],realName:"",heroName:"",hometown:"",baseOfOps:""});
   const[vDeepMode,setVDeepMode]=useState(false);
   const[vProfileMode,setVProfileMode]=useState(false);
   const[vDeepPhase,setVDeepPhase]=useState(0);
@@ -215,6 +222,8 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
   const[pPose,setPPose]=useState("3/4");
   const[pSelected,setPSelected]=useState(null);
   const[pLoading,setPLoading]=useState(false);const[pResult,setPResult]=useState(null);const[sheetLoading,setSheetLoading]=useState(false);
+  const[soloPromptResult,setSoloPromptResult]=useState(null);
+  const[soloLocEdit,setSoloLocEdit]=useState({open:false,hometown:"",baseOfOps:""});
   const[duoA,setDuoA]=useState("");const[duoB,setDuoB]=useState("");
   const pResultRef=useRef(null);
   useEffect(()=>{if(pResult&&pResultRef.current)setTimeout(()=>pResultRef.current?.scrollIntoView({behavior:"smooth",block:"nearest"}),80);},[pResult]);
@@ -245,6 +254,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
   const[saved,setSaved]=useState(false);
   const[pdfLoading,setPdfLoading]=useState(false);
   const[allDossierLoading,setAllDossierLoading]=useState(false);
+  const[encLoading,setEncLoading]=useState(false);
   const[lightMode,setLightMode]=useState(()=>{try{return localStorage.getItem("forge-theme")==="light";}catch{return false;}});
 
   useEffect(()=>{
@@ -306,6 +316,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
       try{const d=await storage.get("forge-villain-factions");setVillainFactions(JSON.parse(d.value)||[]);}catch(e){}
       try{const d=await storage.get("forge-villain-alliances");setVillainAlliances(JSON.parse(d.value)||[]);}catch(e){}
       try{const d=await storage.get("forge-universe");if(d)setUniverseData(JSON.parse(d.value)||{});}catch(e){}
+      try{const d=await storage.get("forge-race-abilities");if(d)setRaceAbilities(JSON.parse(d.value)||{});}catch(e){}
     })();
   },[]);
 
@@ -487,6 +498,10 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     const updated=soloHeroes.filter(h=>h.id!==heroId);setSoloHeroes(updated);persist("forge-solo-heroes",updated);
     if(activeSoloId===heroId)setActiveSoloId(null);
   },[soloHeroes,activeSoloId,persist]);
+  const patchSoloHero=useCallback((heroId,fields)=>{
+    const updated=soloHeroes.map(h=>h.id===heroId?{...h,...fields}:h);
+    setSoloHeroes(updated);persist("forge-solo-heroes",updated);
+  },[soloHeroes,persist]);
   const addSoloRogueFn=useCallback((heroId,rogue)=>{
     const existing=soloVillains[heroId]||[];
     const updated={...soloVillains,[heroId]:[...existing,rogue]};setSoloVillains(updated);persist("forge-solo-villains",updated);
@@ -503,7 +518,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     const raceStr=raceLabel(scRace);const raceLoreStr=raceLore(scRace);
     const computedAge=scAge||(scBirthYear?String(2026-parseInt(scBirthYear)):"");
     try{
-      const p=await callAI(`Create a solo independent superhero (no team). JSON only.\n\nReal name: ${scName||"Unknown"}\nGender: ${scGender}\nAge: ${computedAge||"Unknown"}\n${scBirthYear?`Birth year: ${scBirthYear}\n`:""}Race: ${raceStr||"Unspecified"}\n${raceLoreStr?`Race lore: ${raceLoreStr}\n`:""}${scStoryDir.trim()?`Story direction: ${scStoryDir.trim()}\n`:""}Color palette: ${colorDesc}\n${scHeroName?`Hero name: ${scHeroName} (use exactly this name)`:"Hero name: (choose a fitting name)"}\nIMPORTANT: Use correct pronouns (${pronounOf(scGender)}/${pronounOf(scGender)==="they"?"them":pronounOf(scGender)==="she"?"her":"him"}) throughout.\nThis hero operates alone. Their origin and motivation should reflect that — no team dependency, personal mission, personal rogues gallery.\nQuiz:\n${answers||"Not provided"}\n\n{"heroName":"${scHeroName||"2-word hero name"}","tagline":"one piercing sentence capturing their solo essence","role":"Role · Descriptor (no team)","origin":"3-4 sentences — personal backstory, why they operate alone, what drives them","powers":[{"name":"Power","desc":"visual desc"},{"name":"Power","desc":"visual desc"},{"name":"Power","desc":"visual desc"},{"name":"Power","desc":"visual desc"}],"stats":{"Power":75,"Speed":70,"Tech":60,"Intellect":80,"Will":85},"costumeDesc":"costume using color palette ${colorDesc}","powerFX":"visual power effects using color palette ${colorDesc}","consistencyNotes":"design lock rules","dna":["Inspiration 1","Inspiration 2"]}`,t=>{});
+      const p=await callAI(`Create a solo independent superhero (no team). JSON only.\n\nReal name: ${scName||"Unknown"}\nGender: ${scGender}\nAge: ${computedAge||"Unknown"}\n${scBirthYear?`Birth year: ${scBirthYear}\n`:""}Race: ${raceStr||"Unspecified"}\n${raceLoreStr?`Race lore: ${raceLoreStr}\n`:""}${scStoryDir.trim()?`Story direction: ${scStoryDir.trim()}\n`:""}${inspLine(scInspirations)}Color palette: ${colorDesc}\n${scHeroName?`Hero name: ${scHeroName} (use exactly this name)`:"Hero name: (choose a fitting name)"}\nIMPORTANT: Use correct pronouns (${pronounOf(scGender)}/${pronounOf(scGender)==="they"?"them":pronounOf(scGender)==="she"?"her":"him"}) throughout.\nThis hero operates alone. Their origin and motivation should reflect that — no team dependency, personal mission, personal rogues gallery.\nQuiz:\n${answers||"Not provided"}\n\n{"heroName":"${scHeroName||"2-word hero name"}","tagline":"one piercing sentence capturing their solo essence","role":"Role · Descriptor (no team)","origin":"3-4 sentences — personal backstory, why they operate alone, what drives them","powers":[{"name":"Power","desc":"visual desc"},{"name":"Power","desc":"visual desc"},{"name":"Power","desc":"visual desc"},{"name":"Power","desc":"visual desc"}],"stats":{"Power":75,"Speed":70,"Tech":60,"Intellect":80,"Will":85},"costumeDesc":"costume using color palette ${colorDesc}","powerFX":"visual power effects using color palette ${colorDesc}","consistencyNotes":"design lock rules","dna":["Inspiration 1","Inspiration 2"]}`,t=>{});
       setScResult({id:`solo-${Date.now()}`,solo:true,teamId:null,realName:scName||"Unknown",gender:scGender,age:computedAge,birthYear:scBirthYear||"",race:scRace,species:raceStr||"Human",color:hex,colorPalette:scColors,colorLight:hex+"CC",initials:scName?scName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",isCustom:true,...p});
     }catch(e){if(e.message!=="Generation cancelled.")setScResult({error:true,msg:e.message});}
     setScLoading(false);
@@ -520,7 +535,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     const dnaUnivOpt=DEEP_LORE_PHASES[0]?.questions?.find(q=>q.id==="universe")?.options?.find(o=>o.id===scDeepAnswers.universe);
     const dnaFoundation=[dnaInspoOpt?.label,dnaUnivOpt?.label].filter(Boolean).join(", ");
     try{
-      const p=await callAI(`Create a deeply developed solo independent superhero (no team) using rich comic book lore. JSON only.\n\nReal name: ${scName||"Unknown"}\nGender: ${scGender}\nAge: ${computedAge||"Unknown"}\n${scBirthYear?`Birth year: ${scBirthYear}\n`:""}Race: ${raceStr||"Unspecified"}\n${raceLoreStr?`Race lore (bake into origin): ${raceLoreStr}\n`:""}${scStoryDir.trim()?`Story direction: ${scStoryDir.trim()}\n`:""}Color palette: ${colorDesc}\n${scHeroName?`Hero name: ${scHeroName} (use exactly this name)`:"Hero name: (choose a distinct fitting name)"}\nIMPORTANT: Use correct pronouns (${pronounOf(scGender)}/${pronounOf(scGender)==="they"?"them":pronounOf(scGender)==="she"?"her":"him"}) throughout.\nThis hero operates alone. Personal mission, personal rogues gallery, no team dependency.\n${dnaFoundation?`\nCHARACTER DNA FOUNDATION: ${dnaFoundation}\n`:""}\nFull lore profile:\n${loreContext}\n\n{"heroName":"${scHeroName||"2-word hero name"}","tagline":"one piercing sentence capturing their solo essence","role":"Role · Descriptor (no team)","origin":"3-4 sentences — personal backstory and solo drive, reflecting lore answers and race","powers":[{"name":"Power name","desc":"visual desc"},{"name":"Power name","desc":"visual desc"},{"name":"Power name","desc":"visual desc"},{"name":"Power name","desc":"visual desc"}],"stats":{"Power":75,"Speed":70,"Tech":60,"Intellect":80,"Will":85},"costumeDesc":"costume using color palette ${colorDesc}, reflecting costume philosophy answer","powerFX":"visual power effects using color palette ${colorDesc}, matching FX style answer","consistencyNotes":"2-3 design lock rules","dna":["Primary inspiration","Secondary inspiration"]}`,t=>{});
+      const p=await callAI(`Create a deeply developed solo independent superhero (no team) using rich comic book lore. JSON only.\n\nReal name: ${scName||"Unknown"}\nGender: ${scGender}\nAge: ${computedAge||"Unknown"}\n${scBirthYear?`Birth year: ${scBirthYear}\n`:""}Race: ${raceStr||"Unspecified"}\n${raceLoreStr?`Race lore (bake into origin): ${raceLoreStr}\n`:""}${scStoryDir.trim()?`Story direction: ${scStoryDir.trim()}\n`:""}${inspLine(scInspirations)}Color palette: ${colorDesc}\n${scHeroName?`Hero name: ${scHeroName} (use exactly this name)`:"Hero name: (choose a distinct fitting name)"}\nIMPORTANT: Use correct pronouns (${pronounOf(scGender)}/${pronounOf(scGender)==="they"?"them":pronounOf(scGender)==="she"?"her":"him"}) throughout.\nThis hero operates alone. Personal mission, personal rogues gallery, no team dependency.\n${dnaFoundation?`\nCHARACTER DNA FOUNDATION: ${dnaFoundation}\n`:""}\nFull lore profile:\n${loreContext}\n\n{"heroName":"${scHeroName||"2-word hero name"}","tagline":"one piercing sentence capturing their solo essence","role":"Role · Descriptor (no team)","origin":"3-4 sentences — personal backstory and solo drive, reflecting lore answers and race","powers":[{"name":"Power name","desc":"visual desc"},{"name":"Power name","desc":"visual desc"},{"name":"Power name","desc":"visual desc"},{"name":"Power name","desc":"visual desc"}],"stats":{"Power":75,"Speed":70,"Tech":60,"Intellect":80,"Will":85},"costumeDesc":"costume using color palette ${colorDesc}, reflecting costume philosophy answer","powerFX":"visual power effects using color palette ${colorDesc}, matching FX style answer","consistencyNotes":"2-3 design lock rules","dna":["Primary inspiration","Secondary inspiration"]}`,t=>{});
       setScResult({id:`solo-${Date.now()}`,solo:true,teamId:null,realName:scName||"Unknown",gender:scGender,age:computedAge,birthYear:scBirthYear||"",race:scRace,species:raceStr||"Human",color:hex,colorPalette:scColors,colorLight:hex+"CC",initials:scName?scName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",isCustom:true,deepLore:scDeepAnswers,...p});
     }catch(e){if(e.message!=="Generation cancelled.")setScResult({error:true,msg:e.message});}
     setScLoading(false);
@@ -534,7 +549,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     const computedAge=scAge||(scBirthYear?String(2026-parseInt(scBirthYear)):"");
     const profileContext=PERSONAL_PROFILE.map(sec=>`== ${sec.section} ==\n`+sec.questions.map(q=>{const opt=q.options.find(o=>o.id===scProfileAnswers[q.id]);return opt?`${q.q}\n→ ${opt.value}`:""}).filter(Boolean).join("\n")).join("\n\n");
     try{
-      const p=await callAI(`Create a solo independent superhero (no team) built entirely from this person's real psychological profile. JSON only.\n\nEvery power, origin, and trait must grow directly from who this person actually is.\n\nReal name: ${scName||"Unknown"}\nGender: ${scGender}\nAge: ${computedAge||"Unknown"}\n${scBirthYear?`Birth year: ${scBirthYear}\n`:""}Race: ${raceStr||"Unspecified"}\n${raceLoreStr?`Race lore (bake into origin): ${raceLoreStr}\n`:""}${scStoryDir.trim()?`Story direction: ${scStoryDir.trim()}\n`:""}Color palette: ${colorDesc}\n${scHeroName?`Hero name: ${scHeroName} (use exactly this name)`:""}\nIMPORTANT: Use correct pronouns (${pronounOf(scGender)}/${pronounOf(scGender)==="they"?"them":pronounOf(scGender)==="she"?"her":"him"}) throughout.\nThis hero operates alone. Personal mission, no team dependency.\n\nPERSONAL PROFILE:\n\n${profileContext}\n\n{"heroName":"${scHeroName||"hero name that fits who they actually are"}","tagline":"one sentence capturing their specific truth","role":"Role · Descriptor drawn from their actual function","origin":"3-4 sentences — direct reflection of their wound, proving ground, and what they protect alone","powers":[{"name":"Power name traceable to their specific trait","desc":"How this power looks — directly from who they are"},{"name":"Power name","desc":"visual desc"},{"name":"Power name","desc":"visual desc"},{"name":"Power name","desc":"visual desc"}],"stats":{"Power":75,"Speed":70,"Tech":60,"Intellect":80,"Will":85},"costumeDesc":"Costume from their color and symbol answers using color palette ${colorDesc}","powerFX":"Exact visual FX using color palette ${colorDesc} — matches their power texture answer","consistencyNotes":"Design rules from their identity choices","dna":["Archetype mirroring this profile","Second reference"]}`,t=>{});
+      const p=await callAI(`Create a solo independent superhero (no team) built entirely from this person's real psychological profile. JSON only.\n\nEvery power, origin, and trait must grow directly from who this person actually is.\n\nReal name: ${scName||"Unknown"}\nGender: ${scGender}\nAge: ${computedAge||"Unknown"}\n${scBirthYear?`Birth year: ${scBirthYear}\n`:""}Race: ${raceStr||"Unspecified"}\n${raceLoreStr?`Race lore (bake into origin): ${raceLoreStr}\n`:""}${scStoryDir.trim()?`Story direction: ${scStoryDir.trim()}\n`:""}${inspLine(scInspirations)}Color palette: ${colorDesc}\n${scHeroName?`Hero name: ${scHeroName} (use exactly this name)`:""}\nIMPORTANT: Use correct pronouns (${pronounOf(scGender)}/${pronounOf(scGender)==="they"?"them":pronounOf(scGender)==="she"?"her":"him"}) throughout.\nThis hero operates alone. Personal mission, no team dependency.\n\nPERSONAL PROFILE:\n\n${profileContext}\n\n{"heroName":"${scHeroName||"hero name that fits who they actually are"}","tagline":"one sentence capturing their specific truth","role":"Role · Descriptor drawn from their actual function","origin":"3-4 sentences — direct reflection of their wound, proving ground, and what they protect alone","powers":[{"name":"Power name traceable to their specific trait","desc":"How this power looks — directly from who they are"},{"name":"Power name","desc":"visual desc"},{"name":"Power name","desc":"visual desc"},{"name":"Power name","desc":"visual desc"}],"stats":{"Power":75,"Speed":70,"Tech":60,"Intellect":80,"Will":85},"costumeDesc":"Costume from their color and symbol answers using color palette ${colorDesc}","powerFX":"Exact visual FX using color palette ${colorDesc} — matches their power texture answer","consistencyNotes":"Design rules from their identity choices","dna":["Archetype mirroring this profile","Second reference"]}`,t=>{});
       setScResult({id:`solo-${Date.now()}`,solo:true,teamId:null,realName:scName||"Unknown",gender:scGender,age:computedAge,birthYear:scBirthYear||"",race:scRace,species:raceStr||"Human",color:hex,colorPalette:scColors,colorLight:hex+"CC",initials:scName?scName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",isCustom:true,profileLore:Object.keys(scProfileAnswers).length,...p});
     }catch(e){if(e.message!=="Generation cancelled.")setScResult({error:true,msg:e.message});}
     setScLoading(false);
@@ -558,6 +573,40 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     else if(hero.profileLore){setScProfileMode(true);}
     setScReforgeId(hero.id);setShowSoloCreator(true);
   };
+
+  const startSoloPowerReforge=(hero)=>{
+    resetSoloCreator();
+    setScPowerReforgeTarget(hero);
+    setScPowerForgePhase(1);
+    setShowSoloCreator(true);
+  };
+
+  const generateSoloPowerReforge=async()=>{
+    const hero=scPowerReforgeTarget;
+    if(!hero)return;
+    setScLoading(true);setAiStreamText("");
+    const hex=hero.color||"#888780";
+    const colorDesc=ACCENT_COLORS.find(a=>a.hex===hex)?.label||hexToColorName(hex);
+    const pfContext=POWER_FORGE_PHASES.map(ph=>{
+      const qLines=ph.questions.map(q=>{const opt=q.options.find(o=>o.id===scPowerForgeAnswers[q.id]);return opt?`${q.q}\n→ ${opt.value}`:null;}).filter(Boolean).join("\n");
+      return`[${ph.title}]\n${qLines}`;
+    }).join("\n\n");
+    const pronouns=pronounOf(hero.gender||"Male");
+    try{
+      const p=await callAI(`Design the powers and combat stats for this hero. JSON only. Return ONLY powers, stats, and powerFX.\n\nHero: ${hero.heroName}\nRole: ${hero.role||""}\nOrigin: ${hero.origin||""}\nTagline: ${hero.tagline||""}\nColor palette: ${colorDesc}\n${inspLine(scInspirations)}IMPORTANT: Use correct pronouns (${pronouns}/${pronouns==="they"?"them":pronouns==="she"?"her":"him"}) throughout.\n\nPOWER FORGE PROFILE:\n${pfContext}\n\nBuild four signature powers as direct expressions of this profile. Power FX must visually match the element, color, and signature answers exactly.\n\n{"powers":[{"name":"Name","desc":"2-sentence visual desc matching Power Forge answers"},{"name":"Name","desc":"2-sentence visual desc"},{"name":"Name","desc":"2-sentence visual desc"},{"name":"Name","desc":"2-sentence visual desc"}],"stats":{"Power":75,"Speed":70,"Tech":60,"Intellect":80,"Will":85},"powerFX":"power effects matching element and color answers exactly — using color palette ${colorDesc}"}`,t=>setAiStreamText(t));
+      setScResult({...p,powerForgeLore:Object.keys(scPowerForgeAnswers).length});
+    }catch(e){if(e.message!=="Generation cancelled.")console.error(e);}
+    setScLoading(false);setAiStreamText("");
+  };
+
+  const applySoloPowerReforge=()=>{
+    if(!scResult||!scPowerReforgeTarget)return;
+    const updated={...scPowerReforgeTarget,powers:scResult.powers,stats:scResult.stats,powerFX:scResult.powerFX,powerForgeLore:scResult.powerForgeLore};
+    const newHeroes=soloHeroes.map(h=>h.id===scPowerReforgeTarget.id?updated:h);
+    setSoloHeroes(newHeroes);persist("forge-solo-heroes",newHeroes);
+    setShowSoloCreator(false);resetSoloCreator();
+  };
+
   const generateSoloStory=async(hero,rogues)=>{
     if(!hero||rogues.length===0)return;
     setSoloStoryLoading(true);setSoloStoryResult(null);
@@ -623,6 +672,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
   },[]);
 
   // ── AI ────────────────────────────────────────────────────────────────────
+  const inspLine=(insps)=>{const f=(insps||[]).filter(s=>s.trim());return f.length?`Character inspirations (bake powers and visual style around these — never name-drop, influence only): ${f.join(", ")}\n`:"";}
   const callAI=useCallback(async(prompt,onToken,maxTokens=1500)=>{
     const controller=new AbortController();
     genControllerRef.current=controller;
@@ -691,7 +741,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     try{
       const raceStr=raceLabel(rRace);
       const raceLoreStr=raceLore(rRace);
-      const p=await callAI(`Create the PERSONALITY PROFILE of a ${activeTeam.name} team hero. JSON only. Do NOT include powers or stats — those are determined in a separate Power Forge step.\n\nReal name: ${rName||"Unknown"}\nGender: ${rGender}\nAge: ${rAge||(rBirthYear?String(2026-parseInt(rBirthYear)):"Unknown")}\n${rBirthYear?`Birth year: ${rBirthYear}\n`:""}Race: ${raceStr||"Unspecified"}\n${raceLoreStr?`Race lore (bake into origin): ${raceLoreStr}\n`:""}${rStoryDir.trim()?`Story direction (shape the origin around this): ${rStoryDir.trim()}\n`:""}Team: ${activeTeam.name} (${teamType})\nColor palette: ${colorDesc}\nTeam alignment: ${rNkAlign}\nExisting names (pick different): ${existingNames||"none yet"}\n${rHeroName?`Hero name: ${rHeroName} (use exactly this name)`:"Hero name: (choose a fitting dark name)"}\nQuiz:\n${answers}\n\nIMPORTANT: Use correct pronouns (${pronounOf(rGender)}/${pronounOf(rGender)==="they"?"them":pronounOf(rGender)==="she"?"her":"him"}) for this character throughout.\nIMPORTANT: Pick 2-3 specific comic or anime characters as DNA for this hero based on the quiz answers. Bake these invisibly into the output — tagline capturing their essence, origin echoing their arc. Never name-drop them; only list in the dna array.\n\n{"heroName":"${rHeroName||"2-word dark name"}","tagline":"one punchy sentence","role":"Role · Descriptor","origin":"2-3 sentences connected to the team and their world — reflect their race biology and birth year context if provided","dna":["Character whose energy shapes this hero — e.g. Vegeta","Character whose arc or personality informs their story"]}`,t=>setAiStreamText(t));
+      const p=await callAI(`Create the PERSONALITY PROFILE of a ${activeTeam.name} team hero. JSON only. Do NOT include powers or stats — those are determined in a separate Power Forge step.\n\nReal name: ${rName||"Unknown"}\nGender: ${rGender}\nAge: ${rAge||(rBirthYear?String(2026-parseInt(rBirthYear)):"Unknown")}\n${rBirthYear?`Birth year: ${rBirthYear}\n`:""}Race: ${raceStr||"Unspecified"}\n${raceLoreStr?`Race lore (bake into origin): ${raceLoreStr}\n`:""}${rStoryDir.trim()?`Story direction (shape the origin around this): ${rStoryDir.trim()}\n`:""}${inspLine(rInspirations)}Team: ${activeTeam.name} (${teamType})\nColor palette: ${colorDesc}\nTeam alignment: ${rNkAlign}\nExisting names (pick different): ${existingNames||"none yet"}\n${rHeroName?`Hero name: ${rHeroName} (use exactly this name)`:"Hero name: (choose a fitting dark name)"}\nQuiz:\n${answers}\n\nIMPORTANT: Use correct pronouns (${pronounOf(rGender)}/${pronounOf(rGender)==="they"?"them":pronounOf(rGender)==="she"?"her":"him"}) for this character throughout.\nIMPORTANT: Pick 2-3 specific comic or anime characters as DNA for this hero based on the quiz answers. Bake these invisibly into the output — tagline capturing their essence, origin echoing their arc. Never name-drop them; only list in the dna array.\n\n{"heroName":"${rHeroName||"2-word dark name"}","tagline":"one punchy sentence","role":"Role · Descriptor","origin":"2-3 sentences connected to the team and their world — reflect their race biology and birth year context if provided","dna":["Character whose energy shapes this hero — e.g. Vegeta","Character whose arc or personality informs their story"]}`,t=>setAiStreamText(t));
       const num=String(activeRoster.length+1).padStart(2,"0");
       const computedAge=rAge||(rBirthYear?String(2026-parseInt(rBirthYear)):"");
       setRResult({id:`char-${Date.now()}`,teamId:activeTeamId,realName:rName||"Unknown",gender:rGender,age:computedAge,birthYear:rBirthYear||"",race:rRace,species:raceLabel(rRace)||"Human",color:hex,colorPalette:rColors,colorLight:hex+"CC",initials:rName?rName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",number:num,isCustom:true,nkAlignment:rNkAlign,teamRank:rTeamRank,powers:[],stats:{Power:50,Speed:50,Tech:50,Intellect:50,Will:50},costumeDesc:"",powerFX:"",consistencyNotes:"",...p});
@@ -710,7 +760,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     }).join("\n\n");
     const pfContext=buildPFContext();
     try{
-      const p=await callAI(`Design the powers and combat stats for this hero. JSON only. Return ONLY powers, stats, and powerFX — do NOT return heroName, tagline, origin, costumeDesc, or any other personality fields.\n\nHero: ${rResult?.heroName||rHeroName||"Unknown"}\nRole: ${rResult?.role||""}\nOrigin: ${rResult?.origin||""}\nTagline: ${rResult?.tagline||""}\nColor palette: ${colorDesc}\nIMPORTANT: Use correct pronouns (${pronounOf(rGender)}/${pronounOf(rGender)==="they"?"them":pronounOf(rGender)==="she"?"her":"him"}) throughout.\n\nPOWER FORGE PROFILE:\n${pfContext}\n\nBuild four signature powers as direct expressions of this profile. Power FX must visually match the element, color, and signature answers exactly.\n\n{"powers":[{"name":"Name","desc":"2-sentence visual desc matching Power Forge answers"},{"name":"Name","desc":"2-sentence visual desc"},{"name":"Name","desc":"2-sentence visual desc"},{"name":"Name","desc":"2-sentence visual desc"}],"stats":{"Power":75,"Speed":70,"Tech":60,"Intellect":80,"Will":85},"powerFX":"power effects matching element and color answers exactly — using color palette ${colorDesc}"}`,t=>setAiStreamText(t));
+      const p=await callAI(`Design the powers and combat stats for this hero. JSON only. Return ONLY powers, stats, and powerFX — do NOT return heroName, tagline, origin, costumeDesc, or any other personality fields.\n\nHero: ${rResult?.heroName||rHeroName||"Unknown"}\nRole: ${rResult?.role||""}\nOrigin: ${rResult?.origin||""}\nTagline: ${rResult?.tagline||""}\nColor palette: ${colorDesc}\n${inspLine(rInspirations)}IMPORTANT: Use correct pronouns (${pronounOf(rGender)}/${pronounOf(rGender)==="they"?"them":pronounOf(rGender)==="she"?"her":"him"}) throughout.\n\nPOWER FORGE PROFILE:\n${pfContext}\n\nBuild four signature powers as direct expressions of this profile. Power FX must visually match the element, color, and signature answers exactly.\n\n{"powers":[{"name":"Name","desc":"2-sentence visual desc matching Power Forge answers"},{"name":"Name","desc":"2-sentence visual desc"},{"name":"Name","desc":"2-sentence visual desc"},{"name":"Name","desc":"2-sentence visual desc"}],"stats":{"Power":75,"Speed":70,"Tech":60,"Intellect":80,"Will":85},"powerFX":"power effects matching element and color answers exactly — using color palette ${colorDesc}"}`,t=>setAiStreamText(t));
       setRResult(prev=>({...prev,...p,powerForgeLore:Object.keys(powerForgeAnswers).length}));
       setRPipelineStage(2);
     }catch(e){if(e.message!=="Generation cancelled.")console.error(e);}
@@ -723,7 +773,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
       const updated={...rResult,id:rReforgeId};
       const newRosters={...teamRosters,[activeTeamId]:(teamRosters[activeTeamId]||[]).map(m=>m.id===rReforgeId?updated:m)};
       setTeamRosters(newRosters);persist("forge-rosters",newRosters);
-      setRResult(null);setRAnswers({});setRName("");setRHeroName("");setRStep(0);setRNkAlign("neutral");setRTeamRank("operative");setRGender("Male");setRAge("");setRBirthYear("");setRRace(null);setRStoryDir("");setDeepAnswers({});setDeepPhase(0);setProfileAnswers({});setProfileStep(0);setPowerForgeMode(false);setPowerForgePhase(0);setPowerForgeAnswers({});setRPipelineStage(0);setCostumeAnswers({});setCostumeForgeStep(0);setRFamilyCharId("");setRFamilyRelation("parent");setRFamilyLinks([]);setRHeroAssocId("");setRHeroAssocType("sidekick");setRecruitSuggest(null);setRecruitSuggestLoading(false);setRReforgeId(null);setTab("roster");
+      setRResult(null);setRAnswers({});setRName("");setRHeroName("");setRStep(0);setRNkAlign("neutral");setRTeamRank("operative");setRGender("Male");setRAge("");setRBirthYear("");setRRace(null);setRStoryDir("");setRInspirations([]);setDeepAnswers({});setDeepPhase(0);setProfileAnswers({});setProfileStep(0);setPowerForgeMode(false);setPowerForgePhase(0);setPowerForgeAnswers({});setRPipelineStage(0);setCostumeAnswers({});setCostumeForgeStep(0);setRFamilyCharId("");setRFamilyRelation("parent");setRFamilyLinks([]);setRHeroAssocId("");setRHeroAssocType("sidekick");setRecruitSuggest(null);setRecruitSuggestLoading(false);setRReforgeId(null);setTab("roster");
       return;
     }
     const newRosters={...teamRosters,[activeTeamId]:[...(teamRosters[activeTeamId]||[]),rResult]};
@@ -742,7 +792,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
         persist("forge-hero-assocs",updatedAssocs);
       }
     }
-    setRResult(null);setRAnswers({});setRName("");setRHeroName("");setRStep(0);setRNkAlign("neutral");setRTeamRank("operative");setRGender("Male");setRAge("");setRBirthYear("");setRRace(null);setRStoryDir("");setDeepAnswers({});setDeepPhase(0);setProfileAnswers({});setProfileStep(0);setPowerForgeMode(false);setPowerForgePhase(0);setPowerForgeAnswers({});setRPipelineStage(0);setCostumeAnswers({});setCostumeForgeStep(0);setRFamilyCharId("");setRFamilyRelation("parent");setRFamilyLinks([]);setRHeroAssocId("");setRHeroAssocType("sidekick");setRecruitSuggest(null);setRecruitSuggestLoading(false);setTab("roster");
+    setRResult(null);setRAnswers({});setRName("");setRHeroName("");setRStep(0);setRNkAlign("neutral");setRTeamRank("operative");setRGender("Male");setRAge("");setRBirthYear("");setRRace(null);setRStoryDir("");setRInspirations([]);setDeepAnswers({});setDeepPhase(0);setProfileAnswers({});setProfileStep(0);setPowerForgeMode(false);setPowerForgePhase(0);setPowerForgeAnswers({});setRPipelineStage(0);setCostumeAnswers({});setCostumeForgeStep(0);setRFamilyCharId("");setRFamilyRelation("parent");setRFamilyLinks([]);setRHeroAssocId("");setRHeroAssocType("sidekick");setRecruitSuggest(null);setRecruitSuggestLoading(false);setTab("roster");
   };
   const startRecruitReforge=(member)=>{
     setRResult(null);setRAnswers({});setRStep(0);setDeepPhase(0);setDeepAnswers({});setProfileStep(0);setProfileAnswers({});setPowerForgeMode(false);setPowerForgePhase(0);setPowerForgeAnswers({});setRPipelineStage(0);setCostumeAnswers({});setCostumeForgeStep(0);setDeepMode(false);setProfileMode(false);setRecruitSuggest(null);setRecruitSuggestLoading(false);
@@ -750,6 +800,25 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     if(member.deepLore&&typeof member.deepLore==="object"&&!Array.isArray(member.deepLore)){setDeepMode(true);setDeepAnswers(member.deepLore);setDeepPhase(0);}
     else if(member.profileLore){setProfileMode(true);}
     setRReforgeId(member.id);setTab("recruit");
+  };
+
+  const startPowerReforgeOnMember=(member)=>{
+    setPowerForgePhase(1);setPowerForgeAnswers({});setRPipelineStage(1);setCostumeAnswers({});setCostumeForgeStep(0);
+    setRResult({heroName:member.heroName,role:member.role,origin:member.origin,tagline:member.tagline,color:member.color,colorLight:member.colorLight,realName:member.realName});
+    setRColors(member.colorPalette?.length?member.colorPalette:member.color?[member.color]:["#A32D2D"]);
+    setRGender(member.gender||"Male");
+    setRPowerReforgeTarget(member);
+    setTab("recruit");
+  };
+
+  const applyPowerReforge=()=>{
+    if(!rResult||!rPowerReforgeTarget)return;
+    const updated={...rPowerReforgeTarget,powers:rResult.powers,stats:rResult.stats,powerFX:rResult.powerFX,powerForgeLore:rResult.powerForgeLore};
+    const newRosters={...teamRosters};
+    Object.keys(newRosters).forEach(tid=>{newRosters[tid]=(newRosters[tid]||[]).map(m=>m.id===rPowerReforgeTarget.id?updated:m);});
+    setTeamRosters(newRosters);persist("forge-rosters",newRosters);
+    setRPowerReforgeTarget(null);setRResult(null);setPowerForgePhase(0);setPowerForgeAnswers({});setRPipelineStage(0);setCostumeAnswers({});setCostumeForgeStep(0);
+    setTab("roster");
   };
 
   const runAIRecruit=async()=>{
@@ -785,7 +854,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     try{
       const raceStr=raceLabel(rRace);
       const raceLoreStr=raceLore(rRace);
-      const p=await callAI(`Create the PERSONALITY PROFILE of a deeply developed ${activeTeam.name} hero using rich comic book lore. JSON only. Do NOT include powers or stats — those are determined in a separate Power Forge step.\n\nReal name: ${rName||"Unknown"}\nGender: ${rGender}\nAge: ${rAge||(rBirthYear?String(2026-parseInt(rBirthYear)):"Unknown")}\n${rBirthYear?`Birth year: ${rBirthYear}\n`:""}Race: ${raceStr||"Unspecified"}\n${raceLoreStr?`Race lore (bake into origin): ${raceLoreStr}\n`:""}${rStoryDir.trim()?`Story direction (shape the origin around this): ${rStoryDir.trim()}\n`:""}Color palette: ${colorDesc}\nTeam alignment: ${rNkAlign}\nExisting names (must be different): ${existingNames||"none"}\n${rHeroName?`Hero name: ${rHeroName} (use exactly this name)`:"Hero name: (choose a distinct name fitting the lore profile)"}\nTeam: ${activeTeam.name}\nIMPORTANT: Use correct pronouns (${pronounOf(rGender)}/${pronounOf(rGender)==="they"?"them":pronounOf(rGender)==="she"?"her":"him"}) for this character throughout.\n${dnaFoundation?`\nCHARACTER DNA FOUNDATION (bake these invisibly into every field — origin reflecting their arc pattern, personality in the tagline — filter through the universe this team inhabits, never reference by name except in the dna array):\n${dnaFoundation}\n`:""}\nFull lore profile:\n${loreContext}${freeText?"\nVisual references: "+freeText:""}\n\nUse this lore to create a hero personality that feels authentic to these inspirations. JSON:\n{"heroName":"${rHeroName||"2-word hero name, distinct and fitting the lore profile"}","tagline":"one piercing sentence that captures their essence","role":"Role · Descriptor","origin":"3-4 sentences backstory that directly reflects the lore answers — specific and rooted in their race and birth year context","dna":["Primary DNA — exact character name like Vegeta or Moon Knight","Secondary DNA — another specific character baked into this hero","Optional third DNA — only if genuinely applicable"]}`,t=>setAiStreamText(t));
+      const p=await callAI(`Create the PERSONALITY PROFILE of a deeply developed ${activeTeam.name} hero using rich comic book lore. JSON only. Do NOT include powers or stats — those are determined in a separate Power Forge step.\n\nReal name: ${rName||"Unknown"}\nGender: ${rGender}\nAge: ${rAge||(rBirthYear?String(2026-parseInt(rBirthYear)):"Unknown")}\n${rBirthYear?`Birth year: ${rBirthYear}\n`:""}Race: ${raceStr||"Unspecified"}\n${raceLoreStr?`Race lore (bake into origin): ${raceLoreStr}\n`:""}${rStoryDir.trim()?`Story direction (shape the origin around this): ${rStoryDir.trim()}\n`:""}${inspLine(rInspirations)}Color palette: ${colorDesc}\nTeam alignment: ${rNkAlign}\nExisting names (must be different): ${existingNames||"none"}\n${rHeroName?`Hero name: ${rHeroName} (use exactly this name)`:"Hero name: (choose a distinct name fitting the lore profile)"}\nTeam: ${activeTeam.name}\nIMPORTANT: Use correct pronouns (${pronounOf(rGender)}/${pronounOf(rGender)==="they"?"them":pronounOf(rGender)==="she"?"her":"him"}) for this character throughout.\n${dnaFoundation?`\nCHARACTER DNA FOUNDATION (bake these invisibly into every field — origin reflecting their arc pattern, personality in the tagline — filter through the universe this team inhabits, never reference by name except in the dna array):\n${dnaFoundation}\n`:""}\nFull lore profile:\n${loreContext}${freeText?"\nVisual references: "+freeText:""}\n\nUse this lore to create a hero personality that feels authentic to these inspirations. JSON:\n{"heroName":"${rHeroName||"2-word hero name, distinct and fitting the lore profile"}","tagline":"one piercing sentence that captures their essence","role":"Role · Descriptor","origin":"3-4 sentences backstory that directly reflects the lore answers — specific and rooted in their race and birth year context","dna":["Primary DNA — exact character name like Vegeta or Moon Knight","Secondary DNA — another specific character baked into this hero","Optional third DNA — only if genuinely applicable"]}`,t=>setAiStreamText(t));
       const num=String(activeRoster.length+1).padStart(2,"0");
       const computedAge=rAge||(rBirthYear?String(2026-parseInt(rBirthYear)):"");
       setRResult({id:`char-${Date.now()}`,teamId:activeTeamId,realName:rName||"Unknown",gender:rGender,age:computedAge,birthYear:rBirthYear||"",race:rRace,species:raceLabel(rRace)||"Human",color:hex,colorPalette:rColors,colorLight:hex+"CC",initials:rName?rName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",number:num,isCustom:true,nkAlignment:rNkAlign,teamRank:rTeamRank,deepLore:deepAnswers,powers:[],stats:{Power:50,Speed:50,Tech:50,Intellect:50,Will:50},costumeDesc:"",powerFX:"",consistencyNotes:"",...p});
@@ -803,7 +872,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     try{
       const raceStr=raceLabel(rRace);
       const raceLoreStr=raceLore(rRace);
-      const p=await callAI(`Create the PERSONALITY PROFILE of a hero built from this person's real psychological profile. JSON only. Do NOT include powers or stats — those are determined in a separate Power Forge step.\n\nThis is not a generic hero — every origin and trait must grow directly from who this specific person actually is.\n\nReal name: ${rName||"Unknown"}\nGender: ${rGender}\nAge: ${rAge||(rBirthYear?String(2026-parseInt(rBirthYear)):"Unknown")}\n${rBirthYear?`Birth year: ${rBirthYear}\n`:""}Race: ${raceStr||"Unspecified"}\n${raceLoreStr?`Race lore (bake into origin): ${raceLoreStr}\n`:""}${rStoryDir.trim()?`Story direction: ${rStoryDir.trim()}\n`:""}Team: ${activeTeam.name}\nColor palette: ${colorDesc}\nTeam alignment: ${rNkAlign}\nExisting names (must be different): ${existingNames||"none"}\n${rHeroName?`Hero name: ${rHeroName} (use exactly this name)`:""}\nIMPORTANT: Use correct pronouns (${pronounOf(rGender)}/${pronounOf(rGender)==="they"?"them":pronounOf(rGender)==="she"?"her":"him"}) throughout.\n\nPERSONAL PROFILE — 25 answers defining who this person actually is:\n\n${profileContext}\n\nBuild the personality from these truths. The origin must reflect their real emotional core. Do not default to generic archetypes.\n\n{"heroName":"${rHeroName||"hero name that fits who they actually are"}","tagline":"one sentence that captures their specific truth","role":"Role · Descriptor drawn from their actual function in life","origin":"3-4 sentences — direct reflection of their wound, proving ground, and what they protect","dna":["Archetype or character whose energy mirrors this profile","Second reference"]}`,t=>setAiStreamText(t));
+      const p=await callAI(`Create the PERSONALITY PROFILE of a hero built from this person's real psychological profile. JSON only. Do NOT include powers or stats — those are determined in a separate Power Forge step.\n\nThis is not a generic hero — every origin and trait must grow directly from who this specific person actually is.\n\nReal name: ${rName||"Unknown"}\nGender: ${rGender}\nAge: ${rAge||(rBirthYear?String(2026-parseInt(rBirthYear)):"Unknown")}\n${rBirthYear?`Birth year: ${rBirthYear}\n`:""}Race: ${raceStr||"Unspecified"}\n${raceLoreStr?`Race lore (bake into origin): ${raceLoreStr}\n`:""}${rStoryDir.trim()?`Story direction: ${rStoryDir.trim()}\n`:""}${inspLine(rInspirations)}Team: ${activeTeam.name}\nColor palette: ${colorDesc}\nTeam alignment: ${rNkAlign}\nExisting names (must be different): ${existingNames||"none"}\n${rHeroName?`Hero name: ${rHeroName} (use exactly this name)`:""}\nIMPORTANT: Use correct pronouns (${pronounOf(rGender)}/${pronounOf(rGender)==="they"?"them":pronounOf(rGender)==="she"?"her":"him"}) throughout.\n\nPERSONAL PROFILE — 25 answers defining who this person actually is:\n\n${profileContext}\n\nBuild the personality from these truths. The origin must reflect their real emotional core. Do not default to generic archetypes.\n\n{"heroName":"${rHeroName||"hero name that fits who they actually are"}","tagline":"one sentence that captures their specific truth","role":"Role · Descriptor drawn from their actual function in life","origin":"3-4 sentences — direct reflection of their wound, proving ground, and what they protect","dna":["Archetype or character whose energy mirrors this profile","Second reference"]}`,t=>setAiStreamText(t));
       const num=String(activeRoster.length+1).padStart(2,"0");
       const computedAge=rAge||(rBirthYear?String(2026-parseInt(rBirthYear)):"");
       setRResult({id:`char-${Date.now()}`,teamId:activeTeamId,realName:rName||"Unknown",gender:rGender,age:computedAge,birthYear:rBirthYear||"",race:rRace,species:raceLabel(rRace)||"Human",color:hex,colorPalette:rColors,colorLight:hex+"CC",initials:rName?rName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",number:num,isCustom:true,nkAlignment:rNkAlign,teamRank:rTeamRank,profileLore:answerCount,powers:[],stats:{Power:50,Speed:50,Tech:50,Intellect:50,Will:50},costumeDesc:"",powerFX:"",consistencyNotes:"",...p});
@@ -822,7 +891,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     }).filter(Boolean).join("\n\n");
     const visualRef=costumeAnswers.visualRef||"";
     try{
-      const p=await callAI(`Design the visual costume and appearance for this hero. JSON only.\n\nHero: ${rResult?.heroName||"Unknown"}\nRole: ${rResult?.role||""}\nOrigin: ${rResult?.origin||""}\nPowers: ${(rResult?.powers||[]).map(pw=>pw.name).join(", ")||"TBD"}\nColor palette: ${colorDesc}\n${visualRef?`Visual references: ${visualRef}\n`:""}\nCOSTUME FORGE ANSWERS:\n${costumeContext}\n\nDesign a costume that is a direct visual translation of these choices. Every material, color, and accessory should feel inevitable given the answers.\n\n{"costumeDesc":"3-4 sentences — detailed costume description, every element grounded in the Forge answers. Use specific material descriptions, color placement, and structural details.","powerFX":"2-3 sentences — exact visual description of how powers look when active, using color palette ${colorDesc} and matching the power visual answer","consistencyNotes":"3 specific design-lock rules — things that must ALWAYS appear in this character's visual representation","visualDNA":["Specific character whose costume design inspired this look — e.g. Moon Knight","Second specific character reference"]}`,t=>setAiStreamText(t));
+      const p=await callAI(`Design the visual costume and appearance for this hero. JSON only.\n\nHero: ${rResult?.heroName||"Unknown"}\nRole: ${rResult?.role||""}\nOrigin: ${rResult?.origin||""}\nPowers: ${(rResult?.powers||[]).map(pw=>pw.name).join(", ")||"TBD"}\nColor palette: ${colorDesc}\n${visualRef?`Visual references: ${visualRef}\n`:""}${inspLine(rInspirations)}\nCOSTUME FORGE ANSWERS:\n${costumeContext}\n\nDesign a costume that is a direct visual translation of these choices. Every material, color, and accessory should feel inevitable given the answers.\n\n{"costumeDesc":"3-4 sentences — detailed costume description, every element grounded in the Forge answers. Use specific material descriptions, color placement, and structural details.","powerFX":"2-3 sentences — exact visual description of how powers look when active, using color palette ${colorDesc} and matching the power visual answer","consistencyNotes":"3 specific design-lock rules — things that must ALWAYS appear in this character's visual representation","visualDNA":["Specific character whose costume design inspired this look — e.g. Moon Knight","Second specific character reference"]}`,t=>setAiStreamText(t));
       setRResult(prev=>({...prev,costumeDesc:p.costumeDesc||prev.costumeDesc,powerFX:p.powerFX||prev.powerFX,consistencyNotes:p.consistencyNotes||prev.consistencyNotes,visualDNA:p.visualDNA||[]}));
       setRPipelineStage(3);
     }catch(e){if(e.message!=="Generation cancelled.")console.error(e);}
@@ -859,7 +928,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
       ?(soloHeroes.find(h=>h.id===rogueMode)?.heroName||"the solo hero")
       :vTargetTeams.map(id=>teams.find(t=>t.id===id)?.name||id).join(", ")||(teams[0]?.name||"the heroes");
     try{
-      const p=await callAI(`Create a villain who threatens: ${targetNames}. JSON only — keys: heroName, tagline, role, origin, powers, stats, dna.\n\nName: ${vName||"Unknown"}\nGender: ${vGender}\nIMPORTANT: Use correct pronouns (${pronounOf(vGender)}/${pronounOf(vGender)==="they"?"them":pronounOf(vGender)==="she"?"her":"him"}) throughout.\nTarget teams: ${targetNames}\nQuiz:\n${answers}\n\n{"heroName":"villain codename","tagline":"one chilling sentence","role":"Threat · Descriptor","origin":"3-4 sentences deeply tied to the target teams","powers":[{"name":"Name","desc":"desc, mirror or counter to a hero ability"},{"name":"Name","desc":"desc"},{"name":"Name","desc":"desc"},{"name":"Name","desc":"desc"}],"stats":{"Power":88,"Speed":78,"Tech":82,"Intellect":90,"Will":88},"dna":["Villain Inspiration 1","Villain Inspiration 2"]}`,t=>setAiStreamText(t));
+      const p=await callAI(`Create a villain who threatens: ${targetNames}. JSON only — keys: heroName, tagline, role, origin, powers, stats, dna.\n\nName: ${vName||"Unknown"}\nGender: ${vGender}\n${inspLine(vInspirations)}IMPORTANT: Use correct pronouns (${pronounOf(vGender)}/${pronounOf(vGender)==="they"?"them":pronounOf(vGender)==="she"?"her":"him"}) throughout.\nTarget teams: ${targetNames}\nQuiz:\n${answers}\n\n{"heroName":"villain codename","tagline":"one chilling sentence","role":"Threat · Descriptor","origin":"3-4 sentences deeply tied to the target teams","powers":[{"name":"Name","desc":"desc, mirror or counter to a hero ability"},{"name":"Name","desc":"desc"},{"name":"Name","desc":"desc"},{"name":"Name","desc":"desc"}],"stats":{"Power":88,"Speed":78,"Tech":82,"Intellect":90,"Will":88},"dna":["Villain Inspiration 1","Villain Inspiration 2"]}`,t=>setAiStreamText(t));
       setVResult({id:`villain-${Date.now()}`,realName:vName||"Unknown",gender:vGender,color:"#8B1A1A",colorLight:"#E07070",initials:vName?vName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",isVillain:true,targetTeams:vTargetTeams.length?vTargetTeams:(teams[0]?[teams[0].id]:[]),...p});
     }catch(e){if(e.message==="Generation cancelled.")setVResult(null);else setVResult({error:true,msg:e.message});}
     setVLoading(false);setAiStreamText("");
@@ -876,7 +945,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
         const newPool=villainPool.map(v=>v.id===vReforgeId?updated:v);
         setVillainPool(newPool);persist("forge-villains",newPool);
       }
-      setVResult(null);setVAnswers({});setVName("");setVStep(0);setVTargetTeams([]);setVGender("Male");setVDeepMode(false);setVProfileMode(false);setVDeepPhase(0);setVDeepAnswers({});setVProfileStep(0);setVProfileAnswers({});setVReforgeId(null);setRogueMode(null);
+      setVResult(null);setVAnswers({});setVName("");setVStep(0);setVTargetTeams([]);setVGender("Male");setVInspirations([]);setVDeepMode(false);setVProfileMode(false);setVDeepPhase(0);setVDeepAnswers({});setVProfileStep(0);setVProfileAnswers({});setVReforgeId(null);setRogueMode(null);
       return;
     }
     if(rogueMode){
@@ -885,7 +954,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     }else{
       const newPool=[...villainPool,vResult];setVillainPool(newPool);persist("forge-villains",newPool);
     }
-    setVResult(null);setVAnswers({});setVName("");setVStep(0);setVTargetTeams([]);setVGender("Male");setVDeepMode(false);setVProfileMode(false);setVDeepPhase(0);setVDeepAnswers({});setVProfileStep(0);setVProfileAnswers({});
+    setVResult(null);setVAnswers({});setVName("");setVStep(0);setVTargetTeams([]);setVGender("Male");setVInspirations([]);setVDeepMode(false);setVProfileMode(false);setVDeepPhase(0);setVDeepAnswers({});setVProfileStep(0);setVProfileAnswers({});
   };
   const startVillainReforge=(villain,heroId=null)=>{
     setVResult(null);setVAnswers({});setVStep(0);setVDeepPhase(0);setVDeepAnswers({});setVProfileStep(0);setVProfileAnswers({});setVDeepMode(false);setVProfileMode(false);
@@ -903,7 +972,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     }else{
       const newPool=[...villainPool,bare];setVillainPool(newPool);persist("forge-villains",newPool);
     }
-    setVResult(null);setVAnswers({});setVName("");setVStep(0);setVTargetTeams([]);setVGender("Male");setVDeepMode(false);setVProfileMode(false);setVDeepPhase(0);setVDeepAnswers({});setVProfileStep(0);setVProfileAnswers({});
+    setVResult(null);setVAnswers({});setVName("");setVStep(0);setVTargetTeams([]);setVGender("Male");setVInspirations([]);setVDeepMode(false);setVProfileMode(false);setVDeepPhase(0);setVDeepAnswers({});setVProfileStep(0);setVProfileAnswers({});
   };
 
   const removeVillain=id=>{
@@ -916,7 +985,9 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     const rn=vtDraft.realName.trim()||undefined;
     const hn=vtDraft.heroName.trim()||undefined;
     const initials=rn?rn.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():undefined;
-    const updated=villainPool.map(v=>v.id===id?{...v,targetTeams:vtDraft.teams,targetHeroes:vtDraft.heroes,...(rn?{realName:rn}:{}),... (hn?{heroName:hn}:{}),... (initials?{initials}:{})}:v);
+    const ht=vtDraft.hometown?.trim()||undefined;
+    const bo=vtDraft.baseOfOps?.trim()||undefined;
+    const updated=villainPool.map(v=>v.id===id?{...v,targetTeams:vtDraft.teams,targetHeroes:vtDraft.heroes,...(rn?{realName:rn}:{}),... (hn?{heroName:hn}:{}),... (initials?{initials}:{}),...(ht!==undefined?{hometown:ht}:{}),...(bo!==undefined?{baseOfOps:bo}:{})}:v);
     setVillainPool(updated);persist("forge-villains",updated);setEditingVillainTarget(null);
   },[villainPool,vtDraft,persist]);
 
@@ -936,7 +1007,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     const dnaUnivOpt=DEEP_VILLAIN_PHASES[0]?.questions?.find(q=>q.id==="universe")?.options?.find(o=>o.id===vDeepAnswers.universe);
     const dnaFoundation=[dnaInspoOpt?.label,dnaUnivOpt?.label].filter(Boolean).join(", ");
     try{
-      const p=await callAI(`Create a deeply developed villain who threatens: ${targetNames}. JSON only — keys: heroName, tagline, role, origin, powers, stats, dna.\n\nName: ${vName||"Unknown"}\nGender: ${vGender}\nIMPORTANT: Use correct pronouns (${pronounOf(vGender)}/${pronounOf(vGender)==="they"?"them":pronounOf(vGender)==="she"?"her":"him"}) throughout.\nTarget: ${targetNames}\n\nThis is a VILLAIN — interpret every lore answer as a dangerous antagonist, not a hero. Archetype becomes threat archetype, drive becomes destructive motivation, visual identity becomes menacing presence.\n${dnaFoundation?`\nVILLAIN DNA FOUNDATION (bake into powers and style invisibly): ${dnaFoundation}\n`:""}\nFull lore profile:\n${loreContext}\n\n{"heroName":"villain codename","tagline":"one chilling sentence","role":"Threat · Descriptor","origin":"3-4 sentences — layered backstory tied to the lore profile and the target","powers":[{"name":"Name","desc":"desc — mirrors or counters a hero ability"},{"name":"Name","desc":"desc"},{"name":"Name","desc":"desc"},{"name":"Name","desc":"desc"}],"stats":{"Power":88,"Speed":78,"Tech":82,"Intellect":90,"Will":88},"costumeDesc":"ominous costume reflecting lore visual answers","powerFX":"dark threatening power FX matching lore style answers","consistencyNotes":"design lock rules","dna":["Villain Inspiration 1","Villain Inspiration 2"]}`,t=>setAiStreamText(t));
+      const p=await callAI(`Create a deeply developed villain who threatens: ${targetNames}. JSON only — keys: heroName, tagline, role, origin, powers, stats, dna.\n\nName: ${vName||"Unknown"}\nGender: ${vGender}\nIMPORTANT: Use correct pronouns (${pronounOf(vGender)}/${pronounOf(vGender)==="they"?"them":pronounOf(vGender)==="she"?"her":"him"}) throughout.\nTarget: ${targetNames}\n\nThis is a VILLAIN — interpret every lore answer as a dangerous antagonist, not a hero. Archetype becomes threat archetype, drive becomes destructive motivation, visual identity becomes menacing presence.\n${dnaFoundation?`\nVILLAIN DNA FOUNDATION (bake into powers and style invisibly): ${dnaFoundation}\n`:""}${inspLine(vInspirations)}\nFull lore profile:\n${loreContext}\n\n{"heroName":"villain codename","tagline":"one chilling sentence","role":"Threat · Descriptor","origin":"3-4 sentences — layered backstory tied to the lore profile and the target","powers":[{"name":"Name","desc":"desc — mirrors or counters a hero ability"},{"name":"Name","desc":"desc"},{"name":"Name","desc":"desc"},{"name":"Name","desc":"desc"}],"stats":{"Power":88,"Speed":78,"Tech":82,"Intellect":90,"Will":88},"costumeDesc":"ominous costume reflecting lore visual answers","powerFX":"dark threatening power FX matching lore style answers","consistencyNotes":"design lock rules","dna":["Villain Inspiration 1","Villain Inspiration 2"]}`,t=>setAiStreamText(t));
       setVResult({id:`villain-${Date.now()}`,realName:vName||"Unknown",gender:vGender,color:"#8B1A1A",colorLight:"#E07070",initials:vName?vName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",isVillain:true,targetTeams:vTargetTeams.length?vTargetTeams:(teams[0]?[teams[0].id]:[]),deepLore:vDeepAnswers,...p});
     }catch(e){if(e.message==="Generation cancelled.")setVResult(null);else setVResult({error:true,msg:e.message});}
     setVLoading(false);setAiStreamText("");
@@ -947,7 +1018,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     const targetNames=rogueMode?(soloHeroes.find(h=>h.id===rogueMode)?.heroName||"the solo hero"):vTargetTeams.map(id=>teams.find(t=>t.id===id)?.name||id).join(", ")||(teams[0]?.name||"the heroes");
     const profileContext=VILLAIN_PERSONAL_PROFILE.map(sec=>`== ${sec.section} ==\n`+sec.questions.map(q=>{const opt=q.options.find(o=>o.id===vProfileAnswers[q.id]);return opt?`${q.q}\n→ ${opt.value}`:""}).filter(Boolean).join("\n")).join("\n\n");
     try{
-      const p=await callAI(`Create a villain who threatens: ${targetNames}, built from this threat profile. JSON only — keys: heroName, tagline, role, origin, powers, stats, dna. JSON only — keys: heroName, tagline, role, origin, powers, stats, dna.\n\nName: ${vName||"Unknown"}\nGender: ${vGender}\nIMPORTANT: Use correct pronouns (${pronounOf(vGender)}/${pronounOf(vGender)==="they"?"them":pronounOf(vGender)==="she"?"her":"him"}) throughout.\nTarget: ${targetNames}\n\nThis is a VILLAIN. Interpret every profile answer through a dark lens — their strengths become weapons, their wounds become motivations, their presence becomes a threat.\n\nPERSONAL PROFILE:\n\n${profileContext}\n\n{"heroName":"villain codename fitting their psychological profile","tagline":"one chilling sentence capturing their specific darkness","role":"Threat · Descriptor rooted in their profile","origin":"3-4 sentences — how their psychological wound became a threat to the target","powers":[{"name":"Power emerging from their trait","desc":"How it looks — directly from who they are"},{"name":"Power name","desc":"desc"},{"name":"Power name","desc":"desc"},{"name":"Power name","desc":"desc"}],"stats":{"Power":85,"Speed":78,"Tech":80,"Intellect":92,"Will":90},"costumeDesc":"ominous costume from their visual identity answers","powerFX":"dark power FX matching their power texture answer","consistencyNotes":"design lock rules","dna":["Villain archetype mirroring this profile","Second villain reference"]}`,t=>setAiStreamText(t));
+      const p=await callAI(`Create a villain who threatens: ${targetNames}, built from this threat profile. JSON only — keys: heroName, tagline, role, origin, powers, stats, dna. JSON only — keys: heroName, tagline, role, origin, powers, stats, dna.\n\nName: ${vName||"Unknown"}\nGender: ${vGender}\n${inspLine(vInspirations)}IMPORTANT: Use correct pronouns (${pronounOf(vGender)}/${pronounOf(vGender)==="they"?"them":pronounOf(vGender)==="she"?"her":"him"}) throughout.\nTarget: ${targetNames}\n\nThis is a VILLAIN. Interpret every profile answer through a dark lens — their strengths become weapons, their wounds become motivations, their presence becomes a threat.\n\nPERSONAL PROFILE:\n\n${profileContext}\n\n{"heroName":"villain codename fitting their psychological profile","tagline":"one chilling sentence capturing their specific darkness","role":"Threat · Descriptor rooted in their profile","origin":"3-4 sentences — how their psychological wound became a threat to the target","powers":[{"name":"Power emerging from their trait","desc":"How it looks — directly from who they are"},{"name":"Power name","desc":"desc"},{"name":"Power name","desc":"desc"},{"name":"Power name","desc":"desc"}],"stats":{"Power":85,"Speed":78,"Tech":80,"Intellect":92,"Will":90},"costumeDesc":"ominous costume from their visual identity answers","powerFX":"dark power FX matching their power texture answer","consistencyNotes":"design lock rules","dna":["Villain archetype mirroring this profile","Second villain reference"]}`,t=>setAiStreamText(t));
       setVResult({id:`villain-${Date.now()}`,realName:vName||"Unknown",gender:vGender,color:"#8B1A1A",colorLight:"#E07070",initials:vName?vName.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase():"??",isVillain:true,targetTeams:vTargetTeams.length?vTargetTeams:(teams[0]?[teams[0].id]:[]),profileLore:Object.keys(vProfileAnswers).length,...p});
     }catch(e){if(e.message==="Generation cancelled.")setVResult(null);else setVResult({error:true,msg:e.message});}
     setVLoading(false);setAiStreamText("");
@@ -1011,6 +1082,49 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     t=t.replace(/#[0-9A-Fa-f]{6}\b/g,m=>hexToColorName(m));
     return t;
   };
+  // Auranthi bloodline fractions — how much Auranthi blood each alien species carries
+  const AURANTHI_FRACTION={auranthi:1.0,dravosi:0.5,zyrenian:0.25};
+
+  const saveRaceAbilities=(updated)=>{setRaceAbilities(updated);persist("forge-race-abilities",updated);};
+
+  const getRaceInherentPowers=(hero)=>{
+    const race=hero?.race;
+    if(!race)return[];
+    const au=raceAbilities["auranthi"]||[];
+    const result=[];
+    const addOwn=(raceId,fraction)=>{
+      const own=(raceAbilities[raceId]||[]);
+      const n=Math.ceil(own.length*fraction);
+      own.slice(0,n).forEach(a=>result.push({...a,source:raceId}));
+    };
+    const addAuranthi=(speciesFraction,parentFraction)=>{
+      const pct=AURANTHI_FRACTION[speciesFraction]||0;
+      if(!pct||!au.length)return;
+      const n=Math.floor(au.length*pct*parentFraction);
+      au.slice(0,n).forEach(a=>result.push({...a,source:"auranthi-bloodline"}));
+    };
+    if(race.main==="alien"){
+      const bp=(race.bloodPct??100)/100;
+      addOwn(race.sub,bp);
+      if(race.sub!=="auranthi")addAuranthi(race.sub,bp);
+    } else if(race.main==="hybrid"){
+      [race.sub1,race.sub2].forEach(p=>{
+        if(!p?.main||!p?.sub)return;
+        if(p.main==="alien"){
+          addOwn(p.sub,0.5);
+          if(p.sub!=="auranthi")addAuranthi(p.sub,0.5);
+        } else {
+          addOwn(p.sub,0.5);
+        }
+      });
+    } else {
+      addOwn(race.sub,1);
+    }
+    // deduplicate by name
+    const seen=new Set();
+    return result.filter(a=>{if(seen.has(a.name))return false;seen.add(a.name);return true;});
+  };
+
   // Build color palette description from character palette array
   const palDesc=(c)=>{
     const names=(c.colorPalette?.length?c.colorPalette:[c.color||"#888"]).map(hexToColorName).filter(Boolean);
@@ -1046,6 +1160,34 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     tripo3D=`Full-body 3D character model of ${member.heroName}, ${ph}, ${costume}, neutral A-pose, ${pal}, separate color regions for FDM printing, watertight mesh.`;
     setPResult({member,metaAI,tripo3D,platform:pPlatform});
     setPLoading(false);
+  };
+
+  const generateSoloImagePrompt=(hero,overridePlatform)=>{
+    const plat=overridePlatform||pPlatform;
+    if(overridePlatform){setPPlatform(overridePlatform);persist("forge-prompt-platform",overridePlatform);}
+    const style=ART_STYLES.find(a=>a.id===pStyle)?.text||"character concept art, vibrant colors";
+    const hasRef=images[hero.id];
+    const refPfx=hasRef?"Based on reference image, same face and build. ":"";
+    const costume=sanitizeDesc(hero.costumeDesc||(hexToColorName(hero.color)+" suit"));
+    const fxNote=hero.powerFX?`, subtle ${sanitizeDesc(hero.powerFX)} accent`:"";
+    const ph=physique(hero.gender,hero.age);
+    const pal=palDesc(hero);
+    const poseText=POSE_OPTIONS.find(p=>p.id===pPose)?.hero||POSE_OPTIONS[0].hero;
+    let metaAI,tripo3D;
+    const metaQuality="Realistic render, full body head to toe, feet fully visible, wide shot with space below feet, no cropping, cinematic dramatic lighting, hero headquarters type background, highly detailed, increase resolution, enhanced quality";
+    const phStripped=ph.replace(/^(?:teen |child |young adult )?(?:male|female|person) /i,"");
+    if(plat==="midjourney"){
+      const ref=hasRef?" --cref [upload reference image]":"";
+      metaAI=`${hero.heroName}, ${ph}, ${poseText}. ${costume}${fxNote}, ${pal}, plain background, ${style} --ar 2:3 --v 6.1${ref}`;
+    } else if(plat==="dalle"){
+      metaAI=`${refPfx}${ph}, ${poseText}. ${costume}${fxNote}. ${pal}. Plain clean background. ${style}.`;
+    } else {
+      metaAI=hasRef
+        ?`Using this reference for face and likeness, transform into a person with ${phStripped}, ${poseText}. ${costume}${fxNote}, ${pal}. ${metaQuality}.`
+        :`A ${ph}, ${poseText}. ${costume}${fxNote}, ${pal}. ${metaQuality}.`;
+    }
+    tripo3D=`Full-body 3D character model of ${hero.heroName}, ${ph}, ${costume}, neutral A-pose, ${pal}, separate color regions for FDM printing, watertight mesh.`;
+    setSoloPromptResult({hero,metaAI,tripo3D,platform:plat});
   };
 
   const generateVillainPrompt=(villain)=>{
@@ -1344,6 +1486,39 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     setAllDossierLoading(false);
   };
 
+  const exportEncyclopedia=async()=>{
+    setEncLoading(true);
+    try{
+      const allIds=[
+        ...teams.flatMap(t=>getTeamRoster(t.id).map(m=>m.id)),
+        ...soloHeroes.map(h=>h.id),
+        ...villainPool.map(v=>v.id),
+      ];
+      const b64Images={};
+      for(const id of allIds){
+        const url=images[id];
+        if(url){try{const res=await fetch(url);const blob=await res.blob();const reader=new FileReader();await new Promise(resolve=>{reader.onload=e=>{b64Images[id]=e.target.result;resolve();};reader.readAsDataURL(blob);});}catch(e){}}
+      }
+      const sections=[];
+      for(const t of teams){
+        const roster=getTeamRoster(t.id);
+        if(roster.length>0)sections.push({type:"team",name:t.name,color:t.color||G,abbr:t.abbr||"",members:roster.map(m=>({...m,teamName:t.name,teamColor:t.color||G,nkAlignment:m.nkAlignment||t.nkAlignment||"base",sharedVillains:villainPool.filter(v=>v.targetTeams?.includes(t.id)).map(v=>v.heroName)}))});
+      }
+      if(soloHeroes.length>0)sections.push({type:"solo",name:"Independent Operatives",color:"#888780",members:soloHeroes.map(h=>({...h,teamName:"Independent",teamColor:h.color,nkAlignment:h.nkAlignment||"neutral",sharedVillains:(soloVillains[h.id]||[]).map(v=>v.heroName)}))});
+      if(villainPool.length>0)sections.push({type:"villains",name:"Threat Registry",color:"#8B1A1A",members:villainPool.map(v=>({...v,teamName:"Classified",teamColor:v.color||"#8B1A1A",nkAlignment:"enemy",sharedVillains:[]}))});
+      const allChars=[
+        ...teams.flatMap(t=>getTeamRoster(t.id).map(m=>({id:m.id,heroName:m.heroName,teamName:t.name}))),
+        ...soloHeroes.map(h=>({id:h.id,heroName:h.heroName,teamName:"Independent"})),
+        ...villainPool.map(v=>({id:v.id,heroName:v.heroName,teamName:"Villain"})),
+      ];
+      const res=await fetch("/api/export-encyclopedia",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sections,images:b64Images,familyLinks,heroAssocs,allChars,universeData})});
+      if(!res.ok){const err=await res.json();alert("Encyclopedia error: "+(err.error||"Unknown error"));setEncLoading(false);return;}
+      const blob=await res.blob();const url=URL.createObjectURL(blob);
+      const a=document.createElement("a");a.href=url;a.download="forge-encyclopedia.pdf";document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+    }catch(e){alert("Encyclopedia export failed: "+e.message);}
+    setEncLoading(false);
+  };
+
   // ── Team Power Index ──────────────────────────────────────────────────────
   const getTeamPower=useCallback((teamId)=>{
     const roster=getTeamRoster(teamId);
@@ -1381,7 +1556,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     <div className="fhdr" style={{borderBottom:"1px solid rgba(212,175,55,0.14)",padding:"12px 16px 0",display:"flex",flexDirection:"column",alignItems:"center",background:"var(--header-bg)",backdropFilter:"blur(12px)",position:"sticky",top:0,zIndex:50}}>
 
       {/* Utility controls — top right */}
-      <div style={{position:"absolute",top:8,right:12,display:"flex",alignItems:"center",gap:5,flexWrap:"nowrap"}}>
+      <div className="fhdr-utils" style={{position:"absolute",top:8,right:12,display:"flex",alignItems:"center",gap:5,flexWrap:"nowrap"}}>
         {saved&&<div style={{fontSize:9,color:"#5DCAA5",padding:"3px 8px",background:"rgba(15,110,86,0.12)",border:"1px solid rgba(15,110,86,0.3)",borderRadius:20}}>✓ Saved</div>}
         {updateInfo?.has_update&&<div style={{display:"flex",alignItems:"center",gap:5,padding:"3px 9px",background:"rgba(212,175,55,0.12)",border:"1px solid rgba(212,175,55,0.4)",borderRadius:20,cursor:"pointer"}} onClick={async()=>{if(updatePulling)return;setUpdatePulling(true);const r=await fetch("/api/update/pull",{method:"POST"});const d=await r.json();setUpdatePulling(false);if(d.ok){setUpdateInfo(null);setAppAlert({type:"restart",msg:"Update applied — restart to load the new version."});}else{setAppAlert({type:"error",msg:"Update failed: "+(d.output||"Unknown error")});}}}>
           <div style={{width:5,height:5,borderRadius:"50%",background:G}}/>
@@ -1506,6 +1681,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
             {teams.length>0&&<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
               <div><div style={{fontSize:9,letterSpacing:"0.2em",color:`${G}77`,textTransform:"uppercase",marginBottom:4}}>All Teams</div><div style={{fontSize:13,color:"var(--text2)"}}>Click a team to set it active — all tabs will reflect that team.</div></div>
               <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                <button onClick={exportEncyclopedia} disabled={encLoading} style={{padding:"9px 16px",background:encLoading?"var(--bg3)":`${G}0A`,border:`1px solid ${encLoading?"var(--border2)":`${G}44`}`,borderRadius:8,cursor:encLoading?"not-allowed":"pointer",color:encLoading?"var(--text4)":G,fontSize:10.5,letterSpacing:"0.12em",textTransform:"uppercase",fontFamily:"var(--font-mono)",whiteSpace:"nowrap"}}>{encLoading?"Building...":"⬇ Encyclopedia"}</button>
                 <button onClick={exportAllDossiers} disabled={allDossierLoading} style={{padding:"9px 16px",background:allDossierLoading?"var(--bg3)":"rgba(139,26,26,0.08)",border:`1px solid ${allDossierLoading?"var(--border2)":"rgba(139,26,26,0.4)"}`,borderRadius:8,cursor:allDossierLoading?"not-allowed":"pointer",color:allDossierLoading?"var(--text4)":"#E07070",fontSize:10.5,letterSpacing:"0.12em",textTransform:"uppercase",fontFamily:"var(--font-mono)",whiteSpace:"nowrap"}}>{allDossierLoading?"Building...":"⬇ Universe Dossier"}</button>
                 <button onClick={()=>setShowTeamCreator(true)} style={{padding:"9px 18px",background:`${G}14`,border:`1px solid ${G}`,borderRadius:8,cursor:"pointer",color:G,fontSize:10.5,letterSpacing:"0.12em",textTransform:"uppercase",fontFamily:"var(--font-mono)",whiteSpace:"nowrap"}}>+ New Team</button>
               </div>
@@ -1772,6 +1948,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
               <div className="froster-actions" style={{display:"flex",gap:7,alignItems:"center"}}>
                 <button onClick={e=>{e.stopPropagation();setEditingChar(p=>({...p,[m.id]:!p[m.id]}));setExpanded(p=>({...p,[m.id]:false}));}} style={{fontSize:10.5,padding:"5px 12px",background:editingChar[m.id]?`${m.color}22`:"var(--bg3)",border:`1px solid ${editingChar[m.id]?m.color:"var(--border)"}`,borderRadius:8,cursor:"pointer",color:editingChar[m.id]?m.color:"var(--text3)",fontFamily:"var(--font-mono)"}}>{editingChar[m.id]?"Close":"Edit"}</button>
                 <button onClick={e=>{e.stopPropagation();startRecruitReforge(m);}} style={{fontSize:10.5,padding:"5px 12px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:8,cursor:"pointer",color:"var(--text3)",fontFamily:"var(--font-mono)"}}>Reforge</button>
+                <button onClick={e=>{e.stopPropagation();startPowerReforgeOnMember(m);}} style={{fontSize:10.5,padding:"5px 12px",background:"rgba(245,197,66,0.08)",border:"1px solid rgba(245,197,66,0.3)",borderRadius:8,cursor:"pointer",color:"#F5C542",fontFamily:"var(--font-mono)"}}>⚡ Powers</button>
                 <button onClick={e=>{e.stopPropagation();setSwitchingMember(switchingMember===m.id?null:m.id);setSharingMember(null);}} style={{fontSize:10.5,padding:"5px 12px",background:switchingMember===m.id?`${m.color}22`:"var(--bg3)",border:`1px solid ${switchingMember===m.id?m.color:"var(--border)"}`,borderRadius:8,cursor:"pointer",color:switchingMember===m.id?m.color:"var(--text3)",fontFamily:"var(--font-mono)"}}>Move</button>
                 <button onClick={e=>{e.stopPropagation();setSharingMember(sharingMember===m.id?null:m.id);setSwitchingMember(null);}} style={{fontSize:10.5,padding:"5px 12px",background:sharingMember===m.id?`${m.color}22`:"var(--bg3)",border:`1px solid ${sharingMember===m.id?m.color:"var(--border)"}`,borderRadius:8,cursor:"pointer",color:sharingMember===m.id?m.color:"var(--text3)",fontFamily:"var(--font-mono)"}}>+Team</button>
                 <button onClick={e=>{e.stopPropagation();requirePin(`Remove ${m.heroName} from roster`,()=>removeMember(activeTeamId,m));}} style={{fontSize:10.5,padding:"5px 12px",background:"rgba(163,45,45,0.1)",border:"1px solid rgba(163,45,45,0.28)",borderRadius:8,cursor:"pointer",color:"#e74c3c",fontFamily:"var(--font-mono)"}}>Remove</button>
@@ -1801,7 +1978,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
             {editingChar[m.id]&&<EditPanel member={m} onSave={d=>saveCharEdit(m.id,d,activeTeamId)} onCancel={()=>setEditingChar(p=>({...p,[m.id]:false}))} callAI={callAI} teamName={activeTeam.name}/>}
             {expanded[m.id]&&!editingChar[m.id]&&!switchingMember&&!sharingMember&&(()=>{
               const mTeams=(memberTeamMap[m.id]||[m.teamId||activeTeamId]).map(tid=>{const t=teams.find(x=>x.id===tid);if(!t)return null;const tm=teamMemberships[m.id]?.[tid];const rankId=tm?.teamRank||(sharedEdits[m.id]?.teamRank||m.teamRank);const rk=TEAM_RANKS.find(r=>r.id===rankId);return{...t,heroRank:rk||null};}).filter(Boolean);
-              return(<div style={{border:`1px solid ${m.color}44`,borderTop:"none",borderRadius:"0 0 10px 10px",overflow:"hidden"}}><CharacterPage member={m} imageUrl={images[m.id]||null} teamName={activeTeam.name} teamColor={activeTeam.color} memberTeams={mTeams}/></div>);
+              return(<div style={{border:`1px solid ${m.color}44`,borderTop:"none",borderRadius:"0 0 10px 10px",overflow:"hidden"}}><CharacterPage member={m} imageUrl={images[m.id]||null} teamName={activeTeam.name} teamColor={activeTeam.color} memberTeams={mTeams} inherentPowers={getRaceInherentPowers(m)} teamBase={activeTeam.baseOfOps||""}/></div>);
             })()}
           </div>))}
         </div>
@@ -1992,7 +2169,8 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
       {/* ── RECRUIT TAB ───────────────────────────────────────────────── */}
       {tab==="recruit"&&activeTeam&&(<>
         <div style={{padding:"10px 14px",background:`${activeTeam.color}0A`,border:`1px solid ${activeTeam.color}33`,borderRadius:8,fontSize:11,color:"var(--text2)",marginBottom:18}}>
-          {rReforgeId?<>Reforging <strong style={{color:activeTeam.color}}>{rHeroName||"member"}</strong> for {activeTeam.name} — same identity, new generation.<button onClick={()=>{setRReforgeId(null);setRName("");setRHeroName("");setRGender("Male");setRAge("");setRBirthYear("");setRRace(null);setRColors(["#A32D2D"]);setRStoryDir("");setDeepMode(false);setProfileMode(false);setDeepAnswers({});setDeepPhase(0);setProfileAnswers({});setProfileStep(0);setPowerForgeMode(false);setPowerForgePhase(0);setPowerForgeAnswers({});setRPipelineStage(0);setCostumeAnswers({});setCostumeForgeStep(0);setRResult(null);}} style={{float:"right",background:"none",border:"none",cursor:"pointer",color:"var(--text4)",fontSize:13}}>×</button></>
+          {rPowerReforgeTarget?<>⚡ Power Reforging <strong style={{color:activeTeam.color}}>{rPowerReforgeTarget.heroName}</strong> — answer the phases to replace their powers and stats.<button onClick={()=>{setRPowerReforgeTarget(null);setRResult(null);setPowerForgePhase(0);setPowerForgeAnswers({});setRPipelineStage(0);setCostumeAnswers({});setCostumeForgeStep(0);setTab("roster");}} style={{float:"right",background:"none",border:"none",cursor:"pointer",color:"var(--text4)",fontSize:13}}>×</button></>
+          :rReforgeId?<>Reforging <strong style={{color:activeTeam.color}}>{rHeroName||"member"}</strong> for {activeTeam.name} — same identity, new generation.<button onClick={()=>{setRReforgeId(null);setRName("");setRHeroName("");setRGender("Male");setRAge("");setRBirthYear("");setRRace(null);setRColors(["#A32D2D"]);setRStoryDir("");setDeepMode(false);setProfileMode(false);setDeepAnswers({});setDeepPhase(0);setProfileAnswers({});setProfileStep(0);setPowerForgeMode(false);setPowerForgePhase(0);setPowerForgeAnswers({});setRPipelineStage(0);setCostumeAnswers({});setCostumeForgeStep(0);setRResult(null);}} style={{float:"right",background:"none",border:"none",cursor:"pointer",color:"var(--text4)",fontSize:13}}>×</button></>
           :<>Recruiting for: <strong style={{color:activeTeam.color}}>{activeTeam.name}</strong> · Switch teams in the Teams tab to recruit for a different team.</>}
         </div>
         {/* Mode toggle */}
@@ -2098,6 +2276,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
             <span style={s.lbl}>Story Direction (optional)</span>
             <textarea style={{height:52,fontSize:11,marginTop:4}} placeholder={`e.g. "Was exiled from their homeworld" · "Lost their powers once and had to earn them back" · "Reluctant hero who fights for one person, not the mission"`} value={rStoryDir} onChange={e=>setRStoryDir(e.target.value)}/>
           </div>
+          <InspirationsField value={rInspirations} onChange={setRInspirations} accentColor={rColors[0]||G}/>
           <div style={{marginBottom:14}}>
             <span style={s.lbl}>Race <span style={{color:"#E07070"}}>*</span></span>
             <div style={{marginTop:6,outline:!rRace?"1px solid rgba(224,112,112,0.4)":undefined,borderRadius:8}}>
@@ -2299,16 +2478,31 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
 
         {/* ── Costume Forge ── */}
         {rResult&&!rResult.error&&rPipelineStage===2&&costumeForgeStep===0&&!rResult.costumeDesc&&(<div style={s.card}>
-          <div style={{fontSize:15,fontWeight:"bold",color:"var(--text-primary)",marginBottom:8}}>Costume Forge</div>
-          <div style={{fontSize:11,color:"var(--text3)",marginBottom:14,lineHeight:1.6}}>Design the visual identity. Answer 10 questions about the look — every answer feeds directly into the costume description and reference sheet.</div>
-          <div style={{marginBottom:14}}>
-            <span style={s.lbl}>Visual References (optional)</span>
-            <input value={costumeAnswers.visualRef||""} onChange={e=>setCostumeAnswers(p=>({...p,visualRef:e.target.value}))} placeholder="e.g. Batman's silhouette + Miles Morales suit texture + Moon Knight white" style={{width:"100%"}}/>
-          </div>
-          <div style={{display:"flex",gap:10}}>
-            <button onClick={()=>setRPipelineStage(3)} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:10.5,fontFamily:"var(--font-mono)"}}>Skip Costume →</button>
-            <button onClick={()=>setCostumeForgeStep(1)} style={{flex:2,...s.bigBtn(false,rHex),marginTop:0}}>Begin Costume Forge →</button>
-          </div>
+          {rPowerReforgeTarget?(<>
+            <div style={{fontSize:9,letterSpacing:"0.14em",color:"#F5C54277",textTransform:"uppercase",fontFamily:"var(--font-mono)",marginBottom:8}}>Power Forge Complete</div>
+            <div style={{marginBottom:14,padding:"12px 16px",background:`${rResult.color||"#F5C542"}0C`,border:`1px solid ${rResult.color||"#F5C542"}33`,borderRadius:10}}>
+              <div style={{fontSize:14,fontWeight:"bold",color:"var(--text-primary)",marginBottom:6}}>{rResult.heroName}</div>
+              <div style={{display:"flex",flexDirection:"column",gap:4}}>
+                {(rResult.powers||[]).map((p,i)=><div key={i} style={{fontSize:10.5,color:"var(--text2)"}}><strong style={{color:rResult.color||"#F5C542"}}>{p.name}</strong> — {p.desc}</div>)}
+              </div>
+              {rResult.powerFX&&<div style={{fontSize:10,color:"var(--text3)",marginTop:8,fontStyle:"italic"}}>{rResult.powerFX}</div>}
+            </div>
+            <div style={{display:"flex",gap:10}}>
+              <button onClick={()=>{setRPipelineStage(1);setPowerForgePhase(1);setPowerForgeAnswers({});}} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:10.5,fontFamily:"var(--font-mono)"}}>Regenerate</button>
+              <button onClick={applyPowerReforge} style={{flex:2,padding:"11px",background:"rgba(245,197,66,0.14)",border:"1px solid #F5C542",borderRadius:8,cursor:"pointer",color:"#F5C542",fontSize:10.5,letterSpacing:"0.1em",textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>⚡ Apply to {rPowerReforgeTarget.heroName} →</button>
+            </div>
+          </>):(<>
+            <div style={{fontSize:15,fontWeight:"bold",color:"var(--text-primary)",marginBottom:8}}>Costume Forge</div>
+            <div style={{fontSize:11,color:"var(--text3)",marginBottom:14,lineHeight:1.6}}>Design the visual identity. Answer 10 questions about the look — every answer feeds directly into the costume description and reference sheet.</div>
+            <div style={{marginBottom:14}}>
+              <span style={s.lbl}>Visual References (optional)</span>
+              <input value={costumeAnswers.visualRef||""} onChange={e=>setCostumeAnswers(p=>({...p,visualRef:e.target.value}))} placeholder="e.g. Batman's silhouette + Miles Morales suit texture + Moon Knight white" style={{width:"100%"}}/>
+            </div>
+            <div style={{display:"flex",gap:10}}>
+              <button onClick={()=>setRPipelineStage(3)} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:10.5,fontFamily:"var(--font-mono)"}}>Skip Costume →</button>
+              <button onClick={()=>setCostumeForgeStep(1)} style={{flex:2,...s.bigBtn(false,rHex),marginTop:0}}>Begin Costume Forge →</button>
+            </div>
+          </>)}
         </div>)}
 
         {rResult&&!rResult.error&&rPipelineStage===2&&costumeForgeStep>=1&&costumeForgeStep<=COSTUME_FORGE_QUESTIONS.length&&(()=>{
@@ -2337,7 +2531,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
 
         {/* ── Stage 2: Power done, show preview + Begin Costume Forge ── */}
         {rResult&&!rResult.error&&rPipelineStage===2&&costumeForgeStep===0&&rResult.costumeDesc&&(<>
-          <CharacterPage member={rResult} imageUrl={null} teamName={activeTeam.name} teamColor={activeTeam.color}/>
+          <CharacterPage member={rResult} imageUrl={null} teamName={activeTeam.name} teamColor={activeTeam.color} inherentPowers={getRaceInherentPowers(rResult)} teamBase={activeTeam.baseOfOps||""}/>
           <div style={{display:"flex",gap:10,marginTop:14}}>
             <button onClick={()=>{setRPipelineStage(1);setPowerForgePhase(1);setPowerForgeAnswers({});}} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:10.5,fontFamily:"var(--font-mono)"}}>Regenerate Powers</button>
             <button onClick={()=>setRPipelineStage(3)} style={{flex:2,padding:"11px",background:`${activeTeam.color}16`,border:`1px solid ${activeTeam.color}`,borderRadius:8,cursor:"pointer",color:activeTeam.color,fontSize:10.5,letterSpacing:"0.1em",textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>Looks Good →</button>
@@ -2357,7 +2551,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
             </div>
             {rResult.nkAlignment&&rResult.nkAlignment!=="base"&&<AlignmentBadge alignment={rResult.nkAlignment}/>}
           </div>
-          <CharacterPage member={rResult} imageUrl={null} teamName={activeTeam.name} teamColor={activeTeam.color}/>
+          <CharacterPage member={rResult} imageUrl={null} teamName={activeTeam.name} teamColor={activeTeam.color} inherentPowers={getRaceInherentPowers(rResult)} teamBase={activeTeam.baseOfOps||""}/>
           <div style={{display:"flex",gap:10,marginTop:14}}>
             <button onClick={()=>{setRResult(null);setRStep(0);setRAnswers({});setDeepPhase(0);setDeepAnswers({});setProfileStep(0);setProfileAnswers({});setPowerForgePhase(0);setPowerForgeAnswers({});setRPipelineStage(0);setCostumeAnswers({});setCostumeForgeStep(0);setRHeroAssocId("");setRHeroAssocType("sidekick");setRecruitSuggest(null);setRecruitSuggestLoading(false);}} style={{flex:1,padding:"11px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:10.5,fontFamily:"var(--font-mono)"}}>Regenerate</button>
             <button onClick={addRecruit} style={{flex:2,padding:"11px",background:`${activeTeam.color}16`,border:`1px solid ${activeTeam.color}`,borderRadius:8,cursor:"pointer",color:activeTeam.color,fontSize:10.5,letterSpacing:"0.1em",textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>{rReforgeId?"Update Member →":"Add to "+activeTeam.abbr+" →"}</button>
@@ -2456,7 +2650,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
             <button onClick={()=>genControllerRef.current?.abort()} style={{flexShrink:0,padding:"8px 14px",background:"rgba(224,112,112,0.1)",border:"1px solid rgba(224,112,112,0.35)",borderRadius:8,cursor:"pointer",color:"#E07070",fontSize:9,fontFamily:"var(--font-mono)",whiteSpace:"nowrap"}}>✕ Cancel</button>
           </div>}
           {vResult&&!vResult.error&&(<>
-            <CharacterPage member={vResult} imageUrl={null} isVillain={true}/>
+            <CharacterPage member={vResult} imageUrl={null} isVillain={true} inherentPowers={getRaceInherentPowers(vResult)}/>
             <div style={{display:"flex",gap:10,marginTop:14,marginBottom:20}}>
               <button onClick={()=>{setVResult(null);setVStep(0);setVAnswers({});setVDeepPhase(0);setVDeepAnswers({});setVProfileStep(0);setVProfileAnswers({});}} style={{flex:1,padding:"11px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:10.5,fontFamily:"var(--font-mono)"}}>Regenerate</button>
               <button onClick={addVillain} style={{flex:2,padding:"11px",background:"rgba(139,26,26,0.2)",border:"1px solid #8B1A1A",borderRadius:8,cursor:"pointer",color:"#E07070",fontSize:10.5,letterSpacing:"0.1em",textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>{vReforgeId?"Update Villain →":"Add to Pool →"}</button>
@@ -2499,6 +2693,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
               <option value="Non-binary">Non-binary</option>
               <option value="Other">Other</option>
             </select>
+            <InspirationsField value={vInspirations} onChange={setVInspirations} accentColor="#E07070"/>
             <span style={s.lbl}>Target Teams (who does this villain threaten?)</span>
             <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:14}}>
               {teams.map(t=><button key={t.id} onClick={()=>setVTargetTeams(p=>p.includes(t.id)?p.filter(x=>x!==t.id):[...p,t.id])} style={{display:"flex",alignItems:"center",gap:6,...s.chip(vTargetTeams.includes(t.id),t.color)}}><div style={{width:8,height:8,borderRadius:2,background:t.color,flexShrink:0}}/>{t.abbr}</button>)}
@@ -2531,7 +2726,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                     <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:8,gap:6}}>
                       <div><div style={{fontSize:13,fontWeight:"bold",color:"var(--text-primary)"}}>{v.heroName}</div><div style={{fontSize:10,color:"var(--text2)"}}>{v.realName} · {v.role}</div></div>
                       <div style={{display:"flex",gap:4,flexWrap:"wrap",justifyContent:"flex-end",flexShrink:0}}>
-                        <button onClick={()=>{if(editingVillainTarget===v.id){setEditingVillainTarget(null);}else{setVtDraft({teams:v.targetTeams||[],heroes:v.targetHeroes||[],realName:v.realName||"",heroName:v.heroName||""});setEditingVillainTarget(v.id);setRedeemingVillain(null);setVInlinePrompt(null);}}} style={{fontSize:9,padding:"3px 9px",background:editingVillainTarget===v.id?"rgba(139,26,26,0.15)":"var(--bg3)",border:`1px solid ${editingVillainTarget===v.id?"rgba(139,26,26,0.5)":"var(--border)"}`,borderRadius:6,cursor:"pointer",color:editingVillainTarget===v.id?"#E07070":"var(--text3)",fontFamily:"var(--font-mono)"}}>Edit</button>
+                        <button onClick={()=>{if(editingVillainTarget===v.id){setEditingVillainTarget(null);}else{setVtDraft({teams:v.targetTeams||[],heroes:v.targetHeroes||[],realName:v.realName||"",heroName:v.heroName||"",hometown:v.hometown||"",baseOfOps:v.baseOfOps||""});setEditingVillainTarget(v.id);setRedeemingVillain(null);setVInlinePrompt(null);}}} style={{fontSize:9,padding:"3px 9px",background:editingVillainTarget===v.id?"rgba(139,26,26,0.15)":"var(--bg3)",border:`1px solid ${editingVillainTarget===v.id?"rgba(139,26,26,0.5)":"var(--border)"}`,borderRadius:6,cursor:"pointer",color:editingVillainTarget===v.id?"#E07070":"var(--text3)",fontFamily:"var(--font-mono)"}}>Edit</button>
                         <button onClick={()=>{setRedeemingVillain(redeemingVillain===v.id?null:v.id);setVInlinePrompt(null);}} style={{fontSize:9,padding:"3px 9px",background:redeemingVillain===v.id?"rgba(93,202,165,0.12)":"var(--bg3)",border:`1px solid ${redeemingVillain===v.id?"rgba(93,202,165,0.4)":"var(--border)"}`,borderRadius:6,cursor:"pointer",color:redeemingVillain===v.id?"#5DCAA5":"var(--text3)",fontFamily:"var(--font-mono)"}}>Recruit</button>
                         <button onClick={()=>{vInlinePrompt?.villainId===v.id?setVInlinePrompt(null):generateVillainPromptInline(v);setEditingVillainTarget(null);setRedeemingVillain(null);}} style={{fontSize:9,padding:"3px 9px",background:vInlinePrompt?.villainId===v.id?"rgba(139,26,26,0.2)":"var(--bg3)",border:`1px solid ${vInlinePrompt?.villainId===v.id?"rgba(224,112,112,0.5)":"var(--border)"}`,borderRadius:6,cursor:"pointer",color:vInlinePrompt?.villainId===v.id?"#E07070":"var(--text3)",fontFamily:"var(--font-mono)"}}>🎨 Prompt</button>
                         <button onClick={()=>startVillainReforge(v)} style={{fontSize:9,padding:"3px 9px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:6,cursor:"pointer",color:"var(--text3)",fontFamily:"var(--font-mono)"}}>Reforge</button>
@@ -2557,6 +2752,8 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
                         <div><div style={{fontSize:9,letterSpacing:"0.12em",color:"rgba(139,26,26,0.6)",textTransform:"uppercase",marginBottom:5}}>Real Name</div><input type="text" value={vtDraft.realName} onChange={e=>setVtDraft(p=>({...p,realName:e.target.value}))} placeholder={v.realName||"Real name"} style={{width:"100%",padding:"6px 8px",background:"var(--bg2)",border:"1px solid rgba(139,26,26,0.3)",borderRadius:6,color:"var(--text-primary)",fontSize:10,fontFamily:"var(--font-mono)",boxSizing:"border-box"}}/></div>
                         <div><div style={{fontSize:9,letterSpacing:"0.12em",color:"rgba(139,26,26,0.6)",textTransform:"uppercase",marginBottom:5}}>Villain Name</div><input type="text" value={vtDraft.heroName} onChange={e=>setVtDraft(p=>({...p,heroName:e.target.value}))} placeholder={v.heroName||"Villain name"} style={{width:"100%",padding:"6px 8px",background:"var(--bg2)",border:"1px solid rgba(139,26,26,0.3)",borderRadius:6,color:"var(--text-primary)",fontSize:10,fontFamily:"var(--font-mono)",boxSizing:"border-box"}}/></div>
+                        <div><div style={{fontSize:9,letterSpacing:"0.12em",color:"rgba(139,26,26,0.6)",textTransform:"uppercase",marginBottom:5}}>Hometown</div><input type="text" value={vtDraft.hometown} onChange={e=>setVtDraft(p=>({...p,hometown:e.target.value}))} placeholder="e.g. Chicago, IL" style={{width:"100%",padding:"6px 8px",background:"var(--bg2)",border:"1px solid rgba(139,26,26,0.3)",borderRadius:6,color:"var(--text-primary)",fontSize:10,fontFamily:"var(--font-mono)",boxSizing:"border-box"}}/></div>
+                        <div><div style={{fontSize:9,letterSpacing:"0.12em",color:"rgba(139,26,26,0.6)",textTransform:"uppercase",marginBottom:5}}>Base of Operations</div><input type="text" value={vtDraft.baseOfOps} onChange={e=>setVtDraft(p=>({...p,baseOfOps:e.target.value}))} placeholder="e.g. Abandoned factory" style={{width:"100%",padding:"6px 8px",background:"var(--bg2)",border:"1px solid rgba(139,26,26,0.3)",borderRadius:6,color:"var(--text-primary)",fontSize:10,fontFamily:"var(--font-mono)",boxSizing:"border-box"}}/></div>
                       </div>
                       <div style={{fontSize:9,letterSpacing:"0.12em",color:"rgba(139,26,26,0.6)",textTransform:"uppercase",marginBottom:8}}>Target Teams</div>
                       <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:12}}>
@@ -3595,7 +3792,9 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
               <CharacterPage member={dMember} imageUrl={dImg} isVillain={isVil}
                 teamName={isVil?"Villain":(dTeams[0]?.name||"Independent")}
                 teamColor={isVil?"#8B1A1A":(dTeams[0]?.color||"#555")}
-                memberTeams={isVil?undefined:dTeams}/>
+                memberTeams={isVil?undefined:dTeams}
+                inherentPowers={getRaceInherentPowers(dMember)}
+                teamBase={isVil?"":(dTeams[0]?.baseOfOps||"")}/>
             </div>
           </>);
         }
@@ -3885,7 +4084,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
       {/* ── CODEX TAB ─────────────────────────────────────────────────── */}
       {tab==="codex"&&(()=>{
         const CodexCard=({title,accent,sections,tagline})=>(
-          <div style={{background:"var(--bg3)",border:`1px solid ${accent}33`,borderRadius:12,marginBottom:20,overflow:"hidden"}}>
+          <div style={{background:"var(--bg3)",border:`1px solid ${accent}33`,borderRadius:12,marginBottom:12,overflow:"hidden"}}>
             <div style={{padding:"16px 20px 12px",borderBottom:`1px solid ${accent}22`,background:`${accent}08`}}>
               <div style={{fontSize:15,fontWeight:"bold",color:accent,fontFamily:"var(--font-mono)",letterSpacing:"0.05em",marginBottom:4}}>{title}</div>
               {tagline&&<div style={{fontSize:11,color:"var(--text3)",fontStyle:"italic"}}>{tagline}</div>}
@@ -3900,24 +4099,65 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
             </div>
           </div>
         );
+        const AbilityEditor=({raceId,accent,label,note})=>{
+          const abilities=raceAbilities[raceId]||[];
+          const updateAbility=(i,field,val)=>saveRaceAbilities({...raceAbilities,[raceId]:abilities.map((a,j)=>j===i?{...a,[field]:val}:a)});
+          const addAbility=()=>{if(abilities.length>=10)return;saveRaceAbilities({...raceAbilities,[raceId]:[...abilities,{name:"",desc:""}]});};
+          const removeAbility=(i)=>saveRaceAbilities({...raceAbilities,[raceId]:abilities.filter((_,j)=>j!==i)});
+          return(
+            <div style={{background:`${accent}06`,border:`1px solid ${accent}28`,borderRadius:10,marginBottom:20,overflow:"hidden"}}>
+              <div style={{padding:"10px 16px",borderBottom:`1px solid ${accent}18`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <div style={{display:"flex",alignItems:"center",gap:10}}>
+                  <span style={{fontSize:9,letterSpacing:"0.18em",textTransform:"uppercase",color:accent,fontFamily:"var(--font-mono)",fontWeight:"bold"}}>{label}</span>
+                  <span style={{fontSize:9,color:"var(--text4)",fontFamily:"var(--font-mono)"}}>Inherent Abilities · {abilities.length}/10</span>
+                  {note&&<span style={{fontSize:8.5,color:`${accent}88`,fontStyle:"italic"}}>{note}</span>}
+                </div>
+                {abilities.length<10&&<button onClick={addAbility} style={{fontSize:9,padding:"3px 10px",background:`${accent}18`,border:`1px solid ${accent}44`,borderRadius:6,cursor:"pointer",color:accent,fontFamily:"var(--font-mono)"}}>+ Add</button>}
+              </div>
+              <div style={{padding:"12px 16px"}}>
+                {abilities.length===0&&<div style={{fontSize:10,color:"var(--text4)",fontStyle:"italic",padding:"4px 0"}}>No inherent abilities defined — add up to 10 racial defaults. Heroes with this race will inherit them based on their bloodline purity.</div>}
+                {abilities.map((a,i)=>(
+                  <div key={i} style={{display:"grid",gridTemplateColumns:"18px 150px 1fr auto",gap:8,marginBottom:8,alignItems:"center"}}>
+                    <span style={{fontSize:9,color:`${accent}66`,fontFamily:"var(--font-mono)",textAlign:"right"}}>{i+1}</span>
+                    <input type="text" placeholder="Ability name" value={a.name} onChange={e=>updateAbility(i,"name",e.target.value)}
+                      style={{padding:"6px 8px",background:"var(--bg2)",border:`1px solid ${accent}30`,borderRadius:6,color:"var(--text-primary)",fontSize:10,fontFamily:"var(--font-mono)"}}/>
+                    <input type="text" placeholder="Short description" value={a.desc} onChange={e=>updateAbility(i,"desc",e.target.value)}
+                      style={{padding:"6px 8px",background:"var(--bg2)",border:`1px solid ${accent}30`,borderRadius:6,color:"var(--text-primary)",fontSize:10}}/>
+                    <button onClick={()=>removeAbility(i)} style={{fontSize:12,padding:"3px 8px",background:"rgba(163,45,45,0.08)",border:"1px solid rgba(163,45,45,0.22)",borderRadius:6,cursor:"pointer",color:"#e74c3c",lineHeight:1}}>×</button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        };
         const {zyrenian,auranthi,dravosi}=RACE_TREE.alien.subs.reduce((a,s)=>({...a,[s.id]:s}),{});
         const agene=RACE_TREE.mutate.subs.find(s=>s.id==="a_gene_mutate");
+        const otherRaces=Object.entries(RACE_TREE).flatMap(([main,branch])=>
+          (branch.subs||[]).filter(s=>!["auranthi","zyrenian","dravosi","a_gene_mutate"].includes(s.id)).map(s=>({...s,main,branchLabel:branch.label,accent:main==="human"?"#888780":main==="mutate"?"#0F9E75":"#888780"}))
+        );
         return(<>
           <div style={{fontSize:9,letterSpacing:"0.2em",color:`${G}77`,textTransform:"uppercase",marginBottom:4}}>{universeData?.universeName?`${universeData.universeName} — `:""}Universe Codex</div>
-          <div style={{fontSize:11,color:"var(--text3)",marginBottom:22}}>Canonical lore for the three alien species and the A-Gene mutation. These backstories are original to this universe.</div>
+          <div style={{fontSize:11,color:"var(--text3)",marginBottom:22}}>Canonical lore, species power index, and inherent ability defaults for every race.</div>
 
           <div style={{fontSize:10,letterSpacing:"0.18em",textTransform:"uppercase",color:`${G}66`,fontFamily:"var(--font-mono)",marginBottom:12,paddingBottom:6,borderBottom:"1px solid var(--border)"}}>— Alien Species —</div>
 
-          <CodexCard title="ZYRENIAN" accent="#B04A1A" tagline="War is not what they do. War is what they are."
-            sections={[
-              ["Overview",zyrenian?.lore],
-              ["Homeworld",zyrenian?.codex?.homeworld],
-              ["Biology — The Bloodline Response",zyrenian?.codex?.biology],
-              ["Culture",zyrenian?.codex?.culture],
-              ["Powers",zyrenian?.codex?.powers],
-              ["Average Lifespan",zyrenian?.codex?.lifespan],
-              ["In This Universe",zyrenian?.codex?.note],
-            ]}/>
+          {/* Auranthi Bloodline Hierarchy */}
+          <div style={{background:"rgba(212,160,32,0.06)",border:"1px solid rgba(212,160,32,0.22)",borderRadius:10,padding:"12px 16px",marginBottom:20}}>
+            <div style={{fontSize:8.5,letterSpacing:"0.18em",textTransform:"uppercase",color:"#D4A02088",fontFamily:"var(--font-mono)",marginBottom:10}}>Auranthi Bloodline Hierarchy</div>
+            <div style={{fontSize:10.5,color:"var(--text3)",lineHeight:1.6,marginBottom:12}}>All three alien species share Auranthi blood. A portion of Auranthi inherent abilities passes down through each species proportional to their bloodline fraction. Further diluted when mixed with Human or A-gene parentage.</div>
+            <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+              {[{label:"Auranthi",id:"auranthi",pct:100,accent:"#D4A020"},{label:"Dravosi",id:"dravosi",pct:50,accent:"#5A5AE0"},{label:"Zyrenian",id:"zyrenian",pct:25,accent:"#B04A1A"}].map(({label,id,pct,accent})=>(
+                <div key={id} style={{flex:1,minWidth:140,background:`${accent}0A`,border:`1px solid ${accent}30`,borderRadius:8,padding:"8px 12px"}}>
+                  <div style={{fontSize:11,fontWeight:"bold",color:accent,fontFamily:"var(--font-mono)",marginBottom:4}}>{label}</div>
+                  <div style={{fontSize:9,color:"var(--text3)",marginBottom:6}}>{pct}% Auranthi blood</div>
+                  <div style={{height:4,background:"var(--bg2)",borderRadius:2,overflow:"hidden"}}>
+                    <div style={{height:"100%",width:`${pct}%`,background:`linear-gradient(90deg,${accent}66,${accent})`,borderRadius:2}}/>
+                  </div>
+                  <div style={{fontSize:8.5,color:"var(--text4)",marginTop:4,fontFamily:"var(--font-mono)"}}>inherits {pct===100?"all":"up to "+(Math.floor(10*pct/100))+" of 10"} Auranthi abilities{pct<100?" (if defined)":""}</div>
+                </div>
+              ))}
+            </div>
+          </div>
 
           <CodexCard title="AURANTHI" accent="#D4A020" tagline="They carry a civilization that no longer exists — encoded in their blood."
             sections={[
@@ -3929,6 +4169,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
               ["Average Lifespan",auranthi?.codex?.lifespan],
               ["In This Universe",auranthi?.codex?.note],
             ]}/>
+          <AbilityEditor raceId="auranthi" accent="#D4A020" label="AURANTHI" note="Apex bloodline — all abilities pass down to Dravosi (50%) and Zyrenian (25%)"/>
 
           <CodexCard title="DRAVOSI" accent="#5A5AE0" tagline="They are not cruel. They are orderly. That distinction makes them more dangerous."
             sections={[
@@ -3940,6 +4181,19 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
               ["Average Lifespan",dravosi?.codex?.lifespan],
               ["In This Universe",dravosi?.codex?.note],
             ]}/>
+          <AbilityEditor raceId="dravosi" accent="#5A5AE0" label="DRAVOSI" note="50% Auranthi blood — also inherits half of Auranthi defaults"/>
+
+          <CodexCard title="ZYRENIAN" accent="#B04A1A" tagline="War is not what they do. War is what they are."
+            sections={[
+              ["Overview",zyrenian?.lore],
+              ["Homeworld",zyrenian?.codex?.homeworld],
+              ["Biology — The Bloodline Response",zyrenian?.codex?.biology],
+              ["Culture",zyrenian?.codex?.culture],
+              ["Powers",zyrenian?.codex?.powers],
+              ["Average Lifespan",zyrenian?.codex?.lifespan],
+              ["In This Universe",zyrenian?.codex?.note],
+            ]}/>
+          <AbilityEditor raceId="zyrenian" accent="#B04A1A" label="ZYRENIAN" note="25% Auranthi blood — also inherits 2 of 10 Auranthi defaults"/>
 
           <div style={{fontSize:10,letterSpacing:"0.18em",textTransform:"uppercase",color:`${G}66`,fontFamily:"var(--font-mono)",marginBottom:12,paddingBottom:6,borderBottom:"1px solid var(--border)",marginTop:8}}>— Species Power Index —</div>
 
@@ -3992,6 +4246,13 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
               ["Discovery & the Nexus Foundation",agene?.codex?.discovery],
               ["What It Means",agene?.codex?.note],
             ]}/>
+          <AbilityEditor raceId="a_gene_mutate" accent="#0F9E75" label="A-GENE MUTATION" note="No Auranthi bloodline — abilities are purely this gene's baseline expression"/>
+
+          <div style={{fontSize:10,letterSpacing:"0.18em",textTransform:"uppercase",color:`${G}66`,fontFamily:"var(--font-mono)",marginBottom:12,paddingBottom:6,borderBottom:"1px solid var(--border)",marginTop:8}}>— Other Race Defaults —</div>
+          <div style={{fontSize:10.5,color:"var(--text3)",marginBottom:16,lineHeight:1.6}}>Define inherent ability defaults for any other race. Heroes with matching race inherit these at full strength (no bloodline dilution).</div>
+          {otherRaces.map(r=>(
+            <AbilityEditor key={r.id} raceId={r.id} accent={r.accent} label={r.label.toUpperCase()} note={r.lore?.split("—")[0]?.trim()||r.branchLabel}/>
+          ))}
         </>);
       })()}
 
@@ -4004,14 +4265,14 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
           {/* Header */}
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:22}}>
             <div>
-              <div style={{fontSize:8.5,letterSpacing:"0.24em",color:"rgba(136,135,128,0.65)",textTransform:"uppercase",marginBottom:5,fontFamily:"var(--font-mono)"}}>{scReforgeId?"Reforging · Independent Hero":"Independent Hero"}</div>
-              <div style={{fontSize:19,fontWeight:"900",color:"var(--text-primary)",letterSpacing:"0.02em"}}>Solo Hero Forge</div>
-              <div style={{fontSize:11,color:"var(--text3)",marginTop:3}}>{scReforgeId?`Regenerating ${scHeroName||"hero"} — same identity, new result.`:"No team. Personal mission. Their own rogues gallery."}</div>
+              <div style={{fontSize:8.5,letterSpacing:"0.24em",color:scPowerReforgeTarget?"#F5C54277":"rgba(136,135,128,0.65)",textTransform:"uppercase",marginBottom:5,fontFamily:"var(--font-mono)"}}>{scPowerReforgeTarget?"⚡ Power Forge · Independent Hero":scReforgeId?"Reforging · Independent Hero":"Independent Hero"}</div>
+              <div style={{fontSize:19,fontWeight:"900",color:"var(--text-primary)",letterSpacing:"0.02em"}}>{scPowerReforgeTarget?scPowerReforgeTarget.heroName:"Solo Hero Forge"}</div>
+              <div style={{fontSize:11,color:"var(--text3)",marginTop:3}}>{scPowerReforgeTarget?"Answer the phases to replace this hero's powers and stats.":scReforgeId?`Regenerating ${scHeroName||"hero"} — same identity, new result.`:"No team. Personal mission. Their own rogues gallery."}</div>
             </div>
             <button onClick={()=>{setShowSoloCreator(false);resetSoloCreator();}} style={{background:"none",border:"none",cursor:"pointer",color:"var(--text3)",fontSize:22,padding:"2px 6px",lineHeight:1,flexShrink:0}}>×</button>
           </div>
           {/* Mode selector */}
-          {!scResult&&(scStep===0&&scDeepPhase===0&&scProfileStep===0)&&(
+          {!scPowerReforgeTarget&&!scResult&&(scStep===0&&scDeepPhase===0&&scProfileStep===0)&&(
             <div style={{display:"flex",gap:6,marginBottom:14}}>
               <button onClick={()=>{setScDeepMode(false);setScProfileMode(false);setScStep(0);setScDeepPhase(0);setScProfileStep(0);setScDeepAnswers({});setScProfileAnswers({});}} style={{flex:1,padding:"8px",background:!scDeepMode&&!scProfileMode?"rgba(136,135,128,0.15)":"var(--bg3)",border:`1px solid ${!scDeepMode&&!scProfileMode?"rgba(136,135,128,0.5)":"var(--border2)"}`,borderRadius:8,cursor:"pointer",fontFamily:"var(--font-mono)",textAlign:"center"}}>
                 <div style={{fontSize:11,fontWeight:"bold",color:!scDeepMode&&!scProfileMode?"var(--text-primary)":"var(--text2)"}}>⚡ Quick</div>
@@ -4029,10 +4290,52 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
           )}
           {/* Progress */}
           <div style={{height:3,background:"rgba(255,255,255,0.06)",borderRadius:2,marginBottom:18}}>
-            <div style={{height:3,width:scResult?"100%":scProfileMode?`${(scProfileStep/6)*100}%`:scDeepMode?`${(scDeepPhase/(DEEP_LORE_PHASES.length+1))*100}%`:`${(scStep/(RECRUIT_QUIZ.length+1))*100}%`,background:"#888780",borderRadius:2,transition:"width 0.3s ease"}}/>
+            <div style={{height:3,width:scResult?"100%":scPowerReforgeTarget?`${(scPowerForgePhase/(POWER_FORGE_PHASES.length+1))*100}%`:scProfileMode?`${(scProfileStep/6)*100}%`:scDeepMode?`${(scDeepPhase/(DEEP_LORE_PHASES.length+1))*100}%`:`${(scStep/(RECRUIT_QUIZ.length+1))*100}%`,background:scPowerReforgeTarget?"#F5C542":"#888780",borderRadius:2,transition:"width 0.3s ease"}}/>
           </div>
+          {/* Power Forge phases — for reforging an existing solo hero's powers */}
+          {scPowerReforgeTarget&&!scResult&&scPowerForgePhase>=1&&scPowerForgePhase<=POWER_FORGE_PHASES.length&&(()=>{
+            const ph=POWER_FORGE_PHASES[scPowerForgePhase-1];
+            const phComplete=ph.questions.every(q=>scPowerForgeAnswers[q.id]);
+            const isLast=scPowerForgePhase===POWER_FORGE_PHASES.length;
+            return(<div style={s.card}>
+              <div style={{fontSize:9,letterSpacing:"0.14em",color:"#F5C54277",textTransform:"uppercase",fontFamily:"var(--font-mono)",marginBottom:3}}>Power Forge · Phase {scPowerForgePhase} of {POWER_FORGE_PHASES.length}</div>
+              <div style={{fontSize:13,fontWeight:"bold",color:"var(--text-primary)",marginBottom:12}}>{ph.title}</div>
+              {ph.questions.map(q=>(
+                <div key={q.id} style={{marginBottom:14}}>
+                  <div style={{fontSize:12,color:"var(--text2)",marginBottom:8,lineHeight:1.4}}>{q.q}</div>
+                  <div style={{display:"flex",flexDirection:"column",gap:5}}>
+                    {q.options.map(opt=>(
+                      <button key={opt.id} onClick={()=>setScPowerForgeAnswers(p=>({...p,[q.id]:opt.id}))} style={{...s.optBtn(scPowerForgeAnswers[q.id]===opt.id,"#F5C542"),textAlign:"left",lineHeight:1.5}}>{opt.label}</button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              <div style={{display:"flex",gap:10,marginTop:4}}>
+                <button onClick={()=>setScPowerForgePhase(p=>Math.max(1,p-1))} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text3)",fontSize:10.5,fontFamily:"var(--font-mono)"}}>← Back</button>
+                {!isLast&&<button disabled={!phComplete} onClick={()=>setScPowerForgePhase(p=>p+1)} style={{flex:2,...s.bigBtn(!phComplete,"#F5C542"),marginTop:0}}>
+                  {phComplete?`Next: ${POWER_FORGE_PHASES[scPowerForgePhase]?.title} →`:"Answer all questions to continue"}
+                </button>}
+                {isLast&&<button disabled={!phComplete||scLoading} onClick={generateSoloPowerReforge} style={{flex:2,...s.bigBtn(!phComplete||scLoading,"#F5C542"),marginTop:0}}>
+                  {scLoading?"Forging powers...":phComplete?"Generate Powers →":"Answer all questions"}
+                </button>}
+              </div>
+            </div>);
+          })()}
+          {/* Power Forge result — apply to existing solo hero */}
+          {scPowerReforgeTarget&&scResult&&!scResult.error&&(<div style={s.card}>
+            <div style={{fontSize:9,letterSpacing:"0.14em",color:"#F5C54277",textTransform:"uppercase",fontFamily:"var(--font-mono)",marginBottom:8}}>Power Forge Complete</div>
+            <div style={{marginBottom:14,padding:"12px 16px",background:"rgba(245,197,66,0.06)",border:"1px solid rgba(245,197,66,0.25)",borderRadius:10}}>
+              <div style={{fontSize:13,fontWeight:"bold",color:"var(--text-primary)",marginBottom:8}}>{scPowerReforgeTarget.heroName}</div>
+              {(scResult.powers||[]).map((p,i)=><div key={i} style={{fontSize:10.5,color:"var(--text2)",marginBottom:4}}><strong style={{color:"#F5C542"}}>{p.name}</strong> — {p.desc}</div>)}
+              {scResult.powerFX&&<div style={{fontSize:10,color:"var(--text3)",marginTop:8,fontStyle:"italic"}}>{scResult.powerFX}</div>}
+            </div>
+            <div style={{display:"flex",gap:10}}>
+              <button onClick={()=>{setScResult(null);setScPowerForgePhase(1);setScPowerForgeAnswers({});}} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:10.5,fontFamily:"var(--font-mono)"}}>Regenerate</button>
+              <button onClick={applySoloPowerReforge} style={{flex:2,padding:"11px",background:"rgba(245,197,66,0.14)",border:"1px solid #F5C542",borderRadius:8,cursor:"pointer",color:"#F5C542",fontSize:10.5,letterSpacing:"0.1em",textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>⚡ Apply to {scPowerReforgeTarget.heroName} →</button>
+            </div>
+          </div>)}
           {/* Step 0 — Identity */}
-          {!scResult&&scStep===0&&scDeepPhase===0&&scProfileStep===0&&(
+          {!scPowerReforgeTarget&&!scResult&&scStep===0&&scDeepPhase===0&&scProfileStep===0&&(
             <div>
               <div style={{fontSize:14,fontWeight:"bold",color:"var(--text-primary)",marginBottom:14}}>Who is this hero?</div>
               <span style={s.lbl}>Hero Name <span style={{color:"#E07070"}}>*</span></span>
@@ -4055,6 +4358,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                 <span style={s.lbl}>Story Direction (optional)</span>
                 <textarea style={{height:52,fontSize:11,marginTop:4}} placeholder={`e.g. "Vigilante protecting one neighborhood" · "Former gov agent gone rogue" · "Alien stranded on Earth"`} value={scStoryDir} onChange={e=>setScStoryDir(e.target.value)}/>
               </div>
+              <InspirationsField value={scInspirations} onChange={setScInspirations} accentColor={scColors[0]||"#888780"}/>
               <div style={{marginBottom:12}}>
                 <span style={s.lbl}>Race <span style={{color:"#E07070"}}>*</span></span>
                 <div style={{marginTop:6}}><RaceSelector value={scRace} onChange={setScRace} color={scColors[0]||"#888780"}/></div>
@@ -4074,7 +4378,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
             </div>
           )}
           {/* Quick quiz steps */}
-          {!scResult&&!scDeepMode&&!scProfileMode&&scStep>=1&&scStep<=RECRUIT_QUIZ.length&&(()=>{const q=RECRUIT_QUIZ[scStep-1];return(
+          {!scPowerReforgeTarget&&!scResult&&!scDeepMode&&!scProfileMode&&scStep>=1&&scStep<=RECRUIT_QUIZ.length&&(()=>{const q=RECRUIT_QUIZ[scStep-1];return(
             <div>
               <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}><span style={{fontSize:10,color:"var(--text2)"}}>Question {scStep} of {RECRUIT_QUIZ.length}</span><span style={{fontSize:10,color:"#888780"}}>{Math.round((scStep/(RECRUIT_QUIZ.length+1))*100)}%</span></div>
               <div style={s.card}>
@@ -4088,7 +4392,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
             </div>
           );})()}
           {/* Deep Forge phases */}
-          {!scResult&&scDeepMode&&scDeepPhase>=1&&scDeepPhase<=DEEP_LORE_PHASES.length&&(()=>{
+          {!scPowerReforgeTarget&&!scResult&&scDeepMode&&scDeepPhase>=1&&scDeepPhase<=DEEP_LORE_PHASES.length&&(()=>{
             const ph=DEEP_LORE_PHASES[scDeepPhase-1];
             const phaseComplete=ph.questions.every(q=>scDeepAnswers[q.id]);
             const isLast=scDeepPhase===DEEP_LORE_PHASES.length;
@@ -4102,7 +4406,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
             </>);
           })()}
           {/* Personal Profile sections */}
-          {!scResult&&scProfileMode&&scProfileStep>=1&&scProfileStep<=5&&(()=>{
+          {!scPowerReforgeTarget&&!scResult&&scProfileMode&&scProfileStep>=1&&scProfileStep<=5&&(()=>{
             const sec=PERSONAL_PROFILE[scProfileStep-1];
             const secComplete=sec.questions.every(q=>scProfileAnswers[q.id]);
             const isLast=scProfileStep===5;
@@ -4122,8 +4426,8 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
           {/* Loading */}
           {scLoading&&<div style={{padding:"14px",background:"var(--bg2)",border:"1px solid rgba(136,135,128,0.2)",borderRadius:8,fontSize:10,color:"var(--text3)",fontFamily:"var(--font-mono)",marginTop:10}}>Forging independent hero…</div>}
           {/* Result */}
-          {scResult&&!scResult.error&&(<>
-            <CharacterPage member={scResult} imageUrl={null} isVillain={false} teamName="Independent"/>
+          {!scPowerReforgeTarget&&scResult&&!scResult.error&&(<>
+            <CharacterPage member={scResult} imageUrl={null} isVillain={false} teamName="Independent" inherentPowers={getRaceInherentPowers(scResult)}/>
             <div style={{display:"flex",gap:10,marginTop:14}}>
               <button onClick={resetSoloCreator} style={{flex:1,padding:"11px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:10.5,fontFamily:"var(--font-mono)"}}>Regenerate</button>
               <button onClick={saveSoloHero} style={{flex:2,padding:"11px",background:"rgba(136,135,128,0.12)",border:"1px solid rgba(136,135,128,0.4)",borderRadius:8,cursor:"pointer",color:"var(--text-primary)",fontSize:10.5,letterSpacing:"0.1em",textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>{scReforgeId?"Update Hero →":"Add to Independents →"}</button>
@@ -4149,7 +4453,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
           {/* Top bar */}
           <div style={{position:"sticky",top:0,zIndex:10,background:"var(--header-bg)",borderBottom:`1px solid ${heroColor}25`,padding:"12px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",backdropFilter:"blur(8px)"}}>
             <div style={{display:"flex",alignItems:"center",gap:14}}>
-              <button onClick={()=>{setActiveSoloId(null);setSoloHeroView("profile");setRogueMode(null);setVStep(0);setVResult(null);setVAnswers({});setVName("");setVGender("Male");}} style={{padding:"6px 14px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:10.5,fontFamily:"var(--font-mono)"}}>← Back</button>
+              <button onClick={()=>{setActiveSoloId(null);setSoloHeroView("profile");setRogueMode(null);setVStep(0);setVResult(null);setVAnswers({});setVName("");setVGender("Male");setSoloPromptResult(null);}} style={{padding:"6px 14px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:10.5,fontFamily:"var(--font-mono)"}}>← Back</button>
               <div>
                 <div style={{fontSize:8,letterSpacing:"0.22em",color:"rgba(136,135,128,0.65)",textTransform:"uppercase",fontFamily:"var(--font-mono)",marginBottom:2}}>Independent Hero</div>
                 <div style={{fontSize:16,fontWeight:"900",color:heroColor}}>{hero.heroName}</div>
@@ -4164,6 +4468,8 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
               </label>
               {images[hero.id]&&<button onClick={()=>downloadImg(hero.id,hero.heroName)} style={{padding:"6px 12px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:8,cursor:"pointer",color:"var(--text3)",fontSize:10,fontFamily:"var(--font-mono)"}}>⬇ Save Image</button>}
               <button onClick={()=>startHeroReforge(hero)} style={{padding:"6px 12px",background:"rgba(136,135,128,0.08)",border:"1px solid rgba(136,135,128,0.3)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:10,fontFamily:"var(--font-mono)"}}>Reforge</button>
+              <button onClick={()=>startSoloPowerReforge(hero)} style={{padding:"6px 12px",background:"rgba(245,197,66,0.08)",border:"1px solid rgba(245,197,66,0.3)",borderRadius:8,cursor:"pointer",color:"#F5C542",fontSize:10,fontFamily:"var(--font-mono)"}}>⚡ Powers</button>
+              <button onClick={()=>{setSoloPromptResult(null);generateSoloImagePrompt(hero);setSoloHeroView("profile");}} style={{padding:"6px 12px",background:"rgba(100,160,255,0.08)",border:"1px solid rgba(100,160,255,0.3)",borderRadius:8,cursor:"pointer",color:"#64A0FF",fontSize:10,fontFamily:"var(--font-mono)"}}>🎨 Image</button>
               <button onClick={()=>requirePin(`Delete ${hero.heroName}`,()=>removeSoloHeroFn(hero.id))} style={{padding:"6px 12px",background:"rgba(163,45,45,0.08)",border:"1px solid rgba(163,45,45,0.25)",borderRadius:8,cursor:"pointer",color:"#e74c3c",fontSize:10,fontFamily:"var(--font-mono)"}}>Delete</button>
             </div>
           </div>
@@ -4178,9 +4484,69 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
           <div style={{maxWidth:920,margin:"0 auto",padding:"24px 20px"}}>
 
             {/* Profile view */}
-            {soloHeroView==="profile"&&(
-              <CharacterPage member={hero} imageUrl={images[hero.id]||null} isVillain={false} teamName="Independent"/>
-            )}
+            {soloHeroView==="profile"&&(<>
+              <CharacterPage member={hero} imageUrl={images[hero.id]||null} isVillain={false} teamName="Independent" inherentPowers={getRaceInherentPowers(hero)}/>
+              {/* Location editor */}
+              <div style={{...s.card,marginTop:14}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer"}} onClick={()=>setSoloLocEdit(p=>p.open?{open:false,hometown:"",baseOfOps:""}:{open:true,hometown:hero.hometown||"",baseOfOps:hero.baseOfOps||""})}>
+                  <div style={{fontSize:10,fontWeight:"bold",color:"var(--text2)",fontFamily:"var(--font-mono)"}}>📍 Location</div>
+                  <div style={{display:"flex",gap:12,alignItems:"center"}}>
+                    {(hero.hometown||hero.baseOfOps)&&!soloLocEdit.open&&<div style={{fontSize:9,color:"var(--text4)"}}>{[hero.hometown,hero.baseOfOps].filter(Boolean).join(" · ")}</div>}
+                    <div style={{fontSize:11,color:"var(--text4)"}}>{soloLocEdit.open?"▲":"▼"}</div>
+                  </div>
+                </div>
+                {soloLocEdit.open&&(
+                  <div style={{marginTop:12}}>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
+                      <div>
+                        <div style={{fontSize:8.5,letterSpacing:"0.12em",color:`${heroColor}88`,textTransform:"uppercase",marginBottom:5}}>Hometown</div>
+                        <input type="text" placeholder="e.g. Chicago, IL" value={soloLocEdit.hometown} onChange={e=>setSoloLocEdit(p=>({...p,hometown:e.target.value}))} style={{padding:"7px 10px"}}/>
+                      </div>
+                      <div>
+                        <div style={{fontSize:8.5,letterSpacing:"0.12em",color:`${heroColor}88`,textTransform:"uppercase",marginBottom:5}}>Base of Operations</div>
+                        <input type="text" placeholder="e.g. Warehouse, Midtown" value={soloLocEdit.baseOfOps} onChange={e=>setSoloLocEdit(p=>({...p,baseOfOps:e.target.value}))} style={{padding:"7px 10px"}}/>
+                      </div>
+                    </div>
+                    <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
+                      <button onClick={()=>setSoloLocEdit({open:false,hometown:"",baseOfOps:""})} style={{padding:"5px 14px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:7,cursor:"pointer",color:"var(--text3)",fontSize:10,fontFamily:"var(--font-mono)"}}>Cancel</button>
+                      <button onClick={()=>{patchSoloHero(hero.id,{hometown:soloLocEdit.hometown.trim(),baseOfOps:soloLocEdit.baseOfOps.trim()});setSoloLocEdit({open:false,hometown:"",baseOfOps:""}); }} style={{padding:"5px 18px",background:`${heroColor}18`,border:`1px solid ${heroColor}55`,borderRadius:7,cursor:"pointer",color:heroColor,fontSize:10,fontFamily:"var(--font-mono)"}}>Save</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+              {soloPromptResult&&soloPromptResult.hero?.id===hero.id&&(
+                <div style={{...s.card,marginTop:20}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+                    <div style={{fontSize:12,fontWeight:"bold",color:"#64A0FF"}}>{hero.heroName} · Image Prompts</div>
+                    <button onClick={()=>setSoloPromptResult(null)} style={{background:"none",border:"none",cursor:"pointer",color:"var(--text4)",fontSize:14,lineHeight:1}}>×</button>
+                  </div>
+                  <div style={{display:"flex",gap:6,marginBottom:14}}>
+                    {[["meta-ai","Meta AI"],["midjourney","Midjourney"],["dalle","DALL-E 3"]].map(([id,label])=>(
+                      <button key={id} onClick={()=>generateSoloImagePrompt(hero,id)} style={{...s.chip((soloPromptResult.platform||pPlatform)===id)}}>{label}</button>
+                    ))}
+                  </div>
+                  <span style={s.lbl}>{soloPromptResult.platform==="midjourney"?"Midjourney /imagine Prompt":soloPromptResult.platform==="dalle"?"DALL-E 3 Prompt":"Meta AI Image Prompt"}</span>
+                  <div style={s.pBox}>{soloPromptResult.metaAI}</div>
+                  {soloPromptResult.platform==="midjourney"?(
+                    <div style={{display:"flex",justifyContent:"flex-end",marginTop:6,marginBottom:12}}>
+                      <button style={s.cpyBtn(copied.spmeta)} onClick={()=>copy("spmeta",soloPromptResult.metaAI)}>{copied.spmeta?"Copied!":"Copy Prompt"}</button>
+                    </div>
+                  ):soloPromptResult.platform==="dalle"?(
+                    <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:6,marginBottom:12}}>
+                      <button style={s.cpyBtn(copied.spmeta)} onClick={()=>copy("spmeta",soloPromptResult.metaAI)}>{copied.spmeta?"Copied!":"Copy"}</button>
+                      <button onClick={()=>{navigator.clipboard.writeText(soloPromptResult.metaAI).then(()=>{copy("spmeta",soloPromptResult.metaAI);window.open("https://chat.openai.com/","_blank");});}} style={{padding:"5px 14px",background:"rgba(16,163,127,0.12)",border:"1px solid rgba(16,163,127,0.4)",borderRadius:6,cursor:"pointer",fontSize:10,color:"#10A37F",fontFamily:"var(--font-mono)"}}>Open ChatGPT →</button>
+                    </div>
+                  ):(
+                    hasMetaAI?<MetaAILauncher prompt={soloPromptResult.metaAI} label="Meta AI" copied={copied.spmeta} onCopy={()=>copy("spmeta",soloPromptResult.metaAI)}/>:<div style={{display:"flex",justifyContent:"flex-end",marginTop:6,marginBottom:12}}><button style={s.cpyBtn(copied.spmeta)} onClick={()=>copy("spmeta",soloPromptResult.metaAI)}>{copied.spmeta?"Copied!":"Copy"}</button></div>
+                  )}
+                  {images[hero.id]&&<div style={{marginTop:12}}>
+                    <button style={{...s.bigBtn(false),background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.15)"}} onClick={()=>downloadImg(hero.id,hero.heroName)}>📎 Download Reference Image</button>
+                    <div style={{fontSize:9.5,color:"var(--text4)",marginTop:6}}>{soloPromptResult.platform==="midjourney"?"Use as reference with --cref [image-url] for character consistency":soloPromptResult.platform==="dalle"?"Upload alongside the prompt in ChatGPT for best accuracy":"Upload alongside the prompt in Meta AI for best accuracy"}</div>
+                  </div>}
+                  {soloPromptResult.tripo3D&&<><span style={s.lbl}>Tripo3D Model Prompt</span><div style={s.pBox}>{soloPromptResult.tripo3D}</div><Tripo3DLauncher prompt={soloPromptResult.tripo3D} copied={copied.sptripo} onCopy={()=>copy("sptripo",soloPromptResult.tripo3D)}/></>}
+                </div>
+              )}
+            </>)}
 
             {/* Rogues Gallery */}
             {soloHeroView==="rogues"&&(<>
@@ -4226,7 +4592,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                 );})()}
                 {vLoading&&<div style={{padding:"12px",background:"var(--bg2)",border:"1px solid rgba(139,26,26,0.2)",borderRadius:8,fontSize:10,color:"var(--text3)",fontFamily:"var(--font-mono)",marginTop:10}}>Forging rogue for {hero.heroName}…</div>}
                 {vResult&&!vResult.error&&(<>
-                  <CharacterPage member={vResult} imageUrl={null} isVillain={true}/>
+                  <CharacterPage member={vResult} imageUrl={null} isVillain={true} inherentPowers={getRaceInherentPowers(vResult)}/>
                   <div style={{display:"flex",gap:10,marginTop:14,marginBottom:20}}>
                     <button onClick={()=>{setVResult(null);setVStep(0);setVAnswers({});setVDeepPhase(0);setVDeepAnswers({});setVProfileStep(0);setVProfileAnswers({});}} style={{flex:1,padding:"11px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:10.5,fontFamily:"var(--font-mono)"}}>Regenerate</button>
                     <button onClick={addVillain} style={{flex:2,padding:"11px",background:"rgba(139,26,26,0.2)",border:"1px solid #8B1A1A",borderRadius:8,cursor:"pointer",color:"#E07070",fontSize:10.5,letterSpacing:"0.1em",textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>{vReforgeId?"Update Rogue →":"Add to Rogues Gallery →"}</button>

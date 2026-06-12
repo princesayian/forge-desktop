@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { G, TEAM_RANKS, NK_ALIGNMENTS, ALIGN_META, raceLabel, raceLore } from '../constants/index.js';
 import RaceSelector from './RaceSelector.jsx';
+import InspirationsField from './InspirationsField.jsx';
 
 export default function EditPanel({member,onSave,onCancel,callAI,teamName}){
   const[heroName,setHeroName]=useState(member.heroName||"");
@@ -17,9 +18,33 @@ export default function EditPanel({member,onSave,onCancel,callAI,teamName}){
   const[age,setAge]=useState(member.birthYear?String(2026-parseInt(member.birthYear)):(member.age||""));
   const[heroType,setHeroType]=useState(member.heroType||"hero");
   const[powerType,setPowerType]=useState(member.powerType||"powers");
+  const[hometown,setHometown]=useState(member.hometown||"");
+  const[baseOfOps,setBaseOfOps]=useState(member.baseOfOps||"");
+  const[inspirations,setInspirations]=useState(member.inspirations||[]);
   const[storyDir,setStoryDir]=useState("");
   const[regenLoading,setRegenLoading]=useState(false);
+  const[nameError,setNameError]=useState("");
+  const[nameChecking,setNameChecking]=useState(false);
+  const nameTimerRef=useRef(null);
   const c=member.color;
+
+  useEffect(()=>{
+    const trimmed=heroName.trim();
+    if(!trimmed||(member.heroName||"").toLowerCase()===trimmed.toLowerCase()){
+      setNameError("");setNameChecking(false);return;
+    }
+    setNameChecking(true);
+    clearTimeout(nameTimerRef.current);
+    nameTimerRef.current=setTimeout(async()=>{
+      try{
+        const res=await fetch("/api/validate-name",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:trimmed,char_id:member.id})});
+        const d=await res.json();
+        setNameError(d.available?"":(`"${d.taken_by||trimmed}" is already claimed by another character`));
+      }catch(e){setNameError("");}
+      setNameChecking(false);
+    },420);
+    return()=>clearTimeout(nameTimerRef.current);
+  },[heroName,member.heroName,member.id]);
   async function regenOrigin(){
     if(!callAI)return;
     setRegenLoading(true);
@@ -34,14 +59,29 @@ export default function EditPanel({member,onSave,onCancel,callAI,teamName}){
   return(<div style={{padding:"18px 20px",background:"var(--bg-card2, #07070E)",border:`1px solid ${c}33`,borderRadius:"0 0 12px 12px"}}>
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:14}}>
       <div>
-        <div style={{fontSize:9,letterSpacing:"0.12em",color:`${c}88`,textTransform:"uppercase",marginBottom:5}}>Hero Name</div>
-        <input type="text" value={heroName} onChange={e=>setHeroName(e.target.value)} style={{padding:"7px 10px"}}/>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:5}}>
+          <div style={{fontSize:9,letterSpacing:"0.12em",color:`${c}88`,textTransform:"uppercase"}}>Hero Name</div>
+          {nameChecking&&<div style={{fontSize:8,color:`${c}66`,fontFamily:"var(--font-mono)"}}>checking…</div>}
+        </div>
+        <input type="text" value={heroName} onChange={e=>setHeroName(e.target.value)} style={{padding:"7px 10px",borderColor:nameError?`#C0392B66`:undefined}}/>
+        {nameError&&<div style={{fontSize:9,color:"#C0392B",marginTop:3,fontFamily:"var(--font-mono)"}}>{nameError}</div>}
       </div>
       <div>
         <div style={{fontSize:9,letterSpacing:"0.12em",color:`${c}88`,textTransform:"uppercase",marginBottom:5}}>Real Name</div>
         <input type="text" value={realName} onChange={e=>setRealName(e.target.value)} style={{padding:"7px 10px"}}/>
       </div>
     </div>
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:14}}>
+      <div>
+        <div style={{fontSize:9,letterSpacing:"0.12em",color:`${c}88`,textTransform:"uppercase",marginBottom:5}}>Hometown</div>
+        <input type="text" placeholder="e.g. Chicago, IL" value={hometown} onChange={e=>setHometown(e.target.value)} style={{padding:"7px 10px"}}/>
+      </div>
+      <div>
+        <div style={{fontSize:9,letterSpacing:"0.12em",color:`${c}88`,textTransform:"uppercase",marginBottom:5}}>Base of Operations <span style={{opacity:0.55,fontSize:8}}>(override)</span></div>
+        <input type="text" placeholder="If different from team base" value={baseOfOps} onChange={e=>setBaseOfOps(e.target.value)} style={{padding:"7px 10px"}}/>
+      </div>
+    </div>
+    <InspirationsField value={inspirations} onChange={setInspirations} accentColor={c}/>
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:14}}>
       <div>
         <div style={{fontSize:9,letterSpacing:"0.12em",color:`${c}88`,textTransform:"uppercase",marginBottom:5}}>Gender</div>
@@ -118,7 +158,7 @@ export default function EditPanel({member,onSave,onCancel,callAI,teamName}){
     ))}
     <div style={{display:"flex",gap:10,marginTop:16}}>
       <button onClick={onCancel} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:11}}>Cancel</button>
-      <button onClick={()=>onSave({heroName,realName,tagline:t,origin:o,stats,powers,nkAlignment:align,teamRank,gender,age,birthYear,race,species:raceLabel(race)||member.species||"",powerType,...(!member.isVillain&&{heroType})})} style={{flex:2,padding:"10px",background:`${c}18`,border:`1px solid ${c}`,borderRadius:8,cursor:"pointer",color:c,fontSize:11,letterSpacing:"0.1em",textTransform:"uppercase"}}>Save Changes</button>
+      <button onClick={()=>onSave({heroName,realName,tagline:t,origin:o,stats,powers,nkAlignment:align,teamRank,gender,age,birthYear,race,species:raceLabel(race)||member.species||"",powerType,hometown:hometown.trim(),baseOfOps:baseOfOps.trim(),inspirations:inspirations.filter(s=>s.trim()),...(!member.isVillain&&{heroType})})} disabled={!!nameError||nameChecking} style={{flex:2,padding:"10px",background:nameError?`#C0392B18`:`${c}18`,border:`1px solid ${nameError?"#C0392B":c}`,borderRadius:8,cursor:(nameError||nameChecking)?"not-allowed":"pointer",color:nameError?"#C0392B":c,fontSize:11,letterSpacing:"0.1em",textTransform:"uppercase",opacity:(nameError||nameChecking)?0.6:1}}>{nameChecking?"Checking name…":nameError?"Name taken":"Save Changes"}</button>
     </div>
   </div>);
 }

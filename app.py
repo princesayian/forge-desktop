@@ -3,8 +3,9 @@ Nocturnal Innovations's Superhero Forge — Desktop App
 Local AI powered by Ollama. No API keys. No subscriptions.
 """
 
-import os, sys, json, threading, time, socket, base64, io, subprocess, shutil, signal, atexit
+import os, sys, json, threading, time, socket, base64, io, subprocess, shutil, signal, atexit, sqlite3
 import glob
+from contextlib import contextmanager
 _STORE_LOCK = threading.Lock()
 import requests
 from flask import Flask, Response, request, jsonify, send_from_directory, send_file, session, redirect, stream_with_context
@@ -23,6 +24,7 @@ STORIES_DIR = os.path.join(DATA_DIR, "stories")
 IMAGES_DIR  = os.path.join(BASE, "images")
 LOCK_FILE    = os.path.join(BASE, ".forge.lock")
 STORAGE_FILE = os.path.join(BASE, "forge-data.json")
+DB_FILE      = os.path.join(BASE, "forge.db")
 
 def _compute_version():
     try:
@@ -50,22 +52,110 @@ try:
 except FileNotFoundError:
     pass
 
-def _load_store():
-    for path in (STORAGE_FILE, STORAGE_FILE + ".tmp"):
-        try:
-            with open(path, "r") as f:
-                return json.load(f)
-        except Exception:
-            continue
-    return {}
+# ---------------------------------------------------------------------------
+# SQLite KV store — replaces forge-data.json
+# ---------------------------------------------------------------------------
+@contextmanager
+def _db():
+    conn = sqlite3.connect(DB_FILE, timeout=15)
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA synchronous=NORMAL")
+    try:
+        yield conn
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
 
-def _save_store(data):
-    tmp = STORAGE_FILE + ".tmp"
-    with open(tmp, "w") as f:
-        json.dump(data, f)
-        f.flush()
-        os.fsync(f.fileno())
-    os.replace(tmp, STORAGE_FILE)
+def _init_db():
+    """Create kv_store table and migrate from forge-data.json if the DB is empty."""
+    with _db() as conn:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS kv_store (
+                key        TEXT PRIMARY KEY,
+                value      TEXT NOT NULL DEFAULT '""',
+                updated_at REAL DEFAULT (unixepoch())
+            )
+        """)
+    # One-time migration from JSON file
+    with _db() as conn:
+        count = conn.execute("SELECT COUNT(*) FROM kv_store").fetchone()[0]
+        if count == 0 and os.path.exists(STORAGE_FILE):
+            try:
+                with open(STORAGE_FILE) as f:
+                    legacy = json.load(f)
+                conn.executemany(
+                    "INSERT OR IGNORE INTO kv_store (key, value) VALUES (?, ?)",
+                    [(k, json.dumps(v)) for k, v in legacy.items()]
+                )
+                print(f"[forge] Migrated {len(legacy)} keys from forge-data.json → forge.db")
+            except Exception as e:
+                print(f"[forge] Migration warning: {e}")
+
+def _get_kv_raw(key):
+    """Return the stored JSON string for *key*, or None."""
+    with _db() as conn:
+        row = conn.execute("SELECT value FROM kv_store WHERE key = ?", (key,)).fetchone()
+    return row[0] if row else None
+
+def _get_kv(key):
+    """Return the parsed Python value for *key*, or None."""
+    raw = _get_kv_raw(key)
+    if raw is None:
+        return None
+    try:
+        return json.loads(raw)
+    except Exception:
+        return raw
+
+def _set_kv(key, raw_value):
+    """Store *raw_value* (a JSON string) under *key*."""
+    with _STORE_LOCK:
+        with _db() as conn:
+            conn.execute(
+                "INSERT OR REPLACE INTO kv_store (key, value, updated_at) VALUES (?, ?, unixepoch())",
+                (key, raw_value),
+            )
+
+def _del_kv(key):
+    with _STORE_LOCK:
+        with _db() as conn:
+            conn.execute("DELETE FROM kv_store WHERE key = ?", (key,))
+
+def _list_kv(prefix=""):
+    with _db() as conn:
+        if prefix:
+            rows = conn.execute(
+                "SELECT key FROM kv_store WHERE key LIKE ?", (prefix + "%",)
+            ).fetchall()
+        else:
+            rows = conn.execute("SELECT key FROM kv_store").fetchall()
+    return [r[0] for r in rows]
+
+def _collect_all_names():
+    """Return {char_id: heroName} reflecting the *effective* name for every character."""
+    names = {}
+    rosters = _get_kv("forge-rosters") or {}
+    if isinstance(rosters, dict):
+        for members in rosters.values():
+            for m in (members or []):
+                if isinstance(m, dict) and m.get("id") and m.get("heroName"):
+                    names[m["id"]] = m["heroName"]
+    for h in (_get_kv("forge-solo-heroes") or []):
+        if isinstance(h, dict) and h.get("id") and h.get("heroName"):
+            names[h["id"]] = h["heroName"]
+    for v in (_get_kv("forge-villains") or []):
+        if isinstance(v, dict) and v.get("id") and v.get("heroName"):
+            names[v["id"]] = v["heroName"]
+    # sharedEdits (forge-edits) override base names
+    edits = _get_kv("forge-edits") or {}
+    if isinstance(edits, dict):
+        for cid, ed in edits.items():
+            if isinstance(ed, dict) and ed.get("heroName"):
+                names[cid] = ed["heroName"]
+    return names
 
 TUNNEL_URL   = None
 _TUNNEL_PROC = None
@@ -815,35 +905,43 @@ IMAGE_EXTENSIONS = (".jpg", ".jpeg", ".png", ".gif", ".webp")
 
 @app.route("/api/store", methods=["GET"])
 def store_list():
-    store = _load_store()
     prefix = request.args.get("prefix", "")
-    keys = [k for k in store if k.startswith(prefix)] if prefix else list(store.keys())
-    return jsonify({"keys": keys})
+    return jsonify({"keys": _list_kv(prefix)})
 
 @app.route("/api/store/<key>", methods=["GET"])
 def store_get(key):
-    store = _load_store()
-    if key not in store:
+    raw = _get_kv_raw(key)
+    if raw is None:
         return jsonify({"error": "not found"}), 404
-    return jsonify({"key": key, "value": store[key]})
+    return jsonify({"key": key, "value": raw})
 
 @app.route("/api/store/<key>", methods=["POST"])
 def store_set(key):
     body = request.get_json(silent=True) or {}
-    value = body.get("value", "")
-    with _STORE_LOCK:
-        store = _load_store()
-        store[key] = value
-        _save_store(store)
-    return jsonify({"key": key, "value": value})
+    raw = body.get("value", "")
+    _set_kv(key, raw)
+    return jsonify({"key": key, "value": raw})
 
 @app.route("/api/store/<key>", methods=["DELETE"])
 def store_delete(key):
-    with _STORE_LOCK:
-        store = _load_store()
-        store.pop(key, None)
-        _save_store(store)
+    _del_kv(key)
     return jsonify({"key": key, "deleted": True})
+
+@app.route("/api/validate-name", methods=["POST"])
+def validate_name():
+    body    = request.get_json(silent=True) or {}
+    name    = (body.get("name") or "").strip()
+    char_id = (body.get("char_id") or "").strip()
+    if not name:
+        return jsonify({"available": True})
+    name_lower = name.lower()
+    all_names  = _collect_all_names()
+    for cid, cname in all_names.items():
+        if cid == char_id:
+            continue
+        if (cname or "").strip().lower() == name_lower:
+            return jsonify({"available": False, "taken_by": cname})
+    return jsonify({"available": True})
 
 @app.route("/api/images", methods=["GET"])
 def list_images():
@@ -1766,6 +1864,467 @@ def export_all_pdf():
         as_attachment=True, download_name="forge-universe-dossier.pdf")
 
 # ---------------------------------------------------------------------------
+# API: Encyclopedia PDF Export
+# ---------------------------------------------------------------------------
+@app.route("/api/export-encyclopedia", methods=["POST"])
+def export_encyclopedia():
+    try:
+        from reportlab.lib.pagesizes import letter
+        from reportlab.lib import colors
+        from reportlab.lib.units import inch
+        from reportlab.platypus import (SimpleDocTemplate, Paragraph, Spacer,
+                                        Table, TableStyle, HRFlowable, PageBreak)
+        from reportlab.lib.styles import ParagraphStyle
+        from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_RIGHT
+        from reportlab.platypus import Image as RLImage
+    except ImportError:
+        return jsonify({"error": "reportlab not installed. Run: pip install reportlab"}), 500
+
+    data          = request.get_json() or {}
+    sections      = data.get("sections", [])
+    images        = data.get("images", {})
+    family_links  = data.get("familyLinks", [])
+    hero_assocs   = data.get("heroAssocs", [])
+    all_chars     = data.get("allChars", [])
+    universe_data = data.get("universeData", {}) or {}
+    universe_name = universe_data.get("universeName") or "NOCTURNAL KNIGHTS"
+
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=letter,
+        rightMargin=0.55*inch, leftMargin=0.55*inch,
+        topMargin=0.5*inch, bottomMargin=0.5*inch)
+
+    def hex2rgb(h):
+        h = h.lstrip("#")
+        return tuple(int(h[i:i+2], 16)/255 for i in (0, 2, 4))
+    def rcolor(h):
+        try: return colors.Color(*hex2rgb(h))
+        except: return colors.Color(0.33, 0.29, 0.72)
+    def safe(text, fallback=""):
+        if not text: return fallback
+        return str(text).replace("&","&amp;").replace("<","&lt;").replace(">","&gt;")
+
+    INK   = colors.Color(0.04, 0.04, 0.08)
+    PAPER = colors.Color(0.94, 0.92, 0.86)
+    GOLD  = colors.Color(0.83, 0.69, 0.22)
+    MUTED = colors.Color(0.50, 0.48, 0.44)
+    RED   = colors.Color(0.55, 0.10, 0.10)
+    BLUE  = colors.Color(0.37, 0.64, 1.00)
+
+    ALIGN_LABELS = {
+        "base":"NK Member","member":"NK Member","allied":"Allied",
+        "rival":"NK Rival","enemy":"Enemy","neutral":"Neutral","splinter":"Splinter",
+    }
+    POWER_TYPE_LABELS = {"powers":"Powers","equipment":"Arsenal","skills":"Skills"}
+    HERO_TYPE_LABELS  = {"hero":"Hero","anti-hero":"Anti-Hero","reluctant":"Reluctant Hero"}
+
+    RACE_MAP = {
+        "human":"Human","a_gene_mutate":"A-Gene Mutant","auranthi":"Auranthi",
+        "zyrenian":"Zyrenian","dravosi":"Dravosi","human_mutate":"Mutate",
+        "android":"Android","cyborg":"Cyborg","alien_other":"Alien","symbiote":"Symbiote",
+    }
+    def race_lbl(race):
+        if not race: return ""
+        if isinstance(race, dict):
+            parts = [RACE_MAP.get(race.get("main",""),str(race.get("main","")).replace("_"," ").title())]
+            if race.get("sub"): parts.append(RACE_MAP.get(race["sub"],str(race["sub"]).replace("_"," ").title()))
+            return " / ".join(p for p in parts if p)
+        return RACE_MAP.get(str(race), str(race).replace("_"," ").title())
+
+    _sc = {}
+    def sty(name, size=10, color=PAPER, bold=False, align=TA_LEFT, leading=None, italic=False):
+        key = (name, size, id(color), bold, align, leading, italic)
+        if key not in _sc:
+            if bold and italic: fn = "Helvetica-BoldOblique"
+            elif bold:          fn = "Helvetica-Bold"
+            elif italic:        fn = "Helvetica-Oblique"
+            else:               fn = "Helvetica"
+            _sc[key] = ParagraphStyle(name, fontSize=size, textColor=color,
+                fontName=fn, alignment=align, leading=leading or size*1.4,
+                spaceAfter=0, spaceBefore=0)
+        return _sc[key]
+
+    char_name = {c["id"]: c.get("heroName","?") for c in all_chars}
+    alpha_index = []   # (heroName, realName, teamName, isVillain, color)
+    story = []
+
+    # ── Cover ────────────────────────────────────────────────────────────────
+    total_chars = sum(len(s.get("members",[])) for s in sections)
+    story.append(Spacer(1, 1.1*inch))
+    story.append(Paragraph(universe_name.upper(), sty("cv_u", 9, GOLD, False, TA_CENTER)))
+    story.append(Spacer(1, 0.1*inch))
+    story.append(HRFlowable(width="38%", thickness=0.5, color=GOLD, hAlign="CENTER"))
+    story.append(Spacer(1, 0.1*inch))
+    story.append(Paragraph("CHARACTER ENCYCLOPEDIA", sty("cv_t", 30, PAPER, True, TA_CENTER, 36)))
+    story.append(Spacer(1, 0.12*inch))
+    story.append(HRFlowable(width="80%", thickness=1.5, color=GOLD, hAlign="CENTER"))
+    story.append(Spacer(1, 0.12*inch))
+    story.append(Paragraph("Complete Universe Reference Guide", sty("cv_s", 12, MUTED, False, TA_CENTER, 18)))
+    story.append(Spacer(1, 0.36*inch))
+
+    if sections:
+        cv_rows = []
+        for sec in sections:
+            sc_c = rcolor(sec.get("color","#888780"))
+            stype = sec.get("type","team")
+            label = ("THREAT REGISTRY" if stype=="villains"
+                     else ("INDEPENDENT OPERATIVES" if stype=="solo"
+                           else sec.get("name","").upper()))
+            cv_rows.append([
+                Paragraph(label, sty(f"cl_{label}", 9, sc_c, True)),
+                Paragraph(f"{len(sec.get('members',[]))} entries", sty(f"clc_{label}", 8, MUTED, False, TA_RIGHT)),
+            ])
+        cv_rows.append([
+            Paragraph("TOTAL ENTRIES", sty("cl_tot", 9, GOLD, True)),
+            Paragraph(str(total_chars), sty("clc_tot", 9, GOLD, True, TA_RIGHT)),
+        ])
+        cv_tbl = Table(cv_rows, colWidths=["70%","30%"])
+        cv_tbl.setStyle(TableStyle([
+            ("TOPPADDING",(0,0),(-1,-1),4),("BOTTOMPADDING",(0,0),(-1,-1),4),
+            ("LEFTPADDING",(0,0),(-1,-1),0),("RIGHTPADDING",(0,0),(-1,-1),0),
+            ("LINEBELOW",(0,0),(-1,-2),0.25,colors.Color(0.18,0.18,0.22)),
+        ]))
+        story.append(cv_tbl)
+
+    story.append(Spacer(1, 1.4*inch))
+    story.append(Paragraph(f"Forge Reference  ·  {total_chars} Entries", sty("cv_ft", 8, MUTED, False, TA_CENTER)))
+
+    # ── Character entries ────────────────────────────────────────────────────
+    global_idx = 0
+    for si, section in enumerate(sections):
+        sec_type   = section.get("type","team")
+        sec_name   = section.get("name","Section")
+        sec_color  = section.get("color","#888780")
+        members    = section.get("members",[])
+        SEC_C      = rcolor(sec_color)
+        is_villain_section = sec_type == "villains"
+
+        # Section divider
+        story.append(PageBreak())
+        story.append(Spacer(1, 1.8*inch))
+        if is_villain_section:
+            story.append(Paragraph("THREAT REGISTRY", sty(f"sd{si}t", 26, RED, True, TA_CENTER)))
+        elif sec_type == "solo":
+            story.append(Paragraph("INDEPENDENT OPERATIVES", sty(f"sd{si}t", 22, PAPER, True, TA_CENTER)))
+        else:
+            story.append(Paragraph(sec_name.upper(), sty(f"sd{si}t", 28, GOLD, True, TA_CENTER)))
+        story.append(Spacer(1, 0.1*inch))
+        story.append(HRFlowable(width="55%", thickness=1.5, color=SEC_C, hAlign="CENTER"))
+        story.append(Spacer(1, 0.12*inch))
+        story.append(Paragraph(f"{len(members)} {'CLASSIFIED ENTRIES' if is_villain_section else 'ENTRIES'}", sty(f"sd{si}s", 9, MUTED, False, TA_CENTER)))
+        story.append(Spacer(1, 2.0*inch))
+        story.append(HRFlowable(width="28%", thickness=0.5, color=colors.Color(0.18,0.18,0.24), hAlign="CENTER"))
+        story.append(Spacer(1, 0.08*inch))
+        story.append(Paragraph(f"VOL. {si+1}  ·  {universe_name.upper()}", sty(f"sd{si}v", 7, MUTED, False, TA_CENTER)))
+
+        for member in members:
+            alpha_index.append((
+                member.get("heroName","Unknown"),
+                member.get("realName",""),
+                sec_name,
+                is_villain_section,
+                member.get("color", sec_color),
+            ))
+            story.append(PageBreak())
+            p = f"e{global_idx}"
+            acc   = member.get("color", sec_color)
+            ACC   = rcolor(acc)
+            name  = safe(member.get("heroName","Unknown"))
+            real  = safe(member.get("realName",""))
+            role  = safe(member.get("role",""))
+            tag   = safe(member.get("tagline",""))
+            orig  = safe(member.get("origin",""))
+            apptx = safe(member.get("appearance",""))
+            stats = member.get("stats",{})
+            pows  = member.get("powers",[])
+            is_v  = member.get("isVillain",False)
+            num   = safe(member.get("number",""))
+            gender     = safe(member.get("gender",""))
+            birth_year = safe(member.get("birthYear",""))
+            age        = safe(member.get("age",""))
+            hometown   = safe(member.get("hometown",""))
+            base_ops   = safe(member.get("baseOfOps",""))
+            race_str   = safe(race_lbl(member.get("race")))
+            hero_type  = HERO_TYPE_LABELS.get(member.get("heroType","hero"), "Hero")
+            power_type = POWER_TYPE_LABELS.get(member.get("powerType","powers"), "Powers")
+            nk_aln     = member.get("nkAlignment","neutral")
+            m_team     = safe(member.get("teamName", sec_name))
+            insps      = [str(x).strip() for x in (member.get("inspirations") or []) if x and str(x).strip()]
+            dna        = member.get("dna",[])
+            shared_v   = member.get("sharedVillains",[])
+
+            # Header banner
+            hdr_left  = "— CLASSIFIED THREAT —" if is_v else m_team.upper()
+            hdr_right = f"#{num}" if num else role.upper()
+            hdr = Table([[
+                Paragraph(hdr_left,  sty(f"{p}hl", 7, ACC, False)),
+                Paragraph(hdr_right, sty(f"{p}hr", 7, MUTED, False, TA_RIGHT)),
+            ]], colWidths=["70%","30%"])
+            hdr.setStyle(TableStyle([
+                ("BACKGROUND",(0,0),(-1,-1), colors.Color(*[x*0.15 for x in hex2rgb(acc)])),
+                ("TOPPADDING",(0,0),(-1,-1),5),("BOTTOMPADDING",(0,0),(-1,-1),5),
+                ("LEFTPADDING",(0,0),(0,-1),8),("RIGHTPADDING",(-1,0),(-1,-1),8),
+                ("VALIGN",(0,0),(-1,-1),"MIDDLE"),
+            ]))
+            story.append(hdr)
+            story.append(Spacer(1, 0.1*inch))
+
+            # Name block
+            story.append(Paragraph(name, sty(f"{p}nm", 26, PAPER, True, TA_LEFT, 30)))
+            if real: story.append(Paragraph(real, sty(f"{p}rn", 10, MUTED)))
+            if tag:
+                story.append(Spacer(1, 4))
+                story.append(Paragraph(f'"{tag}"', sty(f"{p}tg", 10, colors.Color(0.76,0.74,0.68), False, TA_LEFT, 14, italic=True)))
+            story.append(Spacer(1, 0.1*inch))
+            story.append(HRFlowable(width="100%", thickness=1, color=ACC))
+            story.append(Spacer(1, 0.1*inch))
+
+            # Image
+            img_cell = Spacer(1, 1)
+            img_b64  = images.get(member.get("id",""))
+            if img_b64:
+                try:
+                    if "," in img_b64: img_b64 = img_b64.split(",",1)[1]
+                    rl_img = RLImage(io.BytesIO(base64.b64decode(img_b64)), width=2.1*inch, height=2.9*inch)
+                    rl_img.hAlign = "LEFT"
+                    img_cell = rl_img
+                except Exception: pass
+
+            # Data file key-value pairs
+            def dr(label, value):
+                if not value: return None
+                return [
+                    Paragraph(label, sty(f"{p}dl{label}", 7.5, ACC, True)),
+                    Paragraph(value, sty(f"{p}dv{label}", 8.5, PAPER, False, TA_LEFT, 12)),
+                ]
+            age_display = age or (f"b. {birth_year}" if birth_year else "")
+            type_display = f"{hero_type} · {power_type}" if not is_v else None
+            align_display = ALIGN_LABELS.get(nk_aln, nk_aln.title()) if not is_v else "HOSTILE THREAT"
+            data_rows = [r for r in [
+                dr("REAL NAME",          real),
+                dr("ROLE",               role),
+                dr("TEAM",               m_team if not is_v else None),
+                dr("SPECIES / RACE",     race_str),
+                dr("GENDER",             gender),
+                dr("AGE",                age_display),
+                dr("HOMETOWN",           hometown),
+                dr("BASE OF OPERATIONS", base_ops),
+                dr("TYPE",               type_display),
+                dr("ALIGNMENT",          align_display),
+                dr("DNA",                " · ".join(dna) if dna else None),
+                dr("INSPIRED BY",        " · ".join(insps) if insps else None),
+            ] if r is not None]
+
+            df_content = []
+            if data_rows:
+                df_tbl = Table(data_rows, colWidths=[1.3*inch, 3.1*inch])
+                df_tbl.setStyle(TableStyle([
+                    ("VALIGN",(0,0),(-1,-1),"TOP"),
+                    ("TOPPADDING",(0,0),(-1,-1),3),("BOTTOMPADDING",(0,0),(-1,-1),3),
+                    ("LEFTPADDING",(0,0),(-1,-1),0),("RIGHTPADDING",(0,0),(-1,-1),0),
+                    ("LINEBELOW",(0,0),(-1,-2),0.25,colors.Color(0.14,0.14,0.20)),
+                ]))
+                df_content = [df_tbl]
+
+            body = Table([[img_cell, df_content]], colWidths=[2.2*inch, 4.6*inch])
+            body.setStyle(TableStyle([
+                ("VALIGN",(0,0),(-1,-1),"TOP"),
+                ("LEFTPADDING",(0,0),(0,-1),0),("RIGHTPADDING",(0,0),(0,-1),12),
+                ("LEFTPADDING",(1,0),(1,-1),0),("RIGHTPADDING",(1,0),(1,-1),0),
+                ("TOPPADDING",(0,0),(-1,-1),0),("BOTTOMPADDING",(0,0),(-1,-1),0),
+            ]))
+            story.append(body)
+            story.append(Spacer(1, 0.12*inch))
+
+            # Stats — compact horizontal row
+            if stats:
+                stat_items = list(stats.items())
+                stat_cells = [Paragraph(
+                    f'{sn.upper()}<br/><font size="11"><b>{sv}</b></font>',
+                    sty(f"{p}st{sn}", 7, MUTED, False, TA_CENTER, 12)
+                ) for sn, sv in stat_items]
+                while len(stat_cells) < 5: stat_cells.append(Spacer(1,1))
+                st = Table([stat_cells[:5]], colWidths=[1.38*inch]*5)
+                st.setStyle(TableStyle([
+                    ("ALIGN",(0,0),(-1,-1),"CENTER"),("VALIGN",(0,0),(-1,-1),"MIDDLE"),
+                    ("BACKGROUND",(0,0),(-1,-1), colors.Color(*[x*0.12 for x in hex2rgb(acc)])),
+                    ("BOX",(0,0),(-1,-1),0.5, colors.Color(*[x*0.4 for x in hex2rgb(acc)])),
+                    ("INNERGRID",(0,0),(-1,-1),0.25, colors.Color(0.12,0.12,0.18)),
+                    ("TOPPADDING",(0,0),(-1,-1),5),("BOTTOMPADDING",(0,0),(-1,-1),5),
+                    ("LEFTPADDING",(0,0),(-1,-1),0),("RIGHTPADDING",(0,0),(-1,-1),0),
+                ]))
+                story.append(Paragraph("STATS", sty(f"{p}stlbl", 7, MUTED)))
+                story.append(Spacer(1, 3))
+                story.append(st)
+                story.append(Spacer(1, 0.1*inch))
+
+            # Powers / Arsenal / Skills
+            if pows:
+                story.append(HRFlowable(width="100%", thickness=0.5, color=colors.Color(0.15,0.15,0.22)))
+                story.append(Spacer(1, 0.08*inch))
+                pow_lbl = "ARSENAL" if power_type=="Arsenal" else ("SKILLS & ABILITIES" if power_type=="Skills" else "POWERS & ABILITIES")
+                story.append(Paragraph(pow_lbl, sty(f"{p}powlbl", 7, MUTED)))
+                story.append(Spacer(1, 4))
+                pow_rows = [
+                    [Paragraph(safe(pw.get("name","")), sty(f"{p}pn{i}", 9.5, PAPER, True)),
+                     Paragraph(safe(pw.get("desc","")), sty(f"{p}pd{i}", 9, MUTED, False, TA_LEFT, 13))]
+                    for i, pw in enumerate(pows)
+                ]
+                pow_tbl = Table(pow_rows, colWidths=[1.8*inch, 5.1*inch])
+                pow_tbl.setStyle(TableStyle([
+                    ("VALIGN",(0,0),(-1,-1),"TOP"),
+                    ("TOPPADDING",(0,0),(-1,-1),3),("BOTTOMPADDING",(0,0),(-1,-1),3),
+                    ("LEFTPADDING",(0,0),(-1,-1),0),("RIGHTPADDING",(0,0),(-1,-1),0),
+                    ("LINEBELOW",(0,0),(-1,-2),0.25,colors.Color(0.14,0.14,0.20)),
+                ]))
+                story.append(pow_tbl)
+                story.append(Spacer(1, 0.1*inch))
+
+            # Origin
+            if orig:
+                story.append(HRFlowable(width="100%", thickness=0.5, color=colors.Color(0.15,0.15,0.22)))
+                story.append(Spacer(1, 0.08*inch))
+                story.append(Paragraph("ORIGIN", sty(f"{p}orlbl", 7, MUTED)))
+                story.append(Spacer(1, 3))
+                story.append(Paragraph(orig, sty(f"{p}or", 9.5, MUTED, False, TA_LEFT, 15)))
+                story.append(Spacer(1, 0.08*inch))
+
+            # Appearance
+            if apptx:
+                story.append(Paragraph("APPEARANCE", sty(f"{p}aplbl", 7, MUTED)))
+                story.append(Spacer(1, 3))
+                story.append(Paragraph(apptx, sty(f"{p}ap", 9.5, MUTED, False, TA_LEFT, 15)))
+                story.append(Spacer(1, 0.08*inch))
+
+            # Shared threats
+            if shared_v:
+                story.append(HRFlowable(width="100%", thickness=0.5, color=RED))
+                story.append(Spacer(1, 4))
+                story.append(Paragraph("&#9888; SHARED THREAT: " + " · ".join(shared_v), sty(f"{p}sv", 8, colors.Color(0.8,0.2,0.2), True)))
+                story.append(Spacer(1, 0.06*inch))
+
+            # Footer
+            story.append(Spacer(1, 0.08*inch))
+            story.append(HRFlowable(width="100%", thickness=0.5, color=colors.Color(*[x*0.22 for x in hex2rgb(acc)])))
+            story.append(Spacer(1, 3))
+            foot = Table([[
+                Paragraph(f"{m_team.upper()}  ·  {universe_name.upper()}", sty(f"{p}ft", 7, MUTED)),
+                Paragraph(num, sty(f"{p}fn", 14, colors.Color(*[x*0.3 for x in hex2rgb(acc)]), True, TA_RIGHT)),
+            ]], colWidths=["88%","12%"])
+            foot.setStyle(TableStyle([("TOPPADDING",(0,0),(-1,-1),0),("BOTTOMPADDING",(0,0),(-1,-1),0),("LEFTPADDING",(0,0),(-1,-1),0),("RIGHTPADDING",(0,0),(-1,-1),0)]))
+            story.append(foot)
+            global_idx += 1
+
+    # ── Alphabetical Index ───────────────────────────────────────────────────
+    if alpha_index:
+        story.append(PageBreak())
+        story.append(Spacer(1, 0.3*inch))
+        story.append(Paragraph("CHARACTER INDEX", sty("idx_t", 20, GOLD, True, TA_CENTER)))
+        story.append(Spacer(1, 0.06*inch))
+        story.append(HRFlowable(width="50%", thickness=1, color=GOLD, hAlign="CENTER"))
+        story.append(Spacer(1, 0.08*inch))
+        story.append(Paragraph("Alphabetical by hero name", sty("idx_sub", 8, MUTED, False, TA_CENTER)))
+        story.append(Spacer(1, 0.22*inch))
+
+        sorted_idx = sorted(alpha_index, key=lambda x: x[0].upper())
+        current_letter = ""
+        pending_rows   = []
+
+        def flush_rows(rows):
+            if not rows: return
+            t = Table(rows, colWidths=[2.9*inch, 2.0*inch, 1.9*inch])
+            t.setStyle(TableStyle([
+                ("TOPPADDING",(0,0),(-1,-1),3),("BOTTOMPADDING",(0,0),(-1,-1),3),
+                ("LEFTPADDING",(0,0),(-1,-1),0),("RIGHTPADDING",(0,0),(-1,-1),4),
+                ("LINEBELOW",(0,0),(-1,-2),0.25,colors.Color(0.14,0.14,0.20)),
+            ]))
+            story.append(t)
+
+        for (hero_nm, real_nm, team_nm, villain_flag, char_color) in sorted_idx:
+            first = hero_nm[0].upper() if hero_nm else "?"
+            if first != current_letter:
+                flush_rows(pending_rows); pending_rows = []
+                if current_letter: story.append(Spacer(1, 6))
+                story.append(Paragraph(first, sty(f"idxl{first}", 14, GOLD, True)))
+                story.append(Spacer(1, 2))
+                current_letter = first
+            acc_c = rcolor(char_color)
+            pending_rows.append([
+                Paragraph(safe(hero_nm), sty(f"idxn{hero_nm}", 9, PAPER, True)),
+                Paragraph(safe(real_nm), sty(f"idxr{hero_nm}", 8.5, MUTED)),
+                Paragraph(("&#9888; " if villain_flag else "") + safe(team_nm),
+                          sty(f"idxt{hero_nm}", 8, colors.Color(0.7,0.2,0.2) if villain_flag else MUTED)),
+            ])
+        flush_rows(pending_rows)
+
+    # ── Relations appendix ───────────────────────────────────────────────────
+    if family_links or hero_assocs:
+        story.append(PageBreak())
+        story.append(Spacer(1, 0.3*inch))
+        story.append(Paragraph("RELATIONS INDEX", sty("ri_t", 18, GOLD, True, TA_CENTER)))
+        story.append(Spacer(1, 0.06*inch))
+        story.append(HRFlowable(width="40%", thickness=1, color=GOLD, hAlign="CENTER"))
+        story.append(Spacer(1, 0.22*inch))
+
+        if family_links:
+            story.append(Paragraph("FAMILY BONDS", sty("ri_fh", 9, MUTED, True)))
+            story.append(Spacer(1, 6))
+            fl_rows = []
+            for lk in family_links:
+                an = safe(char_name.get(lk.get("a",""), lk.get("a","?")))
+                bn = safe(char_name.get(lk.get("b",""), lk.get("b","?")))
+                lid = lk.get("id","")
+                fl_rows.append([
+                    Paragraph(an, sty(f"fla{lid}", 9, PAPER, True)),
+                    Paragraph(f"{safe(lk.get('aRelation',''))}  /  {safe(lk.get('bRelation',''))}", sty(f"flr{lid}", 8, GOLD, False, TA_CENTER)),
+                    Paragraph(bn, sty(f"flb{lid}", 9, PAPER, True, TA_RIGHT)),
+                ])
+            fl_tbl = Table(fl_rows, colWidths=["38%","24%","38%"])
+            fl_tbl.setStyle(TableStyle([
+                ("ALIGN",(0,0),(0,-1),"LEFT"),("ALIGN",(2,0),(2,-1),"RIGHT"),
+                ("VALIGN",(0,0),(-1,-1),"MIDDLE"),
+                ("TOPPADDING",(0,0),(-1,-1),5),("BOTTOMPADDING",(0,0),(-1,-1),5),
+                ("LEFTPADDING",(0,0),(-1,-1),4),("RIGHTPADDING",(0,0),(-1,-1),4),
+                ("LINEBELOW",(0,0),(-1,-2),0.25,colors.Color(0.18,0.18,0.22)),
+            ]))
+            story.append(fl_tbl)
+            story.append(Spacer(1, 0.25*inch))
+
+        if hero_assocs:
+            story.append(Paragraph("HERO ASSOCIATIONS", sty("ri_hah", 9, MUTED, True)))
+            story.append(Spacer(1, 6))
+            ha_rows = []
+            for ha in hero_assocs:
+                an  = safe(char_name.get(ha.get("a",""), ha.get("a","?")))
+                bn  = safe(char_name.get(ha.get("b",""), ha.get("b","?")))
+                hid = ha.get("id","")
+                ha_rows.append([
+                    Paragraph(an, sty(f"haa{hid}", 9, PAPER, True)),
+                    Paragraph(f"{safe(ha.get('aRelation',''))}  /  {safe(ha.get('bRelation',''))}", sty(f"har{hid}", 8, BLUE, False, TA_CENTER)),
+                    Paragraph(bn, sty(f"hab{hid}", 9, PAPER, True, TA_RIGHT)),
+                ])
+            ha_tbl = Table(ha_rows, colWidths=["38%","24%","38%"])
+            ha_tbl.setStyle(TableStyle([
+                ("ALIGN",(0,0),(0,-1),"LEFT"),("ALIGN",(2,0),(2,-1),"RIGHT"),
+                ("VALIGN",(0,0),(-1,-1),"MIDDLE"),
+                ("TOPPADDING",(0,0),(-1,-1),5),("BOTTOMPADDING",(0,0),(-1,-1),5),
+                ("LEFTPADDING",(0,0),(-1,-1),4),("RIGHTPADDING",(0,0),(-1,-1),4),
+                ("LINEBELOW",(0,0),(-1,-2),0.25,colors.Color(0.18,0.18,0.22)),
+            ]))
+            story.append(ha_tbl)
+
+    def bg(canvas, doc):
+        canvas.saveState()
+        canvas.setFillColor(INK)
+        canvas.rect(0, 0, letter[0], letter[1], fill=1, stroke=0)
+        canvas.restoreState()
+
+    doc.build(story, onFirstPage=bg, onLaterPages=bg)
+    buf.seek(0)
+    return send_file(buf, mimetype="application/pdf",
+        as_attachment=True, download_name="forge-encyclopedia.pdf")
+
+# ---------------------------------------------------------------------------
 # API: Comic PDF Export
 # ---------------------------------------------------------------------------
 @app.route("/api/export-comic-pdf", methods=["POST"])
@@ -2012,6 +2571,7 @@ def find_free_port(preferred=7432, retries=10, delay=0.4):
 def run_flask(port, host="127.0.0.1"):
     import logging
     logging.getLogger("werkzeug").setLevel(logging.ERROR)
+    _init_db()
     app.run(host=host, port=port, debug=False, use_reloader=False, threaded=True)
 
 # ---------------------------------------------------------------------------
