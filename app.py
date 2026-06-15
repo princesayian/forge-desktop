@@ -88,7 +88,7 @@ def _init_db():
                     legacy = json.load(f)
                 conn.executemany(
                     "INSERT OR IGNORE INTO kv_store (key, value) VALUES (?, ?)",
-                    [(k, json.dumps(v)) for k, v in legacy.items()]
+                    [(k, v if isinstance(v, str) else json.dumps(v)) for k, v in legacy.items()]
                 )
                 print(f"[forge] Migrated {len(legacy)} keys from forge-data.json → forge.db")
             except Exception as e:
@@ -385,6 +385,17 @@ def _existing_instance():
 def _write_lock():
     with open(LOCK_FILE, "w") as f:
         f.write(str(os.getpid()))
+
+def get_lan_ip():
+    """Return this machine's primary LAN IP (the address other devices on the network reach)."""
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        return None
 
 def find_network_instance():
     return None
@@ -686,13 +697,21 @@ def api_update_pull():
 @app.route("/api/remote")
 def api_remote():
     cfg = load_config()
+    lan = get_lan_ip()
+    try:
+        port = int(request.host.split(":")[-1]) if ":" in request.host else 7432
+    except Exception:
+        port = 7432
+    lan_url = f"http://{lan}:{port}" if lan and lan != "127.0.0.1" else None
     return jsonify({
         "enabled": cfg.get("remote_enabled", False),
         "url": TUNNEL_URL,
         "duck_domain": cfg.get("duck_domain", ""),
         "auth_set": bool(cfg.get("remote_username") and cfg.get("remote_password_hash")),
         "username": cfg.get("remote_username", ""),
-        "cloudflared": bool(_find_cloudflared())
+        "cloudflared": bool(_find_cloudflared()),
+        "lan_ip": lan,
+        "lan_url": lan_url,
     })
 
 # ---------------------------------------------------------------------------
@@ -2641,7 +2660,10 @@ if __name__ == "__main__":
             break
         except Exception:
             time.sleep(0.3)
+    lan_ip = get_lan_ip()
     print(f"\n  Superhero Forge v{FORGE_VERSION} ready at {url}")
+    if lan_ip and lan_ip != "127.0.0.1":
+        print(f"  Local network:  http://{lan_ip}:{port}  ← share this with devices on your Wi-Fi")
 
     # Auto-update check (background)
     def _bg_update_check():

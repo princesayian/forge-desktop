@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { G } from '../constants/index.js';
+const LAN_BLUE = "#5EB1FF";
 
 export default function RemotePanel({remoteInfo,setRemoteInfo,onClose,s,forgeVersion,setAppAlert}){
   const[rusername,setRusername]=useState(remoteInfo?.username||"");
@@ -9,6 +10,9 @@ export default function RemotePanel({remoteInfo,setRemoteInfo,onClose,s,forgeVer
   const[rtoken,setRtoken]=useState("");
   const[saving,setSaving]=useState(false);
   const[pwErr,setPwErr]=useState("");
+  const[lanCopied,setLanCopied]=useState(false);
+  useEffect(()=>{fetch("/api/remote").then(r=>r.json()).then(d=>setRemoteInfo(d)).catch(()=>{});},[]);
+  const copyLan=()=>{if(remoteInfo?.lan_url){navigator.clipboard.writeText(remoteInfo.lan_url).then(()=>{setLanCopied(true);setTimeout(()=>setLanCopied(false),2000);}).catch(()=>{});}};
   const saveRemote=async(enabled)=>{
     if(rpassword&&rpassword!==rconfirm){setPwErr("Passwords do not match.");return;}
     setPwErr("");
@@ -60,6 +64,23 @@ export default function RemotePanel({remoteInfo,setRemoteInfo,onClose,s,forgeVer
           </div>
         );
       })()}
+      {/* ── Local Network Access card ── */}
+      <div style={{padding:"12px 16px",background:"var(--bg3)",border:`1px solid ${LAN_BLUE}30`,borderRadius:8,marginBottom:12}}>
+        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:6}}>
+          <div style={{width:8,height:8,borderRadius:"50%",background:remoteInfo?.lan_url?"#5DCAA5":"#888780",flexShrink:0,boxShadow:remoteInfo?.lan_url?"0 0 6px #5DCAA5":undefined}}/>
+          <div style={{fontSize:10,fontWeight:"bold",color:LAN_BLUE,letterSpacing:"0.06em"}}>LOCAL NETWORK ACCESS</div>
+          <div style={{fontSize:8.5,color:"var(--text4)",marginLeft:4}}>— no setup required, same Wi-Fi only</div>
+        </div>
+        {remoteInfo?.lan_url?(
+          <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+            <span style={{fontFamily:"var(--font-mono)",fontSize:11,color:"#5DCAA5",background:"#5DCAA510",border:"1px solid #5DCAA530",borderRadius:6,padding:"4px 10px",letterSpacing:"0.04em"}}>{remoteInfo.lan_url}</span>
+            <button onClick={copyLan} style={{fontSize:9,padding:"4px 12px",background:lanCopied?`#5DCAA520`:`${LAN_BLUE}10`,border:`1px solid ${lanCopied?"#5DCAA5":LAN_BLUE}44`,borderRadius:6,cursor:"pointer",color:lanCopied?"#5DCAA5":LAN_BLUE,fontFamily:"var(--font-mono)"}}>{lanCopied?"Copied!":"Copy"}</button>
+            <span style={{fontSize:9,color:"var(--text4)"}}>Type this URL on any phone or laptop connected to the same Wi-Fi</span>
+          </div>
+        ):(
+          <div style={{fontSize:9.5,color:"var(--text4)"}}>LAN IP not detected — make sure you are connected to Wi-Fi or Ethernet.</div>
+        )}
+      </div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))",gap:12}}>
         <div style={{padding:"12px 14px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:8}}>
           <div style={{fontSize:10,fontWeight:"bold",color:"#5EB1FF",marginBottom:8}}>Cloudflared Tunnel</div>
