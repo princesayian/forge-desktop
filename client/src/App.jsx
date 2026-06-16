@@ -251,6 +251,10 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
   const[universeDossierTarget,setUniverseDossierTarget]=useState(null);
   const[universeData,setUniverseData]=useState({});
   const[showWorldBuilder,setShowWorldBuilder]=useState(false);
+  const[timeline,setTimeline]=useState([]);
+  const[showTimeline,setShowTimeline]=useState(false);
+  const[tlAddMode,setTlAddMode]=useState(false);
+  const[tlDraft,setTlDraft]=useState({year:"",title:"",description:"",type:"other"});
   const[saved,setSaved]=useState(false);
   const[pdfLoading,setPdfLoading]=useState(false);
   const[allDossierLoading,setAllDossierLoading]=useState(false);
@@ -316,6 +320,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
       try{const d=await storage.get("forge-villain-factions");setVillainFactions(JSON.parse(d.value)||[]);}catch(e){}
       try{const d=await storage.get("forge-villain-alliances");setVillainAlliances(JSON.parse(d.value)||[]);}catch(e){}
       try{const d=await storage.get("forge-universe");if(d)setUniverseData(JSON.parse(d.value)||{});}catch(e){}
+      try{const d=await storage.get("forge-timeline");if(d)setTimeline(JSON.parse(d.value)||[]);}catch(e){}
       try{const d=await storage.get("forge-race-abilities");if(d)setRaceAbilities(JSON.parse(d.value)||{});}catch(e){}
     })();
   },[]);
@@ -3951,6 +3956,92 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                       </div>
                     </div>
 
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* ── UNIVERSE TIMELINE ────────────────────────────────────── */}
+          {(()=>{
+            const TL_COLORS={origin:"#534AB7",battle:"#8B1A1A",alliance:"#0F6E56",defeat:"#BA7517",discovery:"#D4AF37",loss:"#6B4E71",other:"#555"};
+            const TL_LABELS={origin:"Origin",battle:"Battle",alliance:"Alliance",defeat:"Defeat",discovery:"Discovery",loss:"Loss",other:"Event"};
+            const saveTimeline=async(events)=>{setTimeline(events);await storage.set("forge-timeline",JSON.stringify(events));};
+            const addEvent=async()=>{
+              if(!tlDraft.title.trim())return;
+              const ev={...tlDraft,id:String(Date.now())};
+              const sorted=[...timeline,ev].sort((a,b)=>(a.year||"").localeCompare(b.year||""));
+              await saveTimeline(sorted);
+              setTlDraft({year:"",title:"",description:"",type:"other"});
+              setTlAddMode(false);
+            };
+            const removeEvent=async(id)=>saveTimeline(timeline.filter(e=>e.id!==id));
+            return(
+              <div style={{background:"var(--bg3)",border:`1px solid ${G}22`,borderRadius:12,marginBottom:16,overflow:"hidden"}}>
+                <div onClick={()=>setShowTimeline(p=>!p)} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 14px",cursor:"pointer",borderBottom:showTimeline?`1px solid ${G}18`:"none",userSelect:"none"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:10,minWidth:0}}>
+                    <span style={{fontSize:9,letterSpacing:"0.2em",color:`${G}88`,textTransform:"uppercase",fontFamily:"var(--font-mono)",flexShrink:0}}>Universe Timeline</span>
+                    {timeline.length>0&&<span style={{fontSize:9,color:"var(--text4)",fontFamily:"var(--font-mono)"}}>{timeline.length} event{timeline.length!==1?"s":""}</span>}
+                    {timeline.length===0&&!showTimeline&&<span style={{fontSize:9,color:"var(--text4)",fontStyle:"italic"}}>No events yet</span>}
+                  </div>
+                  <span style={{fontSize:9,padding:"3px 10px",background:`${G}12`,border:`1px solid ${G}30`,borderRadius:16,color:G,fontFamily:"var(--font-mono)",flexShrink:0,marginLeft:10}}>{showTimeline?"↑ Close":"✚ Timeline"}</span>
+                </div>
+                {showTimeline&&(
+                  <div style={{padding:"16px"}}>
+                    {timeline.length>0&&(
+                      <div style={{position:"relative",marginBottom:16}}>
+                        <div style={{position:"absolute",left:13,top:8,bottom:8,width:1,background:`${G}18`}}/>
+                        {timeline.map(ev=>{
+                          const c=TL_COLORS[ev.type]||"#555";
+                          return(
+                            <div key={ev.id} style={{display:"flex",gap:14,marginBottom:14,position:"relative"}}>
+                              <div style={{width:27,height:27,borderRadius:"50%",background:`${c}22`,border:`2px solid ${c}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,zIndex:1}}>
+                                <div style={{width:7,height:7,borderRadius:"50%",background:c}}/>
+                              </div>
+                              <div style={{flex:1,minWidth:0,paddingTop:3}}>
+                                <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:3,flexWrap:"wrap"}}>
+                                  {ev.year&&<span style={{fontSize:9,fontFamily:"var(--font-mono)",color:c,fontWeight:"bold"}}>{ev.year}</span>}
+                                  <span style={{fontSize:9,padding:"1px 7px",background:`${c}18`,border:`1px solid ${c}33`,borderRadius:10,color:c,fontFamily:"var(--font-mono)"}}>{TL_LABELS[ev.type]||ev.type}</span>
+                                  <button onClick={()=>removeEvent(ev.id)} style={{marginLeft:"auto",border:0,background:"transparent",color:"var(--text4)",cursor:"pointer",fontSize:11,padding:"0 2px",lineHeight:1,flexShrink:0}}>✕</button>
+                                </div>
+                                <div style={{fontSize:12,fontWeight:"bold",color:"var(--text-primary)",marginBottom:ev.description?3:0}}>{ev.title}</div>
+                                {ev.description&&<div style={{fontSize:11,color:"var(--text3)",lineHeight:1.55}}>{ev.description}</div>}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                    {tlAddMode?(
+                      <div style={{background:"var(--bg-card)",border:`1px solid ${G}22`,borderRadius:9,padding:14,display:"flex",flexDirection:"column",gap:10}}>
+                        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                          <div>
+                            <div style={{fontSize:9,color:"var(--text3)",marginBottom:4}}>Year / Date</div>
+                            <input value={tlDraft.year} onChange={e=>setTlDraft(p=>({...p,year:e.target.value}))} placeholder="e.g. 2031" style={{width:"100%"}}/>
+                          </div>
+                          <div>
+                            <div style={{fontSize:9,color:"var(--text3)",marginBottom:4}}>Event Type</div>
+                            <select value={tlDraft.type} onChange={e=>setTlDraft(p=>({...p,type:e.target.value}))} style={{width:"100%",background:"var(--bg-card)",border:"1px solid var(--border)",borderRadius:6,color:"var(--text-primary)",padding:"8px 10px",fontSize:12,fontFamily:"var(--font-mono)"}}>
+                              {Object.entries(TL_LABELS).map(([k,v])=><option key={k} value={k}>{v}</option>)}
+                            </select>
+                          </div>
+                        </div>
+                        <div>
+                          <div style={{fontSize:9,color:"var(--text3)",marginBottom:4}}>Title</div>
+                          <input value={tlDraft.title} onChange={e=>setTlDraft(p=>({...p,title:e.target.value}))} placeholder="Event title" style={{width:"100%"}}/>
+                        </div>
+                        <div>
+                          <div style={{fontSize:9,color:"var(--text3)",marginBottom:4}}>Description (optional)</div>
+                          <textarea value={tlDraft.description} onChange={e=>setTlDraft(p=>({...p,description:e.target.value}))} placeholder="What happened?" rows={2} style={{width:"100%",resize:"vertical"}}/>
+                        </div>
+                        <div style={{display:"flex",gap:8}}>
+                          <button onClick={addEvent} style={{flex:1,padding:"8px",background:`${G}18`,border:`1px solid ${G}`,borderRadius:7,color:G,fontSize:11,cursor:"pointer",fontFamily:"var(--font-mono)"}}>+ Add Event</button>
+                          <button onClick={()=>{setTlAddMode(false);setTlDraft({year:"",title:"",description:"",type:"other"});}} style={{padding:"8px 14px",background:"transparent",border:"1px solid var(--border)",borderRadius:7,color:"var(--text3)",fontSize:11,cursor:"pointer"}}>Cancel</button>
+                        </div>
+                      </div>
+                    ):(
+                      <button onClick={()=>setTlAddMode(true)} style={{width:"100%",padding:"8px",background:"transparent",border:`1px dashed ${G}30`,borderRadius:8,color:`${G}77`,cursor:"pointer",fontSize:11,fontFamily:"var(--font-mono)"}}>+ Add Timeline Event</button>
+                    )}
                   </div>
                 )}
               </div>

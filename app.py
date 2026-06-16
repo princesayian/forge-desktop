@@ -285,6 +285,78 @@ def ollama_generate(model: str, prompt: str) -> str:
         r.raise_for_status()
         return r.json().get("response", "")
 
+
+def ollama_stream(model: str, prompt: str):
+    """Yield raw text tokens from Groq, remote OpenAI-compat, or local Ollama (streaming mode)."""
+    if model in GROQ_MODELS and GROQ_KEY:
+        r = requests.post(
+            "https://api.groq.com/openai/v1/chat/completions",
+            headers={"Content-Type": "application/json", "Authorization": f"Bearer {GROQ_KEY}"},
+            json={"model": model, "messages": [{"role": "user", "content": prompt}],
+                  "max_tokens": 1200, "stream": True},
+            timeout=180, stream=True,
+        )
+        r.raise_for_status()
+        for line in r.iter_lines():
+            if not line:
+                continue
+            if line.startswith(b"data: "):
+                data = line[6:]
+                if data == b"[DONE]":
+                    break
+                try:
+                    chunk = json.loads(data)
+                    text = chunk.get("choices", [{}])[0].get("delta", {}).get("content", "")
+                    if text:
+                        yield text
+                except Exception:
+                    pass
+        return
+
+    base = config["ollama_url"].rstrip("/")
+    if _is_remote():
+        r = requests.post(
+            f"{base}/v1/chat/completions",
+            headers=_headers(),
+            json={"model": model, "messages": [{"role": "user", "content": prompt}],
+                  "stream": True},
+            timeout=180, stream=True,
+        )
+        r.raise_for_status()
+        for line in r.iter_lines():
+            if not line:
+                continue
+            if line.startswith(b"data: "):
+                data = line[6:]
+                if data == b"[DONE]":
+                    break
+                try:
+                    chunk = json.loads(data)
+                    text = chunk.get("choices", [{}])[0].get("delta", {}).get("content", "")
+                    if text:
+                        yield text
+                except Exception:
+                    pass
+    else:
+        r = requests.post(
+            f"{base}/api/generate",
+            json={"model": model, "prompt": prompt, "stream": True},
+            timeout=180, stream=True,
+        )
+        r.raise_for_status()
+        for line in r.iter_lines():
+            if not line:
+                continue
+            try:
+                chunk = json.loads(line)
+                text = chunk.get("response", "")
+                if text:
+                    yield text
+                if chunk.get("done"):
+                    break
+            except Exception:
+                pass
+
 def ollama_is_running() -> bool:
     base = config["ollama_url"].rstrip("/")
     try:
@@ -331,8 +403,14 @@ def _find_cloudflared():
     cf = shutil.which("cloudflared")
     if cf:
         return cf
-    for p in ("/usr/local/bin/cloudflared", "/opt/homebrew/bin/cloudflared",
-              "/opt/homebrew/sbin/cloudflared", "/usr/bin/cloudflared"):
+    candidates = [
+        "/usr/local/bin/cloudflared", "/opt/homebrew/bin/cloudflared",
+        "/opt/homebrew/sbin/cloudflared", "/usr/bin/cloudflared",
+        r"C:\Program Files (x86)\cloudflare\cloudflared\cloudflared.exe",
+        r"C:\Program Files\cloudflare\cloudflared\cloudflared.exe",
+        r"C:\ProgramData\cloudflare\cloudflared.exe",
+    ]
+    for p in candidates:
         if os.path.isfile(p) and os.access(p, os.X_OK):
             return p
     return None
@@ -1044,32 +1122,37 @@ def generate_hero():
     model = _get_model(data)
     extra = data.get("extra", "") or "Surprise me with a creative, varied hero archetype."
     prompt = HERO_PROMPT.format(extra=extra)
-    raw = ""
-    try:
-        raw = ollama_generate(model, prompt)
-        char = extract_json(raw)
-        if "error" in char and "name" not in char:
-            return jsonify({"error": char["error"], "raw": char.get("raw", raw)}), 422
-        char["source_model"] = model
-        name = char.get("name", "unknown").replace(" ", "_").lower()
-        safe = _safe_name(name) or _safe_name("unknown")
-        path = os.path.join(CHARACTERS_DIR, safe)
-        with open(path, "w") as f:
-            json.dump(char, f, indent=2)
-        return jsonify(char)
-    except requests.exceptions.HTTPError as e:
-        if e.response is not None and e.response.status_code == 401:
-            return jsonify({"error": "Authentication failed. Check your API key."}), 401
-        return jsonify({"error": str(e)}), e.response.status_code if e.response else 500
-    except requests.exceptions.ConnectionError:
-        mode = "remote" if _is_remote() else "local"
-        if mode == "remote":
-            return jsonify({"error": "Cannot reach remote API. Check the URL and API key."}), 503
-        return jsonify({"error": "Ollama is not running. Start it with: ollama serve"}), 503
-    except requests.exceptions.Timeout:
-        return jsonify({"error": f"Model {model} timed out. Try a smaller model or check your connection."}), 504
-    except Exception as e:
-        return jsonify({"error": str(e), "raw": raw[:500] if raw else ""}), 500
+
+    def _stream():
+        raw_parts = []
+        try:
+            for token in ollama_stream(model, prompt):
+                raw_parts.append(token)
+                yield json.dumps({"t": token}) + "\n"
+            raw = "".join(raw_parts)
+            char = extract_json(raw)
+            if "error" in char and "name" not in char:
+                yield json.dumps({"error": char["error"], "raw": char.get("raw", raw[:300])}) + "\n"
+                return
+            char["source_model"] = model
+            name = char.get("name", "unknown").replace(" ", "_").lower()
+            safe = _safe_name(name) or _safe_name("unknown")
+            with open(os.path.join(CHARACTERS_DIR, safe), "w") as f:
+                json.dump(char, f, indent=2)
+            yield json.dumps({"done": True, "result": char}) + "\n"
+        except requests.exceptions.HTTPError as e:
+            code = e.response.status_code if e.response is not None else 500
+            msg = "Authentication failed. Check your API key." if code == 401 else str(e)
+            yield json.dumps({"error": msg}) + "\n"
+        except requests.exceptions.ConnectionError:
+            msg = "Cannot reach remote API." if _is_remote() else "Ollama is not running."
+            yield json.dumps({"error": msg}) + "\n"
+        except requests.exceptions.Timeout:
+            yield json.dumps({"error": f"Model {model} timed out."}) + "\n"
+        except Exception as e:
+            yield json.dumps({"error": str(e)}) + "\n"
+
+    return Response(stream_with_context(_stream()), mimetype="application/x-ndjson")
 
 
 @app.route("/api/generate/villain", methods=["POST"])
@@ -1078,32 +1161,37 @@ def generate_villain():
     model = _get_model(data)
     extra = data.get("extra", "") or "Surprise me with a creative, varied villain archetype."
     prompt = VILLAIN_PROMPT.format(extra=extra)
-    raw = ""
-    try:
-        raw = ollama_generate(model, prompt)
-        char = extract_json(raw)
-        if "error" in char and "name" not in char:
-            return jsonify({"error": char["error"], "raw": char.get("raw", raw)}), 422
-        char["source_model"] = model
-        name = char.get("name", "unknown").replace(" ", "_").lower()
-        safe = _safe_name(name) or _safe_name("unknown")
-        path = os.path.join(CHARACTERS_DIR, safe)
-        with open(path, "w") as f:
-            json.dump(char, f, indent=2)
-        return jsonify(char)
-    except requests.exceptions.HTTPError as e:
-        if e.response is not None and e.response.status_code == 401:
-            return jsonify({"error": "Authentication failed. Check your API key."}), 401
-        return jsonify({"error": str(e)}), e.response.status_code if e.response else 500
-    except requests.exceptions.ConnectionError:
-        mode = "remote" if _is_remote() else "local"
-        if mode == "remote":
-            return jsonify({"error": "Cannot reach remote API. Check the URL and API key."}), 503
-        return jsonify({"error": "Ollama is not running. Start it with: ollama serve"}), 503
-    except requests.exceptions.Timeout:
-        return jsonify({"error": f"Model {model} timed out. Try a smaller model or check your connection."}), 504
-    except Exception as e:
-        return jsonify({"error": str(e), "raw": raw[:500] if raw else ""}), 500
+
+    def _stream():
+        raw_parts = []
+        try:
+            for token in ollama_stream(model, prompt):
+                raw_parts.append(token)
+                yield json.dumps({"t": token}) + "\n"
+            raw = "".join(raw_parts)
+            char = extract_json(raw)
+            if "error" in char and "name" not in char:
+                yield json.dumps({"error": char["error"], "raw": char.get("raw", raw[:300])}) + "\n"
+                return
+            char["source_model"] = model
+            name = char.get("name", "unknown").replace(" ", "_").lower()
+            safe = _safe_name(name) or _safe_name("unknown")
+            with open(os.path.join(CHARACTERS_DIR, safe), "w") as f:
+                json.dump(char, f, indent=2)
+            yield json.dumps({"done": True, "result": char}) + "\n"
+        except requests.exceptions.HTTPError as e:
+            code = e.response.status_code if e.response is not None else 500
+            msg = "Authentication failed. Check your API key." if code == 401 else str(e)
+            yield json.dumps({"error": msg}) + "\n"
+        except requests.exceptions.ConnectionError:
+            msg = "Cannot reach remote API." if _is_remote() else "Ollama is not running."
+            yield json.dumps({"error": msg}) + "\n"
+        except requests.exceptions.Timeout:
+            yield json.dumps({"error": f"Model {model} timed out."}) + "\n"
+        except Exception as e:
+            yield json.dumps({"error": str(e)}) + "\n"
+
+    return Response(stream_with_context(_stream()), mimetype="application/x-ndjson")
 
 
 @app.route("/api/generate/recruit", methods=["POST"])
@@ -1268,6 +1356,45 @@ def chat():
         return _ndjson_error(str(e), code)
     except Exception as e:
         return _ndjson_error(str(e), 500)
+
+# ---------------------------------------------------------------------------
+# API: Universe Timeline
+# ---------------------------------------------------------------------------
+@app.route("/api/timeline", methods=["GET"])
+def get_timeline():
+    events = _get_kv("forge-timeline") or []
+    if not isinstance(events, list):
+        events = []
+    return jsonify(events)
+
+@app.route("/api/timeline", methods=["POST"])
+def add_timeline_event():
+    data = request.get_json() or {}
+    events = _get_kv("forge-timeline") or []
+    if not isinstance(events, list):
+        events = []
+    event = {
+        "id": str(int(time.time() * 1000)),
+        "year": (data.get("year") or "").strip(),
+        "title": (data.get("title") or "").strip(),
+        "description": (data.get("description") or "").strip(),
+        "type": data.get("type", "other"),
+    }
+    if not event["title"]:
+        return jsonify({"error": "title is required"}), 400
+    events.append(event)
+    events.sort(key=lambda e: e.get("year", "") or "")
+    _set_kv("forge-timeline", json.dumps(events))
+    return jsonify(event), 201
+
+@app.route("/api/timeline/<event_id>", methods=["DELETE"])
+def delete_timeline_event(event_id):
+    events = _get_kv("forge-timeline") or []
+    if not isinstance(events, list):
+        events = []
+    events = [e for e in events if e.get("id") != event_id]
+    _set_kv("forge-timeline", json.dumps(events))
+    return jsonify({"deleted": event_id})
 
 # ---------------------------------------------------------------------------
 # PDF Export
