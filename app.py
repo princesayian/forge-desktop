@@ -1,5 +1,5 @@
-"""
-Nocturnal Innovations's Superhero Forge — Desktop App
+﻿"""
+Nocturnal Innovations's Superhero Forge â€” Desktop App
 Local AI powered by Ollama. No API keys. No subscriptions.
 """
 
@@ -53,7 +53,7 @@ except FileNotFoundError:
     pass
 
 # ---------------------------------------------------------------------------
-# SQLite KV store — replaces forge-data.json
+# SQLite KV store â€” replaces forge-data.json
 # ---------------------------------------------------------------------------
 @contextmanager
 def _db():
@@ -90,7 +90,7 @@ def _init_db():
                     "INSERT OR IGNORE INTO kv_store (key, value) VALUES (?, ?)",
                     [(k, v if isinstance(v, str) else json.dumps(v)) for k, v in legacy.items()]
                 )
-                print(f"[forge] Migrated {len(legacy)} keys from forge-data.json → forge.db")
+                print(f"[forge] Migrated {len(legacy)} keys from forge-data.json â†’ forge.db")
             except Exception as e:
                 print(f"[forge] Migration warning: {e}")
 
@@ -210,7 +210,7 @@ def _is_remote():
     return bool(config.get("ollama_api_key"))
 
 def _headers():
-    """Build request headers — include Authorization if API key is set."""
+    """Build request headers â€” include Authorization if API key is set."""
     hdrs = {"Content-Type": "application/json"}
     key = config.get("ollama_api_key", "")
     if key:
@@ -378,7 +378,7 @@ def _existing_instance():
             pid = int(f.read().strip())
         os.kill(pid, 0)
         return pid
-    except (ValueError, ProcessLookupError, PermissionError):
+    except (ValueError, ProcessLookupError, PermissionError, OSError):
         _remove_lock()
         return None
 
@@ -477,10 +477,10 @@ Generate a unique superhero character. Return ONLY valid JSON, no markdown.
 
 Theme and concept: {extra}
 
-Use the theme above as creative inspiration — it is NOT a name. Invent an original codename, real name, powers, appearance, backstory, and personality that embody this theme. Be creative and varied — avoid dark/shadow/night defaults unless the theme calls for it.
+Use the theme above as creative inspiration â€” it is NOT a name. Invent an original codename, real name, powers, appearance, backstory, and personality that embody this theme. Be creative and varied â€” avoid dark/shadow/night defaults unless the theme calls for it.
 
 Return JSON with these fields:
-- name: string (invent an original hero codename — do NOT use the theme as the name)
+- name: string (invent an original hero codename â€” do NOT use the theme as the name)
 - real_name: string
 - alignment: string (hero/anti-hero/vigilante)
 - powers: array of strings (3-5 powers that fit the theme)
@@ -497,10 +497,10 @@ Generate a unique supervillain character. Return ONLY valid JSON, no markdown.
 
 Theme and concept: {extra}
 
-Use the theme above as creative inspiration — it is NOT a name. Invent an original codename, real name, powers, appearance, backstory, and personality that embody this theme. Be creative and varied — avoid dark/shadow/night defaults unless the theme calls for it. Explore different genres, elements, and motivations.
+Use the theme above as creative inspiration â€” it is NOT a name. Invent an original codename, real name, powers, appearance, backstory, and personality that embody this theme. Be creative and varied â€” avoid dark/shadow/night defaults unless the theme calls for it. Explore different genres, elements, and motivations.
 
 Return JSON with these fields:
-- name: string (invent an original villain codename — do NOT use the theme as the name)
+- name: string (invent an original villain codename â€” do NOT use the theme as the name)
 - real_name: string
 - alignment: string (villain/supervillain/mastermind)
 - powers: array of strings (2-4 powers that fit the theme)
@@ -575,19 +575,19 @@ app = Flask(__name__, static_folder=STATIC, static_url_path="")
 app.config["JSON_SORT_KEYS"] = False
 app.secret_key = base64.b64decode(config.get("secret_key", base64.b64encode(os.urandom(24)).decode()))
 
-# Nonce-keyed captcha store — avoids relying on session cookies
+# Nonce-keyed captcha store â€” avoids relying on session cookies
 _CAPTCHA_STORE: dict = {}  # nonce -> {"answer": str, "exp": float}
 
 @app.after_request
 def _cache_headers(response):
     p = request.path
-    # Vite assets have content-hash filenames — safe to cache for 1 year
+    # Vite assets have content-hash filenames â€” safe to cache for 1 year
     if p.startswith("/assets/"):
         response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
-    # Character/team images — cache 1 hour; re-upload replaces the file
+    # Character/team images â€” cache 1 hour; re-upload replaces the file
     elif p.startswith("/api/images/") and request.method == "GET" and response.status_code == 200:
         response.headers["Cache-Control"] = "public, max-age=3600"
-    # index.html and API — never cache
+    # index.html and API â€” never cache
     elif p == "/" or p.endswith(".html") or p.startswith("/api/"):
         response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
         response.headers.pop("Expires", None)
@@ -624,7 +624,7 @@ def login_page():
         _CAPTCHA_STORE.pop(k, None)
     _CAPTCHA_STORE[nonce] = {"answer": answer, "exp": now + 300}
     captcha_q = f"{a} + {b} = ?"
-    login_html = f"""<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Forge — Sign In</title>
+    login_html = f"""<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Forge â€” Sign In</title>
 <style>*{{box-sizing:border-box;margin:0;padding:0;}}body{{background:#09090F;color:#F0EAD6;font-family:'Courier New',monospace;display:flex;align-items:center;justify-content:center;min-height:100vh;}}
 .box{{width:320px;text-align:center;}}.title{{font-size:18px;font-weight:bold;letter-spacing:.1em;color:#D4AF37;margin-bottom:6px;}}
 .sub{{font-size:11px;color:#888;margin-bottom:28px;}}input{{width:100%;padding:12px;background:#111;border:1px solid #333;border-radius:8px;color:#F0EAD6;font-size:14px;text-align:left;margin-bottom:10px;outline:none;}}
@@ -634,12 +634,12 @@ input:focus{{border-color:#D4AF37;}}
 .cap-row input{{margin-bottom:0;flex:1;}}
 button{{width:100%;padding:12px;background:#D4AF3720;border:1px solid #D4AF37;border-radius:8px;color:#D4AF37;font-size:12px;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;}}
 .err{{color:#e74c3c;font-size:11px;margin-top:8px;min-height:16px;}}</style></head>
-<body><div class="box"><div class="title">SUPERHERO FORGE</div><div class="sub">Remote access — sign in to continue</div>
+<body><div class="box"><div class="title">SUPERHERO FORGE</div><div class="sub">Remote access â€” sign in to continue</div>
 <input type="text" id="u" placeholder="Username" autocomplete="username" autofocus onkeydown="if(event.key==='Enter')document.getElementById('p').focus()"/>
 <input type="password" id="p" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter')document.getElementById('c').focus()"/>
 <div class="cap-row"><div class="cap-q">{captcha_q}</div><input type="text" id="c" placeholder="Answer" autocomplete="off" inputmode="numeric" onkeydown="if(event.key==='Enter')login()"/></div>
 <button onclick="login()">Sign In</button><div class="err" id="e"></div></div>
-<script>const _cn='{nonce}';async function login(){{document.getElementById('e').textContent='';const d=await fetch('/api/login',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{username:document.getElementById('u').value,password:document.getElementById('p').value,captcha:document.getElementById('c').value,captcha_nonce:_cn}})}}).then(r=>r.json());if(d.ok){{location.href='/';}}else if(d.captcha){{document.getElementById('e').textContent='Wrong answer — check your math.';setTimeout(()=>location.reload(),1000);}}else{{document.getElementById('e').textContent='Incorrect username or password.';setTimeout(()=>location.reload(),1200);}}}}</script></body></html>"""
+<script>const _cn='{nonce}';async function login(){{document.getElementById('e').textContent='';const d=await fetch('/api/login',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{username:document.getElementById('u').value,password:document.getElementById('p').value,captcha:document.getElementById('c').value,captcha_nonce:_cn}})}}).then(r=>r.json());if(d.ok){{location.href='/';}}else if(d.captcha){{document.getElementById('e').textContent='Wrong answer â€” check your math.';setTimeout(()=>location.reload(),1000);}}else{{document.getElementById('e').textContent='Incorrect username or password.';setTimeout(()=>location.reload(),1200);}}}}</script></body></html>"""
     return login_html
 
 @app.route("/api/login", methods=["POST"])
@@ -755,7 +755,7 @@ def update_config():
             )
             _DUCK_THREAD.start()
 
-    # Remote was just enabled — Flask needs to rebind to 0.0.0.0 (requires restart)
+    # Remote was just enabled â€” Flask needs to rebind to 0.0.0.0 (requires restart)
     needs_restart = not was_remote and bool(config.get("remote_enabled"))
     return jsonify({"ok": True, "mode": "remote" if _is_remote() else "local", "needs_restart": needs_restart})
 
@@ -1183,10 +1183,10 @@ def generate_story():
 # ---------------------------------------------------------------------------
 # API: Chat (with remote support)
 # ---------------------------------------------------------------------------
-SYSTEM_PROMPT = "You are a creative writing assistant specializing in superhero fiction. When asked to return JSON, return ONLY valid JSON — no markdown fences, no preamble, no explanation. The JSON must be complete and parseable."
+SYSTEM_PROMPT = "You are a creative writing assistant specializing in superhero fiction. When asked to return JSON, return ONLY valid JSON â€” no markdown fences, no preamble, no explanation. The JSON must be complete and parseable."
 
 def _ndjson_text(text):
-    """Return a streaming NDJSON response with a single {t} chunk — matches callAI's parser."""
+    """Return a streaming NDJSON response with a single {t} chunk â€” matches callAI's parser."""
     def _gen():
         yield json.dumps({"t": text}) + "\n"
     return Response(stream_with_context(_gen()), mimetype="application/x-ndjson")
@@ -1534,7 +1534,7 @@ def export_pdf():
         as_attachment=True, download_name=f"{team_name.lower().replace(' ','-')}-roster.pdf")
 
 # ---------------------------------------------------------------------------
-# API: Universe Dossier — all teams, solo heroes, villains, relations
+# API: Universe Dossier â€” all teams, solo heroes, villains, relations
 # ---------------------------------------------------------------------------
 @app.route("/api/export-all-pdf", methods=["POST"])
 def export_all_pdf():
@@ -1598,7 +1598,7 @@ def export_all_pdf():
 
     story = []
 
-    # ── Universe cover ───────────────────────────────────────────────────────
+    # â”€â”€ Universe cover â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     total = sum(len(s.get("members",[])) for s in sections)
     story.append(Spacer(1, 1.4*inch))
     story.append(Paragraph("NOCTURNAL KNIGHTS", sty("ucv_title", 28, GOLD, True, TA_CENTER)))
@@ -1631,9 +1631,9 @@ def export_all_pdf():
         story.append(tbl)
 
     story.append(Spacer(1, 1.8*inch))
-    story.append(Paragraph("FOR INTERNAL USE ONLY  ·  CLASSIFIED", sty("ucv_warn", 8, colors.Color(0.4,0.4,0.4), False, TA_CENTER)))
+    story.append(Paragraph("FOR INTERNAL USE ONLY  Â·  CLASSIFIED", sty("ucv_warn", 8, colors.Color(0.4,0.4,0.4), False, TA_CENTER)))
 
-    # ── Member dossier helper ────────────────────────────────────────────────
+    # â”€â”€ Member dossier helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     def add_member(member, sec_name, sec_color, idx):
         story.append(PageBreak())
         acc   = member.get("color", sec_color)
@@ -1660,7 +1660,7 @@ def export_all_pdf():
         ALIGN_C = rcolor(align_color)
 
         p = f"m{idx}"
-        hdr_txt = "— CLASSIFIED THREAT —" if is_v else f"{m_team.upper()} · {num}"
+        hdr_txt = "â€” CLASSIFIED THREAT â€”" if is_v else f"{m_team.upper()} Â· {num}"
         hd = Table([[
             Paragraph(hdr_txt, sty(f"{p}h1", 7, rcolor(acc), False, TA_LEFT)),
             Paragraph(role,    sty(f"{p}h2", 7, MUTED,       False, TA_RIGHT)),
@@ -1703,7 +1703,7 @@ def export_all_pdf():
         if tag:
             info.append(HRFlowable(width="100%", thickness=0.5, color=ACC))
             info.append(Spacer(1,3))
-            info.append(Paragraph(f'<i>“{tag}”</i>', sty(f"{p}tg", 10, colors.Color(0.8,0.8,0.75), False, TA_LEFT, 14)))
+            info.append(Paragraph(f'<i>â€œ{tag}â€</i>', sty(f"{p}tg", 10, colors.Color(0.8,0.8,0.75), False, TA_LEFT, 14)))
             info.append(Spacer(1,7))
         if stats:
             info.append(Paragraph("COMBAT STATS", sty(f"{p}sl", 7, MUTED)))
@@ -1754,30 +1754,30 @@ def export_all_pdf():
             story.append(Paragraph(appearance, sty(f"{p}apt",9,MUTED,False,TA_LEFT,14)))
             story.append(Spacer(1, 0.08*inch))
         if dna:
-            story.append(Paragraph("DNA: " + " · ".join(dna), sty(f"{p}dt",8,GOLD)))
+            story.append(Paragraph("DNA: " + " Â· ".join(dna), sty(f"{p}dt",8,GOLD)))
             story.append(Spacer(1, 0.08*inch))
         if affiliations:
             story.append(Paragraph("AFFILIATIONS", sty(f"{p}afl",7,MUTED)))
             story.append(Spacer(1,3))
-            story.append(Paragraph("  ·  ".join([f"{a.get('teamName','')} ({a.get('role','')})" for a in affiliations]), sty(f"{p}afv",8,GOLD)))
+            story.append(Paragraph("  Â·  ".join([f"{a.get('teamName','')} ({a.get('role','')})" for a in affiliations]), sty(f"{p}afv",8,GOLD)))
             story.append(Spacer(1, 0.08*inch))
         if shared_villains:
             story.append(HRFlowable(width="100%", thickness=0.5, color=RED))
             story.append(Spacer(1,3))
-            story.append(Paragraph("⚠ SHARED THREAT: " + " · ".join(shared_villains), sty(f"{p}sv",8,colors.Color(0.8,0.2,0.2),True)))
+            story.append(Paragraph("âš  SHARED THREAT: " + " Â· ".join(shared_villains), sty(f"{p}sv",8,colors.Color(0.8,0.2,0.2),True)))
             story.append(Spacer(1, 0.06*inch))
 
         story.append(Spacer(1, 0.1*inch))
         story.append(HRFlowable(width="100%", thickness=0.5, color=colors.Color(*[x*0.22 for x in hex2rgb(acc)])))
         story.append(Spacer(1,3))
         ftr = Table([[
-            Paragraph(f"{m_team.upper()} · CLASSIFIED", sty(f"{p}ft",7,colors.Color(0.3,0.3,0.3))),
+            Paragraph(f"{m_team.upper()} Â· CLASSIFIED", sty(f"{p}ft",7,colors.Color(0.3,0.3,0.3))),
             Paragraph(num, sty(f"{p}fn",16,colors.Color(*[x*0.25 for x in hex2rgb(acc)]),True,TA_RIGHT)),
         ]], colWidths=["85%","15%"])
         ftr.setStyle(TableStyle([("TOPPADDING",(0,0),(-1,-1),0),("BOTTOMPADDING",(0,0),(-1,-1),0),("LEFTPADDING",(0,0),(-1,-1),0),("RIGHTPADDING",(0,0),(-1,-1),0)]))
         story.append(ftr)
 
-    # ── Section cover + member pages ─────────────────────────────────────────
+    # â”€â”€ Section cover + member pages â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     global_idx = 0
     for si, section in enumerate(sections):
         sec_type  = section.get("type","team")
@@ -1800,7 +1800,7 @@ def export_all_pdf():
             story.append(Spacer(1, 0.1*inch))
             story.append(HRFlowable(width="50%", thickness=1, color=SEC_C, hAlign="CENTER"))
             story.append(Spacer(1, 0.1*inch))
-            story.append(Paragraph(f"{len(members)} SOLO OPERATIVES  ·  NO TEAM AFFILIATION", sty(f"sc{si}s", 9, MUTED, False, TA_CENTER)))
+            story.append(Paragraph(f"{len(members)} SOLO OPERATIVES  Â·  NO TEAM AFFILIATION", sty(f"sc{si}s", 9, MUTED, False, TA_CENTER)))
         else:
             story.append(Paragraph(sec_name.upper(), sty(f"sc{si}t", 26, GOLD, True, TA_CENTER)))
             story.append(Spacer(1, 0.1*inch))
@@ -1815,7 +1815,7 @@ def export_all_pdf():
             add_member(member, sec_name, sec_color, global_idx)
             global_idx += 1
 
-    # ── Relations appendix ───────────────────────────────────────────────────
+    # â”€â”€ Relations appendix â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     if family_links or hero_assocs:
         story.append(PageBreak())
         story.append(Spacer(1, 0.5*inch))
@@ -1967,7 +1967,7 @@ def export_encyclopedia():
     alpha_index = []   # (heroName, realName, teamName, isVillain, color)
     story = []
 
-    # ── Cover ────────────────────────────────────────────────────────────────
+    # â”€â”€ Cover â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     total_chars = sum(len(s.get("members",[])) for s in sections)
     story.append(Spacer(1, 1.1*inch))
     story.append(Paragraph(universe_name.upper(), sty("cv_u", 9, GOLD, False, TA_CENTER)))
@@ -2006,9 +2006,9 @@ def export_encyclopedia():
         story.append(cv_tbl)
 
     story.append(Spacer(1, 1.4*inch))
-    story.append(Paragraph(f"Forge Reference  ·  {total_chars} Entries", sty("cv_ft", 8, MUTED, False, TA_CENTER)))
+    story.append(Paragraph(f"Forge Reference  Â·  {total_chars} Entries", sty("cv_ft", 8, MUTED, False, TA_CENTER)))
 
-    # ── Character entries ────────────────────────────────────────────────────
+    # â”€â”€ Character entries â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     global_idx = 0
     for si, section in enumerate(sections):
         sec_type   = section.get("type","team")
@@ -2034,7 +2034,7 @@ def export_encyclopedia():
         story.append(Spacer(1, 2.0*inch))
         story.append(HRFlowable(width="28%", thickness=0.5, color=colors.Color(0.18,0.18,0.24), hAlign="CENTER"))
         story.append(Spacer(1, 0.08*inch))
-        story.append(Paragraph(f"VOL. {si+1}  ·  {universe_name.upper()}", sty(f"sd{si}v", 7, MUTED, False, TA_CENTER)))
+        story.append(Paragraph(f"VOL. {si+1}  Â·  {universe_name.upper()}", sty(f"sd{si}v", 7, MUTED, False, TA_CENTER)))
 
         for member in members:
             alpha_index.append((
@@ -2073,7 +2073,7 @@ def export_encyclopedia():
             shared_v   = member.get("sharedVillains",[])
 
             # Header banner
-            hdr_left  = "— CLASSIFIED THREAT —" if is_v else m_team.upper()
+            hdr_left  = "â€” CLASSIFIED THREAT â€”" if is_v else m_team.upper()
             hdr_right = f"#{num}" if num else role.upper()
             hdr = Table([[
                 Paragraph(hdr_left,  sty(f"{p}hl", 7, ACC, False)),
@@ -2117,7 +2117,7 @@ def export_encyclopedia():
                     Paragraph(value, sty(f"{p}dv{label}", 8.5, PAPER, False, TA_LEFT, 12)),
                 ]
             age_display = age or (f"b. {birth_year}" if birth_year else "")
-            type_display = f"{hero_type} · {power_type}" if not is_v else None
+            type_display = f"{hero_type} Â· {power_type}" if not is_v else None
             align_display = ALIGN_LABELS.get(nk_aln, nk_aln.title()) if not is_v else "HOSTILE THREAT"
             data_rows = [r for r in [
                 dr("REAL NAME",          real),
@@ -2130,8 +2130,8 @@ def export_encyclopedia():
                 dr("BASE OF OPERATIONS", base_ops),
                 dr("TYPE",               type_display),
                 dr("ALIGNMENT",          align_display),
-                dr("DNA",                " · ".join(dna) if dna else None),
-                dr("INSPIRED BY",        " · ".join(insps) if insps else None),
+                dr("DNA",                " Â· ".join(dna) if dna else None),
+                dr("INSPIRED BY",        " Â· ".join(insps) if insps else None),
             ] if r is not None]
 
             df_content = []
@@ -2155,7 +2155,7 @@ def export_encyclopedia():
             story.append(body)
             story.append(Spacer(1, 0.12*inch))
 
-            # Stats — compact horizontal row
+            # Stats â€” compact horizontal row
             if stats:
                 stat_items = list(stats.items())
                 stat_cells = [Paragraph(
@@ -2219,7 +2219,7 @@ def export_encyclopedia():
             if shared_v:
                 story.append(HRFlowable(width="100%", thickness=0.5, color=RED))
                 story.append(Spacer(1, 4))
-                story.append(Paragraph("&#9888; SHARED THREAT: " + " · ".join(shared_v), sty(f"{p}sv", 8, colors.Color(0.8,0.2,0.2), True)))
+                story.append(Paragraph("&#9888; SHARED THREAT: " + " Â· ".join(shared_v), sty(f"{p}sv", 8, colors.Color(0.8,0.2,0.2), True)))
                 story.append(Spacer(1, 0.06*inch))
 
             # Footer
@@ -2227,14 +2227,14 @@ def export_encyclopedia():
             story.append(HRFlowable(width="100%", thickness=0.5, color=colors.Color(*[x*0.22 for x in hex2rgb(acc)])))
             story.append(Spacer(1, 3))
             foot = Table([[
-                Paragraph(f"{m_team.upper()}  ·  {universe_name.upper()}", sty(f"{p}ft", 7, MUTED)),
+                Paragraph(f"{m_team.upper()}  Â·  {universe_name.upper()}", sty(f"{p}ft", 7, MUTED)),
                 Paragraph(num, sty(f"{p}fn", 14, colors.Color(*[x*0.3 for x in hex2rgb(acc)]), True, TA_RIGHT)),
             ]], colWidths=["88%","12%"])
             foot.setStyle(TableStyle([("TOPPADDING",(0,0),(-1,-1),0),("BOTTOMPADDING",(0,0),(-1,-1),0),("LEFTPADDING",(0,0),(-1,-1),0),("RIGHTPADDING",(0,0),(-1,-1),0)]))
             story.append(foot)
             global_idx += 1
 
-    # ── Alphabetical Index ───────────────────────────────────────────────────
+    # â”€â”€ Alphabetical Index â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     if alpha_index:
         story.append(PageBreak())
         story.append(Spacer(1, 0.3*inch))
@@ -2276,7 +2276,7 @@ def export_encyclopedia():
             ])
         flush_rows(pending_rows)
 
-    # ── Relations appendix ───────────────────────────────────────────────────
+    # â”€â”€ Relations appendix â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     if family_links or hero_assocs:
         story.append(PageBreak())
         story.append(Spacer(1, 0.3*inch))
@@ -2487,7 +2487,7 @@ def export_comic_pdf():
             canvas.setFillColor(YELLOW); canvas.setFont("Helvetica-Bold", sfs)
             canvas.drawString(ix + 6, iy + ih/2 - sfs/2, sfx[:12])
 
-    # ── Cover page ────────────────────────────────────────────────────────
+    # â”€â”€ Cover page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     c.setFillColor(BLACK); c.rect(0, 0, PW, PH, fill=1, stroke=0)
 
     title_upper = title.upper()
@@ -2505,7 +2505,7 @@ def export_comic_pdf():
     if cast_chars:
         c.setFillColor(colors.HexColor("#888888")); c.setFont("Helvetica", 8)
         c.drawCentredString(PW/2, PH * 0.42,
-                            "  ·  ".join(m.get("heroName", "") for m in cast_chars[:6]))
+                            "  Â·  ".join(m.get("heroName", "") for m in cast_chars[:6]))
 
     c.setFillColor(colors.HexColor("#444444")); c.setFont("Helvetica", 7)
     c.drawString(MARGIN, PH - MARGIN + 8, "NOCTURNAL INNOVATIONS'S SUPERHERO FORGE")
@@ -2516,7 +2516,7 @@ def export_comic_pdf():
     c.drawCentredString(PW/2, 5, "NOCTURNAL INNOVATIONS'S SUPERHERO FORGE")
     c.showPage()
 
-    # ── Comic pages ───────────────────────────────────────────────────────
+    # â”€â”€ Comic pages â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     inner_w = PW - 2 * MARGIN
     inner_h = PH - 2 * MARGIN
 
@@ -2583,11 +2583,11 @@ def find_free_port(preferred=7432, retries=10, delay=0.4):
             s.close()
             if attempt < retries - 1:
                 time.sleep(delay)
-    # Preferred port genuinely occupied — fall back to OS-assigned
+    # Preferred port genuinely occupied â€” fall back to OS-assigned
     s = socket.socket(); s.bind(("127.0.0.1", 0))
     port = s.getsockname()[1]; s.close(); return port
 
-def run_flask(port, host="127.0.0.1"):
+def run_flask(port, host="0.0.0.0"):
     import logging
     logging.getLogger("werkzeug").setLevel(logging.ERROR)
     _init_db()
@@ -2597,7 +2597,7 @@ def run_flask(port, host="127.0.0.1"):
 # Main entry point
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
-    # ── Same-machine instance check ───────────────────────────────────────────
+    # â”€â”€ Same-machine instance check â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     existing = _existing_instance()
     if existing:
         import tkinter as tk
@@ -2620,7 +2620,7 @@ if __name__ == "__main__":
         else:
             sys.exit(0)
 
-    # ── Network instance check (LAN) ──────────────────────────────────────────
+    # â”€â”€ Network instance check (LAN) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     network_url = find_network_instance()
     if network_url:
         import tkinter as tk
@@ -2648,7 +2648,7 @@ if __name__ == "__main__":
 
     print("\n  Starting Ollama...")
     ollama_ok = ensure_ollama()
-    print(f"  Ollama {'ready' if ollama_ok else 'not found — AI features disabled'}")
+    print(f"  Ollama {'ready' if ollama_ok else 'not found â€” AI features disabled'}")
 
     port = find_free_port()
     url  = f"http://127.0.0.1:{port}"
@@ -2663,7 +2663,7 @@ if __name__ == "__main__":
     lan_ip = get_lan_ip()
     print(f"\n  Superhero Forge v{FORGE_VERSION} ready at {url}")
     if lan_ip and lan_ip != "127.0.0.1":
-        print(f"  Local network:  http://{lan_ip}:{port}  ← share this with devices on your Wi-Fi")
+        print(f"  Local network:  http://{lan_ip}:{port}  -- share this with devices on your Wi-Fi")
 
     # Auto-update check (background)
     def _bg_update_check():
@@ -2687,7 +2687,7 @@ if __name__ == "__main__":
         """Open the browser using the most reliable method for the platform."""
         import sys as _sys
         if _sys.platform == "darwin":
-            # Use 'open' directly — avoids AppleScript permission issues
+            # Use 'open' directly â€” avoids AppleScript permission issues
             subprocess.Popen(["open", target_url],
                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         elif _sys.platform == "win32":
@@ -2710,9 +2710,10 @@ if __name__ == "__main__":
             _open_browser(url)
         webview.start(debug=False, private_mode=False, storage_path=_storage, func=_on_started)
     except ImportError:
-        print("  PyWebView not found — opening in browser.\n", flush=True)
+        print("  PyWebView not found â€” opening in browser.\n", flush=True)
         _open_browser(url)
         try:
             while True: time.sleep(1)
         except KeyboardInterrupt:
             print("\n  Shutting down.")
+

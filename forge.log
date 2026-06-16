@@ -1,0 +1,1834 @@
+OSError: [WinError 87] The parameter is incorrect
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2601, in <module>
+    existing = _existing_instance()
+  File "C:\Apps\superhero-forge\app.py", line 379, in _existing_instance
+    os.kill(pid, 0)
+    ~~~~~~~^^^^^^^^
+SystemError: <built-in function kill> returned a result with an exception set
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2601, in <module>
+    existing = _existing_instance()
+  File "C:\Apps\superhero-forge\app.py", line 379, in _existing_instance
+    os.kill(pid, 0)
+    ~~~~~~~^^^^^^^^
+OSError: [WinError 87] The parameter is incorrect
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2601, in <module>
+    existing = _existing_instance()
+  File "C:\Apps\superhero-forge\app.py", line 379, in _existing_instance
+    os.kill(pid, 0)
+    ~~~~~~~^^^^^^^^
+OSError: [WinError 87] The parameter is incorrect
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2601, in <module>
+    existing = _existing_instance()
+  File "C:\Apps\superhero-forge\app.py", line 379, in _existing_instance
+    os.kill(pid, 0)
+    ~~~~~~~^^^^^^^^
+OSError: [WinError 87] The parameter is incorrect
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2601, in <module>
+    existing = _existing_instance()
+  File "C:\Apps\superhero-forge\app.py", line 379, in _existing_instance
+    os.kill(pid, 0)
+    ~~~~~~~^^^^^^^^
+OSError: [WinError 87] The parameter is incorrect
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2601, in <module>
+    existing = _existing_instance()
+  File "C:\Apps\superhero-forge\app.py", line 379, in _existing_instance
+    os.kill(pid, 0)
+    ~~~~~~~^^^^^^^^
+OSError: [WinError 87] The parameter is incorrect
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2601, in <module>
+    existing = _existing_instance()
+  File "C:\Apps\superhero-forge\app.py", line 379, in _existing_instance
+    os.kill(pid, 0)
+    ~~~~~~~^^^^^^^^
+OSError: [WinError 87] The parameter is incorrect
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2601, in <module>
+    existing = _existing_instance()
+  File "C:\Apps\superhero-forge\app.py", line 379, in _existing_instance
+    os.kill(pid, 0)
+    ~~~~~~~^^^^^^^^
+OSError: [WinError 87] The parameter is incorrect
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2601, in <module>
+    existing = _existing_instance()
+  File "C:\Apps\superhero-forge\app.py", line 379, in _existing_instance
+    os.kill(pid, 0)
+    ~~~~~~~^^^^^^^^
+OSError: [WinError 87] The parameter is incorrect
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2601, in <module>
+    existing = _existing_instance()
+  File "C:\Apps\superhero-forge\app.py", line 379, in _existing_instance
+    os.kill(pid, 0)
+    ~~~~~~~^^^^^^^^
+OSError: [WinError 87] The parameter is incorrect
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2601, in <module>
+    existing = _existing_instance()
+  File "C:\Apps\superhero-forge\app.py", line 379, in _existing_instance
+    os.kill(pid, 0)
+    ~~~~~~~^^^^^^^^
+OSError: [WinError 87] The parameter is incorrect
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2601, in <module>
+    existing = _existing_instance()
+  File "C:\Apps\superhero-forge\app.py", line 379, in _existing_instance
+    os.kill(pid, 0)
+    ~~~~~~~^^^^^^^^
+OSError: [WinError 87] The parameter is incorrect
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2601, in <module>
+    existing = _existing_instance()
+  File "C:\Apps\superhero-forge\app.py", line 379, in _existing_instance
+    os.kill(pid, 0)
+    ~~~~~~~^^^^^^^^
+OSError: [WinError 87] The parameter is incorrect
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2601, in <module>
+    existing = _existing_instance()
+  File "C:\Apps\superhero-forge\app.py", line 379, in _existing_instance
+    os.kill(pid, 0)
+    ~~~~~~~^^^^^^^^
+OSError: [WinError 87] The parameter is incorrect
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2601, in <module>
+    existing = _existing_instance()
+  File "C:\Apps\superhero-forge\app.py", line 379, in _existing_instance
+    os.kill(pid, 0)
+    ~~~~~~~^^^^^^^^
+OSError: [WinError 87] The parameter is incorrect
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2601, in <module>
+    existing = _existing_instance()
+  File "C:\Apps\superhero-forge\app.py", line 379, in _existing_instance
+    os.kill(pid, 0)
+    ~~~~~~~^^^^^^^^
+OSError: [WinError 87] The parameter is incorrect
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2601, in <module>
+    existing = _existing_instance()
+  File "C:\Apps\superhero-forge\app.py", line 379, in _existing_instance
+    os.kill(pid, 0)
+    ~~~~~~~^^^^^^^^
+OSError: [WinError 87] The parameter is incorrect
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2601, in <module>
+    existing = _existing_instance()
+  File "C:\Apps\superhero-forge\app.py", line 379, in _existing_instance
+    os.kill(pid, 0)
+    ~~~~~~~^^^^^^^^
+OSError: [WinError 87] The parameter is incorrect
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2601, in <module>
+    existing = _existing_instance()
+  File "C:\Apps\superhero-forge\app.py", line 379, in _existing_instance
+    os.kill(pid, 0)
+    ~~~~~~~^^^^^^^^
+OSError: [WinError 87] The parameter is incorrect
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2601, in <module>
+    existing = _existing_instance()
+  File "C:\Apps\superhero-forge\app.py", line 379, in _existing_instance
+    os.kill(pid, 0)
+    ~~~~~~~^^^^^^^^
+OSError: [WinError 87] The parameter is incorrect
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2601, in <module>
+    existing = _existing_instance()
+  File "C:\Apps\superhero-forge\app.py", line 379, in _existing_instance
+    os.kill(pid, 0)
+    ~~~~~~~^^^^^^^^
+OSError: [WinError 87] The parameter is incorrect
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2601, in <module>
+    existing = _existing_instance()
+  File "C:\Apps\superhero-forge\app.py", line 379, in _existing_instance
+    os.kill(pid, 0)
+    ~~~~~~~^^^^^^^^
+OSError: [WinError 87] The parameter is incorrect
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2601, in <module>
+    existing = _existing_instance()
+  File "C:\Apps\superhero-forge\app.py", line 379, in _existing_instance
+    os.kill(pid, 0)
+    ~~~~~~~^^^^^^^^
+OSError: [WinError 87] The parameter is incorrect
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2601, in <module>
+    existing = _existing_instance()
+  File "C:\Apps\superhero-forge\app.py", line 379, in _existing_instance
+    os.kill(pid, 0)
+    ~~~~~~~^^^^^^^^
+OSError: [WinError 87] The parameter is incorrect
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2601, in <module>
+    existing = _existing_instance()
+  File "C:\Apps\superhero-forge\app.py", line 379, in _existing_instance
+    os.kill(pid, 0)
+    ~~~~~~~^^^^^^^^
+OSError: [WinError 87] The parameter is incorrect
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2601, in <module>
+    existing = _existing_instance()
+  File "C:\Apps\superhero-forge\app.py", line 379, in _existing_instance
+    os.kill(pid, 0)
+    ~~~~~~~^^^^^^^^
+OSError: [WinError 87] The parameter is incorrect
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  \u2190 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2190' in position 45: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  \u2190 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2190' in position 45: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  \u2190 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2190' in position 45: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  \u2190 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2190' in position 45: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  \u2190 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2190' in position 45: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  \u2190 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2190' in position 45: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  \u2190 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2190' in position 45: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  \u2190 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2190' in position 45: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  \u2190 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2190' in position 45: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  \u2190 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2190' in position 45: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  \u2190 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2190' in position 45: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  \u2190 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2190' in position 45: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  \u2190 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2190' in position 45: character maps to <undefined>
+
+  Starting Ollama...
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  â†\x90 share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+Traceback (most recent call last):
+  File "C:\Apps\superhero-forge\app.py", line 2666, in <module>
+    print(f"  Local network:  http://{lan_ip}:{port}  -- share this with devices on your Wi-Fi")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\x90' in position 47: character maps to <undefined>
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+  Local network:  http://192.168.1.174:7432  -- share this with devices on your Wi-Fi
+  Remote (DuckDNS): heroforge.duckdns.org:7432
+  Opening native window (minimized) + browser tab...
+
+Exception in thread Thread-5 (_on_started):
+Traceback (most recent call last):
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\threading.py", line 1041, in _bootstrap_inner
+    self.run()
+    ~~~~~~~~^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\threading.py", line 992, in run
+    self._target(*self._args, **self._kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Apps\superhero-forge\app.py", line 2710, in _on_started
+    _open_browser(url)
+    ~~~~~~~~~~~~~^^^^^
+  File "C:\Apps\superhero-forge\app.py", line 2694, in _open_browser
+    os.startfile(target_url)
+    ~~~~~~~~~~~~^^^^^^^^^^^^
+OSError: [WinError -2147467231] The operation attempted is not supported: 'http://127.0.0.1:7432'
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.55 ready at http://127.0.0.1:7432
+  Local network:  http://192.168.1.174:7432  -- share this with devices on your Wi-Fi
+  Remote (DuckDNS): heroforge.duckdns.org:7432
+  Opening native window (minimized) + browser tab...
+
+Exception in thread Thread-5 (_on_started):
+Traceback (most recent call last):
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\threading.py", line 1041, in _bootstrap_inner
+    self.run()
+    ~~~~~~~~^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\threading.py", line 992, in run
+    self._target(*self._args, **self._kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Apps\superhero-forge\app.py", line 2710, in _on_started
+    _open_browser(url)
+    ~~~~~~~~~~~~~^^^^^
+  File "C:\Apps\superhero-forge\app.py", line 2694, in _open_browser
+    os.startfile(target_url)
+    ~~~~~~~~~~~~^^^^^^^^^^^^
+OSError: [WinError -2147467231] The operation attempted is not supported: 'http://127.0.0.1:7432'
+[pywebview] WebView2 initialization failed with exception:
+  (0x800705B4): This operation returned because the timeout period expired. (Exception from HRESULT: 0x800705B4)
+   at System.Runtime.InteropServices.Marshal.ThrowExceptionForHRInternal(Int32 errorCode, IntPtr errorInfo)
+   at Microsoft.Web.WebView2.Core.CoreWebView2Environment.<CreateCoreWebView2ControllerAsync>d__21.MoveNext()
+--- End of stack trace from previous location where exception was thrown ---
+   at System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw()
+   at System.Runtime.CompilerServices.TaskAwaiter.HandleNonSuccessAndDebuggerNotification(Task task)
+   at Microsoft.Web.WebView2.WinForms.WebView2.<InitCoreWebView2Async>d__25.MoveNext()

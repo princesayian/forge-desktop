@@ -1,0 +1,12 @@
+Forge Migration Export
+Exported:  Mon Jun 15 15:49:51 EDT 2026
+Mac path:  /Users/princesayian/Desktop/forge-desktop
+Git remote: git@github.com:princesayian/forge-desktop.git
+
+Files:
+.claude/settings.json
+.claude/settings.local.json
+.env
+config.json
+forge-data.json
+forge.db
