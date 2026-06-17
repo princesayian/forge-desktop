@@ -42,9 +42,9 @@ export default function CharacterPage({member,imageUrl,isVillain=false,teamName,
       <div style={{fontSize:11,fontStyle:"italic",color:"var(--text2)"}}>{[member.realName,member.role].filter(Boolean).join("  ·  ")}</div>
     </div>
     <div className="fchar-grid" style={{display:"grid",gridTemplateColumns:"1.05fr 1fr",minHeight:330}}>
-      <div style={{position:"relative",overflow:"hidden",background:`${c}05`}}>
+      <div className="fchar-portrait-frame" style={{position:"relative",overflow:"hidden",background:`${c}05`}}>
         {imageUrl
-          ?<img src={imageUrl} alt={member.heroName} style={{width:"100%",height:"100%",minHeight:360,objectFit:"cover",objectPosition:"center top",display:"block"}}/>
+          ?<img className="fchar-portrait-img" src={imageUrl} alt={member.heroName} style={{width:"100%",height:"100%",minHeight:360,objectFit:"cover",objectPosition:"center top",display:"block"}}/>
           :<div style={{minHeight:360,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:10}}>
              <div style={{width:62,height:62,borderRadius:"50%",background:`${c}12`,border:`2px dashed ${c}40`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,fontWeight:"bold",color:c}}>{member.initials}</div>
              <div style={{fontSize:9,color:"var(--text4)"}}>{isVillain?"IMAGE CLASSIFIED":"No image uploaded"}</div>

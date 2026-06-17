@@ -249,6 +249,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
   // ── UI ───────────────────────────────────────────────────────────────────
   const[tab,setTab]=useState(()=>{try{return localStorage.getItem("forge-active-tab")||"teams";}catch{return"teams";}});
   const[universeDossierTarget,setUniverseDossierTarget]=useState(null);
+  const[dossierFromTab,setDossierFromTab]=useState(null);
   const[universeData,setUniverseData]=useState({});
   const[showWorldBuilder,setShowWorldBuilder]=useState(false);
   const[timeline,setTimeline]=useState([]);
@@ -1612,13 +1613,34 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
         </div>
         :<div style={{height:8}}/>}
 
-      {/* Nav tabs — centered */}
-      <div className="ftabs" style={{display:"flex",justifyContent:"center",padding:"0 16px",overflowX:"auto",gap:2,width:"100%",boxSizing:"border-box"}}>
-        {[["teams","Teams"],["roster","Roster"],["team","Team"],["family","Family"],["prompts","Prompts"],["recruit","+ Recruit"],["villains","Villains"],["story","Story"],["battle","⚡ Battle"],["arc","Arc"],["comic","📖 Comic"],["tiers","Tiers"],["universe","Universe"],["codex","Codex"]].map(([id,label])=>{
-          const freeTab=id==="teams"||id==="codex";
-          return(<button key={id} className="ftab" style={s.tab(tab===id)} onClick={()=>{if(!activeTeam&&!freeTab)return;setTab(id);}} disabled={!activeTeam&&!freeTab}>{label}</button>);
-        })}
-      </div>
+      {/* Nav tabs — grouped into categories, centered */}
+      {(()=>{
+        const TAB_CATEGORIES=[
+          {id:"roster",label:"Roster",tabs:[["teams","Teams"],["roster","Roster"],["team","Team"],["family","Family"],["recruit","+ Recruit"]]},
+          {id:"story",label:"Story",tabs:[["prompts","Prompts"],["story","Story"],["arc","Arc"],["comic","📖 Comic"]]},
+          {id:"conflict",label:"Conflict",tabs:[["villains","Villains"],["battle","⚡ Battle"],["tiers","Tiers"]]},
+          {id:"world",label:"World",tabs:[["universe","Universe"],["codex","Codex"]]},
+        ];
+        const activeCat=TAB_CATEGORIES.find(cat=>cat.tabs.some(([id])=>id===tab))||TAB_CATEGORIES[0];
+        return(<>
+          <div className="ftabs-cat" style={{display:"flex",justifyContent:"center",padding:"0 16px",gap:6,width:"100%",boxSizing:"border-box",marginBottom:8}}>
+            {TAB_CATEGORIES.map(cat=>{
+              const catDisabled=!activeTeam&&!cat.tabs.some(([id])=>id==="teams"||id==="codex");
+              return(<button key={cat.id} className="ftab-cat" style={s.chip(cat.id===activeCat.id)} disabled={catDisabled} onClick={()=>{
+                if(cat.id===activeCat.id)return;
+                const target=cat.tabs.find(([id])=>id==="teams"||id==="codex"||activeTeam);
+                if(target)setTab(target[0]);
+              }}>{cat.label}</button>);
+            })}
+          </div>
+          <div className="ftabs" style={{display:"flex",justifyContent:"center",padding:"0 16px",overflowX:"auto",gap:2,width:"100%",boxSizing:"border-box"}}>
+            {activeCat.tabs.map(([id,label])=>{
+              const freeTab=id==="teams"||id==="codex";
+              return(<button key={id} className="ftab" style={s.tab(tab===id)} onClick={()=>{if(!activeTeam&&!freeTab)return;setTab(id);}} disabled={!activeTeam&&!freeTab}>{label}</button>);
+            })}
+          </div>
+        </>);
+      })()}
 
     </div>
 
@@ -1912,7 +1934,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
               <div
                 onMouseEnter={()=>setHoveredCard(m.id)}
                 onMouseLeave={()=>setHoveredCard(null)}
-                onClick={!hasAny?()=>fileRefs.current[m.id]?.click():()=>{setTab("universe");setUniverseDossierTarget({type:"hero",id:m.id});}}
+                onClick={!hasAny?()=>fileRefs.current[m.id]?.click():()=>{setDossierFromTab(tab);setTab("universe");setUniverseDossierTarget({type:"hero",id:m.id});}}
                 style={{background:hasAny?"transparent":`${m.color}08`,border:`1.5px dashed ${hasAny?m.color+"66":m.color+"2E"}`,borderRadius:9,overflow:"hidden",cursor:"pointer",aspectRatio:"3/4",position:"relative",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:6}}>
                 {hasAny?(<>
                   {layer1&&<img src={layer1} alt={m.heroName} style={{width:"100%",height:"100%",objectFit:"cover",objectPosition:"top",position:"absolute",inset:0,zIndex:1,opacity:hasBoth&&isHovered?0:1,transition:"opacity 0.3s"}}/>}
@@ -1920,16 +1942,16 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                   <div style={{position:"absolute",inset:0,background:"linear-gradient(transparent 55%,rgba(0,0,0,0.88))",zIndex:3,pointerEvents:"none"}}/>
                   <div style={{position:"absolute",bottom:8,left:8,zIndex:4}}>
                     <div style={{fontSize:11,fontWeight:"bold",color:"#fff"}}>{m.heroName}</div>
-                    {hasBoth&&<div style={{fontSize:7,color:m.colorLight||m.color,letterSpacing:"0.1em",textTransform:"uppercase",marginTop:1}}>{isShowingCiv?"civilian":"costumed"}</div>}
+                    {hasBoth&&<div style={{fontSize:7,color:m.colorLight||m.color,letterSpacing:"0.1em",textTransform:"uppercase",marginTop:1}}>{isShowingCiv?"comic":"real"}</div>}
                     <div style={{fontSize:8,color:m.colorLight||m.color,marginTop:1}}>{m.number}</div>
                   </div>
                   <div style={{position:"absolute",top:6,right:6,zIndex:4,display:"flex",flexDirection:"column",gap:3,alignItems:"flex-end"}}>
                     <div style={{display:"flex",gap:3}}>
-                      <button onClick={e=>{e.stopPropagation();fileRefs.current[m.id]?.click();}} style={ob}>↑ Hero</button>
-                      <button onClick={e=>{e.stopPropagation();fileRefs.current[m.id+"-civ"]?.click();}} style={ob}>↑ Civ</button>
+                      <button onClick={e=>{e.stopPropagation();fileRefs.current[m.id]?.click();}} style={ob}>↑ Real</button>
+                      <button onClick={e=>{e.stopPropagation();fileRefs.current[m.id+"-civ"]?.click();}} style={ob}>↑ Comic</button>
                       <button onClick={e=>{e.stopPropagation();downloadImg(m.id,m.heroName);}} style={ob}>↓</button>
                     </div>
-                    {hasBoth&&<button onClick={e=>{e.stopPropagation();setImgDefault(p=>({...p,[m.id]:p[m.id]==="civ"?"hero":"civ"}));}} style={obA}>⇄ {isFlipped?"Hero":"Civ"} first</button>}
+                    {hasBoth&&<button onClick={e=>{e.stopPropagation();setImgDefault(p=>({...p,[m.id]:p[m.id]==="civ"?"hero":"civ"}));}} style={obA}>⇄ {isFlipped?"Real":"Comic"} first</button>}
                   </div>
                 </>):(<><div style={{width:34,height:34,borderRadius:"50%",background:`${m.color}14`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:"bold",color:m.color}}>{m.initials}</div><div style={{fontSize:9,color:"var(--text4)",textAlign:"center",lineHeight:1.4}}>{m.heroName}<br/>tap to upload</div></>)}
               </div>
@@ -2718,7 +2740,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                   {/* Portrait upload */}
                   <div style={{flexShrink:0}}>
                     <input type="file" accept="image/*" style={{display:"none"}} ref={el=>fileRefs.current[v.id]=el} onChange={e=>handleImg(v.id,e.target.files[0])}/>
-                    <div onClick={()=>{if(images[v.id]){setTab("universe");setUniverseDossierTarget({type:"villain",id:v.id});}else{fileRefs.current[v.id]?.click();}}} style={{width:80,height:108,borderRadius:10,overflow:"hidden",cursor:"pointer",background:"rgba(139,26,26,0.14)",border:`2px dashed ${images[v.id]?"rgba(224,112,112,0.5)":"rgba(224,112,112,0.25)"}`,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:4,position:"relative",flexShrink:0}}>
+                    <div onClick={()=>{if(images[v.id]){setDossierFromTab(tab);setTab("universe");setUniverseDossierTarget({type:"villain",id:v.id});}else{fileRefs.current[v.id]?.click();}}} style={{width:80,height:108,borderRadius:10,overflow:"hidden",cursor:"pointer",background:"rgba(139,26,26,0.14)",border:`2px dashed ${images[v.id]?"rgba(224,112,112,0.5)":"rgba(224,112,112,0.25)"}`,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:4,position:"relative",flexShrink:0}}>
                       {images[v.id]
                         ?<><img src={images[v.id]} alt={v.heroName} style={{width:"100%",height:"100%",objectFit:"cover",objectPosition:"top",position:"absolute",inset:0}}/><div style={{position:"absolute",inset:0,background:"linear-gradient(to top,rgba(0,0,0,0.6) 0%,transparent 50%)"}}/>
                            <button onClick={e=>{e.stopPropagation();fileRefs.current[v.id]?.click();}} style={{position:"absolute",bottom:4,left:0,right:0,margin:"0 auto",width:"fit-content",fontSize:7,padding:"2px 8px",background:"rgba(0,0,0,0.7)",border:"1px solid rgba(224,112,112,0.4)",borderRadius:4,cursor:"pointer",color:"#E07070",fontFamily:"var(--font-mono)",lineHeight:1.4}}>↑ Change</button></>
@@ -3791,8 +3813,10 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
           }
           if(!dMember)return(<div style={{textAlign:"center",padding:"40px",color:"var(--text3)",fontSize:12}}>Character not found.</div>);
           const dc=dMember.color;
+          const backTab=dossierFromTab||"universe";
+          const backLabel={teams:"Teams",roster:"Roster",team:"Team",family:"Family",prompts:"Prompts",recruit:"Recruit",villains:"Villains",story:"Story",battle:"Battle",arc:"Arc",comic:"Comic",tiers:"Tiers",universe:"Universe",codex:"Codex"}[backTab]||"Back";
           return(<>
-            <button onClick={()=>setUniverseDossierTarget(null)} style={{display:"inline-flex",alignItems:"center",gap:6,padding:"6px 14px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:10.5,fontFamily:"var(--font-mono)",marginBottom:14}}>← Universe</button>
+            <button onClick={()=>{setTab(backTab);setUniverseDossierTarget(null);setDossierFromTab(null);}} style={{display:"inline-flex",alignItems:"center",gap:6,padding:"6px 14px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:10.5,fontFamily:"var(--font-mono)",marginBottom:14}}>← {backLabel}</button>
             <div style={{border:`1px solid ${dc}44`,borderRadius:10,overflow:"hidden"}}>
               <CharacterPage member={dMember} imageUrl={dImg} isVillain={isVil}
                 teamName={isVil?"Villain":(dTeams[0]?.name||"Independent")}
@@ -4552,10 +4576,10 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
             </div>
             <div style={{display:"flex",gap:8,alignItems:"center"}}>
               <label style={{cursor:"pointer",padding:"6px 12px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:8,fontSize:10,color:"var(--text3)",fontFamily:"var(--font-mono)"}}>
-                ↑ Hero <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>e.target.files?.[0]&&handleImg(hero.id,e.target.files[0])}/>
+                ↑ Real <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>e.target.files?.[0]&&handleImg(hero.id,e.target.files[0])}/>
               </label>
               <label style={{cursor:"pointer",padding:"6px 12px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:8,fontSize:10,color:"var(--text3)",fontFamily:"var(--font-mono)"}}>
-                ↑ Civilian <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>e.target.files?.[0]&&handleImg(hero.id+"-civ",e.target.files[0])}/>
+                ↑ Comic <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>e.target.files?.[0]&&handleImg(hero.id+"-civ",e.target.files[0])}/>
               </label>
               {images[hero.id]&&<button onClick={()=>downloadImg(hero.id,hero.heroName)} style={{padding:"6px 12px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:8,cursor:"pointer",color:"var(--text3)",fontSize:10,fontFamily:"var(--font-mono)"}}>⬇ Save Image</button>}
               <button onClick={()=>startHeroReforge(hero)} style={{padding:"6px 12px",background:"rgba(136,135,128,0.08)",border:"1px solid rgba(136,135,128,0.3)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:10,fontFamily:"var(--font-mono)"}}>Reforge</button>

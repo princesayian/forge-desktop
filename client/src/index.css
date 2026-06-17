@@ -61,6 +61,9 @@ button[disabled]{opacity:0.45;cursor:not-allowed;}
 .t-faint{color:var(--text-faint)!important;}
 .forge-section-label{font-size:11px;letter-spacing:0.18em;text-transform:uppercase;font-family:var(--font-mono);opacity:0.6;display:block;margin-bottom:10px;}
 .forge-h2{font-size:22px;font-weight:800;letter-spacing:0.02em;color:var(--text-primary);margin:0;line-height:1.1;}
+.fchar-portrait-frame{cursor:zoom-in;}
+.fchar-portrait-img{transition:transform 0.4s cubic-bezier(0.2,0.8,0.2,1);transform-origin:center top;}
+.fchar-portrait-frame:hover .fchar-portrait-img{transform:scale(1.2);}
 @media (max-width:640px){
   /* Header: pull utility bar out of absolute positioning so it doesn't overlap the logo */
   .fhdr{height:auto!important;padding:6px 10px 0!important;}
@@ -71,6 +74,8 @@ button[disabled]{opacity:0.45;cursor:not-allowed;}
   /* Nav tabs: wrap to multiple rows so nothing is cut off */
   .ftabs{padding:0 2px!important;flex-wrap:wrap!important;justify-content:flex-start!important;overflow-x:visible!important;gap:1px!important;}
   .ftab{padding:7px 9px!important;font-size:9px!important;flex-shrink:0!important;}
+  .ftabs-cat{padding:0 2px!important;flex-wrap:wrap!important;justify-content:flex-start!important;gap:4px!important;}
+  .ftab-cat{padding:6px 11px!important;font-size:10px!important;}
   .fimage-grid{grid-template-columns:repeat(2,1fr)!important;}
   .froster-row{flex-wrap:wrap!important;padding:8px 10px!important;gap:8px!important;}
   .froster-actions{width:100%!important;flex-wrap:wrap!important;padding-top:5px!important;border-top:1px solid var(--border2)!important;}
