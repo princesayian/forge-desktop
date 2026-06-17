@@ -86,6 +86,7 @@ function App(){
   const[comicPanelsPerPage,setComicPanelsPerPage]=useState(4);
   const[comicStyle,setComicStyle]=useState("comic");
   const[comicSubStyle,setComicSubStyle]=useState("");
+  const[comicRealism,setComicRealism]=useState(false);
   const[comicLoading,setComicLoading]=useState(false);
   const[comicResult,setComicResult]=useState(null);
   const[comicPanelPrompts,setComicPanelPrompts]=useState({});
@@ -220,6 +221,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
   // ── Prompts ──────────────────────────────────────────────────────────────
   const[pStyle,setPStyle]=useState("comic");
   const[pSubStyle,setPSubStyle]=useState("");
+  const[pRealism,setPRealism]=useState(false);
   const[pPlatform,setPPlatform]=useState("meta-ai");
   const[pPose,setPPose]=useState("3/4");
   const[pSelected,setPSelected]=useState(null);
@@ -1148,7 +1150,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
 
   const generateCharPrompt=(member)=>{
     setPSelected(member.id);setPLoading(true);setPResult(null);
-    const style=artStyleText(pStyle,pSubStyle)||"character concept art, vibrant colors";
+    const style=artStyleText(pStyle,pSubStyle,pRealism)||"character concept art, vibrant colors";
     const hasRef=images[member.id];
     const refPfx=hasRef?"Based on reference image, same face and build. ":"";
     const costume=sanitizeDesc(member.costumeDesc||(hexToColorName(member.color)+" suit"));
@@ -1177,7 +1179,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
   const generateSoloImagePrompt=(hero,overridePlatform)=>{
     const plat=overridePlatform||pPlatform;
     if(overridePlatform){setPPlatform(overridePlatform);persist("forge-prompt-platform",overridePlatform);}
-    const style=artStyleText(pStyle,pSubStyle)||"character concept art, vibrant colors";
+    const style=artStyleText(pStyle,pSubStyle,pRealism)||"character concept art, vibrant colors";
     const hasRef=images[hero.id];
     const refPfx=hasRef?"Based on reference image, same face and build. ":"";
     const costume=sanitizeDesc(hero.costumeDesc||(hexToColorName(hero.color)+" suit"));
@@ -1204,7 +1206,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
 
   const generateVillainPrompt=(villain)=>{
     setPSelected(villain.id);setPLoading(true);setPResult(null);
-    const style=artStyleText(pStyle,pSubStyle)||"character concept art, dramatic lighting";
+    const style=artStyleText(pStyle,pSubStyle,pRealism)||"character concept art, dramatic lighting";
     const hasRef=images[villain.id];
     const refPfx=hasRef?"Based on reference image, same face and build. ":"";
     const costume=sanitizeDesc(villain.costumeDesc||"dark tailored suit with imposing silhouette");
@@ -1232,7 +1234,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
 
   const generateVillainPromptInline=(villain,overridePlatform,overrideStyle,overridePose)=>{
     const plat=overridePlatform||pPlatform;
-    const styleText=artStyleText(overrideStyle||pStyle,pSubStyle)||"character concept art, dramatic lighting";
+    const styleText=artStyleText(overrideStyle||pStyle,pSubStyle,pRealism)||"character concept art, dramatic lighting";
     const activePose=overridePose||pPose;
     if(overridePlatform){setPPlatform(overridePlatform);persist("forge-prompt-platform",overridePlatform);}
     if(overrideStyle){setPStyle(overrideStyle);persist("forge-prompt-style",overrideStyle);}
@@ -1263,7 +1265,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
 
   const generateGroupPrompt=()=>{
     setPSelected("group");setPLoading(true);setPResult(null);
-    const style=artStyleText(pStyle,pSubStyle)||"comic book art style, vibrant colors";
+    const style=artStyleText(pStyle,pSubStyle,pRealism)||"comic book art style, vibrant colors";
     const hasRef=activeRoster.some(m=>images[m.id]);
     const charList=activeRoster.map(m=>`${m.heroName} in ${hexToColorName(m.color)} ${m.costumeDesc||"superhero suit"}`).join(", ");
     let metaAI;
@@ -1282,7 +1284,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     const a=activeRoster.find(m=>m.id===duoA),b=activeRoster.find(m=>m.id===duoB);
     if(!a||!b)return;
     setPSelected("duo");setPLoading(true);setPResult(null);
-    const style=artStyleText(pStyle,pSubStyle)||"comic book art style, vibrant colors";
+    const style=artStyleText(pStyle,pSubStyle,pRealism)||"comic book art style, vibrant colors";
     const cnA=hexToColorName(a.color),cnB=hexToColorName(b.color);
     let metaAI;
     if(pPlatform==="midjourney"){
@@ -1413,7 +1415,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
   };
 
   const generateComicPanelPrompt=(panel,pageNum)=>{
-    const styleText=artStyleText(comicStyle,comicSubStyle)||"comic book art style";
+    const styleText=artStyleText(comicStyle,comicSubStyle,comicRealism)||"comic book art style";
     const castChars=[...allCharacters,...villainPool].filter(m=>comicCast.includes(m.id));
     const mentioned=castChars.filter(m=>panel.description.toLowerCase().includes(m.heroName.toLowerCase()));
     const charDesc=mentioned.length>0?". "+mentioned.map(m=>`${m.heroName} in ${hexToColorName(m.color)} ${m.costumeDesc||"suit"}`).join(", "):"";
@@ -2111,6 +2113,10 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
               {(pStyle==="comic"?COMIC_SUB_STYLES:ANIME_SUB_STYLES).map(sub=><button key={sub.id} style={s.chip(pSubStyle===sub.id)} onClick={()=>setPSubStyle(sub.id)}>{sub.label}</button>)}
             </div>
           </div>}
+          <label style={{display:"flex",alignItems:"center",gap:6,fontSize:9.5,color:pRealism?"#5DCAA5":"var(--text3)",cursor:"pointer",fontFamily:"var(--font-mono)",marginTop:12}}>
+            <input type="checkbox" checked={pRealism} onChange={e=>setPRealism(e.target.checked)} style={{cursor:"pointer"}}/>
+            📷 Maximize Realism — push toward photographic detail on top of the chosen style
+          </label>
         </div>
         <div style={{...s.card,marginBottom:16}}>
           <span style={s.lbl}>Pose</span>
@@ -3280,13 +3286,17 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
           <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:(comicStyle==="comic"||comicStyle==="anime")?10:18}}>
             {ART_STYLES.map(a=><button key={a.id} style={s.chip(comicStyle===a.id)} onClick={()=>{setComicStyle(a.id);setComicSubStyle("");}}>{a.label}</button>)}
           </div>
-          {(comicStyle==="comic"||comicStyle==="anime")&&<div style={{marginBottom:18}}>
+          {(comicStyle==="comic"||comicStyle==="anime")&&<div style={{marginBottom:14}}>
             <span style={{...s.lbl,fontSize:8.5}}>{comicStyle==="comic"?"Comic Style":"Anime Style"}</span>
             <div style={{display:"flex",flexWrap:"wrap",gap:6,marginTop:4}}>
               <button style={s.chip(!comicSubStyle)} onClick={()=>setComicSubStyle("")}>General</button>
               {(comicStyle==="comic"?COMIC_SUB_STYLES:ANIME_SUB_STYLES).map(sub=><button key={sub.id} style={s.chip(comicSubStyle===sub.id)} onClick={()=>setComicSubStyle(sub.id)}>{sub.label}</button>)}
             </div>
           </div>}
+          <label style={{display:"flex",alignItems:"center",gap:6,fontSize:9.5,color:comicRealism?"#5DCAA5":"var(--text3)",cursor:"pointer",fontFamily:"var(--font-mono)",marginBottom:18}}>
+            <input type="checkbox" checked={comicRealism} onChange={e=>setComicRealism(e.target.checked)} style={{cursor:"pointer"}}/>
+            📷 Maximize Realism — push panel art toward photographic detail
+          </label>
 
           <button style={s.bigBtn(!ollamaOk||comicCast.length===0)} disabled={!ollamaOk||comicCast.length===0} onClick={generateComic}>
             {!ollamaOk?"AI Offline":comicCast.length===0?"Select cast to continue":"Generate Comic Script →"}
@@ -3319,11 +3329,15 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
             <span style={{...s.lbl,marginRight:4}}>Art style:</span>
             {ART_STYLES.map(a=><button key={a.id} style={s.chip(comicStyle===a.id)} onClick={()=>{setComicStyle(a.id);setComicSubStyle("");}}>{a.label}</button>)}
           </div>
-          {(comicStyle==="comic"||comicStyle==="anime")&&<div style={{display:"flex",flexWrap:"wrap",gap:5,alignItems:"center",marginBottom:16}}>
+          {(comicStyle==="comic"||comicStyle==="anime")&&<div style={{display:"flex",flexWrap:"wrap",gap:5,alignItems:"center",marginBottom:10}}>
             <span style={{...s.lbl,marginRight:4,fontSize:8.5}}>{comicStyle==="comic"?"Comic style:":"Anime style:"}</span>
             <button style={s.chip(!comicSubStyle)} onClick={()=>setComicSubStyle("")}>General</button>
             {(comicStyle==="comic"?COMIC_SUB_STYLES:ANIME_SUB_STYLES).map(sub=><button key={sub.id} style={s.chip(comicSubStyle===sub.id)} onClick={()=>setComicSubStyle(sub.id)}>{sub.label}</button>)}
           </div>}
+          <label style={{display:"flex",alignItems:"center",gap:6,fontSize:9.5,color:comicRealism?"#5DCAA5":"var(--text3)",cursor:"pointer",fontFamily:"var(--font-mono)",marginBottom:16}}>
+            <input type="checkbox" checked={comicRealism} onChange={e=>setComicRealism(e.target.checked)} style={{cursor:"pointer"}}/>
+            📷 Maximize Realism — push panel art toward photographic detail
+          </label>
 
           {/* Pages */}
           {(comicResult.pages||[]).map(page=>(

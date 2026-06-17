@@ -188,10 +188,14 @@ export const ANIME_SUB_STYLES=[
   {id:"ghibli",label:"Ghibli-Inspired",text:"Ghibli-inspired anime art style, soft painterly backgrounds, warm natural color palette, whimsical hand-drawn linework"},
   {id:"mecha",label:"Mecha / Sci-Fi",text:"mecha anime art style, sharp technical linework, metallic shading, sci-fi industrial design"},
 ];
-export function artStyleText(styleId,subStyleId){
-  if(styleId==="comic"){const sub=COMIC_SUB_STYLES.find(s=>s.id===subStyleId);if(sub)return sub.text;}
-  if(styleId==="anime"){const sub=ANIME_SUB_STYLES.find(s=>s.id===subStyleId);if(sub)return sub.text;}
-  return ART_STYLES.find(a=>a.id===styleId)?.text;
+export const REALISM_BOOST_TEXT="ultra-photorealistic, shot on a DSLR with an 85mm lens, natural skin texture with visible pores, realistic fabric and material physics, accurate human anatomy and proportions, photographic lighting and depth of field, lifelike eyes and skin tone, 8K ultra-detailed, indistinguishable from a real photograph";
+export function artStyleText(styleId,subStyleId,realism){
+  let text;
+  if(styleId==="comic"){const sub=COMIC_SUB_STYLES.find(s=>s.id===subStyleId);text=sub?.text;}
+  else if(styleId==="anime"){const sub=ANIME_SUB_STYLES.find(s=>s.id===subStyleId);text=sub?.text;}
+  if(!text)text=ART_STYLES.find(a=>a.id===styleId)?.text;
+  if(realism&&text)text=`${text}, ${REALISM_BOOST_TEXT}`;
+  return text;
 }
 export const POSE_OPTIONS=[
   {id:"3/4",label:"3/4 Stance",hero:"confident heroic 3/4 stance, feet flat on the ground",villain:"confident commanding 3/4 stance, feet flat on the ground"},
