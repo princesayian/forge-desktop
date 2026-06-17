@@ -19,25 +19,25 @@ export default function TeamCard({team,isActive,memberCount,onSelect,onEdit,onDe
       gap:8,
       textAlign:"center"
     }}>
-      {isActive&&<div style={{position:"absolute",top:10,left:10,fontSize:8,padding:"1px 7px",background:`${team.color}22`,border:`1px solid ${team.color}55`,borderRadius:10,color:team.color,fontFamily:"var(--font-mono)"}}>Active</div>}
+      {isActive&&<div style={{position:"absolute",top:10,left:10,fontSize:9,padding:"1px 7px",background:`${team.color}22`,border:`1px solid ${team.color}55`,borderRadius:10,color:team.color,fontFamily:"var(--font-mono)"}}>Active</div>}
 
       <TeamLogo team={team} size={52} imageUrl={imageUrl}/>
 
-      <div style={{fontSize:13,fontWeight:"bold",color:"var(--text-primary)",wordBreak:"break-word",lineHeight:1.3}}>{team.name}</div>
+      <div style={{fontSize:14,fontWeight:"bold",color:"var(--text-primary)",wordBreak:"break-word",lineHeight:1.3}}>{team.name}</div>
 
       <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",justifyContent:"center"}}>
-        {type&&<span style={{fontSize:9,color:"var(--text3)",fontFamily:"var(--font-mono)"}}>{type.label}</span>}
-        <span style={{fontSize:9,color:"var(--text4)"}}>·</span>
-        <span style={{fontSize:9,color:"var(--text3)",fontFamily:"var(--font-mono)"}}>{memberCount} member{memberCount!==1?"s":""}</span>
+        {type&&<span style={{fontSize:10,color:"var(--text3)",fontFamily:"var(--font-mono)"}}>{type.label}</span>}
+        <span style={{fontSize:10,color:"var(--text4)"}}>·</span>
+        <span style={{fontSize:10,color:"var(--text3)",fontFamily:"var(--font-mono)"}}>{memberCount} member{memberCount!==1?"s":""}</span>
         {team.nkAlignment&&team.nkAlignment!=="base"&&<>
-          <span style={{fontSize:9,color:"var(--text4)"}}>·</span>
-          <span style={{fontSize:9,color:am.color,fontFamily:"var(--font-mono)"}}>{am.label}</span>
+          <span style={{fontSize:10,color:"var(--text4)"}}>·</span>
+          <span style={{fontSize:10,color:am.color,fontFamily:"var(--font-mono)"}}>{am.label}</span>
         </>}
       </div>
 
       <div style={{position:"absolute",bottom:10,right:10,display:"flex",gap:5}} onClick={e=>e.stopPropagation()}>
-        <button onClick={onEdit} style={{padding:"3px 9px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:6,cursor:"pointer",fontSize:9.5,color:"var(--text3)",fontFamily:"var(--font-mono)"}}>Edit</button>
-        <button onClick={onDelete} style={{padding:"3px 9px",background:"rgba(139,26,26,0.1)",border:"1px solid rgba(139,26,26,0.3)",borderRadius:6,cursor:"pointer",fontSize:9.5,color:"#E07070",fontFamily:"var(--font-mono)"}}>Delete</button>
+        <button onClick={onEdit} style={{padding:"3px 9px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:6,cursor:"pointer",fontSize:10.5,color:"var(--text3)",fontFamily:"var(--font-mono)"}}>Edit</button>
+        <button onClick={onDelete} style={{padding:"3px 9px",background:"rgba(139,26,26,0.1)",border:"1px solid rgba(139,26,26,0.3)",borderRadius:6,cursor:"pointer",fontSize:10.5,color:"#E07070",fontFamily:"var(--font-mono)"}}>Delete</button>
       </div>
     </div>
   );

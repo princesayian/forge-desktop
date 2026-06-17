@@ -32,7 +32,7 @@ export default function RemotePanel({remoteInfo,setRemoteInfo,onClose,s,forgeVer
   };
   return(<div style={{background:"var(--bg2)",borderBottom:"1px solid var(--border)",padding:"14px 22px"}}>
     <div style={{maxWidth:960,margin:"0 auto"}}>
-      <div style={{fontSize:9,letterSpacing:"0.18em",color:"#5EB1FF88",textTransform:"uppercase",marginBottom:12}}>Remote Access & Settings — Nocturnal Innovations's Superhero Forge {forgeVersion?`v${forgeVersion}`:""}</div>
+      <div style={{fontSize:10,letterSpacing:"0.18em",color:"#5EB1FF88",textTransform:"uppercase",marginBottom:12}}>Remote Access & Settings — Nocturnal Innovations's Superhero Forge {forgeVersion?`v${forgeVersion}`:""}</div>
       {(()=>{
         const live=remoteInfo?.enabled&&remoteInfo?.url;
         const needsRestart=remoteInfo?.enabled&&!remoteInfo?.url&&remoteInfo?.cloudflared;
@@ -48,16 +48,16 @@ export default function RemotePanel({remoteInfo,setRemoteInfo,onClose,s,forgeVer
           <div style={{padding:"12px 16px",background:"var(--bg3)",border:`1px solid ${sc}30`,borderRadius:8,marginBottom:12}}>
             <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
               <div style={{width:8,height:8,borderRadius:"50%",background:sc,flexShrink:0,boxShadow:live?`0 0 7px ${sc}`:undefined}}/>
-              <span style={{fontSize:10,fontWeight:"bold",color:sc,letterSpacing:"0.1em"}}>{statusLabel}</span>
-              {live&&<span style={{fontSize:9,color:"#5DCAA5AA",fontFamily:"var(--font-mono)",marginLeft:4,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:260,cursor:"pointer"}} onClick={()=>copyToClipboard(remoteInfo.url)}>{remoteInfo.url}</span>}
+              <span style={{fontSize:11,fontWeight:"bold",color:sc,letterSpacing:"0.1em"}}>{statusLabel}</span>
+              {live&&<span style={{fontSize:10,color:"#5DCAA5AA",fontFamily:"var(--font-mono)",marginLeft:4,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:260,cursor:"pointer"}} onClick={()=>copyToClipboard(remoteInfo.url)}>{remoteInfo.url}</span>}
             </div>
             <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:"4px 16px"}}>
               {checks.map(({ok,label,fix})=>(
                 <div key={label} style={{display:"flex",alignItems:"flex-start",gap:7,padding:"3px 0"}}>
-                  <span style={{fontSize:11,color:ok?"#5DCAA5":"#E07070",flexShrink:0,fontWeight:"bold",lineHeight:1.4,fontFamily:"var(--font-mono)"}}>{ok?"✓":"✗"}</span>
+                  <span style={{fontSize:12,color:ok?"#5DCAA5":"#E07070",flexShrink:0,fontWeight:"bold",lineHeight:1.4,fontFamily:"var(--font-mono)"}}>{ok?"✓":"✗"}</span>
                   <div>
-                    <div style={{fontSize:10,color:ok?"var(--text2)":"var(--text-primary)",lineHeight:1.4}}>{label}</div>
-                    {!ok&&<div style={{fontSize:8.5,color:"var(--text4)",marginTop:1,lineHeight:1.4}}>{fix}</div>}
+                    <div style={{fontSize:11,color:ok?"var(--text2)":"var(--text-primary)",lineHeight:1.4}}>{label}</div>
+                    {!ok&&<div style={{fontSize:9.5,color:"var(--text4)",marginTop:1,lineHeight:1.4}}>{fix}</div>}
                   </div>
                 </div>
               ))}
@@ -69,44 +69,44 @@ export default function RemotePanel({remoteInfo,setRemoteInfo,onClose,s,forgeVer
       <div style={{padding:"12px 16px",background:"var(--bg3)",border:`1px solid ${LAN_BLUE}30`,borderRadius:8,marginBottom:12}}>
         <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:6}}>
           <div style={{width:8,height:8,borderRadius:"50%",background:remoteInfo?.lan_url?"#5DCAA5":"#888780",flexShrink:0,boxShadow:remoteInfo?.lan_url?"0 0 6px #5DCAA5":undefined}}/>
-          <div style={{fontSize:10,fontWeight:"bold",color:LAN_BLUE,letterSpacing:"0.06em"}}>LOCAL NETWORK ACCESS</div>
-          <div style={{fontSize:8.5,color:"var(--text4)",marginLeft:4}}>— no setup required, same Wi-Fi only</div>
+          <div style={{fontSize:11,fontWeight:"bold",color:LAN_BLUE,letterSpacing:"0.06em"}}>LOCAL NETWORK ACCESS</div>
+          <div style={{fontSize:9.5,color:"var(--text4)",marginLeft:4}}>— no setup required, same Wi-Fi only</div>
         </div>
         {remoteInfo?.lan_url?(
           <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-            <span style={{fontFamily:"var(--font-mono)",fontSize:11,color:"#5DCAA5",background:"#5DCAA510",border:"1px solid #5DCAA530",borderRadius:6,padding:"4px 10px",letterSpacing:"0.04em"}}>{remoteInfo.lan_url}</span>
-            <button onClick={copyLan} style={{fontSize:9,padding:"4px 12px",background:lanCopied?`#5DCAA520`:`${LAN_BLUE}10`,border:`1px solid ${lanCopied?"#5DCAA5":LAN_BLUE}44`,borderRadius:6,cursor:"pointer",color:lanCopied?"#5DCAA5":LAN_BLUE,fontFamily:"var(--font-mono)"}}>{lanCopied?"Copied!":"Copy"}</button>
-            <span style={{fontSize:9,color:"var(--text4)"}}>Type this URL on any phone or laptop connected to the same Wi-Fi</span>
+            <span style={{fontFamily:"var(--font-mono)",fontSize:12,color:"#5DCAA5",background:"#5DCAA510",border:"1px solid #5DCAA530",borderRadius:6,padding:"4px 10px",letterSpacing:"0.04em"}}>{remoteInfo.lan_url}</span>
+            <button onClick={copyLan} style={{fontSize:10,padding:"4px 12px",background:lanCopied?`#5DCAA520`:`${LAN_BLUE}10`,border:`1px solid ${lanCopied?"#5DCAA5":LAN_BLUE}44`,borderRadius:6,cursor:"pointer",color:lanCopied?"#5DCAA5":LAN_BLUE,fontFamily:"var(--font-mono)"}}>{lanCopied?"Copied!":"Copy"}</button>
+            <span style={{fontSize:10,color:"var(--text4)"}}>Type this URL on any phone or laptop connected to the same Wi-Fi</span>
           </div>
         ):(
-          <div style={{fontSize:9.5,color:"var(--text4)"}}>LAN IP not detected — make sure you are connected to Wi-Fi or Ethernet.</div>
+          <div style={{fontSize:10.5,color:"var(--text4)"}}>LAN IP not detected — make sure you are connected to Wi-Fi or Ethernet.</div>
         )}
       </div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))",gap:12}}>
         <div style={{padding:"12px 14px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:8}}>
-          <div style={{fontSize:10,fontWeight:"bold",color:"#5EB1FF",marginBottom:8}}>Cloudflared Tunnel</div>
-          <div style={{fontSize:10,color:"var(--text2)",lineHeight:1.6,marginBottom:8}}>{remoteInfo?.cloudflared?"✓ cloudflared installed":"✗ Not installed — Mac: brew install cloudflared · Windows: winget install cloudflare.cloudflared"}</div>
-          {remoteInfo?.url?<div style={{fontSize:10,color:"#5DCAA5",wordBreak:"break-all"}}>{remoteInfo.url}</div>:<div style={{fontSize:10,color:"var(--text4)"}}>Tunnel starts when Remote Access is enabled</div>}
+          <div style={{fontSize:11,fontWeight:"bold",color:"#5EB1FF",marginBottom:8}}>Cloudflared Tunnel</div>
+          <div style={{fontSize:11,color:"var(--text2)",lineHeight:1.6,marginBottom:8}}>{remoteInfo?.cloudflared?"✓ cloudflared installed":"✗ Not installed — Mac: brew install cloudflared · Windows: winget install cloudflare.cloudflared"}</div>
+          {remoteInfo?.url?<div style={{fontSize:11,color:"#5DCAA5",wordBreak:"break-all"}}>{remoteInfo.url}</div>:<div style={{fontSize:11,color:"var(--text4)"}}>Tunnel starts when Remote Access is enabled</div>}
         </div>
         <div style={{padding:"12px 14px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:8}}>
-          <div style={{fontSize:10,fontWeight:"bold",color:G,marginBottom:8}}>DuckDNS (persistent domain)</div>
-          <input type="text" value={rdomain} onChange={e=>setRdomain(e.target.value)} placeholder="your-domain (no .duckdns.org)" style={{marginBottom:6,fontSize:10}}/>
-          <input type="text" value={rtoken} onChange={e=>setRtoken(e.target.value)} placeholder="DuckDNS token" style={{marginBottom:2,fontSize:10}}/>
-          <div style={{fontSize:9,color:"var(--text4)"}}>Get a free domain at duckdns.org + forward port 7432 on your router</div>
+          <div style={{fontSize:11,fontWeight:"bold",color:G,marginBottom:8}}>DuckDNS (persistent domain)</div>
+          <input type="text" value={rdomain} onChange={e=>setRdomain(e.target.value)} placeholder="your-domain (no .duckdns.org)" style={{marginBottom:6,fontSize:11}}/>
+          <input type="text" value={rtoken} onChange={e=>setRtoken(e.target.value)} placeholder="DuckDNS token" style={{marginBottom:2,fontSize:11}}/>
+          <div style={{fontSize:10,color:"var(--text4)"}}>Get a free domain at duckdns.org + forward port 7432 on your router</div>
         </div>
         <div style={{padding:"12px 14px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:8}}>
-          <div style={{fontSize:10,fontWeight:"bold",color:"#e74c3c",marginBottom:8}}>Login Credentials {remoteInfo?.auth_set&&<span style={{color:"#5DCAA5",fontWeight:"normal"}}>· set</span>}</div>
-          <input type="text" value={rusername} onChange={e=>setRusername(e.target.value)} placeholder="Username" autoComplete="off" style={{marginBottom:6,fontSize:10}}/>
-          <input type="password" value={rpassword} onChange={e=>setRpassword(e.target.value)} placeholder={remoteInfo?.auth_set?"New password (leave blank to keep)":"Password"} autoComplete="new-password" style={{marginBottom:6,fontSize:10}}/>
-          <input type="password" value={rconfirm} onChange={e=>setRconfirm(e.target.value)} placeholder="Confirm password" autoComplete="new-password" style={{marginBottom:4,fontSize:10}}/>
-          {pwErr&&<div style={{fontSize:9,color:"#e74c3c",marginBottom:4}}>{pwErr}</div>}
-          <div style={{fontSize:9,color:"var(--text4)"}}>Remote visitors must sign in. Local access is always unrestricted.</div>
+          <div style={{fontSize:11,fontWeight:"bold",color:"#e74c3c",marginBottom:8}}>Login Credentials {remoteInfo?.auth_set&&<span style={{color:"#5DCAA5",fontWeight:"normal"}}>· set</span>}</div>
+          <input type="text" value={rusername} onChange={e=>setRusername(e.target.value)} placeholder="Username" autoComplete="off" style={{marginBottom:6,fontSize:11}}/>
+          <input type="password" value={rpassword} onChange={e=>setRpassword(e.target.value)} placeholder={remoteInfo?.auth_set?"New password (leave blank to keep)":"Password"} autoComplete="new-password" style={{marginBottom:6,fontSize:11}}/>
+          <input type="password" value={rconfirm} onChange={e=>setRconfirm(e.target.value)} placeholder="Confirm password" autoComplete="new-password" style={{marginBottom:4,fontSize:11}}/>
+          {pwErr&&<div style={{fontSize:10,color:"#e74c3c",marginBottom:4}}>{pwErr}</div>}
+          <div style={{fontSize:10,color:"var(--text4)"}}>Remote visitors must sign in. Local access is always unrestricted.</div>
         </div>
       </div>
       <div style={{display:"flex",gap:10,marginTop:12}}>
         <button onClick={()=>saveRemote(true)} disabled={saving} style={{...s.bigBtn(saving,"#5EB1FF"),width:"auto",padding:"8px 20px",marginTop:0}}>{saving?"Saving...":"Enable Remote Access"}</button>
         <button onClick={()=>saveRemote(false)} disabled={saving} style={{...s.bigBtn(saving),width:"auto",padding:"8px 20px",marginTop:0,color:"var(--text3)"}}>{saving?"...":"Disable"}</button>
-        <button onClick={onClose} style={{padding:"8px 16px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:8,cursor:"pointer",color:"var(--text3)",fontSize:10,fontFamily:"var(--font-mono)",marginLeft:"auto"}}>Close</button>
+        <button onClick={onClose} style={{padding:"8px 16px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:8,cursor:"pointer",color:"var(--text3)",fontSize:11,fontFamily:"var(--font-mono)",marginLeft:"auto"}}>Close</button>
       </div>
     </div>
   </div>);

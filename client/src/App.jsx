@@ -6,10 +6,11 @@ import {
   RECRUIT_QUIZ, VILLAIN_QUIZ, SCENARIOS, TONES,
   TEAM_RANKS, FAMILY_RELATIONS, HERO_ASSOC_TYPES,
   ART_STYLES, COMIC_SUB_STYLES, ANIME_SUB_STYLES, artStyleText, POSE_OPTIONS, ACCENT_COLORS, TIER_DEFS,
+  POWER_SCALING_DEFAULTS,
   DEEP_LORE_PHASES, PERSONAL_PROFILE, DEEP_VILLAIN_PHASES, VILLAIN_PERSONAL_PROFILE,
   _rp, _NAMES, _TS, randTeamName, randHeroName, COSTUME_FORGE_QUESTIONS,
 } from './constants/index.js';
-import { autoScore, autoTierFn, pronounOf, ageStage, hexToColorName, copyToClipboard } from './utils/helpers.js';
+import { autoScore, autoTierFn, pronounOf, ageStage, hexToColorName, stripHexDeep, copyToClipboard } from './utils/helpers.js';
 import AlignmentBadge from './components/AlignmentBadge.jsx';
 import StatBar from './components/StatBar.jsx';
 import CharacterPage from './components/CharacterPage.jsx';
@@ -116,6 +117,7 @@ function App(){
   const[soloHeroes,setSoloHeroes]=useState([]);
   const[soloVillains,setSoloVillains]=useState({});
   const[raceAbilities,setRaceAbilities]=useState({});
+  const[powerScaling,setPowerScaling]=useState({});
   const[activeSoloId,setActiveSoloId]=useState(null);
   const[soloHeroView,setSoloHeroView]=useState("profile");
   const[rogueMode,setRogueMode]=useState(null); // null or heroId — saves villain to rogues gallery
@@ -290,7 +292,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
       let _loadedTeams=[];
       let _loadedRosters={};
       try{const d=await storage.get("forge-teams");_loadedTeams=JSON.parse(d.value)||[];}catch(e){}
-      try{const d=await storage.get("forge-rosters");_loadedRosters=JSON.parse(d.value)||{};}catch(e){}
+      try{const d=await storage.get("forge-rosters");_loadedRosters=stripHexDeep(JSON.parse(d.value)||{});}catch(e){}
       // Recover orphaned rosters — any team ID in rosters but absent from teams list gets a stub entry
       {
         const _knownIds=new Set(_loadedTeams.map(t=>t.id));
@@ -306,10 +308,10 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
       try{const d=await storage.get("forge-edits");setSharedEdits(JSON.parse(d.value)||{});}catch(e){
         try{const d2=await storage.get("nk-edits");setSharedEdits(JSON.parse(d2.value)||{});}catch(e2){}
       }
-      try{const d=await storage.get("forge-villains");setVillainPool(JSON.parse(d.value)||[]);}catch(e){
-        try{const d2=await storage.get("nk-villain");const v=JSON.parse(d2.value);if(v)setVillainPool([v]);}catch(e2){}
+      try{const d=await storage.get("forge-villains");setVillainPool(stripHexDeep(JSON.parse(d.value)||[]));}catch(e){
+        try{const d2=await storage.get("nk-villain");const v=JSON.parse(d2.value);if(v)setVillainPool([stripHexDeep(v)]);}catch(e2){}
       }
-      try{const d=await storage.get("nk-recruits");const rec=JSON.parse(d.value)||[];if(rec.length){setTeamRosters(p=>({...p,"nocturnal-knights":[...(p["nocturnal-knights"]||[]),...rec.map(r=>({...r,teamId:"nocturnal-knights"}))]}))};}catch(e){}
+      try{const d=await storage.get("nk-recruits");const rec=stripHexDeep(JSON.parse(d.value)||[]);if(rec.length){setTeamRosters(p=>({...p,"nocturnal-knights":[...(p["nocturnal-knights"]||[]),...rec.map(r=>({...r,teamId:"nocturnal-knights"}))]}))};}catch(e){}
       try{const d=await storage.get("forge-meta-ai-pref");if(d)setHasMetaAI(JSON.parse(d.value));}catch(e){}
       try{const d=await storage.get("forge-prompt-platform");if(d)setPPlatform(JSON.parse(d.value)||"meta-ai");}catch(e){}
       try{const d=await storage.get("forge-family");setFamilyLinks(JSON.parse(d.value)||[]);}catch(e){
@@ -321,13 +323,14 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
       try{const r=await fetch("/api/images");const ids=await r.json();const loaded={};const t=Date.now();ids.forEach(id=>{loaded[id]=`/api/images/${id}?t=${t}`;});if(Object.keys(loaded).length)setImages(loaded);}catch(e){}
       try{const r=await fetch("/api/update/check");setUpdateInfo(await r.json());}catch(e){}
       try{const r=await fetch("/api/remote");setRemoteInfo(await r.json());}catch(e){}
-      try{const d=await storage.get("forge-solo-heroes");setSoloHeroes(JSON.parse(d.value)||[]);}catch(e){}
-      try{const d=await storage.get("forge-solo-villains");setSoloVillains(JSON.parse(d.value)||{});}catch(e){}
+      try{const d=await storage.get("forge-solo-heroes");setSoloHeroes(stripHexDeep(JSON.parse(d.value)||[]));}catch(e){}
+      try{const d=await storage.get("forge-solo-villains");setSoloVillains(stripHexDeep(JSON.parse(d.value)||{}));}catch(e){}
       try{const d=await storage.get("forge-villain-factions");setVillainFactions(JSON.parse(d.value)||[]);}catch(e){}
       try{const d=await storage.get("forge-villain-alliances");setVillainAlliances(JSON.parse(d.value)||[]);}catch(e){}
       try{const d=await storage.get("forge-universe");if(d)setUniverseData(JSON.parse(d.value)||{});}catch(e){}
       try{const d=await storage.get("forge-timeline");if(d)setTimeline(JSON.parse(d.value)||[]);}catch(e){}
       try{const d=await storage.get("forge-race-abilities");if(d)setRaceAbilities(JSON.parse(d.value)||{});}catch(e){}
+      try{const d=await storage.get("forge-power-scaling");if(d)setPowerScaling(JSON.parse(d.value)||{});}catch(e){}
     })();
   },[]);
 
@@ -726,11 +729,13 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
         }
         genControllerRef.current=null;
         const clean=full.replace(/```json\n?/g,"").replace(/```\n?/g,"").trim().replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g,ch=>'\\u'+ch.charCodeAt(0).toString(16).padStart(4,'0'));
-        try{return JSON.parse(clean);}catch{
+        // Scrub any literal hex codes the model echoed into prose (tagline/origin/powers
+        // etc.) into real color names -- applied once here so every caller gets clean text.
+        try{return stripHexDeep(JSON.parse(clean));}catch{
           const m=clean.match(/\{[\s\S]*\}/);
-          if(m){try{return JSON.parse(m[0]);}catch{}}
+          if(m){try{return stripHexDeep(JSON.parse(m[0]));}catch{}}
           const start=clean.indexOf("{");
-          if(start>0){try{return JSON.parse(clean.slice(start));}catch{}}
+          if(start>0){try{return stripHexDeep(JSON.parse(clean.slice(start)));}catch{}}
           throw new Error("Response was not valid JSON");
         }
       }catch(e){
@@ -1100,6 +1105,9 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
   const AURANTHI_FRACTION={auranthi:1.0,dravosi:0.5,zyrenian:0.25};
 
   const saveRaceAbilities=(updated)=>{setRaceAbilities(updated);persist("forge-race-abilities",updated);};
+
+  const savePowerScaling=(updated)=>{setPowerScaling(updated);persist("forge-power-scaling",updated);};
+  const getPowerScale=(raceId)=>({...POWER_SCALING_DEFAULTS[raceId],...(powerScaling[raceId]||{})});
 
   const getRaceInherentPowers=(hero)=>{
     const race=hero?.race;
@@ -1546,14 +1554,14 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
 
   // ── Styles ────────────────────────────────────────────────────────────────
   const s={
-    tab:a=>({padding:"11px 18px",fontSize:11,letterSpacing:"0.1em",textTransform:"uppercase",cursor:"pointer",border:"none",background:a?"rgba(212,175,55,0.08)":"transparent",color:a?G:"var(--text3)",borderBottom:a?`2px solid ${G}`:"2px solid transparent",fontFamily:"var(--font-mono)",whiteSpace:"nowrap",flexShrink:0,transition:"color 0.15s,background 0.15s"}),
+    tab:a=>({padding:"11px 18px",fontSize:12,letterSpacing:"0.1em",textTransform:"uppercase",cursor:"pointer",border:"none",background:a?"rgba(212,175,55,0.08)":"transparent",color:a?G:"var(--text3)",borderBottom:a?`2px solid ${G}`:"2px solid transparent",fontFamily:"var(--font-mono)",whiteSpace:"nowrap",flexShrink:0,transition:"color 0.15s,background 0.15s"}),
     card:{background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:14,padding:"20px 24px",boxShadow:"0 2px 16px rgba(0,0,0,0.22)"},
-    lbl:{fontSize:11,letterSpacing:"0.18em",color:"rgba(212,175,55,0.65)",textTransform:"uppercase",marginBottom:10,display:"block",fontFamily:"var(--font-mono)"},
-    chip:(a,c=G)=>({padding:"7px 15px",background:a?`${c}1A`:"var(--bg3)",border:`1px solid ${a?c+"88":"var(--border2)"}`,borderRadius:20,cursor:"pointer",fontSize:11,color:a?c:"var(--text3)",fontFamily:"var(--font-mono)",fontWeight:a?"600":"normal",transition:"all 0.12s"}),
-    pBox:{background:"var(--prompt-bg)",border:"1px solid var(--border2)",borderRadius:10,padding:"16px 18px",fontFamily:"var(--font-mono)",fontSize:12,color:"var(--text2)",lineHeight:1.8,whiteSpace:"pre-wrap",wordBreak:"break-word"},
-    cpyBtn:d=>({padding:"6px 14px",background:d?`${G}22`:"var(--bg3)",border:`1px solid ${d?G:"var(--border)"}`,borderRadius:8,cursor:"pointer",fontSize:11,color:d?G:"var(--text3)",fontFamily:"var(--font-mono)"}),
-    bigBtn:(d,c=G)=>({width:"100%",padding:"14px",background:d?"var(--bg3)":`${c}16`,border:`1px solid ${d?"var(--border2)":c}`,borderRadius:10,cursor:d?"not-allowed":"pointer",color:d?"var(--text4)":c,fontSize:12,letterSpacing:"0.1em",textTransform:"uppercase",fontFamily:"var(--font-mono)",marginTop:6,fontWeight:"600"}),
-    optBtn:(a,c=G)=>({width:"100%",padding:"13px 18px",background:a?`${c}1A`:"var(--bg3)",border:`1px solid ${a?c+"88":"var(--border2)"}`,borderRadius:10,cursor:"pointer",color:a?"var(--text)":"var(--text2)",fontFamily:"var(--font-mono)",fontSize:12.5,textAlign:"left",marginBottom:8,transition:"all 0.12s"}),
+    lbl:{fontSize:12,letterSpacing:"0.18em",color:"rgba(212,175,55,0.65)",textTransform:"uppercase",marginBottom:10,display:"block",fontFamily:"var(--font-mono)"},
+    chip:(a,c=G)=>({padding:"7px 15px",background:a?`${c}1A`:"var(--bg3)",border:`1px solid ${a?c+"88":"var(--border2)"}`,borderRadius:20,cursor:"pointer",fontSize:12,color:a?c:"var(--text3)",fontFamily:"var(--font-mono)",fontWeight:a?"600":"normal",transition:"all 0.12s"}),
+    pBox:{background:"var(--prompt-bg)",border:"1px solid var(--border2)",borderRadius:10,padding:"16px 18px",fontFamily:"var(--font-mono)",fontSize:13,color:"var(--text2)",lineHeight:1.8,whiteSpace:"pre-wrap",wordBreak:"break-word"},
+    cpyBtn:d=>({padding:"6px 14px",background:d?`${G}22`:"var(--bg3)",border:`1px solid ${d?G:"var(--border)"}`,borderRadius:8,cursor:"pointer",fontSize:12,color:d?G:"var(--text3)",fontFamily:"var(--font-mono)"}),
+    bigBtn:(d,c=G)=>({width:"100%",padding:"14px",background:d?"var(--bg3)":`${c}16`,border:`1px solid ${d?"var(--border2)":c}`,borderRadius:10,cursor:d?"not-allowed":"pointer",color:d?"var(--text4)":c,fontSize:13,letterSpacing:"0.1em",textTransform:"uppercase",fontFamily:"var(--font-mono)",marginTop:6,fontWeight:"600"}),
+    optBtn:(a,c=G)=>({width:"100%",padding:"13px 18px",background:a?`${c}1A`:"var(--bg3)",border:`1px solid ${a?c+"88":"var(--border2)"}`,borderRadius:10,cursor:"pointer",color:a?"var(--text)":"var(--text2)",fontFamily:"var(--font-mono)",fontSize:13.5,textAlign:"left",marginBottom:8,transition:"all 0.12s"}),
   };
 
   const rHex=rColors[0]||G;
@@ -1571,10 +1579,10 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
 
       {/* Utility controls — top right */}
       <div className="fhdr-utils" style={{position:"absolute",top:8,right:12,display:"flex",alignItems:"center",gap:5,flexWrap:"nowrap"}}>
-        {saved&&<div style={{fontSize:9,color:"#5DCAA5",padding:"3px 8px",background:"rgba(15,110,86,0.12)",border:"1px solid rgba(15,110,86,0.3)",borderRadius:20}}>✓ Saved</div>}
+        {saved&&<div style={{fontSize:10,color:"#5DCAA5",padding:"3px 8px",background:"rgba(15,110,86,0.12)",border:"1px solid rgba(15,110,86,0.3)",borderRadius:20}}>✓ Saved</div>}
         {updateInfo?.has_update&&<div style={{display:"flex",alignItems:"center",gap:5,padding:"3px 9px",background:"rgba(212,175,55,0.12)",border:"1px solid rgba(212,175,55,0.4)",borderRadius:20,cursor:"pointer"}} onClick={async()=>{if(updatePulling)return;setUpdatePulling(true);const r=await fetch("/api/update/pull",{method:"POST"});const d=await r.json();setUpdatePulling(false);if(d.ok){setUpdateInfo(null);setAppAlert({type:"restart",msg:"Update applied — restart to load the new version."});}else{setAppAlert({type:"error",msg:"Update failed: "+(d.output||"Unknown error")});}}}>
           <div style={{width:5,height:5,borderRadius:"50%",background:G}}/>
-          <span style={{fontSize:8,color:G,fontFamily:"var(--font-mono)"}}>{updatePulling?"Updating...":"Update available"}</span>
+          <span style={{fontSize:9,color:G,fontFamily:"var(--font-mono)"}}>{updatePulling?"Updating...":"Update available"}</span>
         </div>}
         {remoteInfo&&(()=>{
           const live=remoteInfo.enabled&&remoteInfo.url;
@@ -1586,29 +1594,29 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
             <div style={{display:"flex",alignItems:"center",gap:4,padding:"3px 9px",background:bg,border:`1px solid ${bd}`,borderRadius:20,cursor:"pointer"}}
               onClick={()=>live?copyToClipboard(remoteInfo.url):setShowRemotePanel(p=>!p)}>
               <div style={{width:5,height:5,borderRadius:"50%",background:sc,boxShadow:live?`0 0 4px ${sc}`:undefined}}/>
-              <span style={{fontSize:8,color:sc,fontFamily:"var(--font-mono)",whiteSpace:"nowrap"}}>{live?"Remote: Live":partial?"Remote: Restart":"Remote: Off"}</span>
+              <span style={{fontSize:9,color:sc,fontFamily:"var(--font-mono)",whiteSpace:"nowrap"}}>{live?"Remote: Live":partial?"Remote: Restart":"Remote: Off"}</span>
             </div>
           );
         })()}
-        <button onClick={()=>setShowRemotePanel(p=>!p)} title="Remote Access & Settings" style={{padding:"4px 8px",background:showRemotePanel?"rgba(94,177,255,0.12)":"var(--bg3)",border:`1px solid ${showRemotePanel?"rgba(94,177,255,0.4)":"var(--border)"}`,borderRadius:7,cursor:"pointer",color:showRemotePanel?"#5EB1FF":"var(--text2)",fontSize:10}}>⚙</button>
+        <button onClick={()=>setShowRemotePanel(p=>!p)} title="Remote Access & Settings" style={{padding:"4px 8px",background:showRemotePanel?"rgba(94,177,255,0.12)":"var(--bg3)",border:`1px solid ${showRemotePanel?"rgba(94,177,255,0.4)":"var(--border)"}`,borderRadius:7,cursor:"pointer",color:showRemotePanel?"#5EB1FF":"var(--text2)",fontSize:11}}>⚙</button>
         <div style={{display:"flex",alignItems:"center",gap:5,padding:"4px 10px",background:"var(--bg3)",border:`1px solid ${groqOk?"rgba(94,177,255,0.3)":ollamaOk?"rgba(15,110,86,0.3)":ollamaOk===false?"rgba(139,26,26,0.4)":"var(--border)"}`,borderRadius:20}}>
           <div style={{width:6,height:6,borderRadius:"50%",background:groqOk?"#5EB1FF":ollamaOk?"#5DCAA5":ollamaOk===false?"#E07070":"#888780"}}/>
-          <span style={{fontSize:8,color:"var(--text2)"}}>{ollamaOk===null?"Checking...":groqOk?"Groq · "+currentModel:ollamaOk?currentModel:"Offline"}</span>
+          <span style={{fontSize:9,color:"var(--text2)"}}>{ollamaOk===null?"Checking...":groqOk?"Groq · "+currentModel:ollamaOk?currentModel:"Offline"}</span>
         </div>
-        {ollamaOk&&models.length>0&&<select className="fhdr-model" value={currentModel} onChange={e=>{setCurrentModel(e.target.value);fetch("/api/config",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:e.target.value})});}} style={{background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:7,padding:"4px 8px",color:"var(--text-primary)",fontSize:9,cursor:"pointer"}}>{models.map(m=><option key={m} value={m}>{m}</option>)}</select>}
-        <button className="fhdr-refresh" onClick={checkOllama} style={{padding:"4px 8px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:7,cursor:"pointer",color:"var(--text2)",fontSize:9,fontFamily:"var(--font-mono)"}}>↻</button>
-        <button className="fhdr-restart" onClick={()=>{fetch("/api/restart",{method:"POST"}).then(()=>{setTimeout(()=>window.location.reload(),1800);});}} title="Restart Forge" style={{padding:"4px 8px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:7,cursor:"pointer",color:"var(--text2)",fontSize:8,fontFamily:"var(--font-mono)"}}>⟳</button>
-        <button onClick={()=>setLightMode(p=>!p)} title={lightMode?"Switch to Dark Mode":"Switch to Light Mode"} style={{padding:"4px 9px",background:lightMode?"rgba(0,0,0,0.08)":"var(--bg2)",border:`1px solid ${lightMode?"rgba(0,0,0,0.15)":"var(--border)"}`,borderRadius:7,cursor:"pointer",fontSize:12,lineHeight:1,transition:"all 0.2s"}}>{lightMode?"🌙":"☀️"}</button>
+        {ollamaOk&&models.length>0&&<select className="fhdr-model" value={currentModel} onChange={e=>{setCurrentModel(e.target.value);fetch("/api/config",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:e.target.value})});}} style={{background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:7,padding:"4px 8px",color:"var(--text-primary)",fontSize:10,cursor:"pointer"}}>{models.map(m=><option key={m} value={m}>{m}</option>)}</select>}
+        <button className="fhdr-refresh" onClick={checkOllama} style={{padding:"4px 8px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:7,cursor:"pointer",color:"var(--text2)",fontSize:10,fontFamily:"var(--font-mono)"}}>↻</button>
+        <button className="fhdr-restart" onClick={()=>{fetch("/api/restart",{method:"POST"}).then(()=>{setTimeout(()=>window.location.reload(),1800);});}} title="Restart Forge" style={{padding:"4px 8px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:7,cursor:"pointer",color:"var(--text2)",fontSize:9,fontFamily:"var(--font-mono)"}}>⟳</button>
+        <button onClick={()=>setLightMode(p=>!p)} title={lightMode?"Switch to Dark Mode":"Switch to Light Mode"} style={{padding:"4px 9px",background:lightMode?"rgba(0,0,0,0.08)":"var(--bg2)",border:`1px solid ${lightMode?"rgba(0,0,0,0.15)":"var(--border)"}`,borderRadius:7,cursor:"pointer",fontSize:13,lineHeight:1,transition:"all 0.2s"}}>{lightMode?"🌙":"☀️"}</button>
       </div>
 
       {/* Logo + app name — centered */}
       <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
-        <div style={{width:34,height:34,borderRadius:9,background:`linear-gradient(135deg,${G}22,${G}0A)`,border:`1px solid ${G}33`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0,boxShadow:`0 0 18px ${G}1A`}}>⚒</div>
+        <div style={{width:34,height:34,borderRadius:9,background:`linear-gradient(135deg,${G}22,${G}0A)`,border:`1px solid ${G}33`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,flexShrink:0,boxShadow:`0 0 18px ${G}1A`}}>⚒</div>
         <div>
-          <div style={{fontSize:8.5,letterSpacing:"0.3em",color:`${G}70`,textTransform:"uppercase",fontFamily:"var(--font-mono)",marginBottom:1}}>Nocturnal Innovations's Superhero Forge</div>
+          <div style={{fontSize:9.5,letterSpacing:"0.3em",color:`${G}70`,textTransform:"uppercase",fontFamily:"var(--font-mono)",marginBottom:1}}>Nocturnal Innovations's Superhero Forge</div>
           <div style={{display:"flex",alignItems:"baseline",gap:7}}>
-            <div style={{fontSize:17,fontWeight:"800",letterSpacing:"0.04em",color:"var(--text-primary)",fontFamily:"var(--font-mono)",lineHeight:1}}>SUPERHERO FORGE</div>
-            {forgeVersion&&<div style={{fontSize:8,color:"var(--text4)",letterSpacing:"0.12em",fontFamily:"var(--font-mono)"}}>{`v${forgeVersion}`}</div>}
+            <div style={{fontSize:18,fontWeight:"800",letterSpacing:"0.04em",color:"var(--text-primary)",fontFamily:"var(--font-mono)",lineHeight:1}}>SUPERHERO FORGE</div>
+            {forgeVersion&&<div style={{fontSize:9,color:"var(--text4)",letterSpacing:"0.12em",fontFamily:"var(--font-mono)"}}>{`v${forgeVersion}`}</div>}
           </div>
         </div>
       </div>
@@ -1617,7 +1625,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
       {activeTeam
         ?<div onClick={()=>setTab("teams")} style={{display:"flex",alignItems:"center",gap:7,padding:"4px 14px",background:`${activeTeam.color}10`,border:`1px solid ${activeTeam.color}33`,borderRadius:20,cursor:"pointer",marginBottom:10}}>
           <div style={{width:8,height:8,borderRadius:2,background:activeTeam.color,flexShrink:0,boxShadow:`0 0 6px ${activeTeam.color}88`}}/>
-          <span style={{fontSize:10,color:activeTeam.color,fontFamily:"var(--font-mono)",letterSpacing:"0.07em",fontWeight:"600"}}>{activeTeam.abbr} · {activeTeam.name}</span>
+          <span style={{fontSize:11,color:activeTeam.color,fontFamily:"var(--font-mono)",letterSpacing:"0.07em",fontWeight:"600"}}>{activeTeam.abbr} · {activeTeam.name}</span>
         </div>
         :<div style={{height:8}}/>}
 
@@ -1662,12 +1670,12 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
       const isError=appAlert.type==="error";
       const bc=isRestart?"#D4AF37":isReload?"#5EB1FF":"#E07070";
       return(
-        <div style={{display:"flex",alignItems:"center",gap:12,padding:"9px 22px",background:`${bc}0F`,borderBottom:`1px solid ${bc}35`,fontSize:10,color:bc,fontFamily:"var(--font-mono)",letterSpacing:"0.04em"}}>
+        <div style={{display:"flex",alignItems:"center",gap:12,padding:"9px 22px",background:`${bc}0F`,borderBottom:`1px solid ${bc}35`,fontSize:11,color:bc,fontFamily:"var(--font-mono)",letterSpacing:"0.04em"}}>
           <span style={{flexShrink:0}}>{isRestart?"⚠":isReload?"↻":"✗"}</span>
           <span style={{flex:1}}>{appAlert.msg}</span>
-          {isRestart&&<button onClick={()=>{fetch("/api/restart",{method:"POST"}).then(()=>{setTimeout(()=>window.location.reload(),1800);});setAppAlert(null);}} style={{padding:"4px 14px",background:`${bc}18`,border:`1px solid ${bc}55`,borderRadius:6,cursor:"pointer",color:bc,fontSize:9,fontFamily:"var(--font-mono)",letterSpacing:"0.1em"}}>RESTART NOW</button>}
-          {isReload&&<button onClick={()=>{window.location.reload();}} style={{padding:"4px 14px",background:`${bc}18`,border:`1px solid ${bc}55`,borderRadius:6,cursor:"pointer",color:bc,fontSize:9,fontFamily:"var(--font-mono)",letterSpacing:"0.1em"}}>RELOAD</button>}
-          <button onClick={()=>setAppAlert(null)} style={{padding:"3px 8px",background:"transparent",border:"none",cursor:"pointer",color:`${bc}99`,fontSize:13,lineHeight:1,fontFamily:"var(--font-mono)"}}>×</button>
+          {isRestart&&<button onClick={()=>{fetch("/api/restart",{method:"POST"}).then(()=>{setTimeout(()=>window.location.reload(),1800);});setAppAlert(null);}} style={{padding:"4px 14px",background:`${bc}18`,border:`1px solid ${bc}55`,borderRadius:6,cursor:"pointer",color:bc,fontSize:10,fontFamily:"var(--font-mono)",letterSpacing:"0.1em"}}>RESTART NOW</button>}
+          {isReload&&<button onClick={()=>{window.location.reload();}} style={{padding:"4px 14px",background:`${bc}18`,border:`1px solid ${bc}55`,borderRadius:6,cursor:"pointer",color:bc,fontSize:10,fontFamily:"var(--font-mono)",letterSpacing:"0.1em"}}>RELOAD</button>}
+          <button onClick={()=>setAppAlert(null)} style={{padding:"3px 8px",background:"transparent",border:"none",cursor:"pointer",color:`${bc}99`,fontSize:14,lineHeight:1,fontFamily:"var(--font-mono)"}}>×</button>
         </div>
       );
     })()}
@@ -1675,13 +1683,13 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     {/* ── PIN Delete Modal ────────────────────────────────────────────── */}
     {pinDialog&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.75)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setPinDialog(null)}>
       <div style={{background:"#0D0D1A",border:"1px solid rgba(163,45,45,0.45)",borderRadius:14,padding:"28px 32px",width:320,boxShadow:"0 8px 40px rgba(0,0,0,0.7)"}} onClick={e=>e.stopPropagation()}>
-        <div style={{fontSize:11,fontWeight:"bold",color:"#e74c3c",letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:6}}>Confirm Deletion</div>
-        <div style={{fontSize:12,color:"var(--text2)",marginBottom:20,lineHeight:1.5}}>{pinDialog.label}</div>
-        <input autoFocus type="password" placeholder="Enter PIN" value={pinInput} onChange={e=>{setPinInput(e.target.value);setPinError(false);}} onKeyDown={e=>e.key==="Enter"&&confirmPin()} style={{width:"100%",padding:"10px 14px",background:"rgba(255,255,255,0.05)",border:`1px solid ${pinError?"rgba(231,76,60,0.7)":"rgba(255,255,255,0.12)"}`,borderRadius:8,color:"#F0EAD6",fontSize:14,fontFamily:"var(--font-mono)",letterSpacing:"0.15em",outline:"none",marginBottom:pinError?6:16}}/>
-        {pinError&&<div style={{fontSize:10,color:"#e74c3c",marginBottom:12,fontFamily:"var(--font-mono)"}}>Incorrect PIN</div>}
+        <div style={{fontSize:12,fontWeight:"bold",color:"#e74c3c",letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:6}}>Confirm Deletion</div>
+        <div style={{fontSize:13,color:"var(--text2)",marginBottom:20,lineHeight:1.5}}>{pinDialog.label}</div>
+        <input autoFocus type="password" placeholder="Enter PIN" value={pinInput} onChange={e=>{setPinInput(e.target.value);setPinError(false);}} onKeyDown={e=>e.key==="Enter"&&confirmPin()} style={{width:"100%",padding:"10px 14px",background:"rgba(255,255,255,0.05)",border:`1px solid ${pinError?"rgba(231,76,60,0.7)":"rgba(255,255,255,0.12)"}`,borderRadius:8,color:"#F0EAD6",fontSize:15,fontFamily:"var(--font-mono)",letterSpacing:"0.15em",outline:"none",marginBottom:pinError?6:16}}/>
+        {pinError&&<div style={{fontSize:11,color:"#e74c3c",marginBottom:12,fontFamily:"var(--font-mono)"}}>Incorrect PIN</div>}
         <div style={{display:"flex",gap:10}}>
-          <button onClick={()=>setPinDialog(null)} style={{flex:1,padding:"9px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:8,color:"var(--text2)",fontSize:11,fontFamily:"var(--font-mono)",cursor:"pointer"}}>Cancel</button>
-          <button onClick={confirmPin} style={{flex:1,padding:"9px",background:"rgba(163,45,45,0.15)",border:"1px solid rgba(163,45,45,0.4)",borderRadius:8,color:"#e74c3c",fontSize:11,fontFamily:"var(--font-mono)",cursor:"pointer",fontWeight:"bold"}}>Delete</button>
+          <button onClick={()=>setPinDialog(null)} style={{flex:1,padding:"9px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:8,color:"var(--text2)",fontSize:12,fontFamily:"var(--font-mono)",cursor:"pointer"}}>Cancel</button>
+          <button onClick={confirmPin} style={{flex:1,padding:"9px",background:"rgba(163,45,45,0.15)",border:"1px solid rgba(163,45,45,0.4)",borderRadius:8,color:"#e74c3c",fontSize:12,fontFamily:"var(--font-mono)",cursor:"pointer",fontWeight:"bold"}}>Delete</button>
         </div>
       </div>
     </div>}
@@ -1689,7 +1697,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
 
 <div className="fmain" style={{padding:"28px 26px",maxWidth:960,margin:"0 auto"}}>
       {ollamaOk===false&&<OllamaGuide/>}
-      {!activeTeam&&tab!=="teams"&&tab!=="codex"&&(<div style={{textAlign:"center",padding:"60px 20px"}}><div style={{fontSize:13,color:"var(--text3)",marginBottom:16}}>No team selected.</div><button onClick={()=>setTab("teams")} style={{padding:"9px 22px",background:`${G}14`,border:`1px solid ${G}`,borderRadius:8,cursor:"pointer",color:G,fontSize:11,fontFamily:"var(--font-mono)"}}>Go to Teams</button></div>)}
+      {!activeTeam&&tab!=="teams"&&tab!=="codex"&&(<div style={{textAlign:"center",padding:"60px 20px"}}><div style={{fontSize:14,color:"var(--text3)",marginBottom:16}}>No team selected.</div><button onClick={()=>setTab("teams")} style={{padding:"9px 22px",background:`${G}14`,border:`1px solid ${G}`,borderRadius:8,cursor:"pointer",color:G,fontSize:12,fontFamily:"var(--font-mono)"}}>Go to Teams</button></div>)}
 
       {/* ── TEAMS TAB ─────────────────────────────────────────────────── */}
       {tab==="teams"&&(<>
@@ -1707,18 +1715,18 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
           <>
             {teams.length===0&&!showTeamCreator&&(
               <div style={{textAlign:"center",padding:"60px 20px"}}>
-                <div style={{fontSize:36,marginBottom:16}}>⚒</div>
-                <div style={{fontSize:20,fontWeight:"bold",color:"var(--text-primary)",marginBottom:8,fontFamily:"var(--font-mono)"}}>Build Your Universe</div>
-                <div style={{fontSize:13,color:"var(--text2)",marginBottom:28,lineHeight:1.7,maxWidth:400,margin:"0 auto 28px"}}>Create your first team to get started. Add members, generate lore, build out your hero universe.</div>
-                <button onClick={()=>setShowTeamCreator(true)} style={{padding:"13px 32px",background:`${G}16`,border:`1px solid ${G}`,borderRadius:10,cursor:"pointer",color:G,fontSize:12,letterSpacing:"0.14em",textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>+ Create First Team</button>
+                <div style={{fontSize:37,marginBottom:16}}>⚒</div>
+                <div style={{fontSize:21,fontWeight:"bold",color:"var(--text-primary)",marginBottom:8,fontFamily:"var(--font-mono)"}}>Build Your Universe</div>
+                <div style={{fontSize:14,color:"var(--text2)",marginBottom:28,lineHeight:1.7,maxWidth:400,margin:"0 auto 28px"}}>Create your first team to get started. Add members, generate lore, build out your hero universe.</div>
+                <button onClick={()=>setShowTeamCreator(true)} style={{padding:"13px 32px",background:`${G}16`,border:`1px solid ${G}`,borderRadius:10,cursor:"pointer",color:G,fontSize:13,letterSpacing:"0.14em",textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>+ Create First Team</button>
               </div>
             )}
             {teams.length>0&&<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
-              <div><div style={{fontSize:9,letterSpacing:"0.2em",color:`${G}77`,textTransform:"uppercase",marginBottom:4}}>All Teams</div><div style={{fontSize:13,color:"var(--text2)"}}>Click a team to set it active — all tabs will reflect that team.</div></div>
+              <div><div style={{fontSize:10,letterSpacing:"0.2em",color:`${G}77`,textTransform:"uppercase",marginBottom:4}}>All Teams</div><div style={{fontSize:14,color:"var(--text2)"}}>Click a team to set it active — all tabs will reflect that team.</div></div>
               <div style={{display:"flex",gap:8,alignItems:"center"}}>
-                <button onClick={exportEncyclopedia} disabled={encLoading} style={{padding:"9px 16px",background:encLoading?"var(--bg3)":`${G}0A`,border:`1px solid ${encLoading?"var(--border2)":`${G}44`}`,borderRadius:8,cursor:encLoading?"not-allowed":"pointer",color:encLoading?"var(--text4)":G,fontSize:10.5,letterSpacing:"0.12em",textTransform:"uppercase",fontFamily:"var(--font-mono)",whiteSpace:"nowrap"}}>{encLoading?"Building...":"⬇ Encyclopedia"}</button>
-                <button onClick={exportAllDossiers} disabled={allDossierLoading} style={{padding:"9px 16px",background:allDossierLoading?"var(--bg3)":"rgba(139,26,26,0.08)",border:`1px solid ${allDossierLoading?"var(--border2)":"rgba(139,26,26,0.4)"}`,borderRadius:8,cursor:allDossierLoading?"not-allowed":"pointer",color:allDossierLoading?"var(--text4)":"#E07070",fontSize:10.5,letterSpacing:"0.12em",textTransform:"uppercase",fontFamily:"var(--font-mono)",whiteSpace:"nowrap"}}>{allDossierLoading?"Building...":"⬇ Universe Dossier"}</button>
-                <button onClick={()=>setShowTeamCreator(true)} style={{padding:"9px 18px",background:`${G}14`,border:`1px solid ${G}`,borderRadius:8,cursor:"pointer",color:G,fontSize:10.5,letterSpacing:"0.12em",textTransform:"uppercase",fontFamily:"var(--font-mono)",whiteSpace:"nowrap"}}>+ New Team</button>
+                <button onClick={exportEncyclopedia} disabled={encLoading} style={{padding:"9px 16px",background:encLoading?"var(--bg3)":`${G}0A`,border:`1px solid ${encLoading?"var(--border2)":`${G}44`}`,borderRadius:8,cursor:encLoading?"not-allowed":"pointer",color:encLoading?"var(--text4)":G,fontSize:11.5,letterSpacing:"0.12em",textTransform:"uppercase",fontFamily:"var(--font-mono)",whiteSpace:"nowrap"}}>{encLoading?"Building...":"⬇ Encyclopedia"}</button>
+                <button onClick={exportAllDossiers} disabled={allDossierLoading} style={{padding:"9px 16px",background:allDossierLoading?"var(--bg3)":"rgba(139,26,26,0.08)",border:`1px solid ${allDossierLoading?"var(--border2)":"rgba(139,26,26,0.4)"}`,borderRadius:8,cursor:allDossierLoading?"not-allowed":"pointer",color:allDossierLoading?"var(--text4)":"#E07070",fontSize:11.5,letterSpacing:"0.12em",textTransform:"uppercase",fontFamily:"var(--font-mono)",whiteSpace:"nowrap"}}>{allDossierLoading?"Building...":"⬇ Universe Dossier"}</button>
+                <button onClick={()=>setShowTeamCreator(true)} style={{padding:"9px 18px",background:`${G}14`,border:`1px solid ${G}`,borderRadius:8,cursor:"pointer",color:G,fontSize:11.5,letterSpacing:"0.12em",textTransform:"uppercase",fontFamily:"var(--font-mono)",whiteSpace:"nowrap"}}>+ New Team</button>
               </div>
             </div>}
 
@@ -1738,7 +1746,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
 
             {/* Team Power Index */}
             {teams.length>0&&(<>
-              <div style={{fontSize:9,letterSpacing:"0.2em",color:`${G}77`,textTransform:"uppercase",marginBottom:14}}>Team Power Index</div>
+              <div style={{fontSize:10,letterSpacing:"0.2em",color:`${G}77`,textTransform:"uppercase",marginBottom:14}}>Team Power Index</div>
               <div style={{...s.card,marginBottom:28}}>
                 <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:16}}>
                   {teams.filter(t=>getTeamMemberCount(t.id)>0).map(t=>{
@@ -1746,12 +1754,12 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                     return(<div key={t.id}>
                       <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
                         <TeamLogo team={t} size={24} imageUrl={images['teamlogo-'+t.id]}/>
-                        <span style={{fontSize:11,fontWeight:"bold",color:"var(--text-primary)"}}>{t.name}</span>
+                        <span style={{fontSize:12,fontWeight:"bold",color:"var(--text-primary)"}}>{t.name}</span>
                       </div>
                       <div style={{marginBottom:6}}>
                         <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
-                          <span style={{fontSize:9,color:"var(--text2)",textTransform:"uppercase",letterSpacing:"0.08em"}}>Overall</span>
-                          <span style={{fontSize:9,color:t.color,fontWeight:"bold"}}>{pw.overall}</span>
+                          <span style={{fontSize:10,color:"var(--text2)",textTransform:"uppercase",letterSpacing:"0.08em"}}>Overall</span>
+                          <span style={{fontSize:10,color:t.color,fontWeight:"bold"}}>{pw.overall}</span>
                         </div>
                         <div style={{height:4,background:"rgba(255,255,255,0.06)",borderRadius:2}}><div style={{height:4,width:`${pw.overall}%`,background:t.color,borderRadius:2}}/></div>
                       </div>
@@ -1764,8 +1772,8 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
             {/* Team Alliance Map */}
               {teams.length>1&&(<>
                 <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
-                  <div style={{fontSize:9,letterSpacing:"0.2em",color:`${G}77`,textTransform:"uppercase"}}>Alliance Map</div>
-                  <div style={{fontSize:8,color:"var(--text4)",fontStyle:"italic"}}>click node to upload logo</div>
+                  <div style={{fontSize:10,letterSpacing:"0.2em",color:`${G}77`,textTransform:"uppercase"}}>Alliance Map</div>
+                  <div style={{fontSize:9,color:"var(--text4)",fontStyle:"italic"}}>click node to upload logo</div>
                 </div>
                 <div style={{background:"rgba(255,255,255,0.02)",border:"1px solid var(--border2)",borderRadius:12,overflow:"hidden",padding:"10px 0 14px",marginBottom:24}}>
                   {teams.map(t=>(<input key={t.id} type="file" accept="image/*" style={{display:"none"}} ref={el=>teamLogoRefs.current[t.id]=el} onChange={e=>handleImg('teamlogo-'+t.id,e.target.files[0])}/>))}
@@ -1806,14 +1814,14 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                               ?<image href={tlImg} x={pts[i].x-27} y={pts[i].y-27} width={54} height={54} clipPath={`url(#tlc-${t.id})`} preserveAspectRatio="xMidYMid slice"/>
                               :<g transform={`translate(${pts[i].x},${pts[i].y}) scale(1.7) translate(-16,-16)`}>{getShapes(c,1.1)[seed%8]}</g>
                             }
-                            {nameLines.map((line,li)=>(<text key={li} x={pts[i].x} y={pts[i].y+44+(li*11)} textAnchor="middle" fontSize="8" fill="var(--text-primary)" fontFamily="var(--font-mono)">{line}</text>))}
+                            {nameLines.map((line,li)=>(<text key={li} x={pts[i].x} y={pts[i].y+44+(li*11)} textAnchor="middle" fontSize="9" fill="var(--text-primary)" fontFamily="var(--font-mono)">{line}</text>))}
                           </g>
                         );
                       });
                       return[defs,...lines,...nodes];
                     })()}
                   </svg>
-                  <div style={{textAlign:"center",fontSize:9,color:"var(--text4)",paddingBottom:8,letterSpacing:"0.08em"}}>
+                  <div style={{textAlign:"center",fontSize:10,color:"var(--text4)",paddingBottom:8,letterSpacing:"0.08em"}}>
                     {[{c:"#0F6E56",l:"Allied"},{c:"#BA7517",l:"Rival"},{c:"#8B1A1A",l:"Enemy"},{c:"#888780",l:"Neutral"},{c:"#993C1D",l:"Splinter"}].map(({c,l})=>
                       <span key={l} style={{marginRight:14,color:c}}>■ {l}</span>
                     )}
@@ -1826,12 +1834,12 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
             <div style={{marginBottom:24}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
                 <div>
-                  <div style={{fontSize:9,letterSpacing:"0.2em",color:"rgba(136,135,128,0.7)",textTransform:"uppercase",marginBottom:4}}>Independent Heroes</div>
-                  <div style={{fontSize:12,color:"var(--text3)"}}>Solo operatives — no team, personal rogues gallery.</div>
+                  <div style={{fontSize:10,letterSpacing:"0.2em",color:"rgba(136,135,128,0.7)",textTransform:"uppercase",marginBottom:4}}>Independent Heroes</div>
+                  <div style={{fontSize:13,color:"var(--text3)"}}>Solo operatives — no team, personal rogues gallery.</div>
                 </div>
-                <button onClick={()=>{resetSoloCreator();setShowSoloCreator(true);}} style={{padding:"8px 16px",background:"rgba(136,135,128,0.08)",border:"1px solid rgba(136,135,128,0.3)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:10.5,letterSpacing:"0.12em",textTransform:"uppercase",fontFamily:"var(--font-mono)",whiteSpace:"nowrap"}}>+ Solo Hero</button>
+                <button onClick={()=>{resetSoloCreator();setShowSoloCreator(true);}} style={{padding:"8px 16px",background:"rgba(136,135,128,0.08)",border:"1px solid rgba(136,135,128,0.3)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:11.5,letterSpacing:"0.12em",textTransform:"uppercase",fontFamily:"var(--font-mono)",whiteSpace:"nowrap"}}>+ Solo Hero</button>
               </div>
-              {soloHeroes.length===0&&<div style={{padding:"16px 0 4px",color:"var(--text4)",fontSize:11,fontStyle:"italic"}}>No independents yet — Spider-Man operates alone for a reason.</div>}
+              {soloHeroes.length===0&&<div style={{padding:"16px 0 4px",color:"var(--text4)",fontSize:12,fontStyle:"italic"}}>No independents yet — Spider-Man operates alone for a reason.</div>}
               {soloHeroes.length>0&&<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(230px,1fr))",gap:10}}>
                 {soloHeroes.map(hero=>{
                   const rogueCount=(soloVillains[hero.id]||[]).length;
@@ -1842,16 +1850,16 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                       <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
                         {images[hero.id]
                           ?<img src={images[hero.id]} alt="" style={{width:44,height:44,borderRadius:"50%",objectFit:"cover",objectPosition:"top",border:`2px solid ${hero.color}55`,flexShrink:0}}/>
-                          :<div style={{width:44,height:44,borderRadius:"50%",background:`${hero.color}18`,border:`2px solid ${hero.color}44`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:"bold",color:hero.color,flexShrink:0}}>{hero.initials||"??"}</div>}
+                          :<div style={{width:44,height:44,borderRadius:"50%",background:`${hero.color}18`,border:`2px solid ${hero.color}44`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:"bold",color:hero.color,flexShrink:0}}>{hero.initials||"??"}</div>}
                         <div style={{minWidth:0}}>
-                          <div style={{fontSize:13,fontWeight:"bold",color:"var(--text-primary)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{hero.heroName}</div>
-                          <div style={{fontSize:9.5,color:"var(--text3)"}}>{hero.realName}</div>
+                          <div style={{fontSize:14,fontWeight:"bold",color:"var(--text-primary)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{hero.heroName}</div>
+                          <div style={{fontSize:10.5,color:"var(--text3)"}}>{hero.realName}</div>
                         </div>
                       </div>
-                      <div style={{fontSize:9,color:"var(--text3)",fontStyle:"italic",lineHeight:1.5,marginBottom:8,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{hero.tagline}</div>
+                      <div style={{fontSize:10,color:"var(--text3)",fontStyle:"italic",lineHeight:1.5,marginBottom:8,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{hero.tagline}</div>
                       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                        <span style={{fontSize:8,padding:"2px 9px",background:"rgba(136,135,128,0.12)",border:"1px solid rgba(136,135,128,0.25)",borderRadius:20,color:"var(--text4)",letterSpacing:"0.1em"}}>INDEPENDENT</span>
-                        {rogueCount>0&&<span style={{fontSize:8,padding:"2px 9px",background:"rgba(139,26,26,0.12)",border:"1px solid rgba(139,26,26,0.3)",borderRadius:20,color:"#E07070",letterSpacing:"0.08em"}}>{rogueCount} rogue{rogueCount!==1?"s":""}</span>}
+                        <span style={{fontSize:9,padding:"2px 9px",background:"rgba(136,135,128,0.12)",border:"1px solid rgba(136,135,128,0.25)",borderRadius:20,color:"var(--text4)",letterSpacing:"0.1em"}}>INDEPENDENT</span>
+                        {rogueCount>0&&<span style={{fontSize:9,padding:"2px 9px",background:"rgba(139,26,26,0.12)",border:"1px solid rgba(139,26,26,0.3)",borderRadius:20,color:"#E07070",letterSpacing:"0.08em"}}>{rogueCount} rogue{rogueCount!==1?"s":""}</span>}
                       </div>
                     </div>
                   );
@@ -1863,7 +1871,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
             {villainFactions.length>0&&(<>
               <div style={{display:"flex",alignItems:"center",gap:10,marginTop:28,marginBottom:16}}>
                 <div style={{flex:1,height:1,background:"rgba(139,26,26,0.2)"}}/>
-                <div style={{fontSize:9,letterSpacing:"0.2em",color:"rgba(139,26,26,0.6)",textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>Villain Factions</div>
+                <div style={{fontSize:10,letterSpacing:"0.2em",color:"rgba(139,26,26,0.6)",textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>Villain Factions</div>
                 <div style={{flex:1,height:1,background:"rgba(139,26,26,0.2)"}}/>
               </div>
               <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:12,marginBottom:28}}>
@@ -1875,24 +1883,24 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                     <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:fmembers.length>0?10:0}}>
                       <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3,flexShrink:0}}>
                         <div onClick={()=>factionLogoRefs.current['teams-'+f.id]?.click()} style={{width:40,height:40,borderRadius:8,border:`1px solid ${f.color}44`,overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",background:flImg?"transparent":`${f.color}1A`}}>
-                          {flImg?<img src={flImg} style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<span style={{fontSize:11,fontWeight:"bold",color:f.color,letterSpacing:"0.05em"}}>{f.abbr||f.name.slice(0,2).toUpperCase()}</span>}
+                          {flImg?<img src={flImg} style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<span style={{fontSize:12,fontWeight:"bold",color:f.color,letterSpacing:"0.05em"}}>{f.abbr||f.name.slice(0,2).toUpperCase()}</span>}
                         </div>
-                        <button onClick={()=>factionLogoRefs.current['teams-'+f.id]?.click()} style={{fontSize:7,padding:"1px 6px",background:`${f.color}18`,border:`1px solid ${f.color}44`,borderRadius:4,cursor:"pointer",color:f.color,fontFamily:"var(--font-mono)",whiteSpace:"nowrap"}}>{flImg?"✎ logo":"↑ logo"}</button>
+                        <button onClick={()=>factionLogoRefs.current['teams-'+f.id]?.click()} style={{fontSize:8,padding:"1px 6px",background:`${f.color}18`,border:`1px solid ${f.color}44`,borderRadius:4,cursor:"pointer",color:f.color,fontFamily:"var(--font-mono)",whiteSpace:"nowrap"}}>{flImg?"✎ logo":"↑ logo"}</button>
                       </div>
                       <div style={{minWidth:0,flex:1}}>
-                        <div style={{fontSize:12,fontWeight:"bold",color:"var(--text-primary)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{f.name}</div>
-                        {f.abbr&&<div style={{fontSize:9,color:f.color,fontFamily:"var(--font-mono)",letterSpacing:"0.08em",marginTop:1}}>{f.abbr}</div>}
-                        {f.purpose&&<div style={{fontSize:9,color:"var(--text3)",marginTop:3,lineHeight:1.4,overflow:"hidden",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical"}}>{f.purpose}</div>}
+                        <div style={{fontSize:13,fontWeight:"bold",color:"var(--text-primary)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{f.name}</div>
+                        {f.abbr&&<div style={{fontSize:10,color:f.color,fontFamily:"var(--font-mono)",letterSpacing:"0.08em",marginTop:1}}>{f.abbr}</div>}
+                        {f.purpose&&<div style={{fontSize:10,color:"var(--text3)",marginTop:3,lineHeight:1.4,overflow:"hidden",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical"}}>{f.purpose}</div>}
                       </div>
                     </div>
                     {fmembers.length>0&&(<>
-                      <div style={{fontSize:7.5,letterSpacing:"0.12em",color:`${f.color}88`,textTransform:"uppercase",marginBottom:6}}>{fmembers.length} member{fmembers.length!==1?"s":""}</div>
+                      <div style={{fontSize:8.5,letterSpacing:"0.12em",color:`${f.color}88`,textTransform:"uppercase",marginBottom:6}}>{fmembers.length} member{fmembers.length!==1?"s":""}</div>
                       <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
                         {fmembers.slice(0,7).map(m=>(<div key={m.id} title={m.heroName} style={{display:"flex",alignItems:"center",gap:5}}>
                           {images[m.id]?<img src={images[m.id]} style={{width:26,height:26,borderRadius:"50%",objectFit:"cover",objectPosition:"top",border:`1px solid ${f.color}44`}}/>
-                            :<div style={{width:26,height:26,borderRadius:"50%",background:`${m.color||f.color}1A`,border:`1px solid ${f.color}33`,display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{fontSize:7.5,fontWeight:"bold",color:m.color||f.color}}>{m.initials}</span></div>}
+                            :<div style={{width:26,height:26,borderRadius:"50%",background:`${m.color||f.color}1A`,border:`1px solid ${f.color}33`,display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{fontSize:8.5,fontWeight:"bold",color:m.color||f.color}}>{m.initials}</span></div>}
                         </div>))}
-                        {fmembers.length>7&&<div style={{width:26,height:26,borderRadius:"50%",background:`${f.color}14`,border:`1px solid ${f.color}2A`,display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{fontSize:7,color:f.color}}>+{fmembers.length-7}</span></div>}
+                        {fmembers.length>7&&<div style={{width:26,height:26,borderRadius:"50%",background:`${f.color}14`,border:`1px solid ${f.color}2A`,display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{fontSize:8,color:f.color}}>+{fmembers.length-7}</span></div>}
                       </div>
                     </>)}
                   </div>);
@@ -1911,17 +1919,17 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
             <TeamLogo team={activeTeam} size={56} imageUrl={images['teamlogo-'+activeTeam.id]}/>
             <div>
               <h2 className="forge-h2" style={{color:activeTeam.color}}>{activeTeam.name}</h2>
-              <p style={{fontSize:12.5,color:"var(--text2)",lineHeight:1.5,marginTop:5}}>Upload images, expand to view full pages, or Edit to modify any character.</p>
+              <p style={{fontSize:13.5,color:"var(--text2)",lineHeight:1.5,marginTop:5}}>Upload images, expand to view full pages, or Edit to modify any character.</p>
             </div>
           </div>
-          <button onClick={exportPDF} disabled={pdfLoading} style={{padding:"9px 18px",background:pdfLoading?"var(--bg3)":`${G}14`,border:`1px solid ${pdfLoading?"var(--border2)":G}`,borderRadius:9,cursor:pdfLoading?"not-allowed":"pointer",color:pdfLoading?"var(--text4)":G,fontSize:11,letterSpacing:"0.1em",textTransform:"uppercase",fontFamily:"var(--font-mono)",whiteSpace:"nowrap",flexShrink:0}}>
+          <button onClick={exportPDF} disabled={pdfLoading} style={{padding:"9px 18px",background:pdfLoading?"var(--bg3)":`${G}14`,border:`1px solid ${pdfLoading?"var(--border2)":G}`,borderRadius:9,cursor:pdfLoading?"not-allowed":"pointer",color:pdfLoading?"var(--text4)":G,fontSize:12,letterSpacing:"0.1em",textTransform:"uppercase",fontFamily:"var(--font-mono)",whiteSpace:"nowrap",flexShrink:0}}>
             {pdfLoading?"Exporting...":"⬇ Export PDF"}
           </button>
         </div>
         {activeRoster.length===0&&(<div style={{textAlign:"center",padding:"40px 20px",color:"var(--text3)"}}>
-          <div style={{fontSize:24,marginBottom:10}}>⊕</div>
-          <div style={{fontSize:12,marginBottom:6}}>No members yet</div>
-          <button onClick={()=>setTab("recruit")} style={{fontSize:11,padding:"7px 16px",background:`${activeTeam.color}14`,border:`1px solid ${activeTeam.color}55`,borderRadius:20,cursor:"pointer",color:activeTeam.color,fontFamily:"var(--font-mono)"}}>+ Add First Member</button>
+          <div style={{fontSize:25,marginBottom:10}}>⊕</div>
+          <div style={{fontSize:13,marginBottom:6}}>No members yet</div>
+          <button onClick={()=>setTab("recruit")} style={{fontSize:12,padding:"7px 16px",background:`${activeTeam.color}14`,border:`1px solid ${activeTeam.color}55`,borderRadius:20,cursor:"pointer",color:activeTeam.color,fontFamily:"var(--font-mono)"}}>+ Add First Member</button>
         </div>)}
         <div className="fimage-grid" style={{display:"grid",gridTemplateColumns:`repeat(${Math.min(activeRoster.length,4)},1fr)`,gap:10,marginBottom:24}}>
           {activeRoster.map(m=>{
@@ -1934,7 +1942,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
             const layer1=isFlipped?civImg:heroImg;
             const layer2=isFlipped?heroImg:civImg;
             const isShowingCiv=hasBoth&&(isFlipped?!isHovered:isHovered);
-            const ob={fontSize:8,padding:"3px 7px",background:"rgba(0,0,0,0.65)",border:`1px solid ${m.color}88`,borderRadius:7,cursor:"pointer",color:"#fff",fontFamily:"var(--font-mono)",backdropFilter:"blur(4px)",whiteSpace:"nowrap"};
+            const ob={fontSize:9,padding:"3px 7px",background:"rgba(0,0,0,0.65)",border:`1px solid ${m.color}88`,borderRadius:7,cursor:"pointer",color:"#fff",fontFamily:"var(--font-mono)",backdropFilter:"blur(4px)",whiteSpace:"nowrap"};
             const obA={...ob,background:`${m.color}44`,border:`1px solid ${m.color}bb`};
             return(<div key={m.id}>
               <input type="file" accept="image/*" style={{display:"none"}} ref={el=>fileRefs.current[m.id]=el} onChange={e=>handleImg(m.id,e.target.files[0])}/>
@@ -1949,9 +1957,9 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                   {layer2&&<img src={layer2} alt={m.heroName} style={{width:"100%",height:"100%",objectFit:"cover",objectPosition:"top",position:"absolute",inset:0,zIndex:2,opacity:hasBoth&&isHovered?1:0,transition:"opacity 0.3s"}}/>}
                   <div style={{position:"absolute",inset:0,background:"linear-gradient(transparent 55%,rgba(0,0,0,0.88))",zIndex:3,pointerEvents:"none"}}/>
                   <div style={{position:"absolute",bottom:8,left:8,zIndex:4}}>
-                    <div style={{fontSize:11,fontWeight:"bold",color:"#fff"}}>{m.heroName}</div>
-                    {hasBoth&&<div style={{fontSize:7,color:m.colorLight||m.color,letterSpacing:"0.1em",textTransform:"uppercase",marginTop:1}}>{isShowingCiv?"comic":"real"}</div>}
-                    <div style={{fontSize:8,color:m.colorLight||m.color,marginTop:1}}>{m.number}</div>
+                    <div style={{fontSize:12,fontWeight:"bold",color:"#fff"}}>{m.heroName}</div>
+                    {hasBoth&&<div style={{fontSize:8,color:m.colorLight||m.color,letterSpacing:"0.1em",textTransform:"uppercase",marginTop:1}}>{isShowingCiv?"comic":"real"}</div>}
+                    <div style={{fontSize:9,color:m.colorLight||m.color,marginTop:1}}>{m.number}</div>
                   </div>
                   <div style={{position:"absolute",top:6,right:6,zIndex:4,display:"flex",flexDirection:"column",gap:3,alignItems:"flex-end"}}>
                     <div style={{display:"flex",gap:3}}>
@@ -1961,7 +1969,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                     </div>
                     {hasBoth&&<button onClick={e=>{e.stopPropagation();setImgDefault(p=>({...p,[m.id]:p[m.id]==="civ"?"hero":"civ"}));}} style={obA}>⇄ {isFlipped?"Real":"Comic"} first</button>}
                   </div>
-                </>):(<><div style={{width:34,height:34,borderRadius:"50%",background:`${m.color}14`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:"bold",color:m.color}}>{m.initials}</div><div style={{fontSize:9,color:"var(--text4)",textAlign:"center",lineHeight:1.4}}>{m.heroName}<br/>tap to upload</div></>)}
+                </>):(<><div style={{width:34,height:34,borderRadius:"50%",background:`${m.color}14`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:"bold",color:m.color}}>{m.initials}</div><div style={{fontSize:10,color:"var(--text4)",textAlign:"center",lineHeight:1.4}}>{m.heroName}<br/>tap to upload</div></>)}
               </div>
             </div>);
           })}
@@ -1969,45 +1977,45 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
         <div style={{display:"flex",flexDirection:"column",gap:8}}>
           {activeRoster.map(m=>(<div key={m.id}>
             <div className="froster-row" style={{display:"flex",alignItems:"center",gap:14,padding:"13px 18px",background:expanded[m.id]?`${m.color}0E`:"rgba(255,255,255,0.02)",border:`1px solid ${expanded[m.id]?m.color+"44":"rgba(255,255,255,0.06)"}`,borderRadius:editingChar[m.id]||expanded[m.id]?"12px 12px 0 0":12,cursor:"pointer"}}>
-              {images[m.id]?<img src={images[m.id]} alt="" style={{width:44,height:44,borderRadius:8,objectFit:"cover",objectPosition:"top",flexShrink:0}} onClick={()=>toggle(m.id)}/>:<div style={{width:44,height:44,borderRadius:8,background:`${m.color}14`,border:`1px dashed ${m.color}44`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:"bold",color:m.color,flexShrink:0}} onClick={()=>toggle(m.id)}>{m.initials}</div>}
+              {images[m.id]?<img src={images[m.id]} alt="" style={{width:44,height:44,borderRadius:8,objectFit:"cover",objectPosition:"top",flexShrink:0}} onClick={()=>toggle(m.id)}/>:<div style={{width:44,height:44,borderRadius:8,background:`${m.color}14`,border:`1px dashed ${m.color}44`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:"bold",color:m.color,flexShrink:0}} onClick={()=>toggle(m.id)}>{m.initials}</div>}
               <div style={{flex:1}} onClick={()=>toggle(m.id)}>
                 <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-                  <span style={{fontSize:13,fontWeight:"bold",color:"var(--text-primary)"}}>{m.heroName}</span>
-                  {m.isCustom&&<span style={{fontSize:8,background:`${G}22`,border:`1px solid ${G}44`,color:G,padding:"1px 6px",borderRadius:8}}>NEW</span>}
-                  {sharedEdits[m.id]&&<span style={{fontSize:8,background:"rgba(15,110,86,0.15)",border:"1px solid rgba(15,110,86,0.3)",color:"#5DCAA5",padding:"1px 6px",borderRadius:8}}>Edited</span>}
-                  {(memberTeamMap[m.id]||[]).filter(t=>t!==activeTeamId).map(tid=>{const ot=teams.find(x=>x.id===tid);return ot?<span key={tid} style={{fontSize:8,background:`${ot.color}18`,border:`1px solid ${ot.color}44`,color:ot.color,padding:"1px 6px",borderRadius:8}}>+{ot.abbr||ot.name.split(" ").map(w=>w[0]).join("").slice(0,3).toUpperCase()}</span>:null;})}
+                  <span style={{fontSize:14,fontWeight:"bold",color:"var(--text-primary)"}}>{m.heroName}</span>
+                  {m.isCustom&&<span style={{fontSize:9,background:`${G}22`,border:`1px solid ${G}44`,color:G,padding:"1px 6px",borderRadius:8}}>NEW</span>}
+                  {sharedEdits[m.id]&&<span style={{fontSize:9,background:"rgba(15,110,86,0.15)",border:"1px solid rgba(15,110,86,0.3)",color:"#5DCAA5",padding:"1px 6px",borderRadius:8}}>Edited</span>}
+                  {(memberTeamMap[m.id]||[]).filter(t=>t!==activeTeamId).map(tid=>{const ot=teams.find(x=>x.id===tid);return ot?<span key={tid} style={{fontSize:9,background:`${ot.color}18`,border:`1px solid ${ot.color}44`,color:ot.color,padding:"1px 6px",borderRadius:8}}>+{ot.abbr||ot.name.split(" ").map(w=>w[0]).join("").slice(0,3).toUpperCase()}</span>:null;})}
                   {m.nkAlignment&&m.nkAlignment!=="base"&&<AlignmentBadge alignment={m.nkAlignment}/>}
                 </div>
-                <div style={{fontSize:10,color:"var(--text3)",marginTop:1}}>{m.role}</div>
+                <div style={{fontSize:11,color:"var(--text3)",marginTop:1}}>{m.role}</div>
               </div>
               <div className="froster-actions" style={{display:"flex",gap:7,alignItems:"center"}}>
-                <button onClick={e=>{e.stopPropagation();setEditingChar(p=>({...p,[m.id]:!p[m.id]}));setExpanded(p=>({...p,[m.id]:false}));}} style={{fontSize:10.5,padding:"5px 12px",background:editingChar[m.id]?`${m.color}22`:"var(--bg3)",border:`1px solid ${editingChar[m.id]?m.color:"var(--border)"}`,borderRadius:8,cursor:"pointer",color:editingChar[m.id]?m.color:"var(--text3)",fontFamily:"var(--font-mono)"}}>{editingChar[m.id]?"Close":"Edit"}</button>
-                <button onClick={e=>{e.stopPropagation();startRecruitReforge(m);}} style={{fontSize:10.5,padding:"5px 12px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:8,cursor:"pointer",color:"var(--text3)",fontFamily:"var(--font-mono)"}}>Reforge</button>
-                <button onClick={e=>{e.stopPropagation();startPowerReforgeOnMember(m);}} style={{fontSize:10.5,padding:"5px 12px",background:"rgba(245,197,66,0.08)",border:"1px solid rgba(245,197,66,0.3)",borderRadius:8,cursor:"pointer",color:"#F5C542",fontFamily:"var(--font-mono)"}}>⚡ Powers</button>
-                <button onClick={e=>{e.stopPropagation();setSwitchingMember(switchingMember===m.id?null:m.id);setSharingMember(null);}} style={{fontSize:10.5,padding:"5px 12px",background:switchingMember===m.id?`${m.color}22`:"var(--bg3)",border:`1px solid ${switchingMember===m.id?m.color:"var(--border)"}`,borderRadius:8,cursor:"pointer",color:switchingMember===m.id?m.color:"var(--text3)",fontFamily:"var(--font-mono)"}}>Move</button>
-                <button onClick={e=>{e.stopPropagation();setSharingMember(sharingMember===m.id?null:m.id);setSwitchingMember(null);}} style={{fontSize:10.5,padding:"5px 12px",background:sharingMember===m.id?`${m.color}22`:"var(--bg3)",border:`1px solid ${sharingMember===m.id?m.color:"var(--border)"}`,borderRadius:8,cursor:"pointer",color:sharingMember===m.id?m.color:"var(--text3)",fontFamily:"var(--font-mono)"}}>+Team</button>
-                <button onClick={e=>{e.stopPropagation();requirePin(`Remove ${m.heroName} from roster`,()=>removeMember(activeTeamId,m));}} style={{fontSize:10.5,padding:"5px 12px",background:"rgba(163,45,45,0.1)",border:"1px solid rgba(163,45,45,0.28)",borderRadius:8,cursor:"pointer",color:"#e74c3c",fontFamily:"var(--font-mono)"}}>Remove</button>
-                {images[m.id]&&<button onClick={e=>{e.stopPropagation();generateTripo3D(m);}} style={{fontSize:10.5,padding:"5px 12px",background:"rgba(15,110,86,0.1)",border:"1px solid rgba(15,110,86,0.3)",borderRadius:8,cursor:"pointer",color:"#5DCAA5",fontFamily:"var(--font-mono)",whiteSpace:"nowrap"}}>{tripo3DLoading&&tripo3DTarget===m.id?"...":"⬡ Tripo3D"}</button>}
-                <div style={{fontSize:11,color:`${m.color}88`,minWidth:16}} onClick={()=>toggle(m.id)}>{expanded[m.id]?"▲":"▼"}</div>
+                <button onClick={e=>{e.stopPropagation();setEditingChar(p=>({...p,[m.id]:!p[m.id]}));setExpanded(p=>({...p,[m.id]:false}));}} style={{fontSize:11.5,padding:"5px 12px",background:editingChar[m.id]?`${m.color}22`:"var(--bg3)",border:`1px solid ${editingChar[m.id]?m.color:"var(--border)"}`,borderRadius:8,cursor:"pointer",color:editingChar[m.id]?m.color:"var(--text3)",fontFamily:"var(--font-mono)"}}>{editingChar[m.id]?"Close":"Edit"}</button>
+                <button onClick={e=>{e.stopPropagation();startRecruitReforge(m);}} style={{fontSize:11.5,padding:"5px 12px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:8,cursor:"pointer",color:"var(--text3)",fontFamily:"var(--font-mono)"}}>Reforge</button>
+                <button onClick={e=>{e.stopPropagation();startPowerReforgeOnMember(m);}} style={{fontSize:11.5,padding:"5px 12px",background:"rgba(245,197,66,0.08)",border:"1px solid rgba(245,197,66,0.3)",borderRadius:8,cursor:"pointer",color:"#F5C542",fontFamily:"var(--font-mono)"}}>⚡ Powers</button>
+                <button onClick={e=>{e.stopPropagation();setSwitchingMember(switchingMember===m.id?null:m.id);setSharingMember(null);}} style={{fontSize:11.5,padding:"5px 12px",background:switchingMember===m.id?`${m.color}22`:"var(--bg3)",border:`1px solid ${switchingMember===m.id?m.color:"var(--border)"}`,borderRadius:8,cursor:"pointer",color:switchingMember===m.id?m.color:"var(--text3)",fontFamily:"var(--font-mono)"}}>Move</button>
+                <button onClick={e=>{e.stopPropagation();setSharingMember(sharingMember===m.id?null:m.id);setSwitchingMember(null);}} style={{fontSize:11.5,padding:"5px 12px",background:sharingMember===m.id?`${m.color}22`:"var(--bg3)",border:`1px solid ${sharingMember===m.id?m.color:"var(--border)"}`,borderRadius:8,cursor:"pointer",color:sharingMember===m.id?m.color:"var(--text3)",fontFamily:"var(--font-mono)"}}>+Team</button>
+                <button onClick={e=>{e.stopPropagation();requirePin(`Remove ${m.heroName} from roster`,()=>removeMember(activeTeamId,m));}} style={{fontSize:11.5,padding:"5px 12px",background:"rgba(163,45,45,0.1)",border:"1px solid rgba(163,45,45,0.28)",borderRadius:8,cursor:"pointer",color:"#e74c3c",fontFamily:"var(--font-mono)"}}>Remove</button>
+                {images[m.id]&&<button onClick={e=>{e.stopPropagation();generateTripo3D(m);}} style={{fontSize:11.5,padding:"5px 12px",background:"rgba(15,110,86,0.1)",border:"1px solid rgba(15,110,86,0.3)",borderRadius:8,cursor:"pointer",color:"#5DCAA5",fontFamily:"var(--font-mono)",whiteSpace:"nowrap"}}>{tripo3DLoading&&tripo3DTarget===m.id?"...":"⬡ Tripo3D"}</button>}
+                <div style={{fontSize:12,color:`${m.color}88`,minWidth:16}} onClick={()=>toggle(m.id)}>{expanded[m.id]?"▲":"▼"}</div>
               </div>
             </div>
             {switchingMember===m.id&&(<div style={{display:"flex",flexWrap:"wrap",gap:8,padding:"12px 18px",background:`${m.color}08`,border:`1px solid ${m.color}33`,borderTop:"none",borderRadius:"0 0 12px 12px",alignItems:"center"}}>
-              <span style={{fontSize:10,color:"var(--text4)",letterSpacing:"0.12em",textTransform:"uppercase",marginRight:4,fontFamily:"var(--font-mono)"}}>Move to:</span>
-              {teams.filter(t=>t.id!==activeTeamId).map(t=><button key={t.id} onClick={()=>switchMemberTeam(m,t.id)} style={{fontSize:10.5,padding:"5px 13px",background:`${t.color}14`,border:`1px solid ${t.color}44`,borderRadius:20,cursor:"pointer",color:t.color,fontFamily:"var(--font-mono)"}}>{t.name}</button>)}
-              <button onClick={()=>flipToVillain(m)} style={{fontSize:10.5,padding:"5px 13px",background:"rgba(139,26,26,0.12)",border:"1px solid rgba(139,26,26,0.35)",borderRadius:20,cursor:"pointer",color:"#e74c3c",fontFamily:"var(--font-mono)"}}>⚠ Go Villain</button>
-              <button onClick={()=>setSwitchingMember(null)} style={{fontSize:10.5,padding:"5px 11px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:20,cursor:"pointer",color:"var(--text4)",fontFamily:"var(--font-mono)",marginLeft:4}}>Cancel</button>
+              <span style={{fontSize:11,color:"var(--text4)",letterSpacing:"0.12em",textTransform:"uppercase",marginRight:4,fontFamily:"var(--font-mono)"}}>Move to:</span>
+              {teams.filter(t=>t.id!==activeTeamId).map(t=><button key={t.id} onClick={()=>switchMemberTeam(m,t.id)} style={{fontSize:11.5,padding:"5px 13px",background:`${t.color}14`,border:`1px solid ${t.color}44`,borderRadius:20,cursor:"pointer",color:t.color,fontFamily:"var(--font-mono)"}}>{t.name}</button>)}
+              <button onClick={()=>flipToVillain(m)} style={{fontSize:11.5,padding:"5px 13px",background:"rgba(139,26,26,0.12)",border:"1px solid rgba(139,26,26,0.35)",borderRadius:20,cursor:"pointer",color:"#e74c3c",fontFamily:"var(--font-mono)"}}>⚠ Go Villain</button>
+              <button onClick={()=>setSwitchingMember(null)} style={{fontSize:11.5,padding:"5px 11px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:20,cursor:"pointer",color:"var(--text4)",fontFamily:"var(--font-mono)",marginLeft:4}}>Cancel</button>
             </div>)}
             {sharingMember===m.id&&(()=>{
               const alreadyOn=(memberTeamMap[m.id]||[]);
               const eligible=teams.filter(t=>t.id!==activeTeamId&&!alreadyOn.includes(t.id));
               return(<div style={{display:"flex",flexWrap:"wrap",gap:8,padding:"12px 18px",background:`${m.color}08`,border:`1px solid ${m.color}33`,borderTop:"none",borderRadius:"0 0 12px 12px",alignItems:"center"}}>
-                <span style={{fontSize:10,color:"var(--text4)",letterSpacing:"0.12em",textTransform:"uppercase",marginRight:4,fontFamily:"var(--font-mono)"}}>Also add to:</span>
+                <span style={{fontSize:11,color:"var(--text4)",letterSpacing:"0.12em",textTransform:"uppercase",marginRight:4,fontFamily:"var(--font-mono)"}}>Also add to:</span>
                 {eligible.length===0
-                  ?<span style={{fontSize:10.5,color:"var(--text4)",fontStyle:"italic"}}>Already on all teams</span>
-                  :eligible.map(t=><button key={t.id} onClick={()=>addToTeam(m,t.id)} style={{fontSize:10.5,padding:"5px 13px",background:`${t.color}14`,border:`1px solid ${t.color}44`,borderRadius:20,cursor:"pointer",color:t.color,fontFamily:"var(--font-mono)"}}>{t.name}</button>)
+                  ?<span style={{fontSize:11.5,color:"var(--text4)",fontStyle:"italic"}}>Already on all teams</span>
+                  :eligible.map(t=><button key={t.id} onClick={()=>addToTeam(m,t.id)} style={{fontSize:11.5,padding:"5px 13px",background:`${t.color}14`,border:`1px solid ${t.color}44`,borderRadius:20,cursor:"pointer",color:t.color,fontFamily:"var(--font-mono)"}}>{t.name}</button>)
                 }
-                {alreadyOn.filter(t=>t!==activeTeamId).length>0&&<span style={{fontSize:10,color:"var(--text3)",marginLeft:4}}>· On: {alreadyOn.filter(t=>t!==activeTeamId).map(t=>teams.find(x=>x.id===t)?.name||t).join(", ")}</span>}
-                <button onClick={()=>setSharingMember(null)} style={{fontSize:10.5,padding:"5px 11px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:20,cursor:"pointer",color:"var(--text4)",fontFamily:"var(--font-mono)",marginLeft:4}}>Cancel</button>
+                {alreadyOn.filter(t=>t!==activeTeamId).length>0&&<span style={{fontSize:11,color:"var(--text3)",marginLeft:4}}>· On: {alreadyOn.filter(t=>t!==activeTeamId).map(t=>teams.find(x=>x.id===t)?.name||t).join(", ")}</span>}
+                <button onClick={()=>setSharingMember(null)} style={{fontSize:11.5,padding:"5px 11px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:20,cursor:"pointer",color:"var(--text4)",fontFamily:"var(--font-mono)",marginLeft:4}}>Cancel</button>
               </div>);
             })()}
             {editingChar[m.id]&&<EditPanel member={m} onSave={d=>saveCharEdit(m.id,d,activeTeamId)} onCancel={()=>setEditingChar(p=>({...p,[m.id]:false}))} callAI={callAI} teamName={activeTeam.name}/>}
@@ -2025,10 +2033,10 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
         return(<div style={{padding:"0 0 8px"}}>
           <div style={{padding:"16px 18px",background:"rgba(15,110,86,0.08)",border:"1px solid rgba(15,110,86,0.3)",borderRadius:12}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-              <div><div style={{fontSize:11,fontWeight:"bold",color:"#5DCAA5"}}>⬡ Tripo3D Prompt — {m?.heroName}</div><div style={{fontSize:9,color:"var(--text3)",marginTop:2}}>FDM-optimized · separate color regions · watertight mesh</div></div>
-              <button onClick={()=>{setTripo3DPrompt(null);setTripo3DTarget(null);}} style={{fontSize:9,padding:"2px 8px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:6,cursor:"pointer",color:"var(--text2)",fontFamily:"var(--font-mono)"}}>✕</button>
+              <div><div style={{fontSize:12,fontWeight:"bold",color:"#5DCAA5"}}>⬡ Tripo3D Prompt — {m?.heroName}</div><div style={{fontSize:10,color:"var(--text3)",marginTop:2}}>FDM-optimized · separate color regions · watertight mesh</div></div>
+              <button onClick={()=>{setTripo3DPrompt(null);setTripo3DTarget(null);}} style={{fontSize:10,padding:"2px 8px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:6,cursor:"pointer",color:"var(--text2)",fontFamily:"var(--font-mono)"}}>✕</button>
             </div>
-            <div style={{background:"rgba(0,0,0,0.4)",border:"1px solid var(--border2)",borderRadius:8,padding:"12px 14px",fontFamily:"var(--font-mono)",fontSize:11.5,color:"#BFBBA6",lineHeight:1.7,whiteSpace:"pre-wrap",wordBreak:"break-word",marginBottom:8}}>{tripo3DPrompt}</div>
+            <div style={{background:"rgba(0,0,0,0.4)",border:"1px solid var(--border2)",borderRadius:8,padding:"12px 14px",fontFamily:"var(--font-mono)",fontSize:12.5,color:"#BFBBA6",lineHeight:1.7,whiteSpace:"pre-wrap",wordBreak:"break-word",marginBottom:8}}>{tripo3DPrompt}</div>
             <Tripo3DLauncher prompt={tripo3DPrompt} copied={copied.rtripo} onCopy={()=>copy("rtripo",tripo3DPrompt)}/>
           </div>
         </div>);
@@ -2036,7 +2044,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
 
       {/* ── TEAM DYNAMICS TAB ─────────────────────────────────────────── */}
       {tab==="team"&&activeTeam&&(<>
-        <div style={{fontSize:9,letterSpacing:"0.2em",color:`${G}77`,textTransform:"uppercase",marginBottom:12}}>{activeTeam.name} — Team Dynamics</div>
+        <div style={{fontSize:10,letterSpacing:"0.2em",color:`${G}77`,textTransform:"uppercase",marginBottom:12}}>{activeTeam.name} — Team Dynamics</div>
         {coreMembers.length>=2?(
           <>
             <div style={{background:"rgba(255,255,255,0.02)",border:"1px solid var(--border2)",borderRadius:12,overflow:"hidden",marginBottom:20}}>
@@ -2049,40 +2057,40 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                   return(<g key={d.id} style={{cursor:"pointer"}} onClick={()=>setDynActive(dynActive===i?null:i)}>
                     <line x1={pa.x} y1={pa.y} x2={pb.x} y2={pb.y} stroke={lc} strokeWidth={active?2.5:1.5} strokeOpacity={active?0.9:0.25}/>
                     <circle cx={(pa.x+pb.x)/2} cy={(pa.y+pb.y)/2} r={14} fill={active?`${lc}28`:"var(--bg3)"} stroke={lc} strokeWidth={active?1.5:0.5} strokeOpacity={0.7}/>
-                    <text x={(pa.x+pb.x)/2} y={(pa.y+pb.y)/2+3} textAnchor="middle" fontSize="6" fill={lc} fontFamily="monospace" opacity={0.85}>{d.aRelation}</text>
+                    <text x={(pa.x+pb.x)/2} y={(pa.y+pb.y)/2+3} textAnchor="middle" fontSize="7" fill={lc} fontFamily="monospace" opacity={0.85}>{d.aRelation}</text>
                   </g>);
                 });})()}
                 {coreMembers.map((m,i)=>{const p=positions[i];return(<g key={m.id}>
                   <defs><clipPath id={`cl-${m.id}`}><circle cx={p.x} cy={p.y} r={28}/></clipPath></defs>
                   <circle cx={p.x} cy={p.y} r={34} fill={`${m.color}18`} stroke={m.color} strokeWidth={1.5}/>
-                  {images[m.id]?<image href={images[m.id]} x={p.x-28} y={p.y-28} width={56} height={56} clipPath={`url(#cl-${m.id})`} preserveAspectRatio="xMidYMin slice"/>:<text x={p.x} y={p.y+5} textAnchor="middle" fontSize="12" fontWeight="bold" fill={m.color} fontFamily="monospace">{m.initials}</text>}
-                  <text x={p.x} y={p.y+48} textAnchor="middle" fontSize="8.5" fill="var(--text-primary)" fontFamily="monospace" fontWeight="bold">{m.heroName}</text>
+                  {images[m.id]?<image href={images[m.id]} x={p.x-28} y={p.y-28} width={56} height={56} clipPath={`url(#cl-${m.id})`} preserveAspectRatio="xMidYMin slice"/>:<text x={p.x} y={p.y+5} textAnchor="middle" fontSize="13" fontWeight="bold" fill={m.color} fontFamily="monospace">{m.initials}</text>}
+                  <text x={p.x} y={p.y+48} textAnchor="middle" fontSize="9.5" fill="var(--text-primary)" fontFamily="monospace" fontWeight="bold">{m.heroName}</text>
                 </g>);})}
               </svg>
-              <div style={{fontSize:9,color:"var(--text4)",textAlign:"center",paddingBottom:10,letterSpacing:"0.08em"}}>Family connections between roster members shown above · Add connections in the Family tab</div>
+              <div style={{fontSize:10,color:"var(--text4)",textAlign:"center",paddingBottom:10,letterSpacing:"0.08em"}}>Family connections between roster members shown above · Add connections in the Family tab</div>
             </div>
             {(()=>{const memberIds=coreMembers.map(m=>m.id);const activeLinks=familyLinks.filter(l=>memberIds.includes(l.a)&&memberIds.includes(l.b));
             return activeLinks.length>0?(
               <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))",gap:10}}>
                 {activeLinks.map((d,i)=>{const ma=coreMembers.find(m=>m.id===d.a),mb=coreMembers.find(m=>m.id===d.b);return(<div key={d.id} onClick={()=>setDynActive(dynActive===i?null:i)} style={{background:dynActive===i?`${activeTeam.color}0E`:"var(--bg3)",border:`1px solid ${dynActive===i?activeTeam.color+"44":"rgba(255,255,255,0.06)"}`,borderRadius:10,padding:"13px 15px",cursor:"pointer"}}>
-                  <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:5}}><div style={{width:7,height:7,borderRadius:"50%",background:activeTeam.color}}/><span style={{fontSize:12,fontWeight:"bold",color:"var(--text-primary)"}}>{d.aRelation} / {d.bRelation}</span></div>
-                  <div style={{fontSize:9,color:activeTeam.color}}>{ma?.heroName} · {mb?.heroName}</div>
+                  <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:5}}><div style={{width:7,height:7,borderRadius:"50%",background:activeTeam.color}}/><span style={{fontSize:13,fontWeight:"bold",color:"var(--text-primary)"}}>{d.aRelation} / {d.bRelation}</span></div>
+                  <div style={{fontSize:10,color:activeTeam.color}}>{ma?.heroName} · {mb?.heroName}</div>
                 </div>);})}
               </div>
-            ):<div style={{textAlign:"center",padding:"20px",color:"var(--text3)",fontSize:11}}>No family connections between roster members yet. Add them in the Family tab.</div>;
+            ):<div style={{textAlign:"center",padding:"20px",color:"var(--text3)",fontSize:12}}>No family connections between roster members yet. Add them in the Family tab.</div>;
             })()}
           </>
         ):(
           <div style={{textAlign:"center",padding:"40px 20px"}}>
-            <div style={{fontSize:9,letterSpacing:"0.12em",color:`${activeTeam.color}88`,textTransform:"uppercase",marginBottom:8}}>Team Dynamics</div>
-            <div style={{fontSize:12,color:"var(--text2)",lineHeight:1.7,maxWidth:420,margin:"0 auto"}}>Add at least 2 members via Recruit, then return here to see the team dynamics visualization.</div>
+            <div style={{fontSize:10,letterSpacing:"0.12em",color:`${activeTeam.color}88`,textTransform:"uppercase",marginBottom:8}}>Team Dynamics</div>
+            <div style={{fontSize:13,color:"var(--text2)",lineHeight:1.7,maxWidth:420,margin:"0 auto"}}>Add at least 2 members via Recruit, then return here to see the team dynamics visualization.</div>
           </div>
         )}
       </>)}
 
       {/* ── PROMPTS TAB ───────────────────────────────────────────────── */}
       {tab==="prompts"&&activeTeam&&(<>
-        <div style={{padding:"12px 14px",background:"rgba(212,175,55,0.06)",border:"1px solid rgba(212,175,55,0.2)",borderRadius:8,fontSize:11,color:"var(--text2)",lineHeight:1.65,marginBottom:16}}>
+        <div style={{padding:"12px 14px",background:"rgba(212,175,55,0.06)",border:"1px solid rgba(212,175,55,0.2)",borderRadius:8,fontSize:12,color:"var(--text2)",lineHeight:1.65,marginBottom:16}}>
           <strong style={{color:G,display:"block",marginBottom:3}}>Consistency Lock · {activeTeam.name}</strong>
           Prompts include exact costume specs and design rules. Reference images lock the prompt to that specific design.
         </div>
@@ -2094,26 +2102,26 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
               <button key={id} onClick={()=>{setPPlatform(id);persist("forge-prompt-platform",id);setPResult(null);}} style={s.chip(pPlatform===id)}>{label}</button>
             ))}
           </div>
-          <div style={{fontSize:9,color:"var(--text3)",marginTop:7}}>
+          <div style={{fontSize:10,color:"var(--text3)",marginTop:7}}>
             {pPlatform==="midjourney"?"Paste into Discord /imagine — best quality for detailed characters. Optimal for Midjourney v6.":pPlatform==="dalle"?"Works in ChatGPT (DALL-E 3) — excellent at following detailed descriptions. Requires ChatGPT Plus.":"Paste into Meta AI Imagine — best with reference image uploaded alongside the prompt."}
           </div>
         </div>
         {/* Meta AI account toggle — only relevant for Meta AI platform */}
         {pPlatform==="meta-ai"&&<div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 14px",background:"rgba(30,144,255,0.06)",border:"1px solid rgba(30,144,255,0.2)",borderRadius:8,marginBottom:14}}>
-          <div><div style={{fontSize:11,fontWeight:"bold",color:"#5EB1FF",marginBottom:2}}>Meta AI Account</div><div style={{fontSize:10,color:"var(--text2)"}}>Enable "Copy & Open" buttons that launch meta.ai with your prompt pre-copied</div></div>
-          <button onClick={()=>{const v=!hasMetaAI;setHasMetaAI(v);persist("forge-meta-ai-pref",v);}} style={{padding:"6px 14px",background:hasMetaAI?"rgba(30,144,255,0.2)":"var(--bg3)",border:`1px solid ${hasMetaAI?"rgba(30,144,255,0.6)":"var(--text4)"}`,borderRadius:20,cursor:"pointer",color:hasMetaAI?"#5EB1FF":"var(--text2)",fontSize:10,fontFamily:"var(--font-mono)",flexShrink:0,marginLeft:12}}>{hasMetaAI?"ON":"OFF"}</button>
+          <div><div style={{fontSize:12,fontWeight:"bold",color:"#5EB1FF",marginBottom:2}}>Meta AI Account</div><div style={{fontSize:11,color:"var(--text2)"}}>Enable "Copy & Open" buttons that launch meta.ai with your prompt pre-copied</div></div>
+          <button onClick={()=>{const v=!hasMetaAI;setHasMetaAI(v);persist("forge-meta-ai-pref",v);}} style={{padding:"6px 14px",background:hasMetaAI?"rgba(30,144,255,0.2)":"var(--bg3)",border:`1px solid ${hasMetaAI?"rgba(30,144,255,0.6)":"var(--text4)"}`,borderRadius:20,cursor:"pointer",color:hasMetaAI?"#5EB1FF":"var(--text2)",fontSize:11,fontFamily:"var(--font-mono)",flexShrink:0,marginLeft:12}}>{hasMetaAI?"ON":"OFF"}</button>
         </div>}
         <div style={{...s.card,marginBottom:14}}>
           <span style={s.lbl}>Art Style</span>
           <div style={{display:"flex",flexWrap:"wrap",gap:8}}>{ART_STYLES.map(a=><button key={a.id} style={s.chip(pStyle===a.id)} onClick={()=>{setPStyle(a.id);setPSubStyle("");}}>{a.label}</button>)}</div>
           {(pStyle==="comic"||pStyle==="anime")&&<div style={{marginTop:10}}>
-            <span style={{...s.lbl,fontSize:8.5}}>{pStyle==="comic"?"Comic Style":"Anime Style"}</span>
+            <span style={{...s.lbl,fontSize:9.5}}>{pStyle==="comic"?"Comic Style":"Anime Style"}</span>
             <div style={{display:"flex",flexWrap:"wrap",gap:6,marginTop:4}}>
               <button style={s.chip(!pSubStyle)} onClick={()=>setPSubStyle("")}>General</button>
               {(pStyle==="comic"?COMIC_SUB_STYLES:ANIME_SUB_STYLES).map(sub=><button key={sub.id} style={s.chip(pSubStyle===sub.id)} onClick={()=>setPSubStyle(sub.id)}>{sub.label}</button>)}
             </div>
           </div>}
-          <label style={{display:"flex",alignItems:"center",gap:6,fontSize:9.5,color:pRealism?"#5DCAA5":"var(--text3)",cursor:"pointer",fontFamily:"var(--font-mono)",marginTop:12}}>
+          <label style={{display:"flex",alignItems:"center",gap:6,fontSize:10.5,color:pRealism?"#5DCAA5":"var(--text3)",cursor:"pointer",fontFamily:"var(--font-mono)",marginTop:12}}>
             <input type="checkbox" checked={pRealism} onChange={e=>setPRealism(e.target.checked)} style={{cursor:"pointer"}}/>
             📷 Maximize Realism — push toward photographic detail on top of the chosen style
           </label>
@@ -2126,18 +2134,18 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(190px,1fr))",gap:10,marginBottom:14}}>
           {activeRoster.map(m=>(<div key={m.id} onClick={()=>generateCharPrompt(m)} style={{background:pSelected===m.id?`${m.color}12`:"var(--bg3)",border:`1px solid ${pSelected===m.id?m.color+"55":"rgba(255,255,255,0.06)"}`,borderRadius:10,padding:"14px 16px",cursor:"pointer"}}>
             <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
-              {images[m.id]?<div style={{position:"relative",flexShrink:0}}><img src={images[m.id]} alt="" style={{width:30,height:30,borderRadius:"50%",objectFit:"cover",objectPosition:"top"}}/><div style={{position:"absolute",bottom:-1,right:-1,width:10,height:10,background:"#0F6E56",borderRadius:"50%",border:"1px solid #09090F",display:"flex",alignItems:"center",justifyContent:"center",fontSize:6,color:"#fff"}}>✓</div></div>:<div style={{width:30,height:30,borderRadius:"50%",background:`${m.color}16`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:"bold",color:m.color,flexShrink:0}}>{m.initials}</div>}
-              <div><div style={{fontSize:12,fontWeight:"bold",color:"var(--text-primary)"}}>{m.heroName}</div><div style={{fontSize:9,color:m.color}}>{m.realName}</div></div>
+              {images[m.id]?<div style={{position:"relative",flexShrink:0}}><img src={images[m.id]} alt="" style={{width:30,height:30,borderRadius:"50%",objectFit:"cover",objectPosition:"top"}}/><div style={{position:"absolute",bottom:-1,right:-1,width:10,height:10,background:"#0F6E56",borderRadius:"50%",border:"1px solid #09090F",display:"flex",alignItems:"center",justifyContent:"center",fontSize:7,color:"#fff"}}>✓</div></div>:<div style={{width:30,height:30,borderRadius:"50%",background:`${m.color}16`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:"bold",color:m.color,flexShrink:0}}>{m.initials}</div>}
+              <div><div style={{fontSize:13,fontWeight:"bold",color:"var(--text-primary)"}}>{m.heroName}</div><div style={{fontSize:10,color:m.color}}>{m.realName}</div></div>
             </div>
-            <div style={{fontSize:9,color:"rgba(255,255,255,0.26)",fontStyle:"italic",lineHeight:1.4}}>{m.consistencyNotes||"Consistent design"}</div>
-            {pLoading&&pSelected===m.id&&<div style={{marginTop:7,fontSize:9,color:G}}>Generating...</div>}
+            <div style={{fontSize:10,color:"rgba(255,255,255,0.26)",fontStyle:"italic",lineHeight:1.4}}>{m.consistencyNotes||"Consistent design"}</div>
+            {pLoading&&pSelected===m.id&&<div style={{marginTop:7,fontSize:10,color:G}}>Generating...</div>}
           </div>))}
         </div>
         {/* ── Villain Portraits ── */}
         {villainPool.length>0&&<>
           <div style={{display:"flex",alignItems:"center",gap:10,margin:"20px 0 10px"}}>
             <div style={{flex:1,height:1,background:"rgba(139,26,26,0.3)"}}/>
-            <span style={{fontSize:9,letterSpacing:"0.2em",color:"rgba(224,112,112,0.7)",textTransform:"uppercase",fontFamily:"var(--font-mono)",whiteSpace:"nowrap"}}>Villain Portraits</span>
+            <span style={{fontSize:10,letterSpacing:"0.2em",color:"rgba(224,112,112,0.7)",textTransform:"uppercase",fontFamily:"var(--font-mono)",whiteSpace:"nowrap"}}>Villain Portraits</span>
             <div style={{flex:1,height:1,background:"rgba(139,26,26,0.3)"}}/>
           </div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(190px,1fr))",gap:10,marginBottom:14}}>
@@ -2146,27 +2154,27 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                 <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
                   {images[v.id]
                     ?<div style={{position:"relative",flexShrink:0}}><img src={images[v.id]} alt="" style={{width:30,height:30,borderRadius:"50%",objectFit:"cover",objectPosition:"top"}}/></div>
-                    :<div style={{width:30,height:30,borderRadius:"50%",background:"rgba(139,26,26,0.2)",border:"1px solid rgba(224,112,112,0.3)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:"bold",color:"#E07070",flexShrink:0}}>{v.initials||"??"}</div>}
+                    :<div style={{width:30,height:30,borderRadius:"50%",background:"rgba(139,26,26,0.2)",border:"1px solid rgba(224,112,112,0.3)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:"bold",color:"#E07070",flexShrink:0}}>{v.initials||"??"}</div>}
                   <div>
-                    <div style={{fontSize:12,fontWeight:"bold",color:"#E07070"}}>{v.heroName}</div>
-                    <div style={{fontSize:9,color:"rgba(224,112,112,0.6)"}}>{v.realName}</div>
+                    <div style={{fontSize:13,fontWeight:"bold",color:"#E07070"}}>{v.heroName}</div>
+                    <div style={{fontSize:10,color:"rgba(224,112,112,0.6)"}}>{v.realName}</div>
                   </div>
                 </div>
-                <div style={{fontSize:9,color:"rgba(224,112,112,0.45)",fontStyle:"italic",lineHeight:1.4}}>{v.tagline||v.role||"Villain"}</div>
-                {pLoading&&pSelected===v.id&&<div style={{marginTop:7,fontSize:9,color:"#E07070"}}>Generating...</div>}
+                <div style={{fontSize:10,color:"rgba(224,112,112,0.45)",fontStyle:"italic",lineHeight:1.4}}>{v.tagline||v.role||"Villain"}</div>
+                {pLoading&&pSelected===v.id&&<div style={{marginTop:7,fontSize:10,color:"#E07070"}}>Generating...</div>}
               </div>
             ))}
           </div>
         </>}
         {activeRoster.length>=2&&<div style={{...s.card,marginBottom:12}}>
-          <div style={{fontSize:10,fontWeight:"bold",color:"var(--text3)",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:10}}>Duo Shot · Pick 2 Heroes</div>
+          <div style={{fontSize:11,fontWeight:"bold",color:"var(--text3)",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:10}}>Duo Shot · Pick 2 Heroes</div>
           <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:10}}>
-            <select value={duoA} onChange={e=>setDuoA(e.target.value)} style={{flex:1,padding:"7px 10px",background:"var(--bg2)",border:`1px solid ${duoA?(activeRoster.find(m=>m.id===duoA)?.color+"55")||"rgba(255,255,255,0.15)":"rgba(255,255,255,0.08)"}`,borderRadius:6,color:"var(--text-primary)",fontSize:11,fontFamily:"var(--font-mono)",cursor:"pointer"}}>
+            <select value={duoA} onChange={e=>setDuoA(e.target.value)} style={{flex:1,padding:"7px 10px",background:"var(--bg2)",border:`1px solid ${duoA?(activeRoster.find(m=>m.id===duoA)?.color+"55")||"rgba(255,255,255,0.15)":"rgba(255,255,255,0.08)"}`,borderRadius:6,color:"var(--text-primary)",fontSize:12,fontFamily:"var(--font-mono)",cursor:"pointer"}}>
               <option value="">— Hero A —</option>
               {activeRoster.map(m=><option key={m.id} value={m.id}>{m.heroName}</option>)}
             </select>
-            <span style={{color:"var(--text3)",fontSize:13,flexShrink:0}}>+</span>
-            <select value={duoB} onChange={e=>setDuoB(e.target.value)} style={{flex:1,padding:"7px 10px",background:"var(--bg2)",border:`1px solid ${duoB?(activeRoster.find(m=>m.id===duoB)?.color+"55")||"rgba(255,255,255,0.15)":"rgba(255,255,255,0.08)"}`,borderRadius:6,color:"var(--text-primary)",fontSize:11,fontFamily:"var(--font-mono)",cursor:"pointer"}}>
+            <span style={{color:"var(--text3)",fontSize:14,flexShrink:0}}>+</span>
+            <select value={duoB} onChange={e=>setDuoB(e.target.value)} style={{flex:1,padding:"7px 10px",background:"var(--bg2)",border:`1px solid ${duoB?(activeRoster.find(m=>m.id===duoB)?.color+"55")||"rgba(255,255,255,0.15)":"rgba(255,255,255,0.08)"}`,borderRadius:6,color:"var(--text-primary)",fontSize:12,fontFamily:"var(--font-mono)",cursor:"pointer"}}>
               <option value="">— Hero B —</option>
               {activeRoster.filter(m=>m.id!==duoA).map(m=><option key={m.id} value={m.id}>{m.heroName}</option>)}
             </select>
@@ -2175,20 +2183,20 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
         </div>}
         {activeRoster.length>1&&<button style={s.bigBtn(pLoading)} onClick={generateGroupPrompt} disabled={pLoading}>{pLoading&&pSelected==="group"?"Building group shot...":"Generate Full Team Group Shot"}</button>}
         {pResult&&!pResult.error&&(<div ref={pResultRef} style={{...s.card,marginTop:16}}>
-          <div style={{fontSize:12,fontWeight:"bold",color:pResult.group||pResult.duo?G:pResult.isVillain?"#E07070":pResult.member?.color||G,marginBottom:10}}>{pResult.group?`Group Shot — ${pResult.teamName||activeTeam.name}`:pResult.duo?`Duo Shot — ${pResult.heroA?.heroName} + ${pResult.heroB?.heroName}`:pResult.isVillain?`${pResult.member?.heroName} · Villain Portrait`:`${pResult.member?.heroName} · Image Prompts`}</div>
+          <div style={{fontSize:13,fontWeight:"bold",color:pResult.group||pResult.duo?G:pResult.isVillain?"#E07070":pResult.member?.color||G,marginBottom:10}}>{pResult.group?`Group Shot — ${pResult.teamName||activeTeam.name}`:pResult.duo?`Duo Shot — ${pResult.heroA?.heroName} + ${pResult.heroB?.heroName}`:pResult.isVillain?`${pResult.member?.heroName} · Villain Portrait`:`${pResult.member?.heroName} · Image Prompts`}</div>
           {pResult.metaAI&&<>
             <span style={s.lbl}>{(pResult.platform||pPlatform)==="midjourney"?"Midjourney /imagine Prompt":(pResult.platform||pPlatform)==="dalle"?"DALL-E 3 Prompt":"Meta AI Image Prompt"}</span>
             <div style={s.pBox}>{pResult.metaAI}</div>
             {(pResult.platform||pPlatform)==="midjourney"?(
               <div style={{display:"flex",alignItems:"center",gap:8,marginTop:8,marginBottom:12}}>
-                <div style={{fontSize:9,color:"var(--text3)",flex:1}}>Paste into Discord with /imagine</div>
+                <div style={{fontSize:10,color:"var(--text3)",flex:1}}>Paste into Discord with /imagine</div>
                 <button style={s.cpyBtn(copied.pmeta)} onClick={()=>copy("pmeta",pResult.metaAI)}>{copied.pmeta?"Copied!":"Copy Prompt"}</button>
               </div>
             ):(pResult.platform||pPlatform)==="dalle"?(
               <div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap",marginBottom:12}}>
                 <button style={s.cpyBtn(copied.pmeta)} onClick={()=>copy("pmeta",pResult.metaAI)}>{copied.pmeta?"Copied!":"Copy"}</button>
-                <button onClick={()=>{try{window.open("https://chat.openai.com/","_blank");}catch(e){}copy("pmeta",pResult.metaAI);}} style={{padding:"5px 14px",background:"rgba(16,163,127,0.12)",border:"1px solid rgba(16,163,127,0.4)",borderRadius:6,cursor:"pointer",fontSize:10,color:"#10A37F",fontFamily:"var(--font-mono)",display:"flex",alignItems:"center",gap:5}}>
-                  <span style={{fontSize:12}}>✦</span> Copy & Open ChatGPT
+                <button onClick={()=>{try{window.open("https://chat.openai.com/","_blank");}catch(e){}copy("pmeta",pResult.metaAI);}} style={{padding:"5px 14px",background:"rgba(16,163,127,0.12)",border:"1px solid rgba(16,163,127,0.4)",borderRadius:6,cursor:"pointer",fontSize:11,color:"#10A37F",fontFamily:"var(--font-mono)",display:"flex",alignItems:"center",gap:5}}>
+                  <span style={{fontSize:13}}>✦</span> Copy & Open ChatGPT
                 </button>
               </div>
             ):(
@@ -2197,26 +2205,26 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
           </>}
           {(pResult.group||pResult.duo)&&<div style={{marginTop:12}}>
             <button style={{...s.bigBtn(sheetLoading),background:sheetLoading?"var(--bg3)":"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.15)"}} onClick={()=>downloadTeamSheet(pResult.duo?[pResult.heroA,pResult.heroB]:undefined)} disabled={sheetLoading}>{sheetLoading?"Building reference sheet…":"📎 Download Reference Sheet"}</button>
-            <div style={{fontSize:9,color:"var(--text3)",textAlign:"center",marginTop:6}}>
+            <div style={{fontSize:10,color:"var(--text3)",textAlign:"center",marginTop:6}}>
               {(pResult.platform||pPlatform)==="midjourney"?"Use as reference with --cref [image-url] for character consistency":(pResult.platform||pPlatform)==="dalle"?"Upload alongside the prompt in ChatGPT for best accuracy":"Upload alongside the prompt in Meta AI for best accuracy"}
             </div>
           </div>}
           {!pResult.group&&!pResult.duo&&pResult.member&&images[pResult.member.id]&&<div style={{marginTop:12}}>
             <button style={{...s.bigBtn(false),background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.15)"}} onClick={()=>downloadImg(pResult.member.id,pResult.member.heroName)}>📎 Download Reference Image</button>
-            <div style={{fontSize:9,color:"var(--text3)",textAlign:"center",marginTop:6}}>
+            <div style={{fontSize:10,color:"var(--text3)",textAlign:"center",marginTop:6}}>
               {(pResult.platform||pPlatform)==="midjourney"?"Use as reference with --cref [image-url] for character consistency":(pResult.platform||pPlatform)==="dalle"?"Upload alongside the prompt in ChatGPT for best accuracy":"Upload alongside the prompt in Meta AI for best accuracy"}
             </div>
           </div>}
           {pResult.tripo3D&&<><span style={s.lbl}>Tripo3D Model Prompt</span><div style={s.pBox}>{pResult.tripo3D}</div><Tripo3DLauncher prompt={pResult.tripo3D} copied={copied.ptripo} onCopy={()=>copy("ptripo",pResult.tripo3D)}/></>}
         </div>)}
-        {pResult?.error&&<div style={{marginTop:12,padding:"12px",background:"rgba(192,57,43,0.1)",border:"1px solid rgba(192,57,43,0.28)",borderRadius:8,fontSize:11,color:"#e74c3c"}}>Failed: {pResult.msg}</div>}
+        {pResult?.error&&<div style={{marginTop:12,padding:"12px",background:"rgba(192,57,43,0.1)",border:"1px solid rgba(192,57,43,0.28)",borderRadius:8,fontSize:12,color:"#e74c3c"}}>Failed: {pResult.msg}</div>}
       </>)}
 
       {/* ── RECRUIT TAB ───────────────────────────────────────────────── */}
       {tab==="recruit"&&activeTeam&&(<>
-        <div style={{padding:"10px 14px",background:`${activeTeam.color}0A`,border:`1px solid ${activeTeam.color}33`,borderRadius:8,fontSize:11,color:"var(--text2)",marginBottom:18}}>
-          {rPowerReforgeTarget?<>⚡ Power Reforging <strong style={{color:activeTeam.color}}>{rPowerReforgeTarget.heroName}</strong> — answer the phases to replace their powers and stats.<button onClick={()=>{setRPowerReforgeTarget(null);setRResult(null);setPowerForgePhase(0);setPowerForgeAnswers({});setRPipelineStage(0);setCostumeAnswers({});setCostumeForgeStep(0);setTab("roster");}} style={{float:"right",background:"none",border:"none",cursor:"pointer",color:"var(--text4)",fontSize:13}}>×</button></>
-          :rReforgeId?<>Reforging <strong style={{color:activeTeam.color}}>{rHeroName||"member"}</strong> for {activeTeam.name} — same identity, new generation.<button onClick={()=>{setRReforgeId(null);setRName("");setRHeroName("");setRGender("Male");setRAge("");setRBirthYear("");setRRace(null);setRColors(["#A32D2D"]);setRStoryDir("");setDeepMode(false);setProfileMode(false);setDeepAnswers({});setDeepPhase(0);setProfileAnswers({});setProfileStep(0);setPowerForgeMode(false);setPowerForgePhase(0);setPowerForgeAnswers({});setRPipelineStage(0);setCostumeAnswers({});setCostumeForgeStep(0);setRResult(null);}} style={{float:"right",background:"none",border:"none",cursor:"pointer",color:"var(--text4)",fontSize:13}}>×</button></>
+        <div style={{padding:"10px 14px",background:`${activeTeam.color}0A`,border:`1px solid ${activeTeam.color}33`,borderRadius:8,fontSize:12,color:"var(--text2)",marginBottom:18}}>
+          {rPowerReforgeTarget?<>⚡ Power Reforging <strong style={{color:activeTeam.color}}>{rPowerReforgeTarget.heroName}</strong> — answer the phases to replace their powers and stats.<button onClick={()=>{setRPowerReforgeTarget(null);setRResult(null);setPowerForgePhase(0);setPowerForgeAnswers({});setRPipelineStage(0);setCostumeAnswers({});setCostumeForgeStep(0);setTab("roster");}} style={{float:"right",background:"none",border:"none",cursor:"pointer",color:"var(--text4)",fontSize:14}}>×</button></>
+          :rReforgeId?<>Reforging <strong style={{color:activeTeam.color}}>{rHeroName||"member"}</strong> for {activeTeam.name} — same identity, new generation.<button onClick={()=>{setRReforgeId(null);setRName("");setRHeroName("");setRGender("Male");setRAge("");setRBirthYear("");setRRace(null);setRColors(["#A32D2D"]);setRStoryDir("");setDeepMode(false);setProfileMode(false);setDeepAnswers({});setDeepPhase(0);setProfileAnswers({});setProfileStep(0);setPowerForgeMode(false);setPowerForgePhase(0);setPowerForgeAnswers({});setRPipelineStage(0);setCostumeAnswers({});setCostumeForgeStep(0);setRResult(null);}} style={{float:"right",background:"none",border:"none",cursor:"pointer",color:"var(--text4)",fontSize:14}}>×</button></>
           :<>Recruiting for: <strong style={{color:activeTeam.color}}>{activeTeam.name}</strong> · Switch teams in the Teams tab to recruit for a different team.</>}
         </div>
         {/* Mode toggle */}
@@ -2227,8 +2235,8 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
             {id:"profile",label:"🧬 Personal Profile",sub:"25 questions · built from you",active:profileMode,onClick:()=>{setProfileMode(true);setDeepMode(false);setPowerForgeMode(false);setDeepPhase(0);setDeepAnswers({});setProfileStep(0);setProfileAnswers({});setPowerForgePhase(0);setPowerForgeAnswers({});setRPipelineStage(0);setCostumeAnswers({});setCostumeForgeStep(0);setRStep(0);setRResult(null);}},
           ].map(m=>(
             <button key={m.id} onClick={m.onClick} style={{padding:"10px",background:m.active?`${activeTeam.color}16`:"var(--bg3)",border:`1px solid ${m.active?activeTeam.color:"var(--border2)"}`,borderRadius:9,cursor:"pointer",fontFamily:"var(--font-mono)",textAlign:"center"}}>
-              <div style={{fontSize:11.5,fontWeight:m.active?"bold":"normal",color:m.active?"var(--text-primary)":"var(--text2)"}}>{m.label}</div>
-              <div style={{fontSize:8.5,color:"var(--text3)",marginTop:2}}>{m.sub}</div>
+              <div style={{fontSize:12.5,fontWeight:m.active?"bold":"normal",color:m.active?"var(--text-primary)":"var(--text2)"}}>{m.label}</div>
+              <div style={{fontSize:9.5,color:"var(--text3)",marginTop:2}}>{m.sub}</div>
             </button>
           ))}
         </div>}
@@ -2246,12 +2254,12 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                 <div style={{display:"flex",alignItems:"center",width:"100%"}}>
                   {i>0&&<div style={{flex:1,height:2,background:done||active?activeTeam.color:"rgba(255,255,255,0.08)",transition:"background 0.3s"}}/>}
                   <div style={{width:20,height:20,borderRadius:"50%",background:done?activeTeam.color:active?`${activeTeam.color}33`:"var(--bg3)",border:`2px solid ${done||active?activeTeam.color:"var(--border2)"}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"all 0.3s"}}>
-                    {done&&<span style={{fontSize:9,color:"#fff",fontWeight:"bold"}}>✓</span>}
+                    {done&&<span style={{fontSize:10,color:"#fff",fontWeight:"bold"}}>✓</span>}
                     {!done&&<div style={{width:6,height:6,borderRadius:"50%",background:active?activeTeam.color:"transparent"}}/>}
                   </div>
                   {i<2&&<div style={{flex:1,height:2,background:rPipelineStage>seg.stage?activeTeam.color:"rgba(255,255,255,0.08)",transition:"background 0.3s"}}/>}
                 </div>
-                <span style={{fontSize:8.5,fontFamily:"var(--font-mono)",letterSpacing:"0.08em",color:done?activeTeam.color:active?"var(--text-primary)":"var(--text4)",fontWeight:active?"bold":"normal",textTransform:"uppercase"}}>{seg.label}</span>
+                <span style={{fontSize:9.5,fontFamily:"var(--font-mono)",letterSpacing:"0.08em",color:done?activeTeam.color:active?"var(--text-primary)":"var(--text4)",fontWeight:active?"bold":"normal",textTransform:"uppercase"}}>{seg.label}</span>
               </div>);
             })}
           </div>
@@ -2263,10 +2271,10 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
               }}/>
             </div>
             <div style={{display:"flex",justifyContent:"space-between"}}>
-              <span style={{fontSize:9,color:"var(--text3)"}}>
+              <span style={{fontSize:10,color:"var(--text3)"}}>
                 {profileMode?(profileStep===0?"Identity":`${PERSONAL_PROFILE[profileStep-1]?.section} — ${profileStep} of 5`):deepMode?(deepPhase===0?"Identity":`Phase ${deepPhase} of ${DEEP_LORE_PHASES.length}`):rStep===0?"Identity":`Question ${rStep} of ${RECRUIT_QUIZ.length}`}
               </span>
-              <span style={{fontSize:9,color:activeTeam.color}}>
+              <span style={{fontSize:10,color:activeTeam.color}}>
                 {profileMode?`${Math.round((profileStep/6)*100)}%`:deepMode?`${Math.round((deepPhase/(DEEP_LORE_PHASES.length+1))*100)}%`:`${Math.round((rStep/(RECRUIT_QUIZ.length+1))*100)}%`}
               </span>
             </div>
@@ -2276,8 +2284,8 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
               <div style={{height:2,background:activeTeam.color,borderRadius:2,transition:"width 0.3s ease",width:`${(powerForgePhase/(POWER_FORGE_PHASES.length+1))*100}%`}}/>
             </div>
             <div style={{display:"flex",justifyContent:"space-between"}}>
-              <span style={{fontSize:9,color:"var(--text3)"}}>{powerForgePhase===0?"Begin Power Forge":`${POWER_FORGE_PHASES[powerForgePhase-1]?.title} — Phase ${powerForgePhase} of ${POWER_FORGE_PHASES.length}`}</span>
-              <span style={{fontSize:9,color:activeTeam.color}}>{Math.round((powerForgePhase/(POWER_FORGE_PHASES.length+1))*100)}%</span>
+              <span style={{fontSize:10,color:"var(--text3)"}}>{powerForgePhase===0?"Begin Power Forge":`${POWER_FORGE_PHASES[powerForgePhase-1]?.title} — Phase ${powerForgePhase} of ${POWER_FORGE_PHASES.length}`}</span>
+              <span style={{fontSize:10,color:activeTeam.color}}>{Math.round((powerForgePhase/(POWER_FORGE_PHASES.length+1))*100)}%</span>
             </div>
           </>)}
           {rPipelineStage===2&&(<>
@@ -2285,24 +2293,24 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
               <div style={{height:2,background:activeTeam.color,borderRadius:2,transition:"width 0.3s ease",width:costumeForgeStep===0?"0%":`${(costumeForgeStep/COSTUME_FORGE_QUESTIONS.length)*100}%`}}/>
             </div>
             <div style={{display:"flex",justifyContent:"space-between"}}>
-              <span style={{fontSize:9,color:"var(--text3)"}}>{costumeForgeStep===0?"Begin Costume Forge":`Question ${costumeForgeStep} of ${COSTUME_FORGE_QUESTIONS.length}`}</span>
-              <span style={{fontSize:9,color:activeTeam.color}}>{costumeForgeStep===0?"0%":`${Math.round((costumeForgeStep/COSTUME_FORGE_QUESTIONS.length)*100)}%`}</span>
+              <span style={{fontSize:10,color:"var(--text3)"}}>{costumeForgeStep===0?"Begin Costume Forge":`Question ${costumeForgeStep} of ${COSTUME_FORGE_QUESTIONS.length}`}</span>
+              <span style={{fontSize:10,color:activeTeam.color}}>{costumeForgeStep===0?"0%":`${Math.round((costumeForgeStep/COSTUME_FORGE_QUESTIONS.length)*100)}%`}</span>
             </div>
           </>)}
-          {rPipelineStage===3&&<div style={{fontSize:9,color:activeTeam.color,fontFamily:"var(--font-mono)",letterSpacing:"0.1em",textTransform:"uppercase",textAlign:"center",paddingTop:4}}>Complete — ready to add to roster</div>}
+          {rPipelineStage===3&&<div style={{fontSize:10,color:activeTeam.color,fontFamily:"var(--font-mono)",letterSpacing:"0.1em",textTransform:"uppercase",textAlign:"center",paddingTop:4}}>Complete — ready to add to roster</div>}
         </div>
 
         {/* ── Step 0: Identity (all modes) ── */}
         {rPipelineStage===0&&!rResult&&((!deepMode&&!profileMode&&rStep===0)||(deepMode&&deepPhase===0)||(profileMode&&profileStep===0))&&(<div style={s.card}>
-          <div style={{fontSize:15,fontWeight:"bold",color:"var(--text-primary)",marginBottom:14}}>Who is this recruit?</div>
+          <div style={{fontSize:16,fontWeight:"bold",color:"var(--text-primary)",marginBottom:14}}>Who is this recruit?</div>
           <span style={s.lbl}>Hero Name <span style={{color:"#E07070"}}>*</span></span>
-          <div style={{display:"flex",gap:6,marginBottom:14}}><input type="text" placeholder="e.g. Ironhawk" value={rHeroName} onChange={e=>setRHeroName(e.target.value)} style={{flex:1,borderColor:!rHeroName.trim()?"rgba(224,112,112,0.5)":undefined}}/><button onClick={()=>setRHeroName(randHeroName(rRace))} title="Random hero name (race-aware)" style={{padding:"0 12px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:16,flexShrink:0}}>⚄</button></div>
+          <div style={{display:"flex",gap:6,marginBottom:14}}><input type="text" placeholder="e.g. Ironhawk" value={rHeroName} onChange={e=>setRHeroName(e.target.value)} style={{flex:1,borderColor:!rHeroName.trim()?"rgba(224,112,112,0.5)":undefined}}/><button onClick={()=>setRHeroName(randHeroName(rRace))} title="Random hero name (race-aware)" style={{padding:"0 12px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:17,flexShrink:0}}>⚄</button></div>
           <span style={s.lbl}>Real Name <span style={{color:"#E07070"}}>*</span></span>
           <input type="text" placeholder="e.g. Devon Marshall" value={rName} onChange={e=>setRName(e.target.value)} style={{marginBottom:14,borderColor:!rName.trim()?"rgba(224,112,112,0.5)":undefined}}/>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:14}}>
             <div>
               <span style={s.lbl}>Gender</span>
-              <select value={rGender} onChange={e=>setRGender(e.target.value)} style={{width:"100%",padding:"8px 10px",background:"var(--bg2)",border:"1px solid var(--border2)",borderRadius:7,color:"var(--text-primary)",fontSize:11,marginTop:4}}>
+              <select value={rGender} onChange={e=>setRGender(e.target.value)} style={{width:"100%",padding:"8px 10px",background:"var(--bg2)",border:"1px solid var(--border2)",borderRadius:7,color:"var(--text-primary)",fontSize:12,marginTop:4}}>
                 <option value="Male">Male</option>
                 <option value="Female">Female</option>
                 <option value="Non-binary">Non-binary</option>
@@ -2320,7 +2328,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
           </div>
           <div style={{marginBottom:14}}>
             <span style={s.lbl}>Story Direction (optional)</span>
-            <textarea style={{height:52,fontSize:11,marginTop:4}} placeholder={`e.g. "Was exiled from their homeworld" · "Lost their powers once and had to earn them back" · "Reluctant hero who fights for one person, not the mission"`} value={rStoryDir} onChange={e=>setRStoryDir(e.target.value)}/>
+            <textarea style={{height:52,fontSize:12,marginTop:4}} placeholder={`e.g. "Was exiled from their homeworld" · "Lost their powers once and had to earn them back" · "Reluctant hero who fights for one person, not the mission"`} value={rStoryDir} onChange={e=>setRStoryDir(e.target.value)}/>
           </div>
           <InspirationsField value={rInspirations} onChange={setRInspirations} accentColor={rColors[0]||G}/>
           <div style={{marginBottom:14}}>
@@ -2331,17 +2339,17 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
           </div>
           <span style={s.lbl}>Outfit Color Palette <span style={{color:"var(--text4)",fontWeight:"normal"}}>(up to 3)</span></span>
           <div style={{display:"flex",flexWrap:"wrap",gap:7,marginBottom:8}}>
-            {ACCENT_COLORS.map(ac=>{const sel=rColors.includes(ac.hex);const idx=rColors.indexOf(ac.hex);return(<button key={ac.id} onClick={()=>toggleRColor(ac.hex)} style={{display:"flex",alignItems:"center",gap:7,padding:"6px 11px",background:sel?`${ac.hex}18`:"var(--bg3)",border:`1px solid ${sel?ac.hex:"var(--border2)"}`,borderRadius:20,cursor:"pointer",fontFamily:"var(--font-mono)",fontSize:11,color:sel?"var(--text-primary)":"var(--text2)",position:"relative"}}><div style={{width:10,height:10,borderRadius:"50%",background:ac.hex,flexShrink:0}}/>{ac.label}{sel&&<span style={{fontSize:8,background:ac.hex,color:"#fff",borderRadius:"50%",width:14,height:14,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:"bold",flexShrink:0}}>{idx+1}</span>}</button>);})}</div>
+            {ACCENT_COLORS.map(ac=>{const sel=rColors.includes(ac.hex);const idx=rColors.indexOf(ac.hex);return(<button key={ac.id} onClick={()=>toggleRColor(ac.hex)} style={{display:"flex",alignItems:"center",gap:7,padding:"6px 11px",background:sel?`${ac.hex}18`:"var(--bg3)",border:`1px solid ${sel?ac.hex:"var(--border2)"}`,borderRadius:20,cursor:"pointer",fontFamily:"var(--font-mono)",fontSize:12,color:sel?"var(--text-primary)":"var(--text2)",position:"relative"}}><div style={{width:10,height:10,borderRadius:"50%",background:ac.hex,flexShrink:0}}/>{ac.label}{sel&&<span style={{fontSize:9,background:ac.hex,color:"#fff",borderRadius:"50%",width:14,height:14,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:"bold",flexShrink:0}}>{idx+1}</span>}</button>);})}</div>
           <div style={{display:"flex",gap:6,alignItems:"center",marginBottom:4}}>
             <input type="color" value={rCustomHex||"#ffffff"} onChange={e=>setRCustomHex(e.target.value)} style={{width:32,height:32,padding:2,border:"1px solid var(--border2)",borderRadius:6,cursor:"pointer",background:"var(--bg3)",flexShrink:0}}/>
-            <input type="text" placeholder="#A3B2C1" value={rCustomHex} onChange={e=>setRCustomHex(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addCustomRColor()} style={{flex:1,padding:"6px 10px",fontFamily:"var(--font-mono)",fontSize:11}}/>
-            <button onClick={addCustomRColor} disabled={rColors.length>=3} style={{padding:"6px 14px",background:rColors.length>=3?"var(--bg3)":`${G}14`,border:`1px solid ${rColors.length>=3?"var(--border2)":G}`,borderRadius:8,cursor:rColors.length>=3?"not-allowed":"pointer",color:rColors.length>=3?"var(--text4)":G,fontSize:10,fontFamily:"var(--font-mono)",flexShrink:0}}>+ Add</button>
+            <input type="text" placeholder="#A3B2C1" value={rCustomHex} onChange={e=>setRCustomHex(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addCustomRColor()} style={{flex:1,padding:"6px 10px",fontFamily:"var(--font-mono)",fontSize:12}}/>
+            <button onClick={addCustomRColor} disabled={rColors.length>=3} style={{padding:"6px 14px",background:rColors.length>=3?"var(--bg3)":`${G}14`,border:`1px solid ${rColors.length>=3?"var(--border2)":G}`,borderRadius:8,cursor:rColors.length>=3?"not-allowed":"pointer",color:rColors.length>=3?"var(--text4)":G,fontSize:11,fontFamily:"var(--font-mono)",flexShrink:0}}>+ Add</button>
           </div>
           {rColors.length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:14}}>
             {rColors.map((c,i)=>{const acLabel=ACCENT_COLORS.find(a=>a.hex===c)?.label||hexToColorName(c);return(<div key={c} style={{display:"flex",alignItems:"center",gap:5,padding:"4px 10px",background:`${c}14`,border:`1px solid ${c}55`,borderRadius:20}}>
               <div style={{width:8,height:8,borderRadius:"50%",background:c}}/>
-              <span style={{fontSize:9,color:c,fontFamily:"var(--font-mono)"}}>{["Primary","Secondary","Tertiary"][i]}: {acLabel}</span>
-              {(i>0||rColors.length>1)&&<button onClick={()=>setRColors(prev=>prev.filter(x=>x!==c))} style={{background:"none",border:"none",cursor:"pointer",color:`${c}99`,fontSize:12,padding:0,lineHeight:1,marginLeft:2}}>×</button>}
+              <span style={{fontSize:10,color:c,fontFamily:"var(--font-mono)"}}>{["Primary","Secondary","Tertiary"][i]}: {acLabel}</span>
+              {(i>0||rColors.length>1)&&<button onClick={()=>setRColors(prev=>prev.filter(x=>x!==c))} style={{background:"none",border:"none",cursor:"pointer",color:`${c}99`,fontSize:13,padding:0,lineHeight:1,marginLeft:2}}>×</button>}
             </div>);})}
           </div>}
           {deepMode&&(<>
@@ -2352,12 +2360,12 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
           </>)}
           <span style={{...s.lbl,marginTop:0}}>Team Rank</span>
           <div style={{display:"flex",flexWrap:"wrap",gap:7,marginBottom:14}}>
-            {TEAM_RANKS.map(r=><button key={r.id} onClick={()=>setRTeamRank(r.id)} style={{fontSize:9,padding:"4px 11px",background:rTeamRank===r.id?`${r.color||G}18`:"var(--bg3)",border:`1px solid ${rTeamRank===r.id?(r.color||G):"var(--border2)"}`,borderRadius:20,cursor:"pointer",color:rTeamRank===r.id?(r.color||G):"var(--text2)",fontFamily:"var(--font-mono)"}}>{r.icon?`${r.icon} `:""}{r.label}</button>)}
+            {TEAM_RANKS.map(r=><button key={r.id} onClick={()=>setRTeamRank(r.id)} style={{fontSize:10,padding:"4px 11px",background:rTeamRank===r.id?`${r.color||G}18`:"var(--bg3)",border:`1px solid ${rTeamRank===r.id?(r.color||G):"var(--border2)"}`,borderRadius:20,cursor:"pointer",color:rTeamRank===r.id?(r.color||G):"var(--text2)",fontFamily:"var(--font-mono)"}}>{r.icon?`${r.icon} `:""}{r.label}</button>)}
           </div>
           {(<>
             <span style={{...s.lbl,marginTop:0}}>Team Alignment</span>
             <div style={{display:"flex",flexWrap:"wrap",gap:7,marginBottom:14}}>
-              {NK_ALIGNMENTS.map(a=><button key={a.id} onClick={()=>setRNkAlign(a.id)} style={{fontSize:9,padding:"4px 11px",background:rNkAlign===a.id?`${a.color}18`:"var(--bg3)",border:`1px solid ${rNkAlign===a.id?a.color:"var(--border2)"}`,borderRadius:20,cursor:"pointer",color:rNkAlign===a.id?a.color:"var(--text2)",fontFamily:"var(--font-mono)"}}>{a.label}</button>)}
+              {NK_ALIGNMENTS.map(a=><button key={a.id} onClick={()=>setRNkAlign(a.id)} style={{fontSize:10,padding:"4px 11px",background:rNkAlign===a.id?`${a.color}18`:"var(--bg3)",border:`1px solid ${rNkAlign===a.id?a.color:"var(--border2)"}`,borderRadius:20,cursor:"pointer",color:rNkAlign===a.id?a.color:"var(--text2)",fontFamily:"var(--font-mono)"}}>{a.label}</button>)}
             </div>
           </>)}
           {(()=>{
@@ -2369,21 +2377,21 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
               <div style={{marginBottom:14}}>
                 <span style={s.lbl}>Family Connections (optional)</span>
                 {rFamilyLinks.length>0&&<div style={{display:"flex",flexDirection:"column",gap:4,marginBottom:8}}>
-                  {rFamilyLinks.map((lk,li)=>{const lkChar=uniqueChars.find(c=>c.id===lk.charId);const lkRel=FAMILY_RELATIONS.find(r=>r.id===lk.relation);return lkChar&&lkRel?(<div key={li} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"4px 8px",background:"var(--bg2)",border:"1px solid var(--border2)",borderRadius:7,fontSize:9,fontFamily:"var(--font-mono)",color:"var(--text2)"}}>
+                  {rFamilyLinks.map((lk,li)=>{const lkChar=uniqueChars.find(c=>c.id===lk.charId);const lkRel=FAMILY_RELATIONS.find(r=>r.id===lk.relation);return lkChar&&lkRel?(<div key={li} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"4px 8px",background:"var(--bg2)",border:"1px solid var(--border2)",borderRadius:7,fontSize:10,fontFamily:"var(--font-mono)",color:"var(--text2)"}}>
                     <span>{lkChar.heroName} — <strong style={{color:activeTeam.color}}>{lkRel.label}</strong></span>
-                    <button onClick={()=>setRFamilyLinks(p=>p.filter((_,i)=>i!==li))} style={{background:"none",border:"none",cursor:"pointer",color:"#e74c3c",fontSize:12,lineHeight:1,padding:"0 2px"}}>×</button>
+                    <button onClick={()=>setRFamilyLinks(p=>p.filter((_,i)=>i!==li))} style={{background:"none",border:"none",cursor:"pointer",color:"#e74c3c",fontSize:13,lineHeight:1,padding:"0 2px"}}>×</button>
                   </div>):null;})}
                 </div>}
-                <select value={rFamilyCharId} onChange={e=>setRFamilyCharId(e.target.value)} style={{width:"100%",padding:"8px 10px",background:"var(--bg2)",border:"1px solid var(--border2)",borderRadius:7,color:"var(--text-primary)",fontFamily:"var(--font-mono)",fontSize:11,marginTop:6,marginBottom:rFamilyCharId?8:0}}>
+                <select value={rFamilyCharId} onChange={e=>setRFamilyCharId(e.target.value)} style={{width:"100%",padding:"8px 10px",background:"var(--bg2)",border:"1px solid var(--border2)",borderRadius:7,color:"var(--text-primary)",fontFamily:"var(--font-mono)",fontSize:12,marginTop:6,marginBottom:rFamilyCharId?8:0}}>
                   <option value="">— Add a family connection —</option>
                   {uniqueChars.map(c=><option key={c.id} value={c.id}>{c.heroName}{c.isVillain?" ⚠":""} ({c.realName||"?"})</option>)}
                 </select>
                 {rFamilyCharId&&(<>
                   <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:6}}>
-                    {FAMILY_RELATIONS.map(r=><button key={r.id} onClick={()=>setRFamilyRelation(r.id)} style={{padding:"4px 10px",background:rFamilyRelation===r.id?`${activeTeam.color}18`:"var(--bg3)",border:`1px solid ${rFamilyRelation===r.id?activeTeam.color:"var(--border2)"}`,borderRadius:14,cursor:"pointer",fontSize:9,color:rFamilyRelation===r.id?activeTeam.color:"var(--text2)",fontFamily:"var(--font-mono)"}}>{r.label}</button>)}
+                    {FAMILY_RELATIONS.map(r=><button key={r.id} onClick={()=>setRFamilyRelation(r.id)} style={{padding:"4px 10px",background:rFamilyRelation===r.id?`${activeTeam.color}18`:"var(--bg3)",border:`1px solid ${rFamilyRelation===r.id?activeTeam.color:"var(--border2)"}`,borderRadius:14,cursor:"pointer",fontSize:10,color:rFamilyRelation===r.id?activeTeam.color:"var(--text2)",fontFamily:"var(--font-mono)"}}>{r.label}</button>)}
                   </div>
-                  {selChar&&selRel&&<div style={{fontSize:9,color:"var(--text3)",fontStyle:"italic",marginBottom:6}}>{rHeroName||"New hero"} is {selChar.heroName}'s <strong style={{color:activeTeam.color}}>{selRel.label}</strong> · {selChar.heroName} is their <strong style={{color:activeTeam.color}}>{selRel.inverse}</strong></div>}
-                  <button onClick={()=>{if(rFamilyCharId&&!rFamilyLinks.some(l=>l.charId===rFamilyCharId)){setRFamilyLinks(p=>[...p,{charId:rFamilyCharId,relation:rFamilyRelation}]);setRFamilyCharId("");setRFamilyRelation("parent");}}} style={{padding:"4px 14px",background:`${activeTeam.color}14`,border:`1px solid ${activeTeam.color}55`,borderRadius:8,cursor:"pointer",color:activeTeam.color,fontSize:9,fontFamily:"var(--font-mono)"}}>+ Add</button>
+                  {selChar&&selRel&&<div style={{fontSize:10,color:"var(--text3)",fontStyle:"italic",marginBottom:6}}>{rHeroName||"New hero"} is {selChar.heroName}'s <strong style={{color:activeTeam.color}}>{selRel.label}</strong> · {selChar.heroName} is their <strong style={{color:activeTeam.color}}>{selRel.inverse}</strong></div>}
+                  <button onClick={()=>{if(rFamilyCharId&&!rFamilyLinks.some(l=>l.charId===rFamilyCharId)){setRFamilyLinks(p=>[...p,{charId:rFamilyCharId,relation:rFamilyRelation}]);setRFamilyCharId("");setRFamilyRelation("parent");}}} style={{padding:"4px 14px",background:`${activeTeam.color}14`,border:`1px solid ${activeTeam.color}55`,borderRadius:8,cursor:"pointer",color:activeTeam.color,fontSize:10,fontFamily:"var(--font-mono)"}}>+ Add</button>
                 </>)}
               </div>
             );
@@ -2396,21 +2404,21 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
             return(
               <div style={{marginBottom:14}}>
                 <span style={s.lbl}>Hero Association (optional)</span>
-                <div style={{fontSize:9,color:"var(--text3)",marginBottom:5}}>Sidekick, partner, legacy ally — outside of team alliances</div>
-                <select value={rHeroAssocId} onChange={e=>setRHeroAssocId(e.target.value)} style={{width:"100%",padding:"8px 10px",background:"var(--bg2)",border:"1px solid var(--border2)",borderRadius:7,color:"var(--text-primary)",fontFamily:"var(--font-mono)",fontSize:11,marginTop:2,marginBottom:rHeroAssocId?8:0}}>
+                <div style={{fontSize:10,color:"var(--text3)",marginBottom:5}}>Sidekick, partner, legacy ally — outside of team alliances</div>
+                <select value={rHeroAssocId} onChange={e=>setRHeroAssocId(e.target.value)} style={{width:"100%",padding:"8px 10px",background:"var(--bg2)",border:"1px solid var(--border2)",borderRadius:7,color:"var(--text-primary)",fontFamily:"var(--font-mono)",fontSize:12,marginTop:2,marginBottom:rHeroAssocId?8:0}}>
                   <option value="">— No hero association —</option>
                   {uniqueChars.map(c=><option key={c.id} value={c.id}>{c.heroName}{c.isVillain?" ⚠":""} ({c.realName||"?"})</option>)}
                 </select>
                 {rHeroAssocId&&(<>
                   <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:6}}>
-                    {HERO_ASSOC_TYPES.map(t=><button key={t.id} onClick={()=>setRHeroAssocType(t.id)} style={{padding:"4px 10px",background:rHeroAssocType===t.id?`${activeTeam.color}18`:"var(--bg3)",border:`1px solid ${rHeroAssocType===t.id?activeTeam.color:"var(--border2)"}`,borderRadius:14,cursor:"pointer",fontSize:9,color:rHeroAssocType===t.id?activeTeam.color:"var(--text2)",fontFamily:"var(--font-mono)"}}>{t.label}</button>)}
+                    {HERO_ASSOC_TYPES.map(t=><button key={t.id} onClick={()=>setRHeroAssocType(t.id)} style={{padding:"4px 10px",background:rHeroAssocType===t.id?`${activeTeam.color}18`:"var(--bg3)",border:`1px solid ${rHeroAssocType===t.id?activeTeam.color:"var(--border2)"}`,borderRadius:14,cursor:"pointer",fontSize:10,color:rHeroAssocType===t.id?activeTeam.color:"var(--text2)",fontFamily:"var(--font-mono)"}}>{t.label}</button>)}
                   </div>
-                  {selAssocChar&&selAssocType&&<div style={{fontSize:9,color:"var(--text3)",fontStyle:"italic"}}>{rHeroName||"New hero"} is <strong style={{color:activeTeam.color}}>{selAssocType.label}</strong> {selAssocChar.heroName} · {selAssocChar.heroName} is their <strong style={{color:activeTeam.color}}>{selAssocType.inverse}</strong></div>}
+                  {selAssocChar&&selAssocType&&<div style={{fontSize:10,color:"var(--text3)",fontStyle:"italic"}}>{rHeroName||"New hero"} is <strong style={{color:activeTeam.color}}>{selAssocType.label}</strong> {selAssocChar.heroName} · {selAssocChar.heroName} is their <strong style={{color:activeTeam.color}}>{selAssocType.inverse}</strong></div>}
                 </>)}
               </div>
             );
           })()}
-          {(!rHeroName.trim()||!rName.trim()||!rRace)&&<div style={{fontSize:10,color:"#E07070",marginBottom:8,fontFamily:"var(--font-mono)"}}>* Hero Name, Real Name, and Race are required</div>}
+          {(!rHeroName.trim()||!rName.trim()||!rRace)&&<div style={{fontSize:11,color:"#E07070",marginBottom:8,fontFamily:"var(--font-mono)"}}>* Hero Name, Real Name, and Race are required</div>}
           <button style={s.bigBtn(!rHeroName.trim()||!rName.trim()||!rRace,activeTeam.color)} disabled={!rHeroName.trim()||!rName.trim()||!rRace} onClick={()=>deepMode?setDeepPhase(1):profileMode?setProfileStep(1):setRStep(1)}>
             {deepMode?"Begin Deep Forge →":profileMode?"Begin Profile →":"Begin Assessment →"}
           </button>
@@ -2418,10 +2426,10 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
 
         {/* ── Quick mode quiz ── */}
         {rPipelineStage===0&&!rResult&&!deepMode&&rStep>=1&&rStep<=RECRUIT_QUIZ.length&&rCurrentQ&&(<div style={s.card}>
-          <div style={{fontSize:15,fontWeight:"bold",color:"var(--text-primary)",marginBottom:18,lineHeight:1.4}}>{rCurrentQ.question}</div>
+          <div style={{fontSize:16,fontWeight:"bold",color:"var(--text-primary)",marginBottom:18,lineHeight:1.4}}>{rCurrentQ.question}</div>
           {rCurrentQ.options.map(opt=><button key={opt.id} onClick={()=>{setRAnswers(p=>({...p,[rCurrentQ.id]:opt.id}));if(rStep<RECRUIT_QUIZ.length)setRStep(p=>p+1);}} style={s.optBtn(rAnswers[rCurrentQ.id]===opt.id,rHex)}>{opt.label}</button>)}
           <div style={{display:"flex",gap:10,marginTop:10}}>
-            <button onClick={()=>setRStep(p=>Math.max(0,p-1))} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text3)",fontSize:10.5,fontFamily:"var(--font-mono)"}}>← Back</button>
+            <button onClick={()=>setRStep(p=>Math.max(0,p-1))} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text3)",fontSize:11.5,fontFamily:"var(--font-mono)"}}>← Back</button>
             {rStep===RECRUIT_QUIZ.length&&rAnswers[rCurrentQ.id]&&<button onClick={generateRecruit} disabled={rLoading} style={{flex:2,...s.bigBtn(rLoading,rHex),marginTop:0}}>{rLoading?"Forging identity...":"Generate Recruit →"}</button>}
           </div>
         </div>)}
@@ -2434,7 +2442,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
           return(<>
             <DeepLoreQuiz phase={deepPhase-1} answers={deepAnswers} onAnswer={(qid,oid)=>setDeepAnswers(p=>({...p,[qid]:oid}))} accentColor={rHex}/>
             <div style={{display:"flex",gap:10,marginTop:14}}>
-              <button onClick={()=>setDeepPhase(p=>Math.max(0,p-1))} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text3)",fontSize:10.5,fontFamily:"var(--font-mono)"}}>← Back</button>
+              <button onClick={()=>setDeepPhase(p=>Math.max(0,p-1))} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text3)",fontSize:11.5,fontFamily:"var(--font-mono)"}}>← Back</button>
               {!isLast&&<button disabled={!phaseComplete} onClick={()=>setDeepPhase(p=>p+1)} style={{flex:2,...s.bigBtn(!phaseComplete,rHex),marginTop:0}}>
                 {phaseComplete?`Next: ${DEEP_LORE_PHASES[deepPhase]?.title||"Generate"} →`:"Answer all questions to continue"}
               </button>}
@@ -2451,13 +2459,13 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
           const secComplete=sec.questions.every(q=>profileAnswers[q.id]);
           const isLast=profileStep===5;
           return(<div style={s.card}>
-            <div style={{fontSize:9,letterSpacing:"0.12em",color:`${rHex}88`,textTransform:"uppercase",marginBottom:12}}>{sec.section} · {profileStep} of 5</div>
+            <div style={{fontSize:10,letterSpacing:"0.12em",color:`${rHex}88`,textTransform:"uppercase",marginBottom:12}}>{sec.section} · {profileStep} of 5</div>
             {sec.questions.map(q=>(<div key={q.id} style={{marginBottom:14}}>
-              <div style={{fontSize:13,fontWeight:"bold",color:"var(--text-primary)",marginBottom:8,lineHeight:1.4}}>{q.q}</div>
+              <div style={{fontSize:14,fontWeight:"bold",color:"var(--text-primary)",marginBottom:8,lineHeight:1.4}}>{q.q}</div>
               {q.options.map(opt=><button key={opt.id} onClick={()=>setProfileAnswers(p=>({...p,[q.id]:opt.id}))} style={s.optBtn(profileAnswers[q.id]===opt.id,rHex)}>{opt.label}</button>)}
             </div>))}
             <div style={{display:"flex",gap:10,marginTop:6}}>
-              <button onClick={()=>setProfileStep(p=>Math.max(0,p-1))} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text3)",fontSize:10.5,fontFamily:"var(--font-mono)"}}>← Back</button>
+              <button onClick={()=>setProfileStep(p=>Math.max(0,p-1))} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text3)",fontSize:11.5,fontFamily:"var(--font-mono)"}}>← Back</button>
               {!isLast&&<button disabled={!secComplete} onClick={()=>setProfileStep(p=>p+1)} style={{flex:2,...s.bigBtn(!secComplete,rHex),marginTop:0}}>
                 {secComplete?`Next: ${PERSONAL_PROFILE[profileStep]?.section} →`:"Answer all questions to continue"}
               </button>}
@@ -2475,12 +2483,12 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
           const isLast=powerForgePhase===POWER_FORGE_PHASES.length;
           return(<div style={s.card}>
             <div style={{marginBottom:14}}>
-              <div style={{fontSize:9,letterSpacing:"0.14em",color:`${rHex}77`,textTransform:"uppercase",fontFamily:"var(--font-mono)",marginBottom:3}}>Power Forge · Phase {powerForgePhase} of {POWER_FORGE_PHASES.length}</div>
-              <div style={{fontSize:15,fontWeight:"bold",color:"var(--text-primary)",marginBottom:2}}>{ph.title}</div>
-              <div style={{fontSize:10.5,color:"var(--text3)",fontStyle:"italic"}}>{ph.subtitle}</div>
+              <div style={{fontSize:10,letterSpacing:"0.14em",color:`${rHex}77`,textTransform:"uppercase",fontFamily:"var(--font-mono)",marginBottom:3}}>Power Forge · Phase {powerForgePhase} of {POWER_FORGE_PHASES.length}</div>
+              <div style={{fontSize:16,fontWeight:"bold",color:"var(--text-primary)",marginBottom:2}}>{ph.title}</div>
+              <div style={{fontSize:11.5,color:"var(--text3)",fontStyle:"italic"}}>{ph.subtitle}</div>
             </div>
             {ph.questions.map(q=>(<div key={q.id} style={{marginBottom:16}}>
-              <div style={{fontSize:12.5,fontWeight:"bold",color:"var(--text-primary)",marginBottom:8,lineHeight:1.4}}>{q.q}</div>
+              <div style={{fontSize:13.5,fontWeight:"bold",color:"var(--text-primary)",marginBottom:8,lineHeight:1.4}}>{q.q}</div>
               <div style={{display:"flex",flexDirection:"column",gap:6}}>
                 {q.options.map(opt=>(
                   <button key={opt.id} onClick={()=>setPowerForgeAnswers(p=>({...p,[q.id]:opt.id}))} style={{...s.optBtn(powerForgeAnswers[q.id]===opt.id,rHex),textAlign:"left",lineHeight:1.5}}>{opt.label}</button>
@@ -2488,7 +2496,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
               </div>
             </div>))}
             <div style={{display:"flex",gap:10,marginTop:6}}>
-              <button onClick={()=>setPowerForgePhase(p=>Math.max(1,p-1))} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text3)",fontSize:10.5,fontFamily:"var(--font-mono)"}}>← Back</button>
+              <button onClick={()=>setPowerForgePhase(p=>Math.max(1,p-1))} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text3)",fontSize:11.5,fontFamily:"var(--font-mono)"}}>← Back</button>
               {!isLast&&<button disabled={!phComplete} onClick={()=>setPowerForgePhase(p=>p+1)} style={{flex:2,...s.bigBtn(!phComplete,rHex),marginTop:0}}>
                 {phComplete?`Next: ${POWER_FORGE_PHASES[powerForgePhase]?.title} →`:"Answer all questions to continue"}
               </button>}
@@ -2500,52 +2508,52 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
         })()}
 
         {rLoading&&<div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
-          {aiStreamText&&<div style={{flex:1,padding:"10px 12px",background:"var(--bg2)",border:"1px solid var(--border2)",borderRadius:8,fontFamily:"var(--font-mono)",fontSize:9,color:"var(--text3)",maxHeight:72,overflowY:"auto",whiteSpace:"pre-wrap",wordBreak:"break-all",lineHeight:1.5}}>{aiStreamText}</div>}
-          {!aiStreamText&&<div style={{flex:1,padding:"10px 12px",background:"var(--bg2)",border:"1px solid var(--border2)",borderRadius:8,fontSize:9,color:"var(--text3)",fontFamily:"var(--font-mono)"}}>Waiting for model response…</div>}
-          <button onClick={()=>genControllerRef.current?.abort()} style={{flexShrink:0,padding:"8px 14px",background:"rgba(224,112,112,0.1)",border:"1px solid rgba(224,112,112,0.35)",borderRadius:8,cursor:"pointer",color:"#E07070",fontSize:9,fontFamily:"var(--font-mono)",whiteSpace:"nowrap"}}>✕ Cancel</button>
+          {aiStreamText&&<div style={{flex:1,padding:"10px 12px",background:"var(--bg2)",border:"1px solid var(--border2)",borderRadius:8,fontFamily:"var(--font-mono)",fontSize:10,color:"var(--text3)",maxHeight:72,overflowY:"auto",whiteSpace:"pre-wrap",wordBreak:"break-all",lineHeight:1.5}}>{aiStreamText}</div>}
+          {!aiStreamText&&<div style={{flex:1,padding:"10px 12px",background:"var(--bg2)",border:"1px solid var(--border2)",borderRadius:8,fontSize:10,color:"var(--text3)",fontFamily:"var(--font-mono)"}}>Waiting for model response…</div>}
+          <button onClick={()=>genControllerRef.current?.abort()} style={{flexShrink:0,padding:"8px 14px",background:"rgba(224,112,112,0.1)",border:"1px solid rgba(224,112,112,0.35)",borderRadius:8,cursor:"pointer",color:"#E07070",fontSize:10,fontFamily:"var(--font-mono)",whiteSpace:"nowrap"}}>✕ Cancel</button>
         </div>}
 
         {/* ── Pipeline Stage 1: Personality done, show preview + Begin Power Forge ── */}
         {rResult&&!rResult.error&&rPipelineStage===1&&powerForgePhase===0&&(<div style={s.card}>
-          <div style={{fontSize:9,letterSpacing:"0.14em",color:`${rHex}77`,textTransform:"uppercase",fontFamily:"var(--font-mono)",marginBottom:8}}>Personality Complete</div>
+          <div style={{fontSize:10,letterSpacing:"0.14em",color:`${rHex}77`,textTransform:"uppercase",fontFamily:"var(--font-mono)",marginBottom:8}}>Personality Complete</div>
           <div style={{marginBottom:14,padding:"12px 16px",background:`${rResult.color}0C`,border:`1px solid ${rResult.color}33`,borderRadius:10}}>
-            <div style={{fontSize:17,fontWeight:"bold",color:"var(--text-primary)",marginBottom:4}}>{rResult.heroName}</div>
-            <div style={{fontSize:11,color:rResult.color,marginBottom:6}}>{rResult.realName} · {rResult.role}</div>
-            {rResult.tagline&&<div style={{fontSize:11,color:"var(--text2)",fontStyle:"italic",marginBottom:6,lineHeight:1.5}}>"{rResult.tagline}"</div>}
-            {rResult.origin&&<div style={{fontSize:10.5,color:"var(--text3)",lineHeight:1.6}}>{rResult.origin}</div>}
-            {rResult.dna?.length>0&&<div style={{fontSize:9,color:`${rResult.color}77`,marginTop:8,fontFamily:"var(--font-mono)"}}>DNA: {rResult.dna.join(" · ")}</div>}
+            <div style={{fontSize:18,fontWeight:"bold",color:"var(--text-primary)",marginBottom:4}}>{rResult.heroName}</div>
+            <div style={{fontSize:12,color:rResult.color,marginBottom:6}}>{rResult.realName} · {rResult.role}</div>
+            {rResult.tagline&&<div style={{fontSize:12,color:"var(--text2)",fontStyle:"italic",marginBottom:6,lineHeight:1.5}}>"{rResult.tagline}"</div>}
+            {rResult.origin&&<div style={{fontSize:11.5,color:"var(--text3)",lineHeight:1.6}}>{rResult.origin}</div>}
+            {rResult.dna?.length>0&&<div style={{fontSize:10,color:`${rResult.color}77`,marginTop:8,fontFamily:"var(--font-mono)"}}>DNA: {rResult.dna.join(" · ")}</div>}
           </div>
-          <div style={{fontSize:11,color:"var(--text3)",marginBottom:14,lineHeight:1.6}}>Personality forged. Now run the Power Forge to define abilities, stats, and combat signature.</div>
+          <div style={{fontSize:12,color:"var(--text3)",marginBottom:14,lineHeight:1.6}}>Personality forged. Now run the Power Forge to define abilities, stats, and combat signature.</div>
           <div style={{display:"flex",gap:10}}>
-            <button onClick={()=>{setRResult(null);setRStep(0);setRAnswers({});setDeepPhase(0);setDeepAnswers({});setProfileStep(0);setProfileAnswers({});setPowerForgePhase(0);setPowerForgeAnswers({});setRPipelineStage(0);setCostumeAnswers({});setCostumeForgeStep(0);setRecruitSuggest(null);setRecruitSuggestLoading(false);}} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:10.5,fontFamily:"var(--font-mono)"}}>Regenerate Personality</button>
-            <button onClick={()=>setPowerForgePhase(1)} style={{flex:2,padding:"11px",background:`${activeTeam.color}16`,border:`1px solid ${activeTeam.color}`,borderRadius:8,cursor:"pointer",color:activeTeam.color,fontSize:10.5,letterSpacing:"0.1em",textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>Begin Power Forge →</button>
+            <button onClick={()=>{setRResult(null);setRStep(0);setRAnswers({});setDeepPhase(0);setDeepAnswers({});setProfileStep(0);setProfileAnswers({});setPowerForgePhase(0);setPowerForgeAnswers({});setRPipelineStage(0);setCostumeAnswers({});setCostumeForgeStep(0);setRecruitSuggest(null);setRecruitSuggestLoading(false);}} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:11.5,fontFamily:"var(--font-mono)"}}>Regenerate Personality</button>
+            <button onClick={()=>setPowerForgePhase(1)} style={{flex:2,padding:"11px",background:`${activeTeam.color}16`,border:`1px solid ${activeTeam.color}`,borderRadius:8,cursor:"pointer",color:activeTeam.color,fontSize:11.5,letterSpacing:"0.1em",textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>Begin Power Forge →</button>
           </div>
         </div>)}
 
         {/* ── Costume Forge ── */}
         {rResult&&!rResult.error&&rPipelineStage===2&&costumeForgeStep===0&&!rResult.costumeDesc&&(<div style={s.card}>
           {rPowerReforgeTarget?(<>
-            <div style={{fontSize:9,letterSpacing:"0.14em",color:"#F5C54277",textTransform:"uppercase",fontFamily:"var(--font-mono)",marginBottom:8}}>Power Forge Complete</div>
+            <div style={{fontSize:10,letterSpacing:"0.14em",color:"#F5C54277",textTransform:"uppercase",fontFamily:"var(--font-mono)",marginBottom:8}}>Power Forge Complete</div>
             <div style={{marginBottom:14,padding:"12px 16px",background:`${rResult.color||"#F5C542"}0C`,border:`1px solid ${rResult.color||"#F5C542"}33`,borderRadius:10}}>
-              <div style={{fontSize:14,fontWeight:"bold",color:"var(--text-primary)",marginBottom:6}}>{rResult.heroName}</div>
+              <div style={{fontSize:15,fontWeight:"bold",color:"var(--text-primary)",marginBottom:6}}>{rResult.heroName}</div>
               <div style={{display:"flex",flexDirection:"column",gap:4}}>
-                {(rResult.powers||[]).map((p,i)=><div key={i} style={{fontSize:10.5,color:"var(--text2)"}}><strong style={{color:rResult.color||"#F5C542"}}>{p.name}</strong> — {p.desc}</div>)}
+                {(rResult.powers||[]).map((p,i)=><div key={i} style={{fontSize:11.5,color:"var(--text2)"}}><strong style={{color:rResult.color||"#F5C542"}}>{p.name}</strong> — {p.desc}</div>)}
               </div>
-              {rResult.powerFX&&<div style={{fontSize:10,color:"var(--text3)",marginTop:8,fontStyle:"italic"}}>{rResult.powerFX}</div>}
+              {rResult.powerFX&&<div style={{fontSize:11,color:"var(--text3)",marginTop:8,fontStyle:"italic"}}>{rResult.powerFX}</div>}
             </div>
             <div style={{display:"flex",gap:10}}>
-              <button onClick={()=>{setRPipelineStage(1);setPowerForgePhase(1);setPowerForgeAnswers({});}} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:10.5,fontFamily:"var(--font-mono)"}}>Regenerate</button>
-              <button onClick={applyPowerReforge} style={{flex:2,padding:"11px",background:"rgba(245,197,66,0.14)",border:"1px solid #F5C542",borderRadius:8,cursor:"pointer",color:"#F5C542",fontSize:10.5,letterSpacing:"0.1em",textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>⚡ Apply to {rPowerReforgeTarget.heroName} →</button>
+              <button onClick={()=>{setRPipelineStage(1);setPowerForgePhase(1);setPowerForgeAnswers({});}} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:11.5,fontFamily:"var(--font-mono)"}}>Regenerate</button>
+              <button onClick={applyPowerReforge} style={{flex:2,padding:"11px",background:"rgba(245,197,66,0.14)",border:"1px solid #F5C542",borderRadius:8,cursor:"pointer",color:"#F5C542",fontSize:11.5,letterSpacing:"0.1em",textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>⚡ Apply to {rPowerReforgeTarget.heroName} →</button>
             </div>
           </>):(<>
-            <div style={{fontSize:15,fontWeight:"bold",color:"var(--text-primary)",marginBottom:8}}>Costume Forge</div>
-            <div style={{fontSize:11,color:"var(--text3)",marginBottom:14,lineHeight:1.6}}>Design the visual identity. Answer 10 questions about the look — every answer feeds directly into the costume description and reference sheet.</div>
+            <div style={{fontSize:16,fontWeight:"bold",color:"var(--text-primary)",marginBottom:8}}>Costume Forge</div>
+            <div style={{fontSize:12,color:"var(--text3)",marginBottom:14,lineHeight:1.6}}>Design the visual identity. Answer 10 questions about the look — every answer feeds directly into the costume description and reference sheet.</div>
             <div style={{marginBottom:14}}>
               <span style={s.lbl}>Visual References (optional)</span>
               <input value={costumeAnswers.visualRef||""} onChange={e=>setCostumeAnswers(p=>({...p,visualRef:e.target.value}))} placeholder="e.g. Batman's silhouette + Miles Morales suit texture + Moon Knight white" style={{width:"100%"}}/>
             </div>
             <div style={{display:"flex",gap:10}}>
-              <button onClick={()=>setRPipelineStage(3)} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:10.5,fontFamily:"var(--font-mono)"}}>Skip Costume →</button>
+              <button onClick={()=>setRPipelineStage(3)} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:11.5,fontFamily:"var(--font-mono)"}}>Skip Costume →</button>
               <button onClick={()=>setCostumeForgeStep(1)} style={{flex:2,...s.bigBtn(false,rHex),marginTop:0}}>Begin Costume Forge →</button>
             </div>
           </>)}
@@ -2556,15 +2564,15 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
           const isLast=costumeForgeStep===COSTUME_FORGE_QUESTIONS.length;
           const answered=!!costumeAnswers[q.id];
           return(<div style={s.card}>
-            <div style={{fontSize:9,letterSpacing:"0.14em",color:`${rHex}77`,textTransform:"uppercase",fontFamily:"var(--font-mono)",marginBottom:6}}>Costume Forge · {costumeForgeStep} of {COSTUME_FORGE_QUESTIONS.length}</div>
-            <div style={{fontSize:14,fontWeight:"bold",color:"var(--text-primary)",marginBottom:14,lineHeight:1.4}}>{q.q}</div>
+            <div style={{fontSize:10,letterSpacing:"0.14em",color:`${rHex}77`,textTransform:"uppercase",fontFamily:"var(--font-mono)",marginBottom:6}}>Costume Forge · {costumeForgeStep} of {COSTUME_FORGE_QUESTIONS.length}</div>
+            <div style={{fontSize:15,fontWeight:"bold",color:"var(--text-primary)",marginBottom:14,lineHeight:1.4}}>{q.q}</div>
             <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:14}}>
               {q.options.map(opt=>(
                 <button key={opt.id} onClick={()=>setCostumeAnswers(p=>({...p,[q.id]:opt.id}))} style={{...s.optBtn(costumeAnswers[q.id]===opt.id,rHex),textAlign:"left",lineHeight:1.5,padding:"10px 12px"}}>{opt.label}</button>
               ))}
             </div>
             <div style={{display:"flex",gap:10}}>
-              <button onClick={()=>setCostumeForgeStep(p=>Math.max(0,p-1))} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text3)",fontSize:10.5,fontFamily:"var(--font-mono)"}}>← Back</button>
+              <button onClick={()=>setCostumeForgeStep(p=>Math.max(0,p-1))} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text3)",fontSize:11.5,fontFamily:"var(--font-mono)"}}>← Back</button>
               {!isLast&&<button disabled={!answered} onClick={()=>setCostumeForgeStep(p=>p+1)} style={{flex:2,...s.bigBtn(!answered,rHex),marginTop:0}}>
                 {answered?`Next: ${COSTUME_FORGE_QUESTIONS[costumeForgeStep]?.q?.split("?")[0]||"Continue"} →`:"Select an option to continue"}
               </button>}
@@ -2579,49 +2587,49 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
         {rResult&&!rResult.error&&rPipelineStage===2&&costumeForgeStep===0&&rResult.costumeDesc&&(<>
           <CharacterPage member={rResult} imageUrl={null} teamName={activeTeam.name} teamColor={activeTeam.color} inherentPowers={getRaceInherentPowers(rResult)} teamBase={activeTeam.baseOfOps||""}/>
           <div style={{display:"flex",gap:10,marginTop:14}}>
-            <button onClick={()=>{setRPipelineStage(1);setPowerForgePhase(1);setPowerForgeAnswers({});}} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:10.5,fontFamily:"var(--font-mono)"}}>Regenerate Powers</button>
-            <button onClick={()=>setRPipelineStage(3)} style={{flex:2,padding:"11px",background:`${activeTeam.color}16`,border:`1px solid ${activeTeam.color}`,borderRadius:8,cursor:"pointer",color:activeTeam.color,fontSize:10.5,letterSpacing:"0.1em",textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>Looks Good →</button>
+            <button onClick={()=>{setRPipelineStage(1);setPowerForgePhase(1);setPowerForgeAnswers({});}} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:11.5,fontFamily:"var(--font-mono)"}}>Regenerate Powers</button>
+            <button onClick={()=>setRPipelineStage(3)} style={{flex:2,padding:"11px",background:`${activeTeam.color}16`,border:`1px solid ${activeTeam.color}`,borderRadius:8,cursor:"pointer",color:activeTeam.color,fontSize:11.5,letterSpacing:"0.1em",textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>Looks Good →</button>
           </div>
         </>)}
 
         {/* ── Stage 3: All done ── */}
         {rResult&&!rResult.error&&rPipelineStage===3&&(<>
           <div style={{marginBottom:12,padding:"12px 16px",background:`${rResult.color}0C`,border:`1px solid ${rResult.color}33`,borderRadius:10,display:"flex",alignItems:"center",gap:12}}>
-            <div style={{width:42,height:42,borderRadius:"50%",background:`${rResult.color}18`,border:`1px solid ${rResult.color}55`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:"bold",color:rResult.color,flexShrink:0}}>{rResult.initials}</div>
+            <div style={{width:42,height:42,borderRadius:"50%",background:`${rResult.color}18`,border:`1px solid ${rResult.color}55`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:"bold",color:rResult.color,flexShrink:0}}>{rResult.initials}</div>
             <div style={{flex:1}}>
-              <div style={{fontSize:17,fontWeight:"bold",color:"var(--text-primary)"}}>{rResult.heroName}</div>
-              <div style={{fontSize:11,color:rResult.color,marginTop:2}}>{rResult.realName} · {rResult.role}</div>
-              {rResult.deepLore&&<div style={{fontSize:9,color:`${rResult.color}88`,marginTop:3,letterSpacing:"0.08em"}}>DEEP FORGE · {DEEP_LORE_PHASES.length} phases</div>}
-              {rResult.profileLore&&<div style={{fontSize:9,color:`${rResult.color}88`,marginTop:3,letterSpacing:"0.08em"}}>🧬 PERSONAL PROFILE · {rResult.profileLore} answers</div>}
-              {rResult.powerForgeLore&&<div style={{fontSize:9,color:`${rResult.color}88`,marginTop:3,letterSpacing:"0.08em"}}>⚡ POWER FORGE · {rResult.powerForgeLore} answers</div>}
+              <div style={{fontSize:18,fontWeight:"bold",color:"var(--text-primary)"}}>{rResult.heroName}</div>
+              <div style={{fontSize:12,color:rResult.color,marginTop:2}}>{rResult.realName} · {rResult.role}</div>
+              {rResult.deepLore&&<div style={{fontSize:10,color:`${rResult.color}88`,marginTop:3,letterSpacing:"0.08em"}}>DEEP FORGE · {DEEP_LORE_PHASES.length} phases</div>}
+              {rResult.profileLore&&<div style={{fontSize:10,color:`${rResult.color}88`,marginTop:3,letterSpacing:"0.08em"}}>🧬 PERSONAL PROFILE · {rResult.profileLore} answers</div>}
+              {rResult.powerForgeLore&&<div style={{fontSize:10,color:`${rResult.color}88`,marginTop:3,letterSpacing:"0.08em"}}>⚡ POWER FORGE · {rResult.powerForgeLore} answers</div>}
             </div>
             {rResult.nkAlignment&&rResult.nkAlignment!=="base"&&<AlignmentBadge alignment={rResult.nkAlignment}/>}
           </div>
           <CharacterPage member={rResult} imageUrl={null} teamName={activeTeam.name} teamColor={activeTeam.color} inherentPowers={getRaceInherentPowers(rResult)} teamBase={activeTeam.baseOfOps||""}/>
           <div style={{display:"flex",gap:10,marginTop:14}}>
-            <button onClick={()=>{setRResult(null);setRStep(0);setRAnswers({});setDeepPhase(0);setDeepAnswers({});setProfileStep(0);setProfileAnswers({});setPowerForgePhase(0);setPowerForgeAnswers({});setRPipelineStage(0);setCostumeAnswers({});setCostumeForgeStep(0);setRHeroAssocId("");setRHeroAssocType("sidekick");setRecruitSuggest(null);setRecruitSuggestLoading(false);}} style={{flex:1,padding:"11px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:10.5,fontFamily:"var(--font-mono)"}}>Regenerate</button>
-            <button onClick={addRecruit} style={{flex:2,padding:"11px",background:`${activeTeam.color}16`,border:`1px solid ${activeTeam.color}`,borderRadius:8,cursor:"pointer",color:activeTeam.color,fontSize:10.5,letterSpacing:"0.1em",textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>{rReforgeId?"Update Member →":"Add to "+activeTeam.abbr+" →"}</button>
+            <button onClick={()=>{setRResult(null);setRStep(0);setRAnswers({});setDeepPhase(0);setDeepAnswers({});setProfileStep(0);setProfileAnswers({});setPowerForgePhase(0);setPowerForgeAnswers({});setRPipelineStage(0);setCostumeAnswers({});setCostumeForgeStep(0);setRHeroAssocId("");setRHeroAssocType("sidekick");setRecruitSuggest(null);setRecruitSuggestLoading(false);}} style={{flex:1,padding:"11px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:11.5,fontFamily:"var(--font-mono)"}}>Regenerate</button>
+            <button onClick={addRecruit} style={{flex:2,padding:"11px",background:`${activeTeam.color}16`,border:`1px solid ${activeTeam.color}`,borderRadius:8,cursor:"pointer",color:activeTeam.color,fontSize:11.5,letterSpacing:"0.1em",textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>{rReforgeId?"Update Member →":"Add to "+activeTeam.abbr+" →"}</button>
           </div>
           <div style={{marginTop:10}}>
-            {!recruitSuggest&&<button onClick={runAIRecruit} disabled={recruitSuggestLoading} style={{width:"100%",padding:"10px",background:"rgba(83,74,183,0.1)",border:"1px solid rgba(83,74,183,0.35)",borderRadius:8,cursor:recruitSuggestLoading?"default":"pointer",color:"#8B82E8",fontSize:10,letterSpacing:"0.1em",textTransform:"uppercase",fontFamily:"var(--font-mono)",opacity:recruitSuggestLoading?0.6:1}}>{recruitSuggestLoading?"Consulting AI...":"AI Suggest Next Recruit →"}</button>}
+            {!recruitSuggest&&<button onClick={runAIRecruit} disabled={recruitSuggestLoading} style={{width:"100%",padding:"10px",background:"rgba(83,74,183,0.1)",border:"1px solid rgba(83,74,183,0.35)",borderRadius:8,cursor:recruitSuggestLoading?"default":"pointer",color:"#8B82E8",fontSize:11,letterSpacing:"0.1em",textTransform:"uppercase",fontFamily:"var(--font-mono)",opacity:recruitSuggestLoading?0.6:1}}>{recruitSuggestLoading?"Consulting AI...":"AI Suggest Next Recruit →"}</button>}
             {recruitSuggest&&!recruitSuggest._err&&(<div style={{padding:"12px 14px",background:"rgba(83,74,183,0.08)",border:"1px solid rgba(83,74,183,0.28)",borderRadius:8}}>
-              <div style={{fontSize:9,letterSpacing:"0.14em",color:"rgba(139,130,232,0.65)",textTransform:"uppercase",marginBottom:8}}>AI Recruit Suggestion</div>
-              <div style={{fontSize:15,fontWeight:"bold",color:"var(--text-primary)",marginBottom:2}}>{recruitSuggest.name}</div>
-              {recruitSuggest.real_name&&<div style={{fontSize:10,color:"var(--text3)",marginBottom:4}}>{recruitSuggest.real_name}</div>}
-              {recruitSuggest.role&&<div style={{fontSize:10,color:"#8B82E8",marginBottom:8,fontWeight:"bold"}}>{recruitSuggest.role}</div>}
-              {recruitSuggest.why_recruit&&<div style={{fontSize:10,color:"var(--text2)",marginBottom:8,lineHeight:1.6}}>{recruitSuggest.why_recruit}</div>}
-              {recruitSuggest.powers?.length>0&&<div style={{fontSize:9,color:"var(--text3)",lineHeight:1.6}}>{recruitSuggest.powers.join(" · ")}</div>}
-              <button onClick={()=>setRecruitSuggest(null)} style={{marginTop:10,padding:"5px 12px",background:"transparent",border:"1px solid var(--border2)",borderRadius:6,cursor:"pointer",color:"var(--text3)",fontSize:9,fontFamily:"var(--font-mono)"}}>Dismiss</button>
+              <div style={{fontSize:10,letterSpacing:"0.14em",color:"rgba(139,130,232,0.65)",textTransform:"uppercase",marginBottom:8}}>AI Recruit Suggestion</div>
+              <div style={{fontSize:16,fontWeight:"bold",color:"var(--text-primary)",marginBottom:2}}>{recruitSuggest.name}</div>
+              {recruitSuggest.real_name&&<div style={{fontSize:11,color:"var(--text3)",marginBottom:4}}>{recruitSuggest.real_name}</div>}
+              {recruitSuggest.role&&<div style={{fontSize:11,color:"#8B82E8",marginBottom:8,fontWeight:"bold"}}>{recruitSuggest.role}</div>}
+              {recruitSuggest.why_recruit&&<div style={{fontSize:11,color:"var(--text2)",marginBottom:8,lineHeight:1.6}}>{recruitSuggest.why_recruit}</div>}
+              {recruitSuggest.powers?.length>0&&<div style={{fontSize:10,color:"var(--text3)",lineHeight:1.6}}>{recruitSuggest.powers.join(" · ")}</div>}
+              <button onClick={()=>setRecruitSuggest(null)} style={{marginTop:10,padding:"5px 12px",background:"transparent",border:"1px solid var(--border2)",borderRadius:6,cursor:"pointer",color:"var(--text3)",fontSize:10,fontFamily:"var(--font-mono)"}}>Dismiss</button>
             </div>)}
-            {recruitSuggest?._err&&<div style={{fontSize:10,color:"#E07070",padding:"8px 12px",background:"rgba(224,112,112,0.08)",border:"1px solid rgba(224,112,112,0.25)",borderRadius:8}}>{recruitSuggest._err}</div>}
+            {recruitSuggest?._err&&<div style={{fontSize:11,color:"#E07070",padding:"8px 12px",background:"rgba(224,112,112,0.08)",border:"1px solid rgba(224,112,112,0.25)",borderRadius:8}}>{recruitSuggest._err}</div>}
           </div>
         </>)}
         {rResult?.error&&(<div style={{padding:"14px",background:"rgba(192,57,43,0.08)",border:"1px solid rgba(192,57,43,0.28)",borderRadius:10}}>
-          <div style={{fontSize:11,color:"#e74c3c",marginBottom:12,fontFamily:"var(--font-mono)"}}>AI generation failed: {rResult.msg}</div>
-          <div style={{fontSize:10,color:"var(--text3)",marginBottom:14,lineHeight:1.6}}>Mandatory fields (Hero Name, Real Name, Race) are filled — you can save a basic profile now and fill in the details later via Edit.</div>
+          <div style={{fontSize:12,color:"#e74c3c",marginBottom:12,fontFamily:"var(--font-mono)"}}>AI generation failed: {rResult.msg}</div>
+          <div style={{fontSize:11,color:"var(--text3)",marginBottom:14,lineHeight:1.6}}>Mandatory fields (Hero Name, Real Name, Race) are filled — you can save a basic profile now and fill in the details later via Edit.</div>
           <div style={{display:"flex",gap:10}}>
-            <button onClick={()=>{setRResult(null);}} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:10.5,fontFamily:"var(--font-mono)"}}>↺ Try Again</button>
-            <button onClick={saveBareRecruit} style={{flex:2,padding:"10px",background:`${activeTeam.color}14`,border:`1px solid ${activeTeam.color}55`,borderRadius:8,cursor:"pointer",color:activeTeam.color,fontSize:10.5,fontFamily:"var(--font-mono)",letterSpacing:"0.06em"}}>Save Without AI →</button>
+            <button onClick={()=>{setRResult(null);}} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:11.5,fontFamily:"var(--font-mono)"}}>↺ Try Again</button>
+            <button onClick={saveBareRecruit} style={{flex:2,padding:"10px",background:`${activeTeam.color}14`,border:`1px solid ${activeTeam.color}55`,borderRadius:8,cursor:"pointer",color:activeTeam.color,fontSize:11.5,fontFamily:"var(--font-mono)",letterSpacing:"0.06em"}}>Save Without AI →</button>
           </div>
         </div>)}
       </>)}
@@ -2631,12 +2639,12 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
         {/* Sub-tab toggle */}
         <div style={{display:"flex",gap:6,marginBottom:18}}>
           {[["pool","☠ Villain Pool"],["factions","⚔ Factions & Alliances"]].map(([id,label])=>(
-            <button key={id} onClick={()=>setVillainSubTab(id)} style={{flex:1,padding:"8px 12px",background:villainSubTab===id?"rgba(139,26,26,0.18)":"var(--bg3)",border:`1px solid ${villainSubTab===id?"rgba(224,112,112,0.5)":"var(--border)"}`,borderRadius:8,cursor:"pointer",color:villainSubTab===id?"#E07070":"var(--text2)",fontSize:11,fontFamily:"var(--font-mono)",fontWeight:villainSubTab===id?"bold":"normal",letterSpacing:"0.03em"}}>{label}</button>
+            <button key={id} onClick={()=>setVillainSubTab(id)} style={{flex:1,padding:"8px 12px",background:villainSubTab===id?"rgba(139,26,26,0.18)":"var(--bg3)",border:`1px solid ${villainSubTab===id?"rgba(224,112,112,0.5)":"var(--border)"}`,borderRadius:8,cursor:"pointer",color:villainSubTab===id?"#E07070":"var(--text2)",fontSize:12,fontFamily:"var(--font-mono)",fontWeight:villainSubTab===id?"bold":"normal",letterSpacing:"0.03em"}}>{label}</button>
           ))}
         </div>
         {villainSubTab==="pool"&&(<>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}>
-          <div><div style={{fontSize:9,letterSpacing:"0.2em",color:"rgba(139,26,26,0.7)",textTransform:"uppercase",marginBottom:4}}>Villain Pool</div><div style={{fontSize:12,color:"var(--text2)"}}>Villains can threaten multiple teams. Create once, assign anywhere.</div></div>
+          <div><div style={{fontSize:10,letterSpacing:"0.2em",color:"rgba(139,26,26,0.7)",textTransform:"uppercase",marginBottom:4}}>Villain Pool</div><div style={{fontSize:13,color:"var(--text2)"}}>Villains can threaten multiple teams. Create once, assign anywhere.</div></div>
         </div>
 
         {/* Active villain creator */}
@@ -2648,15 +2656,15 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
               }}/>
             </div>
             <div style={{display:"flex",justifyContent:"space-between"}}>
-              <span style={{fontSize:10,color:"var(--text2)"}}>{vResult?"Review villain":vProfileMode?(vProfileStep===0?"Presence":`${VILLAIN_PERSONAL_PROFILE[vProfileStep-1]?.section} — ${vProfileStep} of ${VILLAIN_PERSONAL_PROFILE.length}`):vDeepMode?(vDeepPhase===0?"Threat Identity":`Phase ${vDeepPhase} of ${DEEP_VILLAIN_PHASES.length} — ${DEEP_VILLAIN_PHASES[vDeepPhase-1]?.title||""}`):(`Question ${vStep} of ${VILLAIN_QUIZ.length}`)}</span>
-              <span style={{fontSize:10,color:"#E07070"}}>{vResult?"Complete":vProfileMode?`${Math.round((vProfileStep/VILLAIN_PERSONAL_PROFILE.length)*100)}%`:vDeepMode?`${Math.round((vDeepPhase/(DEEP_VILLAIN_PHASES.length+1))*100)}%`:`${Math.round((vStep/(VILLAIN_QUIZ.length+1))*100)}%`}</span>
+              <span style={{fontSize:11,color:"var(--text2)"}}>{vResult?"Review villain":vProfileMode?(vProfileStep===0?"Presence":`${VILLAIN_PERSONAL_PROFILE[vProfileStep-1]?.section} — ${vProfileStep} of ${VILLAIN_PERSONAL_PROFILE.length}`):vDeepMode?(vDeepPhase===0?"Threat Identity":`Phase ${vDeepPhase} of ${DEEP_VILLAIN_PHASES.length} — ${DEEP_VILLAIN_PHASES[vDeepPhase-1]?.title||""}`):(`Question ${vStep} of ${VILLAIN_QUIZ.length}`)}</span>
+              <span style={{fontSize:11,color:"#E07070"}}>{vResult?"Complete":vProfileMode?`${Math.round((vProfileStep/VILLAIN_PERSONAL_PROFILE.length)*100)}%`:vDeepMode?`${Math.round((vDeepPhase/(DEEP_VILLAIN_PHASES.length+1))*100)}%`:`${Math.round((vStep/(VILLAIN_QUIZ.length+1))*100)}%`}</span>
             </div>
           </div>
           {!vResult&&!vDeepMode&&!vProfileMode&&vStep>=1&&vStep<=VILLAIN_QUIZ.length&&vCurrentQ&&(<div style={s.card}>
-            <div style={{fontSize:15,fontWeight:"bold",color:"var(--text-primary)",marginBottom:18,lineHeight:1.4}}>{vCurrentQ.question}</div>
+            <div style={{fontSize:16,fontWeight:"bold",color:"var(--text-primary)",marginBottom:18,lineHeight:1.4}}>{vCurrentQ.question}</div>
             {vCurrentQ.options.map(opt=><button key={opt.id} onClick={()=>{setVAnswers(p=>({...p,[vCurrentQ.id]:opt.id}));if(vStep<VILLAIN_QUIZ.length)setVStep(p=>p+1);}} style={s.optBtn(vAnswers[vCurrentQ.id]===opt.id,"#8B1A1A")}>{opt.label}</button>)}
             <div style={{display:"flex",gap:10,marginTop:10}}>
-              <button onClick={()=>{if(vStep===1){setVStep(0);}else setVStep(p=>p-1);}} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text3)",fontSize:10.5,fontFamily:"var(--font-mono)"}}>← Back</button>
+              <button onClick={()=>{if(vStep===1){setVStep(0);}else setVStep(p=>p-1);}} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text3)",fontSize:11.5,fontFamily:"var(--font-mono)"}}>← Back</button>
               {vStep===VILLAIN_QUIZ.length&&vAnswers[vCurrentQ.id]&&<button onClick={generateVillain} disabled={vLoading} style={{flex:2,...s.bigBtn(vLoading,"#8B1A1A"),marginTop:0}}>{vLoading?"Forging threat...":"Generate Villain →"}</button>}
             </div>
           </div>)}
@@ -2667,7 +2675,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
             return(<>
               <DeepLoreQuiz phase={vDeepPhase-1} phases={DEEP_VILLAIN_PHASES} answers={vDeepAnswers} onAnswer={(qid,oid)=>setVDeepAnswers(p=>({...p,[qid]:oid}))} accentColor="#8B1A1A"/>
               <div style={{display:"flex",gap:10,marginTop:14}}>
-                <button onClick={()=>setVDeepPhase(p=>Math.max(0,p-1))} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text3)",fontSize:10.5,fontFamily:"var(--font-mono)"}}>← Back</button>
+                <button onClick={()=>setVDeepPhase(p=>Math.max(0,p-1))} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text3)",fontSize:11.5,fontFamily:"var(--font-mono)"}}>← Back</button>
                 {!isLast&&<button disabled={!phaseComplete} onClick={()=>setVDeepPhase(p=>p+1)} style={{flex:2,...s.bigBtn(!phaseComplete,"#8B1A1A"),marginTop:0}}>{phaseComplete?`Next: ${DEEP_VILLAIN_PHASES[vDeepPhase]?.title||"Generate"} →`:"Answer all questions to continue"}</button>}
                 {isLast&&<button disabled={!phaseComplete||vLoading} onClick={generateVillainDeep} style={{flex:2,...s.bigBtn(!phaseComplete||vLoading,"#8B1A1A"),marginTop:0}}>{vLoading?"Forging threat...":phaseComplete?"Forge the Threat →":"Answer all questions"}</button>}
               </div>
@@ -2678,36 +2686,36 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
             const secComplete=sec.questions.every(q=>vProfileAnswers[q.id]);
             const isLast=vProfileStep===VILLAIN_PERSONAL_PROFILE.length;
             return(<div style={s.card}>
-              <div style={{fontSize:9,letterSpacing:"0.12em",color:"rgba(139,26,26,0.6)",textTransform:"uppercase",marginBottom:12}}>{sec.section} · {vProfileStep} of {VILLAIN_PERSONAL_PROFILE.length}</div>
+              <div style={{fontSize:10,letterSpacing:"0.12em",color:"rgba(139,26,26,0.6)",textTransform:"uppercase",marginBottom:12}}>{sec.section} · {vProfileStep} of {VILLAIN_PERSONAL_PROFILE.length}</div>
               {sec.questions.map(q=>(<div key={q.id} style={{marginBottom:14}}>
-                <div style={{fontSize:13,fontWeight:"bold",color:"var(--text-primary)",marginBottom:8,lineHeight:1.4}}>{q.q}</div>
+                <div style={{fontSize:14,fontWeight:"bold",color:"var(--text-primary)",marginBottom:8,lineHeight:1.4}}>{q.q}</div>
                 {q.options.map(opt=><button key={opt.id} onClick={()=>setVProfileAnswers(p=>({...p,[q.id]:opt.id}))} style={s.optBtn(vProfileAnswers[q.id]===opt.id,"#8B1A1A")}>{opt.label}</button>)}
               </div>))}
               <div style={{display:"flex",gap:10,marginTop:6}}>
-                <button onClick={()=>setVProfileStep(p=>Math.max(0,p-1))} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text3)",fontSize:10.5,fontFamily:"var(--font-mono)"}}>← Back</button>
+                <button onClick={()=>setVProfileStep(p=>Math.max(0,p-1))} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text3)",fontSize:11.5,fontFamily:"var(--font-mono)"}}>← Back</button>
                 {!isLast&&<button disabled={!secComplete} onClick={()=>setVProfileStep(p=>p+1)} style={{flex:2,...s.bigBtn(!secComplete,"#8B1A1A"),marginTop:0}}>{secComplete?`Next: ${VILLAIN_PERSONAL_PROFILE[vProfileStep]?.section} →`:"Answer all questions to continue"}</button>}
                 {isLast&&<button disabled={!secComplete||vLoading} onClick={generateVillainProfile} style={{flex:2,...s.bigBtn(!secComplete||vLoading,"#8B1A1A"),marginTop:0}}>{vLoading?"Forging threat...":secComplete?"Forge the Threat →":"Answer all questions"}</button>}
               </div>
             </div>);
           })()}
           {vLoading&&<div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
-            {aiStreamText&&<div style={{flex:1,padding:"10px 12px",background:"var(--bg2)",border:"1px solid rgba(139,26,26,0.3)",borderRadius:8,fontFamily:"var(--font-mono)",fontSize:9,color:"var(--text3)",maxHeight:72,overflowY:"auto",whiteSpace:"pre-wrap",wordBreak:"break-all",lineHeight:1.5}}>{aiStreamText}</div>}
-            {!aiStreamText&&<div style={{flex:1,padding:"10px 12px",background:"var(--bg2)",border:"1px solid rgba(139,26,26,0.3)",borderRadius:8,fontSize:9,color:"var(--text3)",fontFamily:"var(--font-mono)"}}>Waiting for model response…</div>}
-            <button onClick={()=>genControllerRef.current?.abort()} style={{flexShrink:0,padding:"8px 14px",background:"rgba(224,112,112,0.1)",border:"1px solid rgba(224,112,112,0.35)",borderRadius:8,cursor:"pointer",color:"#E07070",fontSize:9,fontFamily:"var(--font-mono)",whiteSpace:"nowrap"}}>✕ Cancel</button>
+            {aiStreamText&&<div style={{flex:1,padding:"10px 12px",background:"var(--bg2)",border:"1px solid rgba(139,26,26,0.3)",borderRadius:8,fontFamily:"var(--font-mono)",fontSize:10,color:"var(--text3)",maxHeight:72,overflowY:"auto",whiteSpace:"pre-wrap",wordBreak:"break-all",lineHeight:1.5}}>{aiStreamText}</div>}
+            {!aiStreamText&&<div style={{flex:1,padding:"10px 12px",background:"var(--bg2)",border:"1px solid rgba(139,26,26,0.3)",borderRadius:8,fontSize:10,color:"var(--text3)",fontFamily:"var(--font-mono)"}}>Waiting for model response…</div>}
+            <button onClick={()=>genControllerRef.current?.abort()} style={{flexShrink:0,padding:"8px 14px",background:"rgba(224,112,112,0.1)",border:"1px solid rgba(224,112,112,0.35)",borderRadius:8,cursor:"pointer",color:"#E07070",fontSize:10,fontFamily:"var(--font-mono)",whiteSpace:"nowrap"}}>✕ Cancel</button>
           </div>}
           {vResult&&!vResult.error&&(<>
             <CharacterPage member={vResult} imageUrl={null} isVillain={true} inherentPowers={getRaceInherentPowers(vResult)}/>
             <div style={{display:"flex",gap:10,marginTop:14,marginBottom:20}}>
-              <button onClick={()=>{setVResult(null);setVStep(0);setVAnswers({});setVDeepPhase(0);setVDeepAnswers({});setVProfileStep(0);setVProfileAnswers({});}} style={{flex:1,padding:"11px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:10.5,fontFamily:"var(--font-mono)"}}>Regenerate</button>
-              <button onClick={addVillain} style={{flex:2,padding:"11px",background:"rgba(139,26,26,0.2)",border:"1px solid #8B1A1A",borderRadius:8,cursor:"pointer",color:"#E07070",fontSize:10.5,letterSpacing:"0.1em",textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>{vReforgeId?"Update Villain →":"Add to Pool →"}</button>
+              <button onClick={()=>{setVResult(null);setVStep(0);setVAnswers({});setVDeepPhase(0);setVDeepAnswers({});setVProfileStep(0);setVProfileAnswers({});}} style={{flex:1,padding:"11px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:11.5,fontFamily:"var(--font-mono)"}}>Regenerate</button>
+              <button onClick={addVillain} style={{flex:2,padding:"11px",background:"rgba(139,26,26,0.2)",border:"1px solid #8B1A1A",borderRadius:8,cursor:"pointer",color:"#E07070",fontSize:11.5,letterSpacing:"0.1em",textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>{vReforgeId?"Update Villain →":"Add to Pool →"}</button>
             </div>
           </>)}
           {vResult?.error&&(<div style={{padding:"14px",background:"rgba(192,57,43,0.08)",border:"1px solid rgba(192,57,43,0.28)",borderRadius:10,marginBottom:16}}>
-            <div style={{fontSize:11,color:"#e74c3c",marginBottom:12,fontFamily:"var(--font-mono)"}}>AI generation failed: {vResult.msg}</div>
-            <div style={{fontSize:10,color:"var(--text3)",marginBottom:14,lineHeight:1.6}}>You can save a basic villain profile now and fill in powers, origin, and stats later via Edit.</div>
+            <div style={{fontSize:12,color:"#e74c3c",marginBottom:12,fontFamily:"var(--font-mono)"}}>AI generation failed: {vResult.msg}</div>
+            <div style={{fontSize:11,color:"var(--text3)",marginBottom:14,lineHeight:1.6}}>You can save a basic villain profile now and fill in powers, origin, and stats later via Edit.</div>
             <div style={{display:"flex",gap:10}}>
-              <button onClick={()=>{setVResult(null);}} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:10.5,fontFamily:"var(--font-mono)"}}>↺ Try Again</button>
-              <button onClick={saveBareVillain} style={{flex:2,padding:"10px",background:"rgba(139,26,26,0.15)",border:"1px solid rgba(139,26,26,0.5)",borderRadius:8,cursor:"pointer",color:"#E07070",fontSize:10.5,fontFamily:"var(--font-mono)",letterSpacing:"0.06em"}}>Save Without AI →</button>
+              <button onClick={()=>{setVResult(null);}} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:11.5,fontFamily:"var(--font-mono)"}}>↺ Try Again</button>
+              <button onClick={saveBareVillain} style={{flex:2,padding:"10px",background:"rgba(139,26,26,0.15)",border:"1px solid rgba(139,26,26,0.5)",borderRadius:8,cursor:"pointer",color:"#E07070",fontSize:11.5,fontFamily:"var(--font-mono)",letterSpacing:"0.06em"}}>Save Without AI →</button>
             </div>
           </div>)}
         </>)}
@@ -2715,25 +2723,25 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
         {vStep===0&&vDeepPhase===0&&vProfileStep===0&&!vResult&&(<>
           {/* Villain creator setup */}
           <div style={{...s.card,marginBottom:20}}>
-            <div style={{fontSize:13,fontWeight:"bold",color:"var(--text-primary)",marginBottom:12}}>Create New Villain</div>
+            <div style={{fontSize:14,fontWeight:"bold",color:"var(--text-primary)",marginBottom:12}}>Create New Villain</div>
             <div style={{display:"flex",gap:6,marginBottom:14}}>
               <button onClick={()=>{setVDeepMode(false);setVProfileMode(false);setVAnswers({});setVDeepAnswers({});setVProfileAnswers({});}} style={{flex:1,padding:"8px",background:!vDeepMode&&!vProfileMode?"rgba(139,26,26,0.15)":"var(--bg3)",border:`1px solid ${!vDeepMode&&!vProfileMode?"rgba(139,26,26,0.5)":"var(--border2)"}`,borderRadius:8,cursor:"pointer",fontFamily:"var(--font-mono)",textAlign:"center"}}>
-                <div style={{fontSize:11,fontWeight:"bold",color:!vDeepMode&&!vProfileMode?"#E07070":"var(--text2)"}}>⚡ Threat Assessment</div>
-                <div style={{fontSize:8.5,color:"var(--text3)",marginTop:1}}>5 threat questions</div>
+                <div style={{fontSize:12,fontWeight:"bold",color:!vDeepMode&&!vProfileMode?"#E07070":"var(--text2)"}}>⚡ Threat Assessment</div>
+                <div style={{fontSize:9.5,color:"var(--text3)",marginTop:1}}>5 threat questions</div>
               </button>
               <button onClick={()=>{setVDeepMode(true);setVProfileMode(false);setVStep(0);setVAnswers({});setVDeepAnswers({});setVProfileAnswers({});}} style={{flex:1,padding:"8px",background:vDeepMode?"rgba(139,26,26,0.15)":"var(--bg3)",border:`1px solid ${vDeepMode?"rgba(139,26,26,0.5)":"var(--border2)"}`,borderRadius:8,cursor:"pointer",fontFamily:"var(--font-mono)",textAlign:"center"}}>
-                <div style={{fontSize:11,fontWeight:"bold",color:vDeepMode?"#E07070":"var(--text2)"}}>☠ Deep Threat</div>
-                <div style={{fontSize:8.5,color:"var(--text3)",marginTop:1}}>7 villain phases</div>
+                <div style={{fontSize:12,fontWeight:"bold",color:vDeepMode?"#E07070":"var(--text2)"}}>☠ Deep Threat</div>
+                <div style={{fontSize:9.5,color:"var(--text3)",marginTop:1}}>7 villain phases</div>
               </button>
               <button onClick={()=>{setVProfileMode(true);setVDeepMode(false);setVStep(0);setVAnswers({});setVDeepAnswers({});setVProfileAnswers({});}} style={{flex:1,padding:"8px",background:vProfileMode?"rgba(139,26,26,0.15)":"var(--bg3)",border:`1px solid ${vProfileMode?"rgba(139,26,26,0.5)":"var(--border2)"}`,borderRadius:8,cursor:"pointer",fontFamily:"var(--font-mono)",textAlign:"center"}}>
-                <div style={{fontSize:11,fontWeight:"bold",color:vProfileMode?"#E07070":"var(--text2)"}}>🩸 Threat Profile</div>
-                <div style={{fontSize:8.5,color:"var(--text3)",marginTop:1}}>5 menace dimensions</div>
+                <div style={{fontSize:12,fontWeight:"bold",color:vProfileMode?"#E07070":"var(--text2)"}}>🩸 Threat Profile</div>
+                <div style={{fontSize:9.5,color:"var(--text3)",marginTop:1}}>5 menace dimensions</div>
               </button>
             </div>
             <span style={s.lbl}>Real Name (optional)</span>
             <input type="text" placeholder="e.g. Marcus Vane" value={vName} onChange={e=>setVName(e.target.value)} style={{marginBottom:10}}/>
             <span style={s.lbl}>Gender</span>
-            <select value={vGender} onChange={e=>setVGender(e.target.value)} style={{width:"100%",padding:"8px 10px",background:"var(--bg2)",border:"1px solid var(--border2)",borderRadius:7,color:"var(--text-primary)",fontSize:11,marginTop:4,marginBottom:14}}>
+            <select value={vGender} onChange={e=>setVGender(e.target.value)} style={{width:"100%",padding:"8px 10px",background:"var(--bg2)",border:"1px solid var(--border2)",borderRadius:7,color:"var(--text-primary)",fontSize:12,marginTop:4,marginBottom:14}}>
               <option value="Male">Male</option>
               <option value="Female">Female</option>
               <option value="Non-binary">Non-binary</option>
@@ -2751,7 +2759,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
 
           {/* Existing villain pool */}
           {villainPool.length>0&&(<>
-            <div style={{fontSize:9,letterSpacing:"0.2em",color:"rgba(139,26,26,0.7)",textTransform:"uppercase",marginBottom:12}}>Active Threats — {villainPool.length} villain{villainPool.length!==1?"s":""}</div>
+            <div style={{fontSize:10,letterSpacing:"0.2em",color:"rgba(139,26,26,0.7)",textTransform:"uppercase",marginBottom:12}}>Active Threats — {villainPool.length} villain{villainPool.length!==1?"s":""}</div>
             <div style={{display:"flex",flexDirection:"column",gap:10}}>
               {villainPool.map(v=>(<div key={v.id} style={{background:"rgba(139,26,26,0.08)",border:"1px solid rgba(139,26,26,0.25)",borderRadius:10,padding:"14px 16px"}}>
                 {/* Image + info row */}
@@ -2762,97 +2770,97 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                     <div onClick={()=>{if(images[v.id]){setDossierFromTab(tab);setTab("universe");setUniverseDossierTarget({type:"villain",id:v.id});}else{fileRefs.current[v.id]?.click();}}} style={{width:80,height:108,borderRadius:10,overflow:"hidden",cursor:"pointer",background:"rgba(139,26,26,0.14)",border:`2px dashed ${images[v.id]?"rgba(224,112,112,0.5)":"rgba(224,112,112,0.25)"}`,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:4,position:"relative",flexShrink:0}}>
                       {images[v.id]
                         ?<><img src={images[v.id]} alt={v.heroName} style={{width:"100%",height:"100%",objectFit:"cover",objectPosition:"top",position:"absolute",inset:0}}/><div style={{position:"absolute",inset:0,background:"linear-gradient(to top,rgba(0,0,0,0.6) 0%,transparent 50%)"}}/>
-                           <button onClick={e=>{e.stopPropagation();fileRefs.current[v.id]?.click();}} style={{position:"absolute",bottom:4,left:0,right:0,margin:"0 auto",width:"fit-content",fontSize:7,padding:"2px 8px",background:"rgba(0,0,0,0.7)",border:"1px solid rgba(224,112,112,0.4)",borderRadius:4,cursor:"pointer",color:"#E07070",fontFamily:"var(--font-mono)",lineHeight:1.4}}>↑ Change</button></>
-                        :<><div style={{width:36,height:36,borderRadius:"50%",background:"rgba(139,26,26,0.3)",display:"flex",alignItems:"center",justifyContent:"center",marginBottom:2}}><span style={{fontSize:13,fontWeight:"bold",color:"#E07070"}}>{v.initials}</span></div><div style={{fontSize:7.5,color:"rgba(224,112,112,0.55)",textAlign:"center",lineHeight:1.5,letterSpacing:"0.05em"}}>↑ Upload<br/>Portrait</div></>
+                           <button onClick={e=>{e.stopPropagation();fileRefs.current[v.id]?.click();}} style={{position:"absolute",bottom:4,left:0,right:0,margin:"0 auto",width:"fit-content",fontSize:8,padding:"2px 8px",background:"rgba(0,0,0,0.7)",border:"1px solid rgba(224,112,112,0.4)",borderRadius:4,cursor:"pointer",color:"#E07070",fontFamily:"var(--font-mono)",lineHeight:1.4}}>↑ Change</button></>
+                        :<><div style={{width:36,height:36,borderRadius:"50%",background:"rgba(139,26,26,0.3)",display:"flex",alignItems:"center",justifyContent:"center",marginBottom:2}}><span style={{fontSize:14,fontWeight:"bold",color:"#E07070"}}>{v.initials}</span></div><div style={{fontSize:8.5,color:"rgba(224,112,112,0.55)",textAlign:"center",lineHeight:1.5,letterSpacing:"0.05em"}}>↑ Upload<br/>Portrait</div></>
                       }
                     </div>
                   </div>
                   {/* Info + actions */}
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:8,gap:6}}>
-                      <div><div style={{fontSize:13,fontWeight:"bold",color:"var(--text-primary)"}}>{v.heroName}</div><div style={{fontSize:10,color:"var(--text2)"}}>{v.realName} · {v.role}</div></div>
+                      <div><div style={{fontSize:14,fontWeight:"bold",color:"var(--text-primary)"}}>{v.heroName}</div><div style={{fontSize:11,color:"var(--text2)"}}>{v.realName} · {v.role}</div></div>
                       <div style={{display:"flex",gap:4,flexWrap:"wrap",justifyContent:"flex-end",flexShrink:0}}>
-                        <button onClick={()=>{if(editingVillainTarget===v.id){setEditingVillainTarget(null);}else{setVtDraft({teams:v.targetTeams||[],heroes:v.targetHeroes||[],realName:v.realName||"",heroName:v.heroName||"",hometown:v.hometown||"",baseOfOps:v.baseOfOps||""});setEditingVillainTarget(v.id);setRedeemingVillain(null);setVInlinePrompt(null);}}} style={{fontSize:9,padding:"3px 9px",background:editingVillainTarget===v.id?"rgba(139,26,26,0.15)":"var(--bg3)",border:`1px solid ${editingVillainTarget===v.id?"rgba(139,26,26,0.5)":"var(--border)"}`,borderRadius:6,cursor:"pointer",color:editingVillainTarget===v.id?"#E07070":"var(--text3)",fontFamily:"var(--font-mono)"}}>Edit</button>
-                        <button onClick={()=>{setRedeemingVillain(redeemingVillain===v.id?null:v.id);setVInlinePrompt(null);}} style={{fontSize:9,padding:"3px 9px",background:redeemingVillain===v.id?"rgba(93,202,165,0.12)":"var(--bg3)",border:`1px solid ${redeemingVillain===v.id?"rgba(93,202,165,0.4)":"var(--border)"}`,borderRadius:6,cursor:"pointer",color:redeemingVillain===v.id?"#5DCAA5":"var(--text3)",fontFamily:"var(--font-mono)"}}>Recruit</button>
-                        <button onClick={()=>{vInlinePrompt?.villainId===v.id?setVInlinePrompt(null):generateVillainPromptInline(v);setEditingVillainTarget(null);setRedeemingVillain(null);}} style={{fontSize:9,padding:"3px 9px",background:vInlinePrompt?.villainId===v.id?"rgba(139,26,26,0.2)":"var(--bg3)",border:`1px solid ${vInlinePrompt?.villainId===v.id?"rgba(224,112,112,0.5)":"var(--border)"}`,borderRadius:6,cursor:"pointer",color:vInlinePrompt?.villainId===v.id?"#E07070":"var(--text3)",fontFamily:"var(--font-mono)"}}>🎨 Prompt</button>
-                        <button onClick={()=>startVillainReforge(v)} style={{fontSize:9,padding:"3px 9px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:6,cursor:"pointer",color:"var(--text3)",fontFamily:"var(--font-mono)"}}>Reforge</button>
-                        <button onClick={()=>removeVillain(v.id)} style={{fontSize:9,padding:"3px 9px",background:"rgba(163,45,45,0.1)",border:"1px solid rgba(163,45,45,0.28)",borderRadius:6,cursor:"pointer",color:"#e74c3c",fontFamily:"var(--font-mono)"}}>Remove</button>
+                        <button onClick={()=>{if(editingVillainTarget===v.id){setEditingVillainTarget(null);}else{setVtDraft({teams:v.targetTeams||[],heroes:v.targetHeroes||[],realName:v.realName||"",heroName:v.heroName||"",hometown:v.hometown||"",baseOfOps:v.baseOfOps||""});setEditingVillainTarget(v.id);setRedeemingVillain(null);setVInlinePrompt(null);}}} style={{fontSize:10,padding:"3px 9px",background:editingVillainTarget===v.id?"rgba(139,26,26,0.15)":"var(--bg3)",border:`1px solid ${editingVillainTarget===v.id?"rgba(139,26,26,0.5)":"var(--border)"}`,borderRadius:6,cursor:"pointer",color:editingVillainTarget===v.id?"#E07070":"var(--text3)",fontFamily:"var(--font-mono)"}}>Edit</button>
+                        <button onClick={()=>{setRedeemingVillain(redeemingVillain===v.id?null:v.id);setVInlinePrompt(null);}} style={{fontSize:10,padding:"3px 9px",background:redeemingVillain===v.id?"rgba(93,202,165,0.12)":"var(--bg3)",border:`1px solid ${redeemingVillain===v.id?"rgba(93,202,165,0.4)":"var(--border)"}`,borderRadius:6,cursor:"pointer",color:redeemingVillain===v.id?"#5DCAA5":"var(--text3)",fontFamily:"var(--font-mono)"}}>Recruit</button>
+                        <button onClick={()=>{vInlinePrompt?.villainId===v.id?setVInlinePrompt(null):generateVillainPromptInline(v);setEditingVillainTarget(null);setRedeemingVillain(null);}} style={{fontSize:10,padding:"3px 9px",background:vInlinePrompt?.villainId===v.id?"rgba(139,26,26,0.2)":"var(--bg3)",border:`1px solid ${vInlinePrompt?.villainId===v.id?"rgba(224,112,112,0.5)":"var(--border)"}`,borderRadius:6,cursor:"pointer",color:vInlinePrompt?.villainId===v.id?"#E07070":"var(--text3)",fontFamily:"var(--font-mono)"}}>🎨 Prompt</button>
+                        <button onClick={()=>startVillainReforge(v)} style={{fontSize:10,padding:"3px 9px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:6,cursor:"pointer",color:"var(--text3)",fontFamily:"var(--font-mono)"}}>Reforge</button>
+                        <button onClick={()=>removeVillain(v.id)} style={{fontSize:10,padding:"3px 9px",background:"rgba(163,45,45,0.1)",border:"1px solid rgba(163,45,45,0.28)",borderRadius:6,cursor:"pointer",color:"#e74c3c",fontFamily:"var(--font-mono)"}}>Remove</button>
                       </div>
                     </div>
-                    <div style={{fontSize:11,color:"var(--text2)",fontStyle:"italic",lineHeight:1.5,marginBottom:8}}>{v.tagline}</div>
+                    <div style={{fontSize:12,color:"var(--text2)",fontStyle:"italic",lineHeight:1.5,marginBottom:8}}>{v.tagline}</div>
                     {(v.targetTeams?.length>0||v.targetHeroes?.length>0)&&!editingVillainTarget&&(<div style={{marginBottom:8}}>
                       {v.targetTeams&&v.targetTeams.length>0&&(<div style={{marginBottom:v.targetHeroes?.length>0?6:0}}>
-                        <div style={{fontSize:9,letterSpacing:"0.12em",color:"rgba(139,26,26,0.6)",textTransform:"uppercase",marginBottom:5}}>Target Teams</div>
+                        <div style={{fontSize:10,letterSpacing:"0.12em",color:"rgba(139,26,26,0.6)",textTransform:"uppercase",marginBottom:5}}>Target Teams</div>
                         <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                          {v.targetTeams.map(tid=>{const t=teams.find(x=>x.id===tid);return t?<span key={tid} style={{fontSize:9,padding:"2px 9px",background:`${t.color}14`,border:`1px solid ${t.color}33`,borderRadius:20,color:t.color}}>{t.abbr} · {t.name}</span>:null;})}
+                          {v.targetTeams.map(tid=>{const t=teams.find(x=>x.id===tid);return t?<span key={tid} style={{fontSize:10,padding:"2px 9px",background:`${t.color}14`,border:`1px solid ${t.color}33`,borderRadius:20,color:t.color}}>{t.abbr} · {t.name}</span>:null;})}
                         </div>
                       </div>)}
                       {v.targetHeroes&&v.targetHeroes.length>0&&(<div>
-                        <div style={{fontSize:9,letterSpacing:"0.12em",color:"rgba(139,26,26,0.6)",textTransform:"uppercase",marginBottom:5}}>Targeting</div>
+                        <div style={{fontSize:10,letterSpacing:"0.12em",color:"rgba(139,26,26,0.6)",textTransform:"uppercase",marginBottom:5}}>Targeting</div>
                         <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                          {v.targetHeroes.map(hid=>{const h=allCharacters.find(x=>x.id===hid);return h?<span key={hid} style={{fontSize:9,padding:"2px 9px",background:`${h.color}14`,border:`1px solid ${h.color}33`,borderRadius:20,color:h.color}}>{h.heroName}</span>:null;})}
+                          {v.targetHeroes.map(hid=>{const h=allCharacters.find(x=>x.id===hid);return h?<span key={hid} style={{fontSize:10,padding:"2px 9px",background:`${h.color}14`,border:`1px solid ${h.color}33`,borderRadius:20,color:h.color}}>{h.heroName}</span>:null;})}
                         </div>
                       </div>)}
                     </div>)}
                     {editingVillainTarget===v.id&&(<div style={{borderTop:"1px solid rgba(139,26,26,0.2)",paddingTop:10,marginTop:4}}>
                       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
-                        <div><div style={{fontSize:9,letterSpacing:"0.12em",color:"rgba(139,26,26,0.6)",textTransform:"uppercase",marginBottom:5}}>Real Name</div><input type="text" value={vtDraft.realName} onChange={e=>setVtDraft(p=>({...p,realName:e.target.value}))} placeholder={v.realName||"Real name"} style={{width:"100%",padding:"6px 8px",background:"var(--bg2)",border:"1px solid rgba(139,26,26,0.3)",borderRadius:6,color:"var(--text-primary)",fontSize:10,fontFamily:"var(--font-mono)",boxSizing:"border-box"}}/></div>
-                        <div><div style={{fontSize:9,letterSpacing:"0.12em",color:"rgba(139,26,26,0.6)",textTransform:"uppercase",marginBottom:5}}>Villain Name</div><input type="text" value={vtDraft.heroName} onChange={e=>setVtDraft(p=>({...p,heroName:e.target.value}))} placeholder={v.heroName||"Villain name"} style={{width:"100%",padding:"6px 8px",background:"var(--bg2)",border:"1px solid rgba(139,26,26,0.3)",borderRadius:6,color:"var(--text-primary)",fontSize:10,fontFamily:"var(--font-mono)",boxSizing:"border-box"}}/></div>
-                        <div><div style={{fontSize:9,letterSpacing:"0.12em",color:"rgba(139,26,26,0.6)",textTransform:"uppercase",marginBottom:5}}>Hometown</div><input type="text" value={vtDraft.hometown} onChange={e=>setVtDraft(p=>({...p,hometown:e.target.value}))} placeholder="e.g. Chicago, IL" style={{width:"100%",padding:"6px 8px",background:"var(--bg2)",border:"1px solid rgba(139,26,26,0.3)",borderRadius:6,color:"var(--text-primary)",fontSize:10,fontFamily:"var(--font-mono)",boxSizing:"border-box"}}/></div>
-                        <div><div style={{fontSize:9,letterSpacing:"0.12em",color:"rgba(139,26,26,0.6)",textTransform:"uppercase",marginBottom:5}}>Base of Operations</div><input type="text" value={vtDraft.baseOfOps} onChange={e=>setVtDraft(p=>({...p,baseOfOps:e.target.value}))} placeholder="e.g. Abandoned factory" style={{width:"100%",padding:"6px 8px",background:"var(--bg2)",border:"1px solid rgba(139,26,26,0.3)",borderRadius:6,color:"var(--text-primary)",fontSize:10,fontFamily:"var(--font-mono)",boxSizing:"border-box"}}/></div>
+                        <div><div style={{fontSize:10,letterSpacing:"0.12em",color:"rgba(139,26,26,0.6)",textTransform:"uppercase",marginBottom:5}}>Real Name</div><input type="text" value={vtDraft.realName} onChange={e=>setVtDraft(p=>({...p,realName:e.target.value}))} placeholder={v.realName||"Real name"} style={{width:"100%",padding:"6px 8px",background:"var(--bg2)",border:"1px solid rgba(139,26,26,0.3)",borderRadius:6,color:"var(--text-primary)",fontSize:11,fontFamily:"var(--font-mono)",boxSizing:"border-box"}}/></div>
+                        <div><div style={{fontSize:10,letterSpacing:"0.12em",color:"rgba(139,26,26,0.6)",textTransform:"uppercase",marginBottom:5}}>Villain Name</div><input type="text" value={vtDraft.heroName} onChange={e=>setVtDraft(p=>({...p,heroName:e.target.value}))} placeholder={v.heroName||"Villain name"} style={{width:"100%",padding:"6px 8px",background:"var(--bg2)",border:"1px solid rgba(139,26,26,0.3)",borderRadius:6,color:"var(--text-primary)",fontSize:11,fontFamily:"var(--font-mono)",boxSizing:"border-box"}}/></div>
+                        <div><div style={{fontSize:10,letterSpacing:"0.12em",color:"rgba(139,26,26,0.6)",textTransform:"uppercase",marginBottom:5}}>Hometown</div><input type="text" value={vtDraft.hometown} onChange={e=>setVtDraft(p=>({...p,hometown:e.target.value}))} placeholder="e.g. Chicago, IL" style={{width:"100%",padding:"6px 8px",background:"var(--bg2)",border:"1px solid rgba(139,26,26,0.3)",borderRadius:6,color:"var(--text-primary)",fontSize:11,fontFamily:"var(--font-mono)",boxSizing:"border-box"}}/></div>
+                        <div><div style={{fontSize:10,letterSpacing:"0.12em",color:"rgba(139,26,26,0.6)",textTransform:"uppercase",marginBottom:5}}>Base of Operations</div><input type="text" value={vtDraft.baseOfOps} onChange={e=>setVtDraft(p=>({...p,baseOfOps:e.target.value}))} placeholder="e.g. Abandoned factory" style={{width:"100%",padding:"6px 8px",background:"var(--bg2)",border:"1px solid rgba(139,26,26,0.3)",borderRadius:6,color:"var(--text-primary)",fontSize:11,fontFamily:"var(--font-mono)",boxSizing:"border-box"}}/></div>
                       </div>
-                      <div style={{fontSize:9,letterSpacing:"0.12em",color:"rgba(139,26,26,0.6)",textTransform:"uppercase",marginBottom:8}}>Target Teams</div>
+                      <div style={{fontSize:10,letterSpacing:"0.12em",color:"rgba(139,26,26,0.6)",textTransform:"uppercase",marginBottom:8}}>Target Teams</div>
                       <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:12}}>
-                        {teams.map(t=><button key={t.id} onClick={()=>setVtDraft(p=>({...p,teams:p.teams.includes(t.id)?p.teams.filter(x=>x!==t.id):[...p.teams,t.id]}))} style={{fontSize:9,padding:"3px 10px",background:vtDraft.teams.includes(t.id)?`${t.color}22`:"var(--bg3)",border:`1px solid ${vtDraft.teams.includes(t.id)?t.color:"var(--border)"}`,borderRadius:20,cursor:"pointer",color:vtDraft.teams.includes(t.id)?t.color:"var(--text3)",fontFamily:"var(--font-mono)"}}>{t.name}</button>)}
+                        {teams.map(t=><button key={t.id} onClick={()=>setVtDraft(p=>({...p,teams:p.teams.includes(t.id)?p.teams.filter(x=>x!==t.id):[...p.teams,t.id]}))} style={{fontSize:10,padding:"3px 10px",background:vtDraft.teams.includes(t.id)?`${t.color}22`:"var(--bg3)",border:`1px solid ${vtDraft.teams.includes(t.id)?t.color:"var(--border)"}`,borderRadius:20,cursor:"pointer",color:vtDraft.teams.includes(t.id)?t.color:"var(--text3)",fontFamily:"var(--font-mono)"}}>{t.name}</button>)}
                       </div>
-                      <div style={{fontSize:9,letterSpacing:"0.12em",color:"rgba(139,26,26,0.6)",textTransform:"uppercase",marginBottom:8}}>Specific Heroes</div>
+                      <div style={{fontSize:10,letterSpacing:"0.12em",color:"rgba(139,26,26,0.6)",textTransform:"uppercase",marginBottom:8}}>Specific Heroes</div>
                       <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:12}}>
-                        {allCharacters.map(h=><button key={h.id} onClick={()=>setVtDraft(p=>({...p,heroes:p.heroes.includes(h.id)?p.heroes.filter(x=>x!==h.id):[...p.heroes,h.id]}))} style={{fontSize:9,padding:"3px 10px",background:vtDraft.heroes.includes(h.id)?`${h.color}22`:"var(--bg3)",border:`1px solid ${vtDraft.heroes.includes(h.id)?h.color:"var(--border)"}`,borderRadius:20,cursor:"pointer",color:vtDraft.heroes.includes(h.id)?h.color:"var(--text3)",fontFamily:"var(--font-mono)"}}>{h.heroName}</button>)}
+                        {allCharacters.map(h=><button key={h.id} onClick={()=>setVtDraft(p=>({...p,heroes:p.heroes.includes(h.id)?p.heroes.filter(x=>x!==h.id):[...p.heroes,h.id]}))} style={{fontSize:10,padding:"3px 10px",background:vtDraft.heroes.includes(h.id)?`${h.color}22`:"var(--bg3)",border:`1px solid ${vtDraft.heroes.includes(h.id)?h.color:"var(--border)"}`,borderRadius:20,cursor:"pointer",color:vtDraft.heroes.includes(h.id)?h.color:"var(--text3)",fontFamily:"var(--font-mono)"}}>{h.heroName}</button>)}
                       </div>
                       <div style={{display:"flex",gap:8}}>
-                        <button onClick={()=>setEditingVillainTarget(null)} style={{flex:1,fontSize:9,padding:"6px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:6,cursor:"pointer",color:"var(--text3)",fontFamily:"var(--font-mono)"}}>Cancel</button>
-                        <button onClick={()=>saveVillainTarget(v.id)} style={{flex:2,fontSize:9,padding:"6px",background:"rgba(139,26,26,0.15)",border:"1px solid rgba(139,26,26,0.4)",borderRadius:6,cursor:"pointer",color:"#E07070",fontFamily:"var(--font-mono)"}}>Save Targets</button>
+                        <button onClick={()=>setEditingVillainTarget(null)} style={{flex:1,fontSize:10,padding:"6px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:6,cursor:"pointer",color:"var(--text3)",fontFamily:"var(--font-mono)"}}>Cancel</button>
+                        <button onClick={()=>saveVillainTarget(v.id)} style={{flex:2,fontSize:10,padding:"6px",background:"rgba(139,26,26,0.15)",border:"1px solid rgba(139,26,26,0.4)",borderRadius:6,cursor:"pointer",color:"#E07070",fontFamily:"var(--font-mono)"}}>Save Targets</button>
                       </div>
                     </div>)}
                     {redeemingVillain===v.id&&(<div style={{display:"flex",flexWrap:"wrap",gap:6,padding:"10px 0 2px",alignItems:"center"}}>
-                      <span style={{fontSize:9,color:"#5DCAA5",letterSpacing:"0.1em",marginRight:4}}>RECRUIT TO:</span>
-                      {teams.map(t=><button key={t.id} onClick={()=>redeemVillain(v,t.id)} style={{fontSize:9,padding:"3px 10px",background:`${t.color}14`,border:`1px solid ${t.color}44`,borderRadius:20,cursor:"pointer",color:t.color,fontFamily:"var(--font-mono)"}}>{t.name}</button>)}
-                      <button onClick={()=>setRedeemingVillain(null)} style={{fontSize:9,padding:"3px 8px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:20,cursor:"pointer",color:"var(--text4)",fontFamily:"var(--font-mono)"}}>Cancel</button>
+                      <span style={{fontSize:10,color:"#5DCAA5",letterSpacing:"0.1em",marginRight:4}}>RECRUIT TO:</span>
+                      {teams.map(t=><button key={t.id} onClick={()=>redeemVillain(v,t.id)} style={{fontSize:10,padding:"3px 10px",background:`${t.color}14`,border:`1px solid ${t.color}44`,borderRadius:20,cursor:"pointer",color:t.color,fontFamily:"var(--font-mono)"}}>{t.name}</button>)}
+                      <button onClick={()=>setRedeemingVillain(null)} style={{fontSize:10,padding:"3px 8px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:20,cursor:"pointer",color:"var(--text4)",fontFamily:"var(--font-mono)"}}>Cancel</button>
                     </div>)}
                   </div>
                 </div>
                 {/* Inline prompt panel */}
                 {vInlinePrompt?.villainId===v.id&&(<div style={{borderTop:"1px solid rgba(139,26,26,0.2)",paddingTop:12,marginTop:4}}>
-                  <div style={{fontSize:9,letterSpacing:"0.15em",color:"rgba(224,112,112,0.6)",textTransform:"uppercase",marginBottom:10}}>Image Prompt</div>
+                  <div style={{fontSize:10,letterSpacing:"0.15em",color:"rgba(224,112,112,0.6)",textTransform:"uppercase",marginBottom:10}}>Image Prompt</div>
                   <div style={{display:"flex",gap:5,marginBottom:8,flexWrap:"wrap"}}>
                     {[["meta-ai","Meta AI"],["midjourney","Midjourney"],["dalle","DALL-E"]].map(([id,label])=>(
-                      <button key={id} onClick={()=>generateVillainPromptInline(v,id,undefined)} style={{fontSize:9,padding:"3px 10px",background:(vInlinePrompt.platform||pPlatform)===id?"rgba(139,26,26,0.15)":"var(--bg3)",border:`1px solid ${(vInlinePrompt.platform||pPlatform)===id?"rgba(224,112,112,0.5)":"var(--border)"}`,borderRadius:20,cursor:"pointer",color:(vInlinePrompt.platform||pPlatform)===id?"#E07070":"var(--text3)",fontFamily:"var(--font-mono)"}}>{label}</button>
+                      <button key={id} onClick={()=>generateVillainPromptInline(v,id,undefined)} style={{fontSize:10,padding:"3px 10px",background:(vInlinePrompt.platform||pPlatform)===id?"rgba(139,26,26,0.15)":"var(--bg3)",border:`1px solid ${(vInlinePrompt.platform||pPlatform)===id?"rgba(224,112,112,0.5)":"var(--border)"}`,borderRadius:20,cursor:"pointer",color:(vInlinePrompt.platform||pPlatform)===id?"#E07070":"var(--text3)",fontFamily:"var(--font-mono)"}}>{label}</button>
                     ))}
                   </div>
                   <div style={{display:"flex",gap:5,marginBottom:8,flexWrap:"wrap"}}>
                     {ART_STYLES.map(a=>(
-                      <button key={a.id} onClick={()=>generateVillainPromptInline(v,undefined,a.id)} style={{fontSize:9,padding:"3px 10px",background:(vInlinePrompt.styleId||pStyle)===a.id?"rgba(139,26,26,0.1)":"var(--bg3)",border:`1px solid ${(vInlinePrompt.styleId||pStyle)===a.id?"rgba(224,112,120,0.4)":"var(--border)"}`,borderRadius:20,cursor:"pointer",color:(vInlinePrompt.styleId||pStyle)===a.id?"#E07070":"var(--text3)",fontFamily:"var(--font-mono)"}}>{a.label}</button>
+                      <button key={a.id} onClick={()=>generateVillainPromptInline(v,undefined,a.id)} style={{fontSize:10,padding:"3px 10px",background:(vInlinePrompt.styleId||pStyle)===a.id?"rgba(139,26,26,0.1)":"var(--bg3)",border:`1px solid ${(vInlinePrompt.styleId||pStyle)===a.id?"rgba(224,112,120,0.4)":"var(--border)"}`,borderRadius:20,cursor:"pointer",color:(vInlinePrompt.styleId||pStyle)===a.id?"#E07070":"var(--text3)",fontFamily:"var(--font-mono)"}}>{a.label}</button>
                     ))}
                   </div>
                   <div style={{display:"flex",gap:5,marginBottom:10,flexWrap:"wrap"}}>
                     {POSE_OPTIONS.map(p=>(
-                      <button key={p.id} onClick={()=>generateVillainPromptInline(v,undefined,undefined,p.id)} style={{fontSize:9,padding:"3px 10px",background:(vInlinePrompt.poseId||pPose)===p.id?"rgba(139,26,26,0.1)":"var(--bg3)",border:`1px solid ${(vInlinePrompt.poseId||pPose)===p.id?"rgba(224,112,112,0.4)":"var(--border)"}`,borderRadius:20,cursor:"pointer",color:(vInlinePrompt.poseId||pPose)===p.id?"#E07070":"var(--text3)",fontFamily:"var(--font-mono)"}}>{p.label}</button>
+                      <button key={p.id} onClick={()=>generateVillainPromptInline(v,undefined,undefined,p.id)} style={{fontSize:10,padding:"3px 10px",background:(vInlinePrompt.poseId||pPose)===p.id?"rgba(139,26,26,0.1)":"var(--bg3)",border:`1px solid ${(vInlinePrompt.poseId||pPose)===p.id?"rgba(224,112,112,0.4)":"var(--border)"}`,borderRadius:20,cursor:"pointer",color:(vInlinePrompt.poseId||pPose)===p.id?"#E07070":"var(--text3)",fontFamily:"var(--font-mono)"}}>{p.label}</button>
                     ))}
                   </div>
                   <div style={{position:"relative",marginBottom:10}}>
-                    <textarea readOnly value={vInlinePrompt.metaAI} rows={3} style={{width:"100%",padding:"10px 44px 10px 12px",background:"var(--bg3)",border:"1px solid rgba(139,26,26,0.3)",borderRadius:8,color:"var(--text-primary)",fontSize:10.5,fontFamily:"var(--font-mono)",resize:"none",lineHeight:1.6,boxSizing:"border-box"}}/>
-                    <button onClick={()=>copyToClipboard(vInlinePrompt.metaAI)} style={{position:"absolute",top:8,right:8,fontSize:8,padding:"3px 8px",background:"rgba(139,26,26,0.15)",border:"1px solid rgba(224,112,112,0.35)",borderRadius:6,cursor:"pointer",color:"#E07070",fontFamily:"var(--font-mono)"}}>Copy</button>
+                    <textarea readOnly value={vInlinePrompt.metaAI} rows={3} style={{width:"100%",padding:"10px 44px 10px 12px",background:"var(--bg3)",border:"1px solid rgba(139,26,26,0.3)",borderRadius:8,color:"var(--text-primary)",fontSize:11.5,fontFamily:"var(--font-mono)",resize:"none",lineHeight:1.6,boxSizing:"border-box"}}/>
+                    <button onClick={()=>copyToClipboard(vInlinePrompt.metaAI)} style={{position:"absolute",top:8,right:8,fontSize:9,padding:"3px 8px",background:"rgba(139,26,26,0.15)",border:"1px solid rgba(224,112,112,0.35)",borderRadius:6,cursor:"pointer",color:"#E07070",fontFamily:"var(--font-mono)"}}>Copy</button>
                   </div>
                   <div style={{position:"relative"}}>
-                    <textarea readOnly value={vInlinePrompt.tripo3D} rows={2} style={{width:"100%",padding:"10px 44px 10px 12px",background:"var(--bg3)",border:"1px solid rgba(15,110,86,0.2)",borderRadius:8,color:"var(--text-primary)",fontSize:10.5,fontFamily:"var(--font-mono)",resize:"none",lineHeight:1.6,boxSizing:"border-box"}}/>
-                    <button onClick={()=>copyToClipboard(vInlinePrompt.tripo3D)} style={{position:"absolute",top:8,right:8,fontSize:8,padding:"3px 8px",background:"rgba(15,110,86,0.1)",border:"1px solid rgba(15,110,86,0.3)",borderRadius:6,cursor:"pointer",color:"#5DCAA5",fontFamily:"var(--font-mono)"}}>Copy</button>
+                    <textarea readOnly value={vInlinePrompt.tripo3D} rows={2} style={{width:"100%",padding:"10px 44px 10px 12px",background:"var(--bg3)",border:"1px solid rgba(15,110,86,0.2)",borderRadius:8,color:"var(--text-primary)",fontSize:11.5,fontFamily:"var(--font-mono)",resize:"none",lineHeight:1.6,boxSizing:"border-box"}}/>
+                    <button onClick={()=>copyToClipboard(vInlinePrompt.tripo3D)} style={{position:"absolute",top:8,right:8,fontSize:9,padding:"3px 8px",background:"rgba(15,110,86,0.1)",border:"1px solid rgba(15,110,86,0.3)",borderRadius:6,cursor:"pointer",color:"#5DCAA5",fontFamily:"var(--font-mono)"}}>Copy</button>
                   </div>
-                  {images[v.id]&&<div style={{marginTop:8,fontSize:9,color:"rgba(224,112,112,0.55)",lineHeight:1.5}}>✓ Reference image detected — upload alongside the prompt for best results.</div>}
+                  {images[v.id]&&<div style={{marginTop:8,fontSize:10,color:"rgba(224,112,112,0.55)",lineHeight:1.5}}>✓ Reference image detected — upload alongside the prompt for best results.</div>}
                 </div>)}
               </div>))}
             </div>
           </>)}
-          {villainPool.length===0&&<div style={{textAlign:"center",padding:"30px",color:"var(--text3)",fontSize:12}}>No villains created yet. Every hero team needs an antagonist.</div>}
+          {villainPool.length===0&&<div style={{textAlign:"center",padding:"30px",color:"var(--text3)",fontSize:13}}>No villains created yet. Every hero team needs an antagonist.</div>}
         </>)}
         </>)}
 
@@ -2862,14 +2870,14 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
           <div style={{...s.card,marginBottom:20}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
               <div>
-                <div style={{fontSize:9,letterSpacing:"0.2em",color:"rgba(139,26,26,0.7)",textTransform:"uppercase",marginBottom:3}}>Villain Factions</div>
-                <div style={{fontSize:11,color:"var(--text2)"}}>Organize villains into criminal organizations, cabals, or syndicates.</div>
+                <div style={{fontSize:10,letterSpacing:"0.2em",color:"rgba(139,26,26,0.7)",textTransform:"uppercase",marginBottom:3}}>Villain Factions</div>
+                <div style={{fontSize:12,color:"var(--text2)"}}>Organize villains into criminal organizations, cabals, or syndicates.</div>
               </div>
-              <button onClick={()=>{setCreatingFaction(true);setEditingFactionId(null);setFactionDraft({name:"",abbr:"",color:"#8B1A1A",purpose:"",memberIds:[]});}} style={{fontSize:9,padding:"5px 12px",background:"rgba(139,26,26,0.15)",border:"1px solid rgba(139,26,26,0.4)",borderRadius:6,cursor:"pointer",color:"#E07070",fontFamily:"var(--font-mono)",whiteSpace:"nowrap"}}>+ New Faction</button>
+              <button onClick={()=>{setCreatingFaction(true);setEditingFactionId(null);setFactionDraft({name:"",abbr:"",color:"#8B1A1A",purpose:"",memberIds:[]});}} style={{fontSize:10,padding:"5px 12px",background:"rgba(139,26,26,0.15)",border:"1px solid rgba(139,26,26,0.4)",borderRadius:6,cursor:"pointer",color:"#E07070",fontFamily:"var(--font-mono)",whiteSpace:"nowrap"}}>+ New Faction</button>
             </div>
             {(creatingFaction||editingFactionId!==null)&&(<>
               <div style={{borderTop:"1px solid rgba(139,26,26,0.2)",paddingTop:14,marginTop:4}}>
-                <div style={{fontSize:9,letterSpacing:"0.12em",color:"rgba(139,26,26,0.6)",textTransform:"uppercase",marginBottom:10}}>{editingFactionId!==null?"Edit Faction":"New Faction"}</div>
+                <div style={{fontSize:10,letterSpacing:"0.12em",color:"rgba(139,26,26,0.6)",textTransform:"uppercase",marginBottom:10}}>{editingFactionId!==null?"Edit Faction":"New Faction"}</div>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 80px",gap:8,marginBottom:10}}>
                   <div>
                     <span style={s.lbl}>Faction Name</span>
@@ -2899,13 +2907,13 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                     <span style={s.lbl}>Faction Logo</span>
                     <div style={{display:"flex",alignItems:"center",gap:10,marginTop:6}}>
                       <div style={{width:40,height:40,borderRadius:8,background:fl?"transparent":`${factionDraft.color}22`,border:`1px solid ${factionDraft.color}55`,overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                        {fl?<img src={fl} style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<span style={{fontSize:12,fontWeight:"bold",color:factionDraft.color}}>{factionDraft.abbr||factionDraft.name.slice(0,2).toUpperCase()||"?"}</span>}
+                        {fl?<img src={fl} style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<span style={{fontSize:13,fontWeight:"bold",color:factionDraft.color}}>{factionDraft.abbr||factionDraft.name.slice(0,2).toUpperCase()||"?"}</span>}
                       </div>
-                      <label style={{fontSize:9,padding:"5px 12px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:6,cursor:"pointer",color:"var(--text2)",fontFamily:"var(--font-mono)"}}>
+                      <label style={{fontSize:10,padding:"5px 12px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:6,cursor:"pointer",color:"var(--text2)",fontFamily:"var(--font-mono)"}}>
                         {fl?"Replace Logo":"Upload Logo"}
                         <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>e.target.files?.[0]&&handleImg('factionlogo-'+editingFactionId,e.target.files[0])}/>
                       </label>
-                      {fl&&<button onClick={async()=>{await fetch(`/api/images/factionlogo-${editingFactionId}`,{method:"DELETE"});setImages(p=>{const n={...p};delete n['factionlogo-'+editingFactionId];return n;});}} style={{fontSize:9,padding:"5px 12px",background:"rgba(139,26,26,0.1)",border:"1px solid rgba(139,26,26,0.3)",borderRadius:6,cursor:"pointer",color:"#E07070",fontFamily:"var(--font-mono)"}}>Remove</button>}
+                      {fl&&<button onClick={async()=>{await fetch(`/api/images/factionlogo-${editingFactionId}`,{method:"DELETE"});setImages(p=>{const n={...p};delete n['factionlogo-'+editingFactionId];return n;});}} style={{fontSize:10,padding:"5px 12px",background:"rgba(139,26,26,0.1)",border:"1px solid rgba(139,26,26,0.3)",borderRadius:6,cursor:"pointer",color:"#E07070",fontFamily:"var(--font-mono)"}}>Remove</button>}
                     </div>
                   </div>);
                 })()}
@@ -2916,15 +2924,15 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                       const sel=factionDraft.memberIds.includes(v.id);
                       return(<button key={v.id} onClick={()=>setFactionDraft(p=>({...p,memberIds:sel?p.memberIds.filter(x=>x!==v.id):[...p.memberIds,v.id]}))}
                         style={{display:"flex",alignItems:"center",gap:6,padding:"4px 10px 4px 4px",background:sel?"rgba(139,26,26,0.2)":"var(--bg3)",border:`1px solid ${sel?"rgba(224,112,112,0.5)":"var(--border)"}`,borderRadius:20,cursor:"pointer"}}>
-                        {images[v.id]?<img src={images[v.id]} style={{width:22,height:22,borderRadius:"50%",objectFit:"cover",objectPosition:"top"}}/>:<div style={{width:22,height:22,borderRadius:"50%",background:`${v.color||"#8B1A1A"}22`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:7,fontWeight:"bold",color:v.color||"#E07070"}}>{v.initials}</div>}
-                        <span style={{fontSize:9,color:sel?"#E07070":"var(--text2)",fontFamily:"var(--font-mono)"}}>{v.heroName}</span>
+                        {images[v.id]?<img src={images[v.id]} style={{width:22,height:22,borderRadius:"50%",objectFit:"cover",objectPosition:"top"}}/>:<div style={{width:22,height:22,borderRadius:"50%",background:`${v.color||"#8B1A1A"}22`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:8,fontWeight:"bold",color:v.color||"#E07070"}}>{v.initials}</div>}
+                        <span style={{fontSize:10,color:sel?"#E07070":"var(--text2)",fontFamily:"var(--font-mono)"}}>{v.heroName}</span>
                       </button>);
                     })}
                   </div>
                 </div>)}
-                {villainPool.length===0&&<div style={{fontSize:10,color:"var(--text3)",marginBottom:12,fontStyle:"italic"}}>Add villains to the pool first to assign faction members.</div>}
+                {villainPool.length===0&&<div style={{fontSize:11,color:"var(--text3)",marginBottom:12,fontStyle:"italic"}}>Add villains to the pool first to assign faction members.</div>}
                 <div style={{display:"flex",gap:8}}>
-                  <button onClick={()=>{setCreatingFaction(false);setEditingFactionId(null);}} style={{flex:1,fontSize:9,padding:"7px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:6,cursor:"pointer",color:"var(--text3)",fontFamily:"var(--font-mono)"}}>Cancel</button>
+                  <button onClick={()=>{setCreatingFaction(false);setEditingFactionId(null);}} style={{flex:1,fontSize:10,padding:"7px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:6,cursor:"pointer",color:"var(--text3)",fontFamily:"var(--font-mono)"}}>Cancel</button>
                   <button onClick={()=>{
                     if(!factionDraft.name.trim())return;
                     if(editingFactionId!==null){
@@ -2935,7 +2943,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                       setVillainFactions(nf);persist("forge-villain-factions",nf);
                     }
                     setCreatingFaction(false);setEditingFactionId(null);
-                  }} disabled={!factionDraft.name.trim()} style={{flex:2,fontSize:9,padding:"7px",background:factionDraft.name.trim()?"rgba(139,26,26,0.2)":"var(--bg3)",border:`1px solid ${factionDraft.name.trim()?"rgba(139,26,26,0.5)":"var(--border)"}`,borderRadius:6,cursor:factionDraft.name.trim()?"pointer":"default",color:factionDraft.name.trim()?"#E07070":"var(--text4)",fontFamily:"var(--font-mono)"}}>Save Faction →</button>
+                  }} disabled={!factionDraft.name.trim()} style={{flex:2,fontSize:10,padding:"7px",background:factionDraft.name.trim()?"rgba(139,26,26,0.2)":"var(--bg3)",border:`1px solid ${factionDraft.name.trim()?"rgba(139,26,26,0.5)":"var(--border)"}`,borderRadius:6,cursor:factionDraft.name.trim()?"pointer":"default",color:factionDraft.name.trim()?"#E07070":"var(--text4)",fontFamily:"var(--font-mono)"}}>Save Faction →</button>
                 </div>
               </div>
             </>)}
@@ -2953,59 +2961,59 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                     <div style={{display:"flex",alignItems:"center",gap:10}}>
                       <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3,flexShrink:0}}>
                         <div onClick={()=>factionLogoRefs.current[f.id]?.click()} style={{width:38,height:38,borderRadius:8,background:flImg?"transparent":`${f.color}22`,border:`1px solid ${f.color}55`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",overflow:"hidden"}}>
-                          {flImg?<img src={flImg} style={{width:"100%",height:"100%",objectFit:"cover",objectPosition:"center"}}/>:<span style={{fontSize:11,fontWeight:"bold",color:f.color,letterSpacing:"0.05em"}}>{f.abbr||f.name.slice(0,2).toUpperCase()}</span>}
+                          {flImg?<img src={flImg} style={{width:"100%",height:"100%",objectFit:"cover",objectPosition:"center"}}/>:<span style={{fontSize:12,fontWeight:"bold",color:f.color,letterSpacing:"0.05em"}}>{f.abbr||f.name.slice(0,2).toUpperCase()}</span>}
                         </div>
-                        <button onClick={()=>factionLogoRefs.current[f.id]?.click()} style={{fontSize:7,padding:"1px 6px",background:`${f.color}18`,border:`1px solid ${f.color}44`,borderRadius:4,cursor:"pointer",color:f.color,fontFamily:"var(--font-mono)",whiteSpace:"nowrap"}}>{flImg?"✎ logo":"↑ logo"}</button>
+                        <button onClick={()=>factionLogoRefs.current[f.id]?.click()} style={{fontSize:8,padding:"1px 6px",background:`${f.color}18`,border:`1px solid ${f.color}44`,borderRadius:4,cursor:"pointer",color:f.color,fontFamily:"var(--font-mono)",whiteSpace:"nowrap"}}>{flImg?"✎ logo":"↑ logo"}</button>
                       </div>
                       <div>
-                        <div style={{fontSize:13,fontWeight:"bold",color:"var(--text-primary)"}}>{f.name}</div>
-                        {f.purpose&&<div style={{fontSize:10,color:"var(--text2)",marginTop:2,lineHeight:1.4}}>{f.purpose}</div>}
+                        <div style={{fontSize:14,fontWeight:"bold",color:"var(--text-primary)"}}>{f.name}</div>
+                        {f.purpose&&<div style={{fontSize:11,color:"var(--text2)",marginTop:2,lineHeight:1.4}}>{f.purpose}</div>}
                       </div>
                     </div>
                     <div style={{display:"flex",gap:5,flexShrink:0}}>
-                      <button onClick={()=>{setEditingFactionId(f.id);setCreatingFaction(false);setFactionDraft({name:f.name,abbr:f.abbr||"",color:f.color,purpose:f.purpose||"",memberIds:f.memberIds||[]});}} style={{fontSize:8,padding:"3px 9px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:5,cursor:"pointer",color:"var(--text3)",fontFamily:"var(--font-mono)"}}>Edit</button>
-                      <button onClick={()=>{const updated=villainFactions.filter(x=>x.id!==f.id);setVillainFactions(updated);persist("forge-villain-factions",updated);const updatedA=villainAlliances.filter(a=>a.factionA!==f.id&&a.factionB!==f.id);setVillainAlliances(updatedA);persist("forge-villain-alliances",updatedA);}} style={{fontSize:8,padding:"3px 9px",background:"rgba(163,45,45,0.1)",border:"1px solid rgba(163,45,45,0.28)",borderRadius:5,cursor:"pointer",color:"#e74c3c",fontFamily:"var(--font-mono)"}}>Remove</button>
+                      <button onClick={()=>{setEditingFactionId(f.id);setCreatingFaction(false);setFactionDraft({name:f.name,abbr:f.abbr||"",color:f.color,purpose:f.purpose||"",memberIds:f.memberIds||[]});}} style={{fontSize:9,padding:"3px 9px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:5,cursor:"pointer",color:"var(--text3)",fontFamily:"var(--font-mono)"}}>Edit</button>
+                      <button onClick={()=>{const updated=villainFactions.filter(x=>x.id!==f.id);setVillainFactions(updated);persist("forge-villain-factions",updated);const updatedA=villainAlliances.filter(a=>a.factionA!==f.id&&a.factionB!==f.id);setVillainAlliances(updatedA);persist("forge-villain-alliances",updatedA);}} style={{fontSize:9,padding:"3px 9px",background:"rgba(163,45,45,0.1)",border:"1px solid rgba(163,45,45,0.28)",borderRadius:5,cursor:"pointer",color:"#e74c3c",fontFamily:"var(--font-mono)"}}>Remove</button>
                     </div>
                   </div>
                   {members.length>0?(<div>
-                    <div style={{fontSize:8,letterSpacing:"0.12em",color:`${f.color}99`,textTransform:"uppercase",marginBottom:7}}>{members.length} member{members.length!==1?"s":""}</div>
+                    <div style={{fontSize:9,letterSpacing:"0.12em",color:`${f.color}99`,textTransform:"uppercase",marginBottom:7}}>{members.length} member{members.length!==1?"s":""}</div>
                     <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                       {members.map(m=>(<div key={m.id} style={{display:"flex",alignItems:"center",gap:6}}>
                         {images[m.id]?<img src={images[m.id]} style={{width:28,height:28,borderRadius:"50%",objectFit:"cover",objectPosition:"top",border:`1px solid ${f.color}55`}}/>
-                          :<div style={{width:28,height:28,borderRadius:"50%",background:`${m.color||f.color}22`,display:"flex",alignItems:"center",justifyContent:"center",border:`1px solid ${f.color}44`}}><span style={{fontSize:8,fontWeight:"bold",color:m.color||f.color}}>{m.initials}</span></div>}
-                        <span style={{fontSize:9,color:"var(--text2)",fontFamily:"var(--font-mono)"}}>{m.heroName}</span>
+                          :<div style={{width:28,height:28,borderRadius:"50%",background:`${m.color||f.color}22`,display:"flex",alignItems:"center",justifyContent:"center",border:`1px solid ${f.color}44`}}><span style={{fontSize:9,fontWeight:"bold",color:m.color||f.color}}>{m.initials}</span></div>}
+                        <span style={{fontSize:10,color:"var(--text2)",fontFamily:"var(--font-mono)"}}>{m.heroName}</span>
                       </div>))}
                     </div>
-                  </div>):(<div style={{fontSize:9,color:"var(--text3)",fontStyle:"italic"}}>No members assigned — edit to add villains from the pool.</div>)}
+                  </div>):(<div style={{fontSize:10,color:"var(--text3)",fontStyle:"italic"}}>No members assigned — edit to add villains from the pool.</div>)}
                 </div>);
               })}
             </div>
           </>)}
-          {villainFactions.length===0&&!creatingFaction&&(<div style={{textAlign:"center",padding:"20px 0 28px",color:"var(--text3)",fontSize:11}}>No factions yet. Every major threat has an organization behind it.</div>)}
+          {villainFactions.length===0&&!creatingFaction&&(<div style={{textAlign:"center",padding:"20px 0 28px",color:"var(--text3)",fontSize:12}}>No factions yet. Every major threat has an organization behind it.</div>)}
 
           {/* ── ALLIANCES ─────────────────────────────────────────────── */}
           {villainFactions.length>=2&&(<>
             <div style={{borderTop:"1px solid rgba(139,26,26,0.15)",paddingTop:20,marginBottom:16}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
                 <div>
-                  <div style={{fontSize:9,letterSpacing:"0.2em",color:"rgba(139,26,26,0.7)",textTransform:"uppercase",marginBottom:3}}>Inter-Faction Relations</div>
-                  <div style={{fontSize:11,color:"var(--text2)"}}>Define how factions relate — alliances, rivalries, and power dynamics.</div>
+                  <div style={{fontSize:10,letterSpacing:"0.2em",color:"rgba(139,26,26,0.7)",textTransform:"uppercase",marginBottom:3}}>Inter-Faction Relations</div>
+                  <div style={{fontSize:12,color:"var(--text2)"}}>Define how factions relate — alliances, rivalries, and power dynamics.</div>
                 </div>
-                <button onClick={()=>{setCreatingAlliance(p=>!p);setAllianceDraft({factionA:"",factionB:"",type:"united",description:""}); }} style={{fontSize:9,padding:"5px 12px",background:creatingAlliance?"rgba(139,26,26,0.15)":"var(--bg3)",border:`1px solid ${creatingAlliance?"rgba(139,26,26,0.4)":"var(--border)"}`,borderRadius:6,cursor:"pointer",color:creatingAlliance?"#E07070":"var(--text2)",fontFamily:"var(--font-mono)",whiteSpace:"nowrap"}}>+ Add Relation</button>
+                <button onClick={()=>{setCreatingAlliance(p=>!p);setAllianceDraft({factionA:"",factionB:"",type:"united",description:""}); }} style={{fontSize:10,padding:"5px 12px",background:creatingAlliance?"rgba(139,26,26,0.15)":"var(--bg3)",border:`1px solid ${creatingAlliance?"rgba(139,26,26,0.4)":"var(--border)"}`,borderRadius:6,cursor:"pointer",color:creatingAlliance?"#E07070":"var(--text2)",fontFamily:"var(--font-mono)",whiteSpace:"nowrap"}}>+ Add Relation</button>
               </div>
               {creatingAlliance&&(<div style={{...s.card,marginBottom:14}}>
-                <div style={{fontSize:9,letterSpacing:"0.12em",color:"rgba(139,26,26,0.6)",textTransform:"uppercase",marginBottom:10}}>New Relation</div>
+                <div style={{fontSize:10,letterSpacing:"0.12em",color:"rgba(139,26,26,0.6)",textTransform:"uppercase",marginBottom:10}}>New Relation</div>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
                   <div>
                     <span style={s.lbl}>Faction A</span>
-                    <select value={allianceDraft.factionA} onChange={e=>setAllianceDraft(p=>({...p,factionA:e.target.value}))} style={{width:"100%",padding:"7px 10px",background:"var(--bg2)",border:"1px solid var(--border2)",borderRadius:7,color:"var(--text-primary)",fontSize:10,marginTop:4}}>
+                    <select value={allianceDraft.factionA} onChange={e=>setAllianceDraft(p=>({...p,factionA:e.target.value}))} style={{width:"100%",padding:"7px 10px",background:"var(--bg2)",border:"1px solid var(--border2)",borderRadius:7,color:"var(--text-primary)",fontSize:11,marginTop:4}}>
                       <option value="">Select...</option>
                       {villainFactions.map(f=><option key={f.id} value={f.id}>{f.name}</option>)}
                     </select>
                   </div>
                   <div>
                     <span style={s.lbl}>Faction B</span>
-                    <select value={allianceDraft.factionB} onChange={e=>setAllianceDraft(p=>({...p,factionB:e.target.value}))} style={{width:"100%",padding:"7px 10px",background:"var(--bg2)",border:"1px solid var(--border2)",borderRadius:7,color:"var(--text-primary)",fontSize:10,marginTop:4}}>
+                    <select value={allianceDraft.factionB} onChange={e=>setAllianceDraft(p=>({...p,factionB:e.target.value}))} style={{width:"100%",padding:"7px 10px",background:"var(--bg2)",border:"1px solid var(--border2)",borderRadius:7,color:"var(--text-primary)",fontSize:11,marginTop:4}}>
                       <option value="">Select...</option>
                       {villainFactions.filter(f=>f.id!==allianceDraft.factionA).map(f=><option key={f.id} value={f.id}>{f.name}</option>)}
                     </select>
@@ -3015,7 +3023,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                   <span style={s.lbl}>Relationship Type</span>
                   <div style={{display:"flex",gap:5,flexWrap:"wrap",marginTop:6}}>
                     {[["united","🤝 United Front","#2d6a4f"],["truce","⚖ Uneasy Truce","#805500"],["rivalry","⚔ Rivalry","#8B1A1A"],["hostile","💥 Open Conflict","#7d0000"],["merged","🔗 Merged","#4A0E6E"]].map(([id,label,col])=>(
-                      <button key={id} onClick={()=>setAllianceDraft(p=>({...p,type:id}))} style={{fontSize:9,padding:"4px 10px",background:allianceDraft.type===id?`${col}22`:"var(--bg3)",border:`1px solid ${allianceDraft.type===id?col:"var(--border)"}`,borderRadius:20,cursor:"pointer",color:allianceDraft.type===id?col:"var(--text3)",fontFamily:"var(--font-mono)"}}>{label}</button>
+                      <button key={id} onClick={()=>setAllianceDraft(p=>({...p,type:id}))} style={{fontSize:10,padding:"4px 10px",background:allianceDraft.type===id?`${col}22`:"var(--bg3)",border:`1px solid ${allianceDraft.type===id?col:"var(--border)"}`,borderRadius:20,cursor:"pointer",color:allianceDraft.type===id?col:"var(--text3)",fontFamily:"var(--font-mono)"}}>{label}</button>
                     ))}
                   </div>
                 </div>
@@ -3024,13 +3032,13 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                   <input value={allianceDraft.description} onChange={e=>setAllianceDraft(p=>({...p,description:e.target.value}))} placeholder="e.g. Temporarily allied to eliminate a common enemy" style={{width:"100%",marginTop:4}}/>
                 </div>
                 <div style={{display:"flex",gap:8}}>
-                  <button onClick={()=>setCreatingAlliance(false)} style={{flex:1,fontSize:9,padding:"7px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:6,cursor:"pointer",color:"var(--text3)",fontFamily:"var(--font-mono)"}}>Cancel</button>
+                  <button onClick={()=>setCreatingAlliance(false)} style={{flex:1,fontSize:10,padding:"7px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:6,cursor:"pointer",color:"var(--text3)",fontFamily:"var(--font-mono)"}}>Cancel</button>
                   <button onClick={()=>{
                     if(!allianceDraft.factionA||!allianceDraft.factionB||allianceDraft.factionA===allianceDraft.factionB)return;
                     const na=[...villainAlliances,{id:`alliance-${Date.now()}`,...allianceDraft}];
                     setVillainAlliances(na);persist("forge-villain-alliances",na);setCreatingAlliance(false);
                   }} disabled={!allianceDraft.factionA||!allianceDraft.factionB||allianceDraft.factionA===allianceDraft.factionB}
-                    style={{flex:2,fontSize:9,padding:"7px",background:(allianceDraft.factionA&&allianceDraft.factionB&&allianceDraft.factionA!==allianceDraft.factionB)?"rgba(139,26,26,0.2)":"var(--bg3)",border:`1px solid ${(allianceDraft.factionA&&allianceDraft.factionB&&allianceDraft.factionA!==allianceDraft.factionB)?"rgba(139,26,26,0.5)":"var(--border)"}`,borderRadius:6,cursor:"pointer",color:(allianceDraft.factionA&&allianceDraft.factionB&&allianceDraft.factionA!==allianceDraft.factionB)?"#E07070":"var(--text4)",fontFamily:"var(--font-mono)"}}>Save Relation →</button>
+                    style={{flex:2,fontSize:10,padding:"7px",background:(allianceDraft.factionA&&allianceDraft.factionB&&allianceDraft.factionA!==allianceDraft.factionB)?"rgba(139,26,26,0.2)":"var(--bg3)",border:`1px solid ${(allianceDraft.factionA&&allianceDraft.factionB&&allianceDraft.factionA!==allianceDraft.factionB)?"rgba(139,26,26,0.5)":"var(--border)"}`,borderRadius:6,cursor:"pointer",color:(allianceDraft.factionA&&allianceDraft.factionB&&allianceDraft.factionA!==allianceDraft.factionB)?"#E07070":"var(--text4)",fontFamily:"var(--font-mono)"}}>Save Relation →</button>
                 </div>
               </div>)}
               {villainAlliances.length>0&&(<div style={{display:"flex",flexDirection:"column",gap:8}}>
@@ -3042,31 +3050,31 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                   return(<div key={a.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:8}}>
                     <div style={{display:"flex",alignItems:"center",gap:6,flex:1,minWidth:0}}>
                       <div style={{width:10,height:10,borderRadius:2,background:fA.color,flexShrink:0}}/>
-                      <span style={{fontSize:10,color:"var(--text-primary)",fontWeight:"bold",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{fA.name}</span>
+                      <span style={{fontSize:11,color:"var(--text-primary)",fontWeight:"bold",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{fA.name}</span>
                     </div>
-                    <div style={{padding:"3px 10px",background:`${typeInfo.color}18`,border:`1px solid ${typeInfo.color}44`,borderRadius:20,fontSize:8,color:typeInfo.color,fontFamily:"var(--font-mono)",whiteSpace:"nowrap",flexShrink:0}}>{typeInfo.label}</div>
+                    <div style={{padding:"3px 10px",background:`${typeInfo.color}18`,border:`1px solid ${typeInfo.color}44`,borderRadius:20,fontSize:9,color:typeInfo.color,fontFamily:"var(--font-mono)",whiteSpace:"nowrap",flexShrink:0}}>{typeInfo.label}</div>
                     <div style={{display:"flex",alignItems:"center",gap:6,flex:1,minWidth:0,justifyContent:"flex-end"}}>
-                      <span style={{fontSize:10,color:"var(--text-primary)",fontWeight:"bold",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",textAlign:"right"}}>{fB.name}</span>
+                      <span style={{fontSize:11,color:"var(--text-primary)",fontWeight:"bold",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",textAlign:"right"}}>{fB.name}</span>
                       <div style={{width:10,height:10,borderRadius:2,background:fB.color,flexShrink:0}}/>
                     </div>
-                    <button onClick={()=>{const updated=villainAlliances.filter(x=>x.id!==a.id);setVillainAlliances(updated);persist("forge-villain-alliances",updated);}} style={{fontSize:8,padding:"3px 7px",background:"rgba(163,45,45,0.1)",border:"1px solid rgba(163,45,45,0.25)",borderRadius:5,cursor:"pointer",color:"#e74c3c",fontFamily:"var(--font-mono)",flexShrink:0}}>✕</button>
+                    <button onClick={()=>{const updated=villainAlliances.filter(x=>x.id!==a.id);setVillainAlliances(updated);persist("forge-villain-alliances",updated);}} style={{fontSize:9,padding:"3px 7px",background:"rgba(163,45,45,0.1)",border:"1px solid rgba(163,45,45,0.25)",borderRadius:5,cursor:"pointer",color:"#e74c3c",fontFamily:"var(--font-mono)",flexShrink:0}}>✕</button>
                   </div>);
                 })}
               </div>)}
-              {villainAlliances.length===0&&!creatingAlliance&&<div style={{textAlign:"center",padding:"14px 0",color:"var(--text3)",fontSize:10,fontStyle:"italic"}}>No relations defined yet between factions.</div>}
+              {villainAlliances.length===0&&!creatingAlliance&&<div style={{textAlign:"center",padding:"14px 0",color:"var(--text3)",fontSize:11,fontStyle:"italic"}}>No relations defined yet between factions.</div>}
             </div>
           </>)}
-          {villainFactions.length<2&&villainFactions.length>0&&(<div style={{marginTop:16,padding:"10px 14px",background:"rgba(139,26,26,0.07)",border:"1px solid rgba(139,26,26,0.15)",borderRadius:8,fontSize:10,color:"var(--text3)"}}>Create at least 2 factions to define inter-faction relations.</div>)}
+          {villainFactions.length<2&&villainFactions.length>0&&(<div style={{marginTop:16,padding:"10px 14px",background:"rgba(139,26,26,0.07)",border:"1px solid rgba(139,26,26,0.15)",borderRadius:8,fontSize:11,color:"var(--text3)"}}>Create at least 2 factions to define inter-faction relations.</div>)}
         </>)}
       </>)}
 
       {/* ── STORY TAB ─────────────────────────────────────────────────── */}
       {tab==="story"&&(<>
-        <p style={{fontSize:12,color:"var(--text2)",marginBottom:18,lineHeight:1.7}}>Generate a cinematic Meta AI scene prompt. Pull cast from any team.</p>
+        <p style={{fontSize:13,color:"var(--text2)",marginBottom:18,lineHeight:1.7}}>Generate a cinematic Meta AI scene prompt. Pull cast from any team.</p>
         <div style={s.card}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
             <span style={s.lbl}>Select Cast</span>
-            <button onClick={()=>setCrossover(p=>!p)} style={{fontSize:9,padding:"3px 10px",background:crossover?"rgba(212,175,55,0.12)":"var(--bg3)",border:`1px solid ${crossover?G:"var(--border)"}`,borderRadius:20,cursor:"pointer",color:crossover?G:"var(--text2)",fontFamily:"var(--font-mono)"}}>
+            <button onClick={()=>setCrossover(p=>!p)} style={{fontSize:10,padding:"3px 10px",background:crossover?"rgba(212,175,55,0.12)":"var(--bg3)",border:`1px solid ${crossover?G:"var(--border)"}`,borderRadius:20,cursor:"pointer",color:crossover?G:"var(--text2)",fontFamily:"var(--font-mono)"}}>
               {crossover?"🌐 Crossover ON":"🌐 Crossover OFF"}
             </button>
           </div>
@@ -3076,18 +3084,18 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                 const tr=getTeamRoster(t.id);
                 if(!tr.length)return null;
                 return(<div key={t.id} style={{marginBottom:12}}>
-                  <div style={{fontSize:9,color:t.color,letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:6}}>{t.name}</div>
+                  <div style={{fontSize:10,color:t.color,letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:6}}>{t.name}</div>
                   <div style={{display:"flex",flexWrap:"wrap",gap:6}}>{tr.map(m=><button key={m.id} onClick={()=>setSCast(p=>p.includes(m.id)?p.filter(x=>x!==m.id):[...p,m.id])} style={{display:"flex",alignItems:"center",gap:5,...s.chip(sCast.includes(m.id),m.color),padding:"5px 10px"}}>{images[m.id]&&<img src={images[m.id]} alt="" style={{width:16,height:16,borderRadius:"50%",objectFit:"cover",objectPosition:"top"}}/>}{m.heroName}</button>)}</div>
                 </div>);
               })}
-              {villainPool.length>0&&<div><div style={{fontSize:9,color:"#E07070",letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:6}}>Villains</div><div style={{display:"flex",flexWrap:"wrap",gap:6}}>{villainPool.map(v=><button key={v.id} onClick={()=>setSCast(p=>p.includes(v.id)?p.filter(x=>x!==v.id):[...p,v.id])} style={{display:"flex",alignItems:"center",gap:5,...s.chip(sCast.includes(v.id),"#8B1A1A"),padding:"5px 10px"}}><span style={{fontSize:9}}>⚠</span>{v.heroName}</button>)}</div></div>}
+              {villainPool.length>0&&<div><div style={{fontSize:10,color:"#E07070",letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:6}}>Villains</div><div style={{display:"flex",flexWrap:"wrap",gap:6}}>{villainPool.map(v=><button key={v.id} onClick={()=>setSCast(p=>p.includes(v.id)?p.filter(x=>x!==v.id):[...p,v.id])} style={{display:"flex",alignItems:"center",gap:5,...s.chip(sCast.includes(v.id),"#8B1A1A"),padding:"5px 10px"}}><span style={{fontSize:10}}>⚠</span>{v.heroName}</button>)}</div></div>}
             </div>
           ):(
             <div style={{marginBottom:18}}>
               <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
                 {[...activeRoster,...villainPool.filter(v=>v.targetTeams?.includes(activeTeamId))].map(m=><button key={m.id} onClick={()=>setSCast(p=>p.includes(m.id)?p.filter(x=>x!==m.id):[...p,m.id])} style={{display:"flex",alignItems:"center",gap:6,...s.chip(sCast.includes(m.id),m.isVillain?"#8B1A1A":m.color)}}>
                   {images[m.id]&&<img src={images[m.id]} alt="" style={{width:18,height:18,borderRadius:"50%",objectFit:"cover",objectPosition:"top"}}/>}
-                  {m.isVillain&&<span style={{fontSize:9}}>⚠</span>}
+                  {m.isVillain&&<span style={{fontSize:10}}>⚠</span>}
                   {m.heroName}
                 </button>)}
               </div>
@@ -3095,7 +3103,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
           )}
           <span style={s.lbl}>Scenario</span>
           <div className="fscenario-grid" style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:18}}>
-            {SCENARIOS.map(sc=><button key={sc.id} onClick={()=>setSScenario(sc.id)} style={{...s.chip(sScenario===sc.id),padding:"9px 11px",textAlign:"left",borderRadius:9,display:"flex",flexDirection:"column",gap:2}}><span style={{fontSize:14}}>{sc.icon}</span><span style={{fontSize:11,fontWeight:"bold"}}>{sc.label}</span><span style={{fontSize:9,opacity:0.55}}>{sc.desc}</span></button>)}
+            {SCENARIOS.map(sc=><button key={sc.id} onClick={()=>setSScenario(sc.id)} style={{...s.chip(sScenario===sc.id),padding:"9px 11px",textAlign:"left",borderRadius:9,display:"flex",flexDirection:"column",gap:2}}><span style={{fontSize:15}}>{sc.icon}</span><span style={{fontSize:12,fontWeight:"bold"}}>{sc.label}</span><span style={{fontSize:10,opacity:0.55}}>{sc.desc}</span></button>)}
           </div>
           <span style={s.lbl}>Tone</span>
           <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:6}}>{TONES.map(t=><button key={t.id} style={s.chip(sTone===t.id)} onClick={()=>setSTone(t.id)}>{t.label}</button>)}</div>
@@ -3112,63 +3120,63 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
       {tab==="battle"&&(()=>{
         const battlePool=[...allCharacters,...villainPool.map(v=>({...v,isVillain:true}))];
         return(<>
-          <div style={{fontSize:9,letterSpacing:"0.2em",color:`${G}77`,textTransform:"uppercase",marginBottom:16}}>Battle Simulator — Select Two Fighters</div>
+          <div style={{fontSize:10,letterSpacing:"0.2em",color:`${G}77`,textTransform:"uppercase",marginBottom:16}}>Battle Simulator — Select Two Fighters</div>
           <div className="fbattle-grid" style={{display:"grid",gridTemplateColumns:"1fr 44px 1fr",gap:10,alignItems:"start",marginBottom:16}}>
             <div>
-              <div style={{fontSize:9,color:"var(--text4)",marginBottom:8,letterSpacing:"0.1em"}}>FIGHTER A</div>
-              <select value={battleA?.id||""} onChange={e=>{setBattleA(battlePool.find(m=>m.id===e.target.value)||null);setBattleResult(null);}} style={{width:"100%",background:"var(--bg3)",border:`1px solid ${battleA?battleA.color+"55":"var(--border)"}`,borderRadius:8,padding:"10px 12px",color:"var(--text-primary)",fontSize:11,cursor:"pointer",marginBottom:8}}>
+              <div style={{fontSize:10,color:"var(--text4)",marginBottom:8,letterSpacing:"0.1em"}}>FIGHTER A</div>
+              <select value={battleA?.id||""} onChange={e=>{setBattleA(battlePool.find(m=>m.id===e.target.value)||null);setBattleResult(null);}} style={{width:"100%",background:"var(--bg3)",border:`1px solid ${battleA?battleA.color+"55":"var(--border)"}`,borderRadius:8,padding:"10px 12px",color:"var(--text-primary)",fontSize:12,cursor:"pointer",marginBottom:8}}>
                 <option value="">— Select —</option>
                 {allCharacters.map(m=><option key={m.id} value={m.id}>{m.heroName}</option>)}
                 {villainPool.map(v=><option key={v.id} value={v.id}>⚠ {v.heroName}</option>)}
               </select>
               {battleA&&<div style={{padding:"10px",background:`${battleA.color}0A`,border:`1px solid ${battleA.color}33`,borderRadius:8}}>
                 {images[battleA.id]&&<img src={images[battleA.id]} alt="" style={{width:"100%",height:100,objectFit:"cover",objectPosition:"top",borderRadius:6,marginBottom:8}}/>}
-                <div style={{fontSize:13,fontWeight:"bold",color:battleA.color,marginBottom:2}}>{battleA.heroName}</div>
-                <div style={{fontSize:9,color:"var(--text3)",marginBottom:6}}>{battleA.realName}</div>
-                {battleA.stats&&Object.entries(battleA.stats).map(([k,v])=><div key={k} style={{display:"flex",gap:6,alignItems:"center",marginBottom:3}}><div style={{fontSize:8,color:"var(--text4)",width:55}}>{k}</div><div style={{flex:1,height:3,background:"rgba(255,255,255,0.08)",borderRadius:2,overflow:"hidden"}}><div style={{width:`${v}%`,height:"100%",background:battleA.color,borderRadius:2}}/></div><div style={{fontSize:8,color:battleA.color,width:18,textAlign:"right"}}>{v}</div></div>)}
+                <div style={{fontSize:14,fontWeight:"bold",color:battleA.color,marginBottom:2}}>{battleA.heroName}</div>
+                <div style={{fontSize:10,color:"var(--text3)",marginBottom:6}}>{battleA.realName}</div>
+                {battleA.stats&&Object.entries(battleA.stats).map(([k,v])=><div key={k} style={{display:"flex",gap:6,alignItems:"center",marginBottom:3}}><div style={{fontSize:9,color:"var(--text4)",width:55}}>{k}</div><div style={{flex:1,height:3,background:"rgba(255,255,255,0.08)",borderRadius:2,overflow:"hidden"}}><div style={{width:`${v}%`,height:"100%",background:battleA.color,borderRadius:2}}/></div><div style={{fontSize:9,color:battleA.color,width:18,textAlign:"right"}}>{v}</div></div>)}
               </div>}
             </div>
             <div style={{display:"flex",alignItems:"center",justifyContent:"center",paddingTop:36}}>
-              <div style={{fontSize:15,fontWeight:"bold",color:G}}>VS</div>
+              <div style={{fontSize:16,fontWeight:"bold",color:G}}>VS</div>
             </div>
             <div>
-              <div style={{fontSize:9,color:"var(--text4)",marginBottom:8,letterSpacing:"0.1em"}}>FIGHTER B</div>
-              <select value={battleB?.id||""} onChange={e=>{setBattleB(battlePool.find(m=>m.id===e.target.value)||null);setBattleResult(null);}} style={{width:"100%",background:"var(--bg3)",border:`1px solid ${battleB?battleB.color+"55":"var(--border)"}`,borderRadius:8,padding:"10px 12px",color:"var(--text-primary)",fontSize:11,cursor:"pointer",marginBottom:8}}>
+              <div style={{fontSize:10,color:"var(--text4)",marginBottom:8,letterSpacing:"0.1em"}}>FIGHTER B</div>
+              <select value={battleB?.id||""} onChange={e=>{setBattleB(battlePool.find(m=>m.id===e.target.value)||null);setBattleResult(null);}} style={{width:"100%",background:"var(--bg3)",border:`1px solid ${battleB?battleB.color+"55":"var(--border)"}`,borderRadius:8,padding:"10px 12px",color:"var(--text-primary)",fontSize:12,cursor:"pointer",marginBottom:8}}>
                 <option value="">— Select —</option>
                 {allCharacters.map(m=><option key={m.id} value={m.id}>{m.heroName}</option>)}
                 {villainPool.map(v=><option key={v.id} value={v.id}>⚠ {v.heroName}</option>)}
               </select>
               {battleB&&<div style={{padding:"10px",background:`${battleB.color}0A`,border:`1px solid ${battleB.color}33`,borderRadius:8}}>
                 {images[battleB.id]&&<img src={images[battleB.id]} alt="" style={{width:"100%",height:100,objectFit:"cover",objectPosition:"top",borderRadius:6,marginBottom:8}}/>}
-                <div style={{fontSize:13,fontWeight:"bold",color:battleB.color,marginBottom:2}}>{battleB.heroName}</div>
-                <div style={{fontSize:9,color:"var(--text3)",marginBottom:6}}>{battleB.realName}</div>
-                {battleB.stats&&Object.entries(battleB.stats).map(([k,v])=><div key={k} style={{display:"flex",gap:6,alignItems:"center",marginBottom:3}}><div style={{fontSize:8,color:"var(--text4)",width:55}}>{k}</div><div style={{flex:1,height:3,background:"rgba(255,255,255,0.08)",borderRadius:2,overflow:"hidden"}}><div style={{width:`${v}%`,height:"100%",background:battleB.color,borderRadius:2}}/></div><div style={{fontSize:8,color:battleB.color,width:18,textAlign:"right"}}>{v}</div></div>)}
+                <div style={{fontSize:14,fontWeight:"bold",color:battleB.color,marginBottom:2}}>{battleB.heroName}</div>
+                <div style={{fontSize:10,color:"var(--text3)",marginBottom:6}}>{battleB.realName}</div>
+                {battleB.stats&&Object.entries(battleB.stats).map(([k,v])=><div key={k} style={{display:"flex",gap:6,alignItems:"center",marginBottom:3}}><div style={{fontSize:9,color:"var(--text4)",width:55}}>{k}</div><div style={{flex:1,height:3,background:"rgba(255,255,255,0.08)",borderRadius:2,overflow:"hidden"}}><div style={{width:`${v}%`,height:"100%",background:battleB.color,borderRadius:2}}/></div><div style={{fontSize:9,color:battleB.color,width:18,textAlign:"right"}}>{v}</div></div>)}
               </div>}
             </div>
           </div>
           <button style={s.bigBtn(!battleA||!battleB||battleLoading)} onClick={generateBattle} disabled={!battleA||!battleB||battleLoading}>{battleLoading?"Simulating...":"Run Battle"}</button>
           {battleResult&&!battleResult.error&&(<div style={{...s.card,marginTop:16}}>
             <div style={{textAlign:"center",padding:"12px 0 14px",marginBottom:14,borderBottom:"1px solid var(--border2)"}}>
-              <div style={{fontSize:9,color:"var(--text4)",letterSpacing:"0.15em",marginBottom:4}}>WINNER</div>
-              <div style={{fontSize:24,fontWeight:"bold",color:battleResult.winner===battleResult.a?.heroName?battleResult.a?.color:battleResult.b?.color}}>{battleResult.winner}</div>
-              <div style={{fontSize:10,color:"var(--text3)",marginTop:2,fontStyle:"italic"}}>{battleResult.margin} victory</div>
+              <div style={{fontSize:10,color:"var(--text4)",letterSpacing:"0.15em",marginBottom:4}}>WINNER</div>
+              <div style={{fontSize:25,fontWeight:"bold",color:battleResult.winner===battleResult.a?.heroName?battleResult.a?.color:battleResult.b?.color}}>{battleResult.winner}</div>
+              <div style={{fontSize:11,color:"var(--text3)",marginTop:2,fontStyle:"italic"}}>{battleResult.margin} victory</div>
             </div>
             {battleResult.narrative&&<><span style={s.lbl}>Narrative</span><div style={{...s.pBox,marginBottom:12}}>{battleResult.narrative}</div></>}
             {battleResult.keyMoment&&<><span style={s.lbl}>Key Moment</span><div style={{...s.pBox,marginBottom:12,fontStyle:"italic",color:G}}>{battleResult.keyMoment}</div></>}
             {battleResult.finisher&&<><span style={s.lbl}>Finishing Move</span><div style={{...s.pBox,marginBottom:12,color:"#e74c3c"}}>{battleResult.finisher}</div></>}
             {(battleResult.aEdge||battleResult.bEdge)&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginTop:4}}>
-              {battleResult.aEdge&&<div style={{background:`${battleResult.a.color}0A`,border:`1px solid ${battleResult.a.color}33`,borderRadius:8,padding:"10px 12px"}}><div style={{fontSize:8,color:battleResult.a.color,letterSpacing:"0.1em",marginBottom:6}}>{battleResult.a.heroName} EDGE</div>{battleResult.aEdge.map((e,i)=><div key={i} style={{fontSize:10,color:"var(--text2)",marginBottom:3}}>· {e}</div>)}</div>}
-              {battleResult.bEdge&&<div style={{background:`${battleResult.b.color}0A`,border:`1px solid ${battleResult.b.color}33`,borderRadius:8,padding:"10px 12px"}}><div style={{fontSize:8,color:battleResult.b.color,letterSpacing:"0.1em",marginBottom:6}}>{battleResult.b.heroName} EDGE</div>{battleResult.bEdge.map((e,i)=><div key={i} style={{fontSize:10,color:"var(--text2)",marginBottom:3}}>· {e}</div>)}</div>}
+              {battleResult.aEdge&&<div style={{background:`${battleResult.a.color}0A`,border:`1px solid ${battleResult.a.color}33`,borderRadius:8,padding:"10px 12px"}}><div style={{fontSize:9,color:battleResult.a.color,letterSpacing:"0.1em",marginBottom:6}}>{battleResult.a.heroName} EDGE</div>{battleResult.aEdge.map((e,i)=><div key={i} style={{fontSize:11,color:"var(--text2)",marginBottom:3}}>· {e}</div>)}</div>}
+              {battleResult.bEdge&&<div style={{background:`${battleResult.b.color}0A`,border:`1px solid ${battleResult.b.color}33`,borderRadius:8,padding:"10px 12px"}}><div style={{fontSize:9,color:battleResult.b.color,letterSpacing:"0.1em",marginBottom:6}}>{battleResult.b.heroName} EDGE</div>{battleResult.bEdge.map((e,i)=><div key={i} style={{fontSize:11,color:"var(--text2)",marginBottom:3}}>· {e}</div>)}</div>}
             </div>}
             <div style={{display:"flex",justifyContent:"flex-end",marginTop:10}}><button style={s.cpyBtn(copied.battle)} onClick={()=>copy("battle",[battleResult.narrative,battleResult.keyMoment,battleResult.finisher].filter(Boolean).join("\n\n"))}>{copied.battle?"Copied!":"Copy"}</button></div>
           </div>)}
-          {battleResult?.error&&<div style={{marginTop:12,padding:"12px",background:"rgba(192,57,43,0.1)",border:"1px solid rgba(192,57,43,0.28)",borderRadius:8,fontSize:11,color:"#e74c3c"}}>Battle simulation failed — check Ollama is running.</div>}
+          {battleResult?.error&&<div style={{marginTop:12,padding:"12px",background:"rgba(192,57,43,0.1)",border:"1px solid rgba(192,57,43,0.28)",borderRadius:8,fontSize:12,color:"#e74c3c"}}>Battle simulation failed — check Ollama is running.</div>}
         </>);
       })()}
 
       {/* ── ARC TAB ───────────────────────────────────────────────────── */}
       {tab==="arc"&&(<>
-        <div style={{fontSize:9,letterSpacing:"0.2em",color:`${G}77`,textTransform:"uppercase",marginBottom:16}}>Arc Generator — Build a Story Arc</div>
+        <div style={{fontSize:10,letterSpacing:"0.2em",color:`${G}77`,textTransform:"uppercase",marginBottom:16}}>Arc Generator — Build a Story Arc</div>
         <div style={s.card}>
           <span style={s.lbl}>Arc Title</span>
           <input type="text" value={arcTitle} onChange={e=>setArcTitle(e.target.value)} placeholder="e.g. The Omega Protocol" style={{marginBottom:16}}/>
@@ -3180,7 +3188,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
           <span style={s.lbl}>Teams Involved</span>
           <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:16}}>
             {teams.map(t=><button key={t.id} onClick={()=>setArcTeams(p=>p.includes(t.id)?p.filter(x=>x!==t.id):[...p,t.id])} style={{...s.chip(arcTeams.includes(t.id),t.color),padding:"5px 12px"}}>{t.name}</button>)}
-            {arcTeams.length===0&&<div style={{fontSize:9,color:"var(--text4)",padding:"6px 4px"}}>None selected — uses active team</div>}
+            {arcTeams.length===0&&<div style={{fontSize:10,color:"var(--text4)",padding:"6px 4px"}}>None selected — uses active team</div>}
           </div>
           <div style={{display:"flex",gap:16,marginBottom:16,flexWrap:"wrap"}}>
             <div style={{flex:1,minWidth:160}}>
@@ -3196,52 +3204,52 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
         </div>
         {arcResult&&!arcResult.error&&(<div style={{marginTop:16}}>
           <div style={{padding:"16px 18px",background:"rgba(212,175,55,0.06)",border:"1px solid rgba(212,175,55,0.25)",borderRadius:10,marginBottom:14}}>
-            <div style={{fontSize:20,fontWeight:"bold",color:G,marginBottom:4}}>{arcResult.arcTitle}</div>
-            <div style={{fontSize:12,color:"var(--text2)",fontStyle:"italic",marginBottom:8}}>{arcResult.tagline}</div>
-            {arcResult.villainGoal&&<div style={{fontSize:10,color:"var(--text3)"}}><span style={{color:"#e74c3c"}}>Threat: </span>{arcResult.villainGoal}</div>}
+            <div style={{fontSize:21,fontWeight:"bold",color:G,marginBottom:4}}>{arcResult.arcTitle}</div>
+            <div style={{fontSize:13,color:"var(--text2)",fontStyle:"italic",marginBottom:8}}>{arcResult.tagline}</div>
+            {arcResult.villainGoal&&<div style={{fontSize:11,color:"var(--text3)"}}><span style={{color:"#e74c3c"}}>Threat: </span>{arcResult.villainGoal}</div>}
           </div>
           <div style={{display:"flex",flexDirection:"column",gap:8}}>
             {(arcResult.issues||[]).map(issue=><div key={issue.number} style={{padding:"14px 16px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:10}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8,flexWrap:"wrap",gap:6}}>
                 <div style={{display:"flex",gap:8,alignItems:"center"}}>
-                  <div style={{fontSize:8,color:"var(--text4)",letterSpacing:"0.1em",background:"rgba(255,255,255,0.05)",padding:"2px 7px",borderRadius:20}}>#{issue.number}</div>
-                  <div style={{fontSize:13,fontWeight:"bold",color:"var(--text-primary)"}}>{issue.title}</div>
+                  <div style={{fontSize:9,color:"var(--text4)",letterSpacing:"0.1em",background:"rgba(255,255,255,0.05)",padding:"2px 7px",borderRadius:20}}>#{issue.number}</div>
+                  <div style={{fontSize:14,fontWeight:"bold",color:"var(--text-primary)"}}>{issue.title}</div>
                 </div>
-                {issue.spotlightHero&&<div style={{fontSize:9,padding:"2px 9px",background:`${G}12`,border:`1px solid ${G}44`,borderRadius:20,color:G}}>★ {issue.spotlightHero}</div>}
+                {issue.spotlightHero&&<div style={{fontSize:10,padding:"2px 9px",background:`${G}12`,border:`1px solid ${G}44`,borderRadius:20,color:G}}>★ {issue.spotlightHero}</div>}
               </div>
-              <div style={{fontSize:11,color:"var(--text2)",lineHeight:1.65,marginBottom:8}}>{issue.summary}</div>
-              {issue.villainMove&&<div style={{fontSize:10,color:"#e07070",marginBottom:5}}>⚠ {issue.villainMove}</div>}
-              {issue.cliffhanger&&<div style={{fontSize:10,color:"var(--text3)",fontStyle:"italic",borderTop:"1px solid var(--border)",paddingTop:6,marginTop:4}}>↳ {issue.cliffhanger}</div>}
+              <div style={{fontSize:12,color:"var(--text2)",lineHeight:1.65,marginBottom:8}}>{issue.summary}</div>
+              {issue.villainMove&&<div style={{fontSize:11,color:"#e07070",marginBottom:5}}>⚠ {issue.villainMove}</div>}
+              {issue.cliffhanger&&<div style={{fontSize:11,color:"var(--text3)",fontStyle:"italic",borderTop:"1px solid var(--border)",paddingTop:6,marginTop:4}}>↳ {issue.cliffhanger}</div>}
             </div>)}
           </div>
           {arcResult.resolution&&<div style={{marginTop:10,padding:"14px 16px",background:"rgba(93,202,165,0.06)",border:"1px solid rgba(93,202,165,0.25)",borderRadius:10}}>
-            <div style={{fontSize:8,color:"#5DCAA5",letterSpacing:"0.1em",marginBottom:4}}>RESOLUTION</div>
-            <div style={{fontSize:11,color:"var(--text2)",lineHeight:1.65}}>{arcResult.resolution}</div>
+            <div style={{fontSize:9,color:"#5DCAA5",letterSpacing:"0.1em",marginBottom:4}}>RESOLUTION</div>
+            <div style={{fontSize:12,color:"var(--text2)",lineHeight:1.65}}>{arcResult.resolution}</div>
           </div>}
           {arcResult.teaser&&<div style={{marginTop:8,padding:"12px 16px",background:"rgba(212,175,55,0.04)",border:"1px solid rgba(212,175,55,0.18)",borderRadius:10}}>
-            <div style={{fontSize:8,color:G,letterSpacing:"0.1em",marginBottom:4}}>NEXT ARC</div>
-            <div style={{fontSize:11,color:"var(--text2)",fontStyle:"italic"}}>{arcResult.teaser}</div>
+            <div style={{fontSize:9,color:G,letterSpacing:"0.1em",marginBottom:4}}>NEXT ARC</div>
+            <div style={{fontSize:12,color:"var(--text2)",fontStyle:"italic"}}>{arcResult.teaser}</div>
           </div>}
           <div style={{display:"flex",justifyContent:"flex-end",marginTop:12}}>
             <button style={s.cpyBtn(copied.arc)} onClick={()=>{const txt=(arcResult.issues||[]).map(i=>`Issue #${i.number}: ${i.title}\n${i.summary}${i.cliffhanger?"\n↳ "+i.cliffhanger:""}`).join("\n\n");copy("arc",`${arcResult.arcTitle}\n${arcResult.tagline}\n\n${txt}${arcResult.resolution?"\n\nResolution: "+arcResult.resolution:""}`)}}>{copied.arc?"Copied!":"Copy Arc"}</button>
           </div>
         </div>)}
-        {arcResult?.error&&<div style={{marginTop:12,padding:"12px",background:"rgba(192,57,43,0.1)",border:"1px solid rgba(192,57,43,0.28)",borderRadius:8,fontSize:11,color:"#e74c3c"}}>Arc generation failed — check Ollama is running.</div>}
+        {arcResult?.error&&<div style={{marginTop:12,padding:"12px",background:"rgba(192,57,43,0.1)",border:"1px solid rgba(192,57,43,0.28)",borderRadius:8,fontSize:12,color:"#e74c3c"}}>Arc generation failed — check Ollama is running.</div>}
       </>)}
 
       {/* ── COMIC TAB ─────────────────────────────────────────────────── */}
       {tab==="comic"&&(<>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:18,flexWrap:"wrap",gap:8}}>
           <div>
-            <div style={{fontSize:9,letterSpacing:"0.2em",color:G+"99",textTransform:"uppercase",marginBottom:4}}>Comic Book</div>
-            <div style={{fontSize:12,color:"var(--text2)"}}>Generate a full script from your cast, then add art panel by panel.</div>
+            <div style={{fontSize:10,letterSpacing:"0.2em",color:G+"99",textTransform:"uppercase",marginBottom:4}}>Comic Book</div>
+            <div style={{fontSize:13,color:"var(--text2)"}}>Generate a full script from your cast, then add art panel by panel.</div>
           </div>
-          {comicResult&&!comicResult.error&&<button onClick={exportComicPDF} disabled={comicExporting} style={{...s.bigBtn(comicExporting),padding:"8px 18px",fontSize:10}}>{comicExporting?"Generating PDF...":"Export Comic PDF →"}</button>}
+          {comicResult&&!comicResult.error&&<button onClick={exportComicPDF} disabled={comicExporting} style={{...s.bigBtn(comicExporting),padding:"8px 18px",fontSize:11}}>{comicExporting?"Generating PDF...":"Export Comic PDF →"}</button>}
         </div>
 
         {/* ── Setup form ── */}
         {!comicResult&&!comicLoading&&(<div style={s.card}>
-          <div style={{fontSize:13,fontWeight:"bold",color:"var(--text-primary)",marginBottom:14}}>Setup</div>
+          <div style={{fontSize:14,fontWeight:"bold",color:"var(--text-primary)",marginBottom:14}}>Setup</div>
 
           <span style={s.lbl}>Title</span>
           <input type="text" placeholder='"The Night Fracture"' value={comicTitle} onChange={e=>setComicTitle(e.target.value)} style={{marginBottom:14}}/>
@@ -3287,13 +3295,13 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
             {ART_STYLES.map(a=><button key={a.id} style={s.chip(comicStyle===a.id)} onClick={()=>{setComicStyle(a.id);setComicSubStyle("");}}>{a.label}</button>)}
           </div>
           {(comicStyle==="comic"||comicStyle==="anime")&&<div style={{marginBottom:14}}>
-            <span style={{...s.lbl,fontSize:8.5}}>{comicStyle==="comic"?"Comic Style":"Anime Style"}</span>
+            <span style={{...s.lbl,fontSize:9.5}}>{comicStyle==="comic"?"Comic Style":"Anime Style"}</span>
             <div style={{display:"flex",flexWrap:"wrap",gap:6,marginTop:4}}>
               <button style={s.chip(!comicSubStyle)} onClick={()=>setComicSubStyle("")}>General</button>
               {(comicStyle==="comic"?COMIC_SUB_STYLES:ANIME_SUB_STYLES).map(sub=><button key={sub.id} style={s.chip(comicSubStyle===sub.id)} onClick={()=>setComicSubStyle(sub.id)}>{sub.label}</button>)}
             </div>
           </div>}
-          <label style={{display:"flex",alignItems:"center",gap:6,fontSize:9.5,color:comicRealism?"#5DCAA5":"var(--text3)",cursor:"pointer",fontFamily:"var(--font-mono)",marginBottom:18}}>
+          <label style={{display:"flex",alignItems:"center",gap:6,fontSize:10.5,color:comicRealism?"#5DCAA5":"var(--text3)",cursor:"pointer",fontFamily:"var(--font-mono)",marginBottom:18}}>
             <input type="checkbox" checked={comicRealism} onChange={e=>setComicRealism(e.target.checked)} style={{cursor:"pointer"}}/>
             📷 Maximize Realism — push panel art toward photographic detail
           </label>
@@ -3305,9 +3313,9 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
 
         {/* ── Loading ── */}
         {comicLoading&&(<div style={s.card}>
-          <div style={{fontSize:12,fontWeight:"bold",color:"var(--text-primary)",marginBottom:10}}>Writing comic script…</div>
-          {aiStreamText&&<div style={{padding:"10px 12px",background:"var(--bg2)",border:`1px solid ${G}22`,borderRadius:8,fontFamily:"var(--font-mono)",fontSize:9,color:"var(--text3)",maxHeight:80,overflowY:"auto",whiteSpace:"pre-wrap",wordBreak:"break-all",lineHeight:1.5,marginBottom:10}}>{aiStreamText}</div>}
-          <button onClick={()=>genControllerRef.current?.abort()} style={{padding:"8px 14px",background:`${G}11`,border:`1px solid ${G}44`,borderRadius:8,cursor:"pointer",color:G,fontSize:9,fontFamily:"var(--font-mono)"}}>✕ Cancel</button>
+          <div style={{fontSize:13,fontWeight:"bold",color:"var(--text-primary)",marginBottom:10}}>Writing comic script…</div>
+          {aiStreamText&&<div style={{padding:"10px 12px",background:"var(--bg2)",border:`1px solid ${G}22`,borderRadius:8,fontFamily:"var(--font-mono)",fontSize:10,color:"var(--text3)",maxHeight:80,overflowY:"auto",whiteSpace:"pre-wrap",wordBreak:"break-all",lineHeight:1.5,marginBottom:10}}>{aiStreamText}</div>}
+          <button onClick={()=>genControllerRef.current?.abort()} style={{padding:"8px 14px",background:`${G}11`,border:`1px solid ${G}44`,borderRadius:8,cursor:"pointer",color:G,fontSize:10,fontFamily:"var(--font-mono)"}}>✕ Cancel</button>
         </div>)}
 
         {/* ── Result ── */}
@@ -3315,12 +3323,12 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
           {/* Header */}
           <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:14,flexWrap:"wrap",gap:8}}>
             <div>
-              <div style={{fontSize:20,fontWeight:"bold",color:G,marginBottom:2}}>{comicResult.title}</div>
-              {comicResult.tagline&&<div style={{fontSize:12,color:"var(--text2)",fontStyle:"italic"}}>{comicResult.tagline}</div>}
+              <div style={{fontSize:21,fontWeight:"bold",color:G,marginBottom:2}}>{comicResult.title}</div>
+              {comicResult.tagline&&<div style={{fontSize:13,color:"var(--text2)",fontStyle:"italic"}}>{comicResult.tagline}</div>}
             </div>
             <div style={{display:"flex",gap:8,flexShrink:0}}>
-              <button onClick={()=>{setComicResult(null);setComicPanelPrompts({});setComicActivePanelPrompt(null);}} style={{padding:"8px 14px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:10,fontFamily:"var(--font-mono)"}}>← New</button>
-              <button onClick={exportComicPDF} disabled={comicExporting} style={{...s.bigBtn(comicExporting),padding:"8px 16px",fontSize:10}}>{comicExporting?"Exporting...":"Export PDF →"}</button>
+              <button onClick={()=>{setComicResult(null);setComicPanelPrompts({});setComicActivePanelPrompt(null);}} style={{padding:"8px 14px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:11,fontFamily:"var(--font-mono)"}}>← New</button>
+              <button onClick={exportComicPDF} disabled={comicExporting} style={{...s.bigBtn(comicExporting),padding:"8px 16px",fontSize:11}}>{comicExporting?"Exporting...":"Export PDF →"}</button>
             </div>
           </div>
 
@@ -3330,11 +3338,11 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
             {ART_STYLES.map(a=><button key={a.id} style={s.chip(comicStyle===a.id)} onClick={()=>{setComicStyle(a.id);setComicSubStyle("");}}>{a.label}</button>)}
           </div>
           {(comicStyle==="comic"||comicStyle==="anime")&&<div style={{display:"flex",flexWrap:"wrap",gap:5,alignItems:"center",marginBottom:10}}>
-            <span style={{...s.lbl,marginRight:4,fontSize:8.5}}>{comicStyle==="comic"?"Comic style:":"Anime style:"}</span>
+            <span style={{...s.lbl,marginRight:4,fontSize:9.5}}>{comicStyle==="comic"?"Comic style:":"Anime style:"}</span>
             <button style={s.chip(!comicSubStyle)} onClick={()=>setComicSubStyle("")}>General</button>
             {(comicStyle==="comic"?COMIC_SUB_STYLES:ANIME_SUB_STYLES).map(sub=><button key={sub.id} style={s.chip(comicSubStyle===sub.id)} onClick={()=>setComicSubStyle(sub.id)}>{sub.label}</button>)}
           </div>}
-          <label style={{display:"flex",alignItems:"center",gap:6,fontSize:9.5,color:comicRealism?"#5DCAA5":"var(--text3)",cursor:"pointer",fontFamily:"var(--font-mono)",marginBottom:16}}>
+          <label style={{display:"flex",alignItems:"center",gap:6,fontSize:10.5,color:comicRealism?"#5DCAA5":"var(--text3)",cursor:"pointer",fontFamily:"var(--font-mono)",marginBottom:16}}>
             <input type="checkbox" checked={comicRealism} onChange={e=>setComicRealism(e.target.checked)} style={{cursor:"pointer"}}/>
             📷 Maximize Realism — push panel art toward photographic detail
           </label>
@@ -3342,7 +3350,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
           {/* Pages */}
           {(comicResult.pages||[]).map(page=>(
             <div key={page.pageNum} style={{marginBottom:28}}>
-              <div style={{fontSize:9,letterSpacing:"0.15em",color:G+"88",textTransform:"uppercase",marginBottom:8,borderBottom:`1px solid ${G}18`,paddingBottom:4}}>
+              <div style={{fontSize:10,letterSpacing:"0.15em",color:G+"88",textTransform:"uppercase",marginBottom:8,borderBottom:`1px solid ${G}18`,paddingBottom:4}}>
                 Page {page.pageNum}
               </div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4}}>
@@ -3358,12 +3366,12 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                         {hasImg
                           ?<img src={images[panel.id]} alt="" style={{width:"100%",height:"100%",objectFit:"cover",objectPosition:"top",display:"block"}}/>
                           :<div style={{position:"absolute",inset:0,padding:"10px 12px",display:"flex",flexDirection:"column",gap:6,justifyContent:"space-between"}}>
-                            {panel.caption?<div style={{fontSize:8,fontFamily:"var(--font-mono)",color:"#111",background:"rgba(255,255,230,0.93)",padding:"3px 7px",borderRadius:3,lineHeight:1.4,alignSelf:"flex-start",maxWidth:"90%",boxShadow:"0 1px 3px rgba(0,0,0,0.4)"}}>{panel.caption}</div>:<div/>}
-                            <div style={{fontSize:10,color:"rgba(255,255,255,0.4)",lineHeight:1.5,textAlign:"center",flex:1,display:"flex",alignItems:"center",justifyContent:"center",padding:"4px 0"}}>{panel.description}</div>
+                            {panel.caption?<div style={{fontSize:9,fontFamily:"var(--font-mono)",color:"#111",background:"rgba(255,255,230,0.93)",padding:"3px 7px",borderRadius:3,lineHeight:1.4,alignSelf:"flex-start",maxWidth:"90%",boxShadow:"0 1px 3px rgba(0,0,0,0.4)"}}>{panel.caption}</div>:<div/>}
+                            <div style={{fontSize:11,color:"rgba(255,255,255,0.4)",lineHeight:1.5,textAlign:"center",flex:1,display:"flex",alignItems:"center",justifyContent:"center",padding:"4px 0"}}>{panel.description}</div>
                             <div style={{display:"flex",flexDirection:"column",gap:3}}>
-                              {panel.sfx&&<div style={{fontSize:16,fontWeight:"bold",color:"#FFD700",fontStyle:"italic",textShadow:"1px 1px 0 #000",lineHeight:1}}>{panel.sfx}</div>}
+                              {panel.sfx&&<div style={{fontSize:17,fontWeight:"bold",color:"#FFD700",fontStyle:"italic",textShadow:"1px 1px 0 #000",lineHeight:1}}>{panel.sfx}</div>}
                               {(panel.dialogue||[]).slice(0,2).map((d,i)=>(
-                                <div key={i} style={{fontSize:8.5,color:"#fff",background:"rgba(255,255,255,0.13)",border:"1px solid rgba(255,255,255,0.22)",padding:"3px 8px",borderRadius:8,lineHeight:1.4,alignSelf:"flex-start",maxWidth:"90%"}}>
+                                <div key={i} style={{fontSize:9.5,color:"#fff",background:"rgba(255,255,255,0.13)",border:"1px solid rgba(255,255,255,0.22)",padding:"3px 8px",borderRadius:8,lineHeight:1.4,alignSelf:"flex-start",maxWidth:"90%"}}>
                                   <span style={{color:G,fontWeight:"bold"}}>{d.character}: </span>{d.text}
                                 </div>
                               ))}
@@ -3371,31 +3379,31 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                           </div>
                         }
                         {/* Image overlays when image present */}
-                        {hasImg&&panel.caption&&<div style={{position:"absolute",top:0,left:0,right:0,padding:"5px 8px 12px",background:"linear-gradient(rgba(0,0,0,0.75),transparent)",fontSize:8,fontFamily:"var(--font-mono)",color:"#fff",lineHeight:1.4}}>{panel.caption}</div>}
+                        {hasImg&&panel.caption&&<div style={{position:"absolute",top:0,left:0,right:0,padding:"5px 8px 12px",background:"linear-gradient(rgba(0,0,0,0.75),transparent)",fontSize:9,fontFamily:"var(--font-mono)",color:"#fff",lineHeight:1.4}}>{panel.caption}</div>}
                         {hasImg&&(panel.dialogue||[]).length>0&&<div style={{position:"absolute",bottom:0,left:0,right:0,padding:"12px 6px 5px",background:"linear-gradient(transparent,rgba(0,0,0,0.82))",display:"flex",flexDirection:"column",gap:3}}>
                           {panel.dialogue.slice(0,2).map((d,i)=>(
-                            <div key={i} style={{fontSize:8,color:"#fff",background:"rgba(255,255,255,0.14)",border:"1px solid rgba(255,255,255,0.25)",padding:"2px 7px",borderRadius:8,lineHeight:1.4,alignSelf:"flex-start",maxWidth:"90%"}}>
+                            <div key={i} style={{fontSize:9,color:"#fff",background:"rgba(255,255,255,0.14)",border:"1px solid rgba(255,255,255,0.25)",padding:"2px 7px",borderRadius:8,lineHeight:1.4,alignSelf:"flex-start",maxWidth:"90%"}}>
                               <span style={{color:G,fontWeight:"bold"}}>{d.character}: </span>{d.text}
                             </div>
                           ))}
                         </div>}
-                        {hasImg&&panel.sfx&&<div style={{position:"absolute",top:"50%",left:8,transform:"translateY(-50%)",fontSize:20,fontWeight:"bold",color:"#FFD700",fontStyle:"italic",textShadow:"2px 2px 0 #000,0 0 14px rgba(255,215,0,0.5)",pointerEvents:"none"}}>{panel.sfx}</div>}
+                        {hasImg&&panel.sfx&&<div style={{position:"absolute",top:"50%",left:8,transform:"translateY(-50%)",fontSize:21,fontWeight:"bold",color:"#FFD700",fontStyle:"italic",textShadow:"2px 2px 0 #000,0 0 14px rgba(255,215,0,0.5)",pointerEvents:"none"}}>{panel.sfx}</div>}
                         {/* Controls */}
                         <div style={{position:"absolute",top:4,right:4,display:"flex",gap:3}}>
-                          <button onClick={e=>{e.stopPropagation();fileRefs.current[panel.id]?.click();}} style={{fontSize:7.5,padding:"2px 7px",background:"rgba(0,0,0,0.7)",border:"1px solid rgba(255,255,255,0.2)",borderRadius:4,cursor:"pointer",color:"#fff",fontFamily:"var(--font-mono)",backdropFilter:"blur(4px)"}}>
+                          <button onClick={e=>{e.stopPropagation();fileRefs.current[panel.id]?.click();}} style={{fontSize:8.5,padding:"2px 7px",background:"rgba(0,0,0,0.7)",border:"1px solid rgba(255,255,255,0.2)",borderRadius:4,cursor:"pointer",color:"#fff",fontFamily:"var(--font-mono)",backdropFilter:"blur(4px)"}}>
                             {hasImg?"↑ Change":"↑ Upload"}
                           </button>
-                          <button onClick={()=>generateComicPanelPrompt(panel,page.pageNum)} style={{fontSize:7.5,padding:"2px 7px",background:promptOpen?"rgba(212,175,55,0.28)":"rgba(0,0,0,0.7)",border:`1px solid ${promptOpen?G+"88":"rgba(255,255,255,0.2)"}`,borderRadius:4,cursor:"pointer",color:promptOpen?G:"#fff",fontFamily:"var(--font-mono)",backdropFilter:"blur(4px)"}}>🎨</button>
+                          <button onClick={()=>generateComicPanelPrompt(panel,page.pageNum)} style={{fontSize:8.5,padding:"2px 7px",background:promptOpen?"rgba(212,175,55,0.28)":"rgba(0,0,0,0.7)",border:`1px solid ${promptOpen?G+"88":"rgba(255,255,255,0.2)"}`,borderRadius:4,cursor:"pointer",color:promptOpen?G:"#fff",fontFamily:"var(--font-mono)",backdropFilter:"blur(4px)"}}>🎨</button>
                         </div>
                       </div>
                       {/* Inline prompt */}
                       {promptOpen&&comicPanelPrompts[panel.id]&&(
                         <div style={{padding:"8px 10px",borderTop:`1px solid ${G}18`,background:`${G}04`}}>
                           <div style={{position:"relative"}}>
-                            <textarea readOnly value={comicPanelPrompts[panel.id].metaAI} rows={2} style={{width:"100%",padding:"8px 44px 8px 10px",background:"var(--bg3)",border:`1px solid ${G}22`,borderRadius:6,color:"var(--text-primary)",fontSize:9,fontFamily:"var(--font-mono)",resize:"none",lineHeight:1.5,boxSizing:"border-box"}}/>
-                            <button onClick={()=>copyToClipboard(comicPanelPrompts[panel.id].metaAI)} style={{position:"absolute",top:6,right:6,fontSize:7.5,padding:"2px 7px",background:`${G}18`,border:`1px solid ${G}44`,borderRadius:4,cursor:"pointer",color:G,fontFamily:"var(--font-mono)"}}>Copy</button>
+                            <textarea readOnly value={comicPanelPrompts[panel.id].metaAI} rows={2} style={{width:"100%",padding:"8px 44px 8px 10px",background:"var(--bg3)",border:`1px solid ${G}22`,borderRadius:6,color:"var(--text-primary)",fontSize:10,fontFamily:"var(--font-mono)",resize:"none",lineHeight:1.5,boxSizing:"border-box"}}/>
+                            <button onClick={()=>copyToClipboard(comicPanelPrompts[panel.id].metaAI)} style={{position:"absolute",top:6,right:6,fontSize:8.5,padding:"2px 7px",background:`${G}18`,border:`1px solid ${G}44`,borderRadius:4,cursor:"pointer",color:G,fontFamily:"var(--font-mono)"}}>Copy</button>
                           </div>
-                          {hasImg&&<div style={{marginTop:4,fontSize:8,color:`${G}66`}}>✓ Reference uploaded — include with prompt for consistency</div>}
+                          {hasImg&&<div style={{marginTop:4,fontSize:9,color:`${G}66`}}>✓ Reference uploaded — include with prompt for consistency</div>}
                         </div>
                       )}
                     </div>
@@ -3407,8 +3415,8 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
         </>)}
 
         {comicResult?.error&&(<div style={{padding:"14px",background:"rgba(192,57,43,0.08)",border:"1px solid rgba(192,57,43,0.28)",borderRadius:10}}>
-          <div style={{fontSize:11,color:"#e74c3c",marginBottom:10}}>Comic generation failed — check Ollama is running and try again.</div>
-          <button onClick={()=>setComicResult(null)} style={{padding:"6px 14px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:6,cursor:"pointer",color:"var(--text2)",fontSize:10,fontFamily:"var(--font-mono)"}}>← Try Again</button>
+          <div style={{fontSize:12,color:"#e74c3c",marginBottom:10}}>Comic generation failed — check Ollama is running and try again.</div>
+          <button onClick={()=>setComicResult(null)} style={{padding:"6px 14px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:6,cursor:"pointer",color:"var(--text2)",fontSize:11,fontFamily:"var(--font-mono)"}}>← Try Again</button>
         </div>)}
       </>)}
 
@@ -3422,25 +3430,25 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
         };
         return(<>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-            <div style={{fontSize:9,letterSpacing:"0.2em",color:`${G}77`,textTransform:"uppercase"}}>Power Tier Rankings — All Characters</div>
-            <button onClick={()=>{setTierOverrides({});try{localStorage.removeItem("forge-tiers");}catch{}}} style={{fontSize:9,padding:"3px 10px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:20,cursor:"pointer",color:"var(--text3)",fontFamily:"var(--font-mono)"}}>Reset</button>
+            <div style={{fontSize:10,letterSpacing:"0.2em",color:`${G}77`,textTransform:"uppercase"}}>Power Tier Rankings — All Characters</div>
+            <button onClick={()=>{setTierOverrides({});try{localStorage.removeItem("forge-tiers");}catch{}}} style={{fontSize:10,padding:"3px 10px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:20,cursor:"pointer",color:"var(--text3)",fontFamily:"var(--font-mono)"}}>Reset</button>
           </div>
           {TIER_DEFS.map(tier=>{
             const members=allCharacters.filter(m=>(tierOverrides[m.id]||autoTierFn(m))===tier.id);
             return(<div key={tier.id} style={{display:"flex",alignItems:"stretch",marginBottom:8,minHeight:76,border:`1px solid ${tier.color}22`,borderRadius:10,overflow:"hidden"}}>
               <div style={{width:46,background:`${tier.color}14`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                <div style={{fontSize:22,fontWeight:"bold",color:tier.color}}>{tier.id}</div>
+                <div style={{fontSize:23,fontWeight:"bold",color:tier.color}}>{tier.id}</div>
               </div>
               <div style={{flex:1,display:"flex",flexWrap:"wrap",gap:8,padding:"10px 12px",alignItems:"center"}}>
-                {members.length===0&&<div style={{fontSize:10,color:"var(--text4)",fontStyle:"italic"}}>—</div>}
+                {members.length===0&&<div style={{fontSize:11,color:"var(--text4)",fontStyle:"italic"}}>—</div>}
                 {members.map(m=><div key={m.id} onClick={()=>cycleTier(m)} title="Click to move to next tier" style={{display:"flex",alignItems:"center",gap:7,padding:"6px 10px",background:`${m.color}10`,border:`1px solid ${m.color}33`,borderRadius:8,cursor:"pointer"}}>
-                  {images[m.id]?<img src={images[m.id]} alt="" style={{width:26,height:26,borderRadius:"50%",objectFit:"cover",objectPosition:"top",flexShrink:0}}/>:<div style={{width:26,height:26,borderRadius:"50%",background:`${m.color}20`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:8,fontWeight:"bold",color:m.color,flexShrink:0}}>{m.initials}</div>}
-                  <div><div style={{fontSize:11,fontWeight:"bold",color:"var(--text-primary)"}}>{m.heroName}</div><div style={{fontSize:8,color:m.color}}>{autoScore(m)} avg</div></div>
+                  {images[m.id]?<img src={images[m.id]} alt="" style={{width:26,height:26,borderRadius:"50%",objectFit:"cover",objectPosition:"top",flexShrink:0}}/>:<div style={{width:26,height:26,borderRadius:"50%",background:`${m.color}20`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:"bold",color:m.color,flexShrink:0}}>{m.initials}</div>}
+                  <div><div style={{fontSize:12,fontWeight:"bold",color:"var(--text-primary)"}}>{m.heroName}</div><div style={{fontSize:9,color:m.color}}>{autoScore(m)} avg</div></div>
                 </div>)}
               </div>
             </div>);
           })}
-          <div style={{marginTop:8,fontSize:9,color:"var(--text4)",textAlign:"center"}}>Click any character to cycle tier · Auto-ranked by average stats · Overrides saved locally</div>
+          <div style={{marginTop:8,fontSize:10,color:"var(--text4)",textAlign:"center"}}>Click any character to cycle tier · Auto-ranked by average stats · Overrides saved locally</div>
         </>);
       })()}
 
@@ -3557,9 +3565,9 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
 
         return(<>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
-            <div style={{fontSize:9,letterSpacing:"0.2em",color:`${G}77`,textTransform:"uppercase"}}>Family Tree</div>
+            <div style={{fontSize:10,letterSpacing:"0.2em",color:`${G}77`,textTransform:"uppercase"}}>Family Tree</div>
             {derivedLinks.length>0&&(
-              <label style={{display:"flex",alignItems:"center",gap:6,fontSize:9.5,color:"var(--text3)",cursor:"pointer",fontFamily:"var(--font-mono)"}}>
+              <label style={{display:"flex",alignItems:"center",gap:6,fontSize:10.5,color:"var(--text3)",cursor:"pointer",fontFamily:"var(--font-mono)"}}>
                 <input type="checkbox" checked={ftShowInferred} onChange={e=>setFtShowInferred(e.target.checked)} style={{cursor:"pointer"}}/>
                 Show inferred relations ({derivedLinks.length})
               </label>
@@ -3589,7 +3597,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                           stroke={color} strokeWidth={1.3} strokeOpacity={0.3} strokeDasharray="4,4"/>
                       )}
                       <rect x={mx-26} y={my-8} width={52} height={14} rx={4} fill="var(--bg)" opacity={0.55}/>
-                      <text x={mx} y={my+4} textAnchor="middle" fontSize="7" fill={color} fontFamily="monospace" fontStyle="italic" opacity={0.55}>{link.aRelation}</text>
+                      <text x={mx} y={my+4} textAnchor="middle" fontSize="8" fill={color} fontFamily="monospace" fontStyle="italic" opacity={0.55}>{link.aRelation}</text>
                     </g>
                   );
                 })}
@@ -3612,7 +3620,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                           strokeDasharray={link.aRelation==="Sibling"||link.aRelation==="Twin"?"none":"5,3"}/>
                       )}
                       <rect x={mx-24} y={my-8} width={48} height={14} rx={4} fill="var(--bg)" opacity={0.8}/>
-                      <text x={mx} y={my+4} textAnchor="middle" fontSize="7" fill={color} fontFamily="monospace" fontWeight="bold">{link.aRelation}</text>
+                      <text x={mx} y={my+4} textAnchor="middle" fontSize="8" fill={color} fontFamily="monospace" fontWeight="bold">{link.aRelation}</text>
                     </g>
                   );
                 })}
@@ -3634,11 +3642,11 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                       ):(
                         <>
                           <circle cx={p.x} cy={p.y} r={nodeR} fill={`${color}18`} stroke={color} strokeWidth={isActive?2:1.5}/>
-                          <text x={p.x} y={p.y+5} textAnchor="middle" fontSize="12" fontWeight="bold" fill={color} fontFamily="monospace">{char.initials}</text>
+                          <text x={p.x} y={p.y+5} textAnchor="middle" fontSize="13" fontWeight="bold" fill={color} fontFamily="monospace">{char.initials}</text>
                         </>
                       )}
-                      <text x={p.x} y={p.y+nodeR+14} textAnchor="middle" fontSize="8.5" fill="var(--text-primary)" fontFamily="monospace" fontWeight="bold">{char.heroName}</text>
-                      {char.isVillain&&<text x={p.x} y={p.y+nodeR+25} textAnchor="middle" fontSize="7" fill="#E07070" fontFamily="monospace">VILLAIN</text>}
+                      <text x={p.x} y={p.y+nodeR+14} textAnchor="middle" fontSize="9.5" fill="var(--text-primary)" fontFamily="monospace" fontWeight="bold">{char.heroName}</text>
+                      {char.isVillain&&<text x={p.x} y={p.y+nodeR+25} textAnchor="middle" fontSize="8" fill="#E07070" fontFamily="monospace">VILLAIN</text>}
                     </g>
                   );
                 })}
@@ -3649,21 +3657,21 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                 {[["#D4AF37","Parent / Child"],["#5BA3D4","Sibling / Twin"],["#E07070","Spouse"],["#8B5CF6","Aunt / Uncle"],["#1D9E75","Cousin"],["#F0997B","Adoptive"],["#BA7517","Grandparent"]].map(([color,label])=>(
                   <div key={label} style={{display:"flex",alignItems:"center",gap:5}}>
                     <div style={{width:18,height:2,background:color,borderRadius:1}}/>
-                    <span style={{fontSize:8.5,color:"var(--text3)",fontFamily:"var(--font-mono)"}}>{label}</span>
+                    <span style={{fontSize:9.5,color:"var(--text3)",fontFamily:"var(--font-mono)"}}>{label}</span>
                   </div>
                 ))}
                 {ftShowInferred&&derivedLinks.length>0&&(
                   <div style={{display:"flex",alignItems:"center",gap:5}}>
                     <div style={{width:18,height:2,background:"rgba(255,255,255,0.2)",borderRadius:1,backgroundImage:"repeating-linear-gradient(to right,rgba(255,255,255,0.35) 0,rgba(255,255,255,0.35) 3px,transparent 3px,transparent 7px)"}}/>
-                    <span style={{fontSize:8.5,color:"var(--text4)",fontFamily:"var(--font-mono)",fontStyle:"italic"}}>Inferred</span>
+                    <span style={{fontSize:9.5,color:"var(--text4)",fontFamily:"var(--font-mono)",fontStyle:"italic"}}>Inferred</span>
                   </div>
                 )}
               </div>
             </div>
           ):(
             <div style={{textAlign:"center",padding:"36px 0",color:"var(--text3)",marginBottom:20,border:"1px dashed var(--border)",borderRadius:12}}>
-              <div style={{fontSize:14,marginBottom:6,color:"var(--text-secondary)"}}>No family connections yet</div>
-              <div style={{fontSize:10}}>Link two characters below to start building the family tree.</div>
+              <div style={{fontSize:15,marginBottom:6,color:"var(--text-secondary)"}}>No family connections yet</div>
+              <div style={{fontSize:11}}>Link two characters below to start building the family tree.</div>
             </div>
           )}
 
@@ -3678,8 +3686,8 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                 <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
                   {images[ftActiveNode]&&<img src={images[ftActiveNode]} style={{width:36,height:36,borderRadius:"50%",objectFit:"cover",objectPosition:"top"}} alt=""/>}
                   <div>
-                    <div style={{fontSize:14,fontWeight:"bold",color:"var(--text-primary)"}}>{char.heroName}</div>
-                    <div style={{fontSize:10,color:char.color||G}}>{char.realName}</div>
+                    <div style={{fontSize:15,fontWeight:"bold",color:"var(--text-primary)"}}>{char.heroName}</div>
+                    <div style={{fontSize:11,color:char.color||G}}>{char.realName}</div>
                   </div>
                 </div>
                 {links.length>0&&(
@@ -3690,7 +3698,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                       const other=getChar(otherId);
                       const color=relColor(rel);
                       return(
-                        <div key={link.id} style={{fontSize:10,color:"var(--text2)",display:"flex",alignItems:"center",gap:6}}>
+                        <div key={link.id} style={{fontSize:11,color:"var(--text2)",display:"flex",alignItems:"center",gap:6}}>
                           <span style={{color,fontWeight:"bold"}}>{rel} of</span>
                           <span style={{color:"var(--text-primary)"}}>{other?.heroName||otherId}</span>
                         </div>
@@ -3700,7 +3708,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                 )}
                 {inferredForNode.length>0&&(
                   <div style={{marginTop:8,paddingTop:8,borderTop:"1px solid rgba(255,255,255,0.06)"}}>
-                    <div style={{fontSize:8,letterSpacing:"0.14em",color:`${G}55`,textTransform:"uppercase",marginBottom:5}}>Inferred</div>
+                    <div style={{fontSize:9,letterSpacing:"0.14em",color:`${G}55`,textTransform:"uppercase",marginBottom:5}}>Inferred</div>
                     <div style={{display:"flex",flexDirection:"column",gap:4}}>
                       {inferredForNode.map((link,i)=>{
                         const otherId=link.a===ftActiveNode?link.b:link.a;
@@ -3708,10 +3716,10 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                         const other=getChar(otherId);
                         const color=relColor(rel);
                         return(
-                          <div key={i} style={{fontSize:10,color:"var(--text3)",display:"flex",alignItems:"center",gap:6}}>
+                          <div key={i} style={{fontSize:11,color:"var(--text3)",display:"flex",alignItems:"center",gap:6}}>
                             <span style={{color,fontWeight:"bold",opacity:0.7}}>{rel} of</span>
                             <span style={{color:"var(--text2)"}}>{other?.heroName||otherId}</span>
-                            <span style={{fontSize:8,color:"var(--text4)",fontStyle:"italic"}}>· inferred</span>
+                            <span style={{fontSize:9,color:"var(--text4)",fontStyle:"italic"}}>· inferred</span>
                           </div>
                         );
                       })}
@@ -3724,29 +3732,29 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
 
           {/* Add connection form */}
           <div style={{background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:10,padding:"16px 18px",marginBottom:20}}>
-            <div style={{fontSize:9,letterSpacing:"0.18em",color:`${G}88`,textTransform:"uppercase",marginBottom:12}}>Add Family Connection</div>
+            <div style={{fontSize:10,letterSpacing:"0.18em",color:`${G}88`,textTransform:"uppercase",marginBottom:12}}>Add Family Connection</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
               <div>
-                <div style={{fontSize:9,color:"var(--text3)",marginBottom:5,letterSpacing:"0.1em",textTransform:"uppercase"}}>Character A</div>
-                <select value={ftAddA} onChange={e=>setFtAddA(e.target.value)} style={{width:"100%",padding:"8px 10px",background:"var(--bg-card)",border:"1px solid var(--border)",borderRadius:7,color:"var(--text-primary)",fontFamily:"var(--font-mono)",fontSize:11}}>
+                <div style={{fontSize:10,color:"var(--text3)",marginBottom:5,letterSpacing:"0.1em",textTransform:"uppercase"}}>Character A</div>
+                <select value={ftAddA} onChange={e=>setFtAddA(e.target.value)} style={{width:"100%",padding:"8px 10px",background:"var(--bg-card)",border:"1px solid var(--border)",borderRadius:7,color:"var(--text-primary)",fontFamily:"var(--font-mono)",fontSize:12}}>
                   <option value="">Select character…</option>
                   {allChars.map(c=><option key={c.id} value={c.id}>{c.heroName}{c.isVillain?" ⚠":""}</option>)}
                 </select>
               </div>
               <div>
-                <div style={{fontSize:9,color:"var(--text3)",marginBottom:5,letterSpacing:"0.1em",textTransform:"uppercase"}}>Character B</div>
-                <select value={ftAddB} onChange={e=>setFtAddB(e.target.value)} style={{width:"100%",padding:"8px 10px",background:"var(--bg-card)",border:"1px solid var(--border)",borderRadius:7,color:"var(--text-primary)",fontFamily:"var(--font-mono)",fontSize:11}}>
+                <div style={{fontSize:10,color:"var(--text3)",marginBottom:5,letterSpacing:"0.1em",textTransform:"uppercase"}}>Character B</div>
+                <select value={ftAddB} onChange={e=>setFtAddB(e.target.value)} style={{width:"100%",padding:"8px 10px",background:"var(--bg-card)",border:"1px solid var(--border)",borderRadius:7,color:"var(--text-primary)",fontFamily:"var(--font-mono)",fontSize:12}}>
                   <option value="">Select character…</option>
                   {allChars.filter(c=>c.id!==ftAddA).map(c=><option key={c.id} value={c.id}>{c.heroName}{c.isVillain?" ⚠":""}</option>)}
                 </select>
               </div>
             </div>
             <div style={{marginBottom:12}}>
-              <div style={{fontSize:9,color:"var(--text3)",marginBottom:7,letterSpacing:"0.1em",textTransform:"uppercase"}}>A is B's…</div>
+              <div style={{fontSize:10,color:"var(--text3)",marginBottom:7,letterSpacing:"0.1em",textTransform:"uppercase"}}>A is B's…</div>
               <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
                 {FAMILY_RELATIONS.map(r=>(
                   <button key={r.id} onClick={()=>setFtAddRelation(r.id)}
-                    style={{padding:"5px 11px",background:ftAddRelation===r.id?`${G}18`:"var(--bg-card)",border:`1px solid ${ftAddRelation===r.id?G:"var(--border)"}`,borderRadius:16,cursor:"pointer",fontSize:10,color:ftAddRelation===r.id?G:"var(--text3)",fontFamily:"var(--font-mono)",transition:"all 0.1s"}}>
+                    style={{padding:"5px 11px",background:ftAddRelation===r.id?`${G}18`:"var(--bg-card)",border:`1px solid ${ftAddRelation===r.id?G:"var(--border)"}`,borderRadius:16,cursor:"pointer",fontSize:11,color:ftAddRelation===r.id?G:"var(--text3)",fontFamily:"var(--font-mono)",transition:"all 0.1s"}}>
                     {r.label}
                   </button>
                 ))}
@@ -3755,18 +3763,18 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                 const rel=FAMILY_RELATIONS.find(r=>r.id===ftAddRelation);
                 const cA=getChar(ftAddA),cB=getChar(ftAddB);
                 if(!rel||!cA||!cB)return null;
-                return<div style={{marginTop:9,fontSize:10,color:"var(--text3)",fontStyle:"italic"}}>{cA.heroName} is {cB.heroName}'s <span style={{color:relColor(rel.label),fontWeight:"bold"}}>{rel.label}</span> · {cB.heroName} is {cA.heroName}'s <span style={{color:relColor(rel.inverse),fontWeight:"bold"}}>{rel.inverse}</span></div>;
+                return<div style={{marginTop:9,fontSize:11,color:"var(--text3)",fontStyle:"italic"}}>{cA.heroName} is {cB.heroName}'s <span style={{color:relColor(rel.label),fontWeight:"bold"}}>{rel.label}</span> · {cB.heroName} is {cA.heroName}'s <span style={{color:relColor(rel.inverse),fontWeight:"bold"}}>{rel.inverse}</span></div>;
               })()}
             </div>
             <button onClick={addFamilyLink} disabled={!ftAddA||!ftAddB||ftAddA===ftAddB}
-              style={{width:"100%",padding:"11px",background:(!ftAddA||!ftAddB||ftAddA===ftAddB)?"var(--bg-card)":`${G}14`,border:`1px solid ${(!ftAddA||!ftAddB||ftAddA===ftAddB)?"var(--border)":G}`,borderRadius:8,cursor:(!ftAddA||!ftAddB||ftAddA===ftAddB)?"not-allowed":"pointer",color:(!ftAddA||!ftAddB||ftAddA===ftAddB)?"var(--text3)":G,fontSize:10.5,letterSpacing:"0.12em",textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>
+              style={{width:"100%",padding:"11px",background:(!ftAddA||!ftAddB||ftAddA===ftAddB)?"var(--bg-card)":`${G}14`,border:`1px solid ${(!ftAddA||!ftAddB||ftAddA===ftAddB)?"var(--border)":G}`,borderRadius:8,cursor:(!ftAddA||!ftAddB||ftAddA===ftAddB)?"not-allowed":"pointer",color:(!ftAddA||!ftAddB||ftAddA===ftAddB)?"var(--text3)":G,fontSize:11.5,letterSpacing:"0.12em",textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>
               Add Connection →
             </button>
           </div>
 
           {/* Connection list */}
           {familyLinks.length>0&&(<>
-            <div style={{fontSize:9,letterSpacing:"0.18em",color:`${G}88`,textTransform:"uppercase",marginBottom:10}}>All Connections ({familyLinks.length})</div>
+            <div style={{fontSize:10,letterSpacing:"0.18em",color:`${G}88`,textTransform:"uppercase",marginBottom:10}}>All Connections ({familyLinks.length})</div>
             <div style={{display:"flex",flexDirection:"column",gap:6}}>
               {familyLinks.map(link=>{
                 const cA=getChar(link.a),cB=getChar(link.b);
@@ -3774,12 +3782,12 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                 return(
                   <div key={link.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:9}}>
                     <div style={{width:8,height:8,borderRadius:"50%",background:color,flexShrink:0}}/>
-                    <div style={{flex:1,fontSize:11}}>
+                    <div style={{flex:1,fontSize:12}}>
                       <span style={{color:"var(--text-primary)",fontWeight:"bold"}}>{cA?.heroName||link.a}</span>
                       <span style={{color:color,margin:"0 7px"}}>is {link.aRelation} of</span>
                       <span style={{color:"var(--text-primary)",fontWeight:"bold"}}>{cB?.heroName||link.b}</span>
                     </div>
-                    <button onClick={()=>removeFamilyLink(link.id)} style={{padding:"3px 9px",background:"rgba(163,45,45,0.1)",border:"1px solid rgba(163,45,45,0.25)",borderRadius:6,cursor:"pointer",color:"#e74c3c",fontSize:9,fontFamily:"var(--font-mono)",flexShrink:0}}>Remove</button>
+                    <button onClick={()=>removeFamilyLink(link.id)} style={{padding:"3px 9px",background:"rgba(163,45,45,0.1)",border:"1px solid rgba(163,45,45,0.25)",borderRadius:6,cursor:"pointer",color:"#e74c3c",fontSize:10,fontFamily:"var(--font-mono)",flexShrink:0}}>Remove</button>
                   </div>
                 );
               })}
@@ -3788,14 +3796,14 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
 
           {/* ── Hero Associations ─────────────────────────────────────── */}
           <div style={{marginTop:28}}>
-            <div style={{fontSize:9,letterSpacing:"0.2em",color:`${G}77`,textTransform:"uppercase",marginBottom:14}}>Hero Associations</div>
-            <div style={{fontSize:9,color:"var(--text3)",marginBottom:14}}>Sidekick, partner, legacy ally, mentor — outside of team alliances</div>
+            <div style={{fontSize:10,letterSpacing:"0.2em",color:`${G}77`,textTransform:"uppercase",marginBottom:14}}>Hero Associations</div>
+            <div style={{fontSize:10,color:"var(--text3)",marginBottom:14}}>Sidekick, partner, legacy ally, mentor — outside of team alliances</div>
 
             {/* Association list */}
             {heroAssocs.length===0?(
               <div style={{textAlign:"center",padding:"28px 0",color:"var(--text3)",marginBottom:20,border:"1px dashed var(--border)",borderRadius:12}}>
-                <div style={{fontSize:13,marginBottom:6,color:"var(--text-secondary)"}}>No hero associations yet</div>
-                <div style={{fontSize:10}}>Link two characters below to define their association.</div>
+                <div style={{fontSize:14,marginBottom:6,color:"var(--text-secondary)"}}>No hero associations yet</div>
+                <div style={{fontSize:11}}>Link two characters below to define their association.</div>
               </div>
             ):(
               <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:20}}>
@@ -3806,12 +3814,12 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                   return(
                     <div key={assoc.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:9}}>
                       <div style={{width:8,height:8,borderRadius:2,background:color,flexShrink:0}}/>
-                      <div style={{flex:1,fontSize:11}}>
+                      <div style={{flex:1,fontSize:12}}>
                         <span style={{color:"var(--text-primary)",fontWeight:"bold"}}>{cA?.heroName||assoc.a}</span>
                         <span style={{color,margin:"0 7px"}}>is {assoc.aRelation}</span>
                         <span style={{color:"var(--text-primary)",fontWeight:"bold"}}>{cB?.heroName||assoc.b}</span>
                       </div>
-                      <button onClick={()=>removeHeroAssoc(assoc.id)} style={{padding:"3px 9px",background:"rgba(163,45,45,0.1)",border:"1px solid rgba(163,45,45,0.25)",borderRadius:6,cursor:"pointer",color:"#e74c3c",fontSize:9,fontFamily:"var(--font-mono)",flexShrink:0}}>Remove</button>
+                      <button onClick={()=>removeHeroAssoc(assoc.id)} style={{padding:"3px 9px",background:"rgba(163,45,45,0.1)",border:"1px solid rgba(163,45,45,0.25)",borderRadius:6,cursor:"pointer",color:"#e74c3c",fontSize:10,fontFamily:"var(--font-mono)",flexShrink:0}}>Remove</button>
                     </div>
                   );
                 })}
@@ -3820,29 +3828,29 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
 
             {/* Add form */}
             <div style={{background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:10,padding:"16px 18px"}}>
-              <div style={{fontSize:9,letterSpacing:"0.18em",color:`${G}88`,textTransform:"uppercase",marginBottom:12}}>Add Hero Association</div>
+              <div style={{fontSize:10,letterSpacing:"0.18em",color:`${G}88`,textTransform:"uppercase",marginBottom:12}}>Add Hero Association</div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
                 <div>
-                  <div style={{fontSize:9,color:"var(--text3)",marginBottom:5,letterSpacing:"0.1em",textTransform:"uppercase"}}>Character A</div>
-                  <select value={haAddA} onChange={e=>setHaAddA(e.target.value)} style={{width:"100%",padding:"8px 10px",background:"var(--bg-card)",border:"1px solid var(--border)",borderRadius:7,color:"var(--text-primary)",fontFamily:"var(--font-mono)",fontSize:11}}>
+                  <div style={{fontSize:10,color:"var(--text3)",marginBottom:5,letterSpacing:"0.1em",textTransform:"uppercase"}}>Character A</div>
+                  <select value={haAddA} onChange={e=>setHaAddA(e.target.value)} style={{width:"100%",padding:"8px 10px",background:"var(--bg-card)",border:"1px solid var(--border)",borderRadius:7,color:"var(--text-primary)",fontFamily:"var(--font-mono)",fontSize:12}}>
                     <option value="">Select character…</option>
                     {allChars.map(c=><option key={c.id} value={c.id}>{c.heroName}{c.isVillain?" ⚠":""}</option>)}
                   </select>
                 </div>
                 <div>
-                  <div style={{fontSize:9,color:"var(--text3)",marginBottom:5,letterSpacing:"0.1em",textTransform:"uppercase"}}>Character B</div>
-                  <select value={haAddB} onChange={e=>setHaAddB(e.target.value)} style={{width:"100%",padding:"8px 10px",background:"var(--bg-card)",border:"1px solid var(--border)",borderRadius:7,color:"var(--text-primary)",fontFamily:"var(--font-mono)",fontSize:11}}>
+                  <div style={{fontSize:10,color:"var(--text3)",marginBottom:5,letterSpacing:"0.1em",textTransform:"uppercase"}}>Character B</div>
+                  <select value={haAddB} onChange={e=>setHaAddB(e.target.value)} style={{width:"100%",padding:"8px 10px",background:"var(--bg-card)",border:"1px solid var(--border)",borderRadius:7,color:"var(--text-primary)",fontFamily:"var(--font-mono)",fontSize:12}}>
                     <option value="">Select character…</option>
                     {allChars.filter(c=>c.id!==haAddA).map(c=><option key={c.id} value={c.id}>{c.heroName}{c.isVillain?" ⚠":""}</option>)}
                   </select>
                 </div>
               </div>
               <div style={{marginBottom:12}}>
-                <div style={{fontSize:9,color:"var(--text3)",marginBottom:7,letterSpacing:"0.1em",textTransform:"uppercase"}}>A is B's…</div>
+                <div style={{fontSize:10,color:"var(--text3)",marginBottom:7,letterSpacing:"0.1em",textTransform:"uppercase"}}>A is B's…</div>
                 <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
                   {HERO_ASSOC_TYPES.map(t=>(
                     <button key={t.id} onClick={()=>setHaAddType(t.id)}
-                      style={{padding:"5px 11px",background:haAddType===t.id?`${G}18`:"var(--bg-card)",border:`1px solid ${haAddType===t.id?G:"var(--border)"}`,borderRadius:16,cursor:"pointer",fontSize:10,color:haAddType===t.id?G:"var(--text3)",fontFamily:"var(--font-mono)",transition:"all 0.1s"}}>
+                      style={{padding:"5px 11px",background:haAddType===t.id?`${G}18`:"var(--bg-card)",border:`1px solid ${haAddType===t.id?G:"var(--border)"}`,borderRadius:16,cursor:"pointer",fontSize:11,color:haAddType===t.id?G:"var(--text3)",fontFamily:"var(--font-mono)",transition:"all 0.1s"}}>
                       {t.label}
                     </button>
                   ))}
@@ -3851,11 +3859,11 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                   const t=HERO_ASSOC_TYPES.find(x=>x.id===haAddType);
                   const cA=getChar(haAddA),cB=getChar(haAddB);
                   if(!t||!cA||!cB)return null;
-                  return<div style={{marginTop:9,fontSize:10,color:"var(--text3)",fontStyle:"italic"}}>{cA.heroName} <span style={{color:G,fontWeight:"bold"}}>{t.label}</span> {cB.heroName} · {cB.heroName} is their <span style={{color:G,fontWeight:"bold"}}>{t.inverse}</span></div>;
+                  return<div style={{marginTop:9,fontSize:11,color:"var(--text3)",fontStyle:"italic"}}>{cA.heroName} <span style={{color:G,fontWeight:"bold"}}>{t.label}</span> {cB.heroName} · {cB.heroName} is their <span style={{color:G,fontWeight:"bold"}}>{t.inverse}</span></div>;
                 })()}
               </div>
               <button onClick={addHeroAssoc} disabled={!haAddA||!haAddB||haAddA===haAddB}
-                style={{width:"100%",padding:"11px",background:(!haAddA||!haAddB||haAddA===haAddB)?"var(--bg-card)":`${G}14`,border:`1px solid ${(!haAddA||!haAddB||haAddA===haAddB)?"var(--border)":G}`,borderRadius:8,cursor:(!haAddA||!haAddB||haAddA===haAddB)?"not-allowed":"pointer",color:(!haAddA||!haAddB||haAddA===haAddB)?"var(--text3)":G,fontSize:10.5,letterSpacing:"0.12em",textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>
+                style={{width:"100%",padding:"11px",background:(!haAddA||!haAddB||haAddA===haAddB)?"var(--bg-card)":`${G}14`,border:`1px solid ${(!haAddA||!haAddB||haAddA===haAddB)?"var(--border)":G}`,borderRadius:8,cursor:(!haAddA||!haAddB||haAddA===haAddB)?"not-allowed":"pointer",color:(!haAddA||!haAddB||haAddA===haAddB)?"var(--text3)":G,fontSize:11.5,letterSpacing:"0.12em",textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>
                 Add Association →
               </button>
             </div>
@@ -3867,7 +3875,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
       {tab==="universe"&&(()=>{
         const primaryTeam=teams[0];
         const otherTeams=teams.slice(1);
-        if(!primaryTeam)return(<div style={{textAlign:"center",padding:"40px",color:"var(--text3)",fontSize:12}}>Create your first team to see the universe map.</div>);
+        if(!primaryTeam)return(<div style={{textAlign:"center",padding:"40px",color:"var(--text3)",fontSize:13}}>Create your first team to see the universe map.</div>);
 
         // ── Dossier view ───────────────────────────────────────────────
         if(universeDossierTarget){
@@ -3891,12 +3899,12 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
               }).filter(Boolean);
             }
           }
-          if(!dMember)return(<div style={{textAlign:"center",padding:"40px",color:"var(--text3)",fontSize:12}}>Character not found.</div>);
+          if(!dMember)return(<div style={{textAlign:"center",padding:"40px",color:"var(--text3)",fontSize:13}}>Character not found.</div>);
           const dc=dMember.color;
           const backTab=dossierFromTab||"universe";
           const backLabel={teams:"Teams",roster:"Roster",team:"Team",family:"Family",prompts:"Prompts",recruit:"Recruit",villains:"Villains",story:"Story",battle:"Battle",arc:"Arc",comic:"Comic",tiers:"Tiers",universe:"Universe",codex:"Codex"}[backTab]||"Back";
           return(<>
-            <button onClick={()=>{setTab(backTab);setUniverseDossierTarget(null);setDossierFromTab(null);}} style={{display:"inline-flex",alignItems:"center",gap:6,padding:"6px 14px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:10.5,fontFamily:"var(--font-mono)",marginBottom:14}}>← {backLabel}</button>
+            <button onClick={()=>{setTab(backTab);setUniverseDossierTarget(null);setDossierFromTab(null);}} style={{display:"inline-flex",alignItems:"center",gap:6,padding:"6px 14px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:11.5,fontFamily:"var(--font-mono)",marginBottom:14}}>← {backLabel}</button>
             <div style={{border:`1px solid ${dc}44`,borderRadius:10,overflow:"hidden"}}>
               <CharacterPage member={dMember} imageUrl={dImg} isVillain={isVil}
                 teamName={isVil?"Villain":(dTeams[0]?.name||"Independent")}
@@ -3929,7 +3937,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
           const c=m.color||(isVil?"#8B1A1A":"#555");
           return img
             ?<img src={img} alt={m.heroName} style={{width:36,height:48,borderRadius:5,objectFit:"cover",objectPosition:"top",border:`1px solid ${c}55`,flexShrink:0}}/>
-            :<div style={{width:36,height:48,borderRadius:5,background:`${c}14`,border:`1px dashed ${c}44`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:"bold",color:c,flexShrink:0}}>{m.initials}</div>;
+            :<div style={{width:36,height:48,borderRadius:5,background:`${c}14`,border:`1px dashed ${c}44`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:"bold",color:c,flexShrink:0}}>{m.initials}</div>;
         };
 
         return(<>
@@ -3937,125 +3945,125 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
           {(()=>{
             const wbField=(field,val)=>{const n={...universeData,[field]:val};setUniverseData(n);persist("forge-universe",n);};
             const wbChip=(val,cur,field)=>(
-              <button key={val} onClick={()=>wbField(field,cur===val?"":val)} style={{padding:"3px 9px",background:cur===val?`${G}20`:"var(--bg-card)",border:`1px solid ${cur===val?G:"var(--border)"}`,borderRadius:16,cursor:"pointer",color:cur===val?G:"var(--text3)",fontSize:9,fontFamily:"var(--font-mono)",transition:"all 0.1s"}}>{val}</button>
+              <button key={val} onClick={()=>wbField(field,cur===val?"":val)} style={{padding:"3px 9px",background:cur===val?`${G}20`:"var(--bg-card)",border:`1px solid ${cur===val?G:"var(--border)"}`,borderRadius:16,cursor:"pointer",color:cur===val?G:"var(--text3)",fontSize:10,fontFamily:"var(--font-mono)",transition:"all 0.1s"}}>{val}</button>
             );
             const hasData=!!(universeData.universeName||universeData.worldState||universeData.era);
             return(
               <div style={{background:"var(--bg3)",border:`1px solid ${G}22`,borderRadius:12,marginBottom:16,overflow:"hidden"}}>
                 <div onClick={()=>setShowWorldBuilder(p=>!p)} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 14px",cursor:"pointer",borderBottom:showWorldBuilder?`1px solid ${G}18`:"none",userSelect:"none"}}>
                   <div style={{display:"flex",alignItems:"center",gap:10,minWidth:0}}>
-                    <span style={{fontSize:9,letterSpacing:"0.2em",color:`${G}88`,textTransform:"uppercase",fontFamily:"var(--font-mono)",flexShrink:0}}>
+                    <span style={{fontSize:10,letterSpacing:"0.2em",color:`${G}88`,textTransform:"uppercase",fontFamily:"var(--font-mono)",flexShrink:0}}>
                       {universeData.universeName||"World Builder"}
                     </span>
-                    {universeData.era&&<span style={{fontSize:9,color:"var(--text4)",fontFamily:"var(--font-mono)",flexShrink:0}}>— {universeData.era}{universeData.eraNote?` · ${universeData.eraNote}`:""}</span>}
-                    {!hasData&&<span style={{fontSize:9,color:"var(--text4)",fontStyle:"italic"}}>Define your universe</span>}
-                    {universeData.greatestThreat&&!showWorldBuilder&&<span style={{fontSize:9,color:"rgba(224,112,112,0.55)",fontFamily:"var(--font-mono)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>⚠ {universeData.greatestThreat}</span>}
+                    {universeData.era&&<span style={{fontSize:10,color:"var(--text4)",fontFamily:"var(--font-mono)",flexShrink:0}}>— {universeData.era}{universeData.eraNote?` · ${universeData.eraNote}`:""}</span>}
+                    {!hasData&&<span style={{fontSize:10,color:"var(--text4)",fontStyle:"italic"}}>Define your universe</span>}
+                    {universeData.greatestThreat&&!showWorldBuilder&&<span style={{fontSize:10,color:"rgba(224,112,112,0.55)",fontFamily:"var(--font-mono)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>⚠ {universeData.greatestThreat}</span>}
                   </div>
-                  <span style={{fontSize:9,padding:"3px 10px",background:`${G}12`,border:`1px solid ${G}30`,borderRadius:16,color:G,fontFamily:"var(--font-mono)",flexShrink:0,marginLeft:10}}>
+                  <span style={{fontSize:10,padding:"3px 10px",background:`${G}12`,border:`1px solid ${G}30`,borderRadius:16,color:G,fontFamily:"var(--font-mono)",flexShrink:0,marginLeft:10}}>
                     {showWorldBuilder?"↑ Close":"✎ Build World"}
                   </span>
                 </div>
                 {showWorldBuilder&&(
                   <div style={{padding:"18px 16px",display:"flex",flexDirection:"column",gap:14}}>
 
-                    <div style={{fontSize:8.5,letterSpacing:"0.18em",color:`${G}66`,textTransform:"uppercase",fontFamily:"var(--font-mono)",borderBottom:`1px solid ${G}18`,paddingBottom:5}}>Foundation</div>
+                    <div style={{fontSize:9.5,letterSpacing:"0.18em",color:`${G}66`,textTransform:"uppercase",fontFamily:"var(--font-mono)",borderBottom:`1px solid ${G}18`,paddingBottom:5}}>Foundation</div>
                     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
                       <div>
-                        <div style={{fontSize:9,color:"var(--text3)",marginBottom:5}}>Universe Name</div>
+                        <div style={{fontSize:10,color:"var(--text3)",marginBottom:5}}>Universe Name</div>
                         <input value={universeData.universeName||""} onChange={e=>wbField("universeName",e.target.value)} placeholder="e.g. The Fractured Earth" style={{width:"100%"}}/>
                       </div>
                       <div>
-                        <div style={{fontSize:9,color:"var(--text3)",marginBottom:5}}>Year / Era Note</div>
+                        <div style={{fontSize:10,color:"var(--text3)",marginBottom:5}}>Year / Era Note</div>
                         <input value={universeData.eraNote||""} onChange={e=>wbField("eraNote",e.target.value)} placeholder="e.g. 2041, post-Collapse" style={{width:"100%"}}/>
                       </div>
                     </div>
                     <div>
-                      <div style={{fontSize:9,color:"var(--text3)",marginBottom:5}}>Time Period</div>
+                      <div style={{fontSize:10,color:"var(--text3)",marginBottom:5}}>Time Period</div>
                       <div style={{display:"flex",flexWrap:"wrap",gap:5}}>{["Modern Day","Near Future","Far Future","Historical","Other"].map(v=>wbChip(v,universeData.era,"era"))}</div>
                     </div>
                     <div>
-                      <div style={{fontSize:9,color:"var(--text3)",marginBottom:5}}>Current State of the World</div>
+                      <div style={{fontSize:10,color:"var(--text3)",marginBottom:5}}>Current State of the World</div>
                       <textarea value={universeData.worldState||""} onChange={e=>wbField("worldState",e.target.value)} placeholder="Describe the overall condition of society, politics, and daily life..." rows={2} style={{width:"100%",resize:"vertical"}}/>
                     </div>
                     <div>
-                      <div style={{fontSize:9,color:"var(--text3)",marginBottom:5}}>Who Holds Political Power?</div>
+                      <div style={{fontSize:10,color:"var(--text3)",marginBottom:5}}>Who Holds Political Power?</div>
                       <input value={universeData.powerStructure||""} onChange={e=>wbField("powerStructure",e.target.value)} placeholder="e.g. A coalition of mega-corporations, an elected global council..." style={{width:"100%"}}/>
                     </div>
 
-                    <div style={{fontSize:8.5,letterSpacing:"0.18em",color:`${G}66`,textTransform:"uppercase",fontFamily:"var(--font-mono)",borderBottom:`1px solid ${G}18`,paddingBottom:5,marginTop:4}}>Superhumans</div>
+                    <div style={{fontSize:9.5,letterSpacing:"0.18em",color:`${G}66`,textTransform:"uppercase",fontFamily:"var(--font-mono)",borderBottom:`1px solid ${G}18`,paddingBottom:5,marginTop:4}}>Superhumans</div>
                     <div>
-                      <div style={{fontSize:9,color:"var(--text3)",marginBottom:5}}>Public Knowledge of Superhumans</div>
+                      <div style={{fontSize:10,color:"var(--text3)",marginBottom:5}}>Public Knowledge of Superhumans</div>
                       <div style={{display:"flex",flexWrap:"wrap",gap:5}}>{["Openly Known","Publicly Debated","Government Secret","Mostly Unknown"].map(v=>wbChip(v,universeData.superhumanAwareness,"superhumanAwareness"))}</div>
                     </div>
                     <div>
-                      <div style={{fontSize:9,color:"var(--text3)",marginBottom:5}}>Origin of Superhuman Abilities</div>
+                      <div style={{fontSize:10,color:"var(--text3)",marginBottom:5}}>Origin of Superhuman Abilities</div>
                       <textarea value={universeData.powerOrigin||""} onChange={e=>wbField("powerOrigin",e.target.value)} placeholder="How did powers first appear in this world? Natural mutation, cosmic event, ancient bloodline..." rows={2} style={{width:"100%",resize:"vertical"}}/>
                     </div>
                     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
                       <div>
-                        <div style={{fontSize:9,color:"var(--text3)",marginBottom:5}}>Hero Regulation</div>
+                        <div style={{fontSize:10,color:"var(--text3)",marginBottom:5}}>Hero Regulation</div>
                         <div style={{display:"flex",flexWrap:"wrap",gap:5}}>{["Mandatory","Voluntary","Underground","None"].map(v=>wbChip(v,universeData.heroRegulation,"heroRegulation"))}</div>
                       </div>
                       <div>
-                        <div style={{fontSize:9,color:"var(--text3)",marginBottom:5}}>Government Stance on Heroes</div>
+                        <div style={{fontSize:10,color:"var(--text3)",marginBottom:5}}>Government Stance on Heroes</div>
                         <div style={{display:"flex",flexWrap:"wrap",gap:5}}>{["Supportive","Hostile","Exploitative","Neutral"].map(v=>wbChip(v,universeData.govtStance,"govtStance"))}</div>
                       </div>
                     </div>
 
-                    <div style={{fontSize:8.5,letterSpacing:"0.18em",color:`${G}66`,textTransform:"uppercase",fontFamily:"var(--font-mono)",borderBottom:`1px solid ${G}18`,paddingBottom:5,marginTop:4}}>Conflict & Threats</div>
+                    <div style={{fontSize:9.5,letterSpacing:"0.18em",color:`${G}66`,textTransform:"uppercase",fontFamily:"var(--font-mono)",borderBottom:`1px solid ${G}18`,paddingBottom:5,marginTop:4}}>Conflict & Threats</div>
                     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
                       <div>
-                        <div style={{fontSize:9,color:"var(--text3)",marginBottom:5}}>Greatest Current Threat</div>
+                        <div style={{fontSize:10,color:"var(--text3)",marginBottom:5}}>Greatest Current Threat</div>
                         <input value={universeData.greatestThreat||""} onChange={e=>wbField("greatestThreat",e.target.value)} placeholder="e.g. Alien invasion, rogue AI, corrupt regime..." style={{width:"100%"}}/>
                       </div>
                       <div>
-                        <div style={{fontSize:9,color:"var(--text3)",marginBottom:5}}>Ultimate Danger</div>
+                        <div style={{fontSize:10,color:"var(--text3)",marginBottom:5}}>Ultimate Danger</div>
                         <input value={universeData.ultimateThreat||""} onChange={e=>wbField("ultimateThreat",e.target.value)} placeholder="The one thing that could destroy everything..." style={{width:"100%"}}/>
                       </div>
                     </div>
                     <div>
-                      <div style={{fontSize:9,color:"var(--text3)",marginBottom:5}}>Defining Historical Event</div>
+                      <div style={{fontSize:10,color:"var(--text3)",marginBottom:5}}>Defining Historical Event</div>
                       <textarea value={universeData.definingEvent||""} onChange={e=>wbField("definingEvent",e.target.value)} placeholder="What event changed this world forever?" rows={2} style={{width:"100%",resize:"vertical"}}/>
                     </div>
                     <div>
-                      <div style={{fontSize:9,color:"var(--text3)",marginBottom:5}}>Primary Tensions Among Heroes</div>
+                      <div style={{fontSize:10,color:"var(--text3)",marginBottom:5}}>Primary Tensions Among Heroes</div>
                       <textarea value={universeData.heroConflicts||""} onChange={e=>wbField("heroConflicts",e.target.value)} placeholder="What divides the hero community? Ideology, methods, loyalties..." rows={2} style={{width:"100%",resize:"vertical"}}/>
                     </div>
 
-                    <div style={{fontSize:8.5,letterSpacing:"0.18em",color:`${G}66`,textTransform:"uppercase",fontFamily:"var(--font-mono)",borderBottom:`1px solid ${G}18`,paddingBottom:5,marginTop:4}}>World Elements</div>
+                    <div style={{fontSize:9.5,letterSpacing:"0.18em",color:`${G}66`,textTransform:"uppercase",fontFamily:"var(--font-mono)",borderBottom:`1px solid ${G}18`,paddingBottom:5,marginTop:4}}>World Elements</div>
                     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
                       <div>
-                        <div style={{fontSize:9,color:"var(--text3)",marginBottom:5}}>Alien Presence</div>
+                        <div style={{fontSize:10,color:"var(--text3)",marginBottom:5}}>Alien Presence</div>
                         <div style={{display:"flex",flexWrap:"wrap",gap:5}}>{["Publicly Known","Hidden","None"].map(v=>wbChip(v,universeData.alienPresence,"alienPresence"))}</div>
                       </div>
                       <div>
-                        <div style={{fontSize:9,color:"var(--text3)",marginBottom:5}}>Technology Level</div>
+                        <div style={{fontSize:10,color:"var(--text3)",marginBottom:5}}>Technology Level</div>
                         <div style={{display:"flex",flexWrap:"wrap",gap:5}}>{["Near-Modern","Advanced","Highly Advanced","Mixed"].map(v=>wbChip(v,universeData.techLevel,"techLevel"))}</div>
                       </div>
                       <div>
-                        <div style={{fontSize:9,color:"var(--text3)",marginBottom:5}}>Magic / Mystical Forces</div>
+                        <div style={{fontSize:10,color:"var(--text3)",marginBottom:5}}>Magic / Mystical Forces</div>
                         <div style={{display:"flex",flexWrap:"wrap",gap:5}}>{["Open","Hidden","None"].map(v=>wbChip(v,universeData.mysticism,"mysticism"))}</div>
                       </div>
                       <div>
-                        <div style={{fontSize:9,color:"var(--text3)",marginBottom:5}}>Public View of Heroes</div>
+                        <div style={{fontSize:10,color:"var(--text3)",marginBottom:5}}>Public View of Heroes</div>
                         <div style={{display:"flex",flexWrap:"wrap",gap:5}}>{["Revered","Feared","Controversial","Unknown"].map(v=>wbChip(v,universeData.publicSentiment,"publicSentiment"))}</div>
                       </div>
                       <div>
-                        <div style={{fontSize:9,color:"var(--text3)",marginBottom:5}}>Primary Villain Motivation</div>
+                        <div style={{fontSize:10,color:"var(--text3)",marginBottom:5}}>Primary Villain Motivation</div>
                         <div style={{display:"flex",flexWrap:"wrap",gap:5}}>{["Power","Ideology","Trauma","Profit","Survival"].map(v=>wbChip(v,universeData.villainMotivation,"villainMotivation"))}</div>
                       </div>
                       <div>
-                        <div style={{fontSize:9,color:"var(--text3)",marginBottom:5}}>Parallel Realities / Dimensions</div>
+                        <div style={{fontSize:10,color:"var(--text3)",marginBottom:5}}>Parallel Realities / Dimensions</div>
                         <div style={{display:"flex",flexWrap:"wrap",gap:5}}>{["Active","Theoretical","None"].map(v=>wbChip(v,universeData.dimensions,"dimensions"))}</div>
                       </div>
                     </div>
                     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
                       <div>
-                        <div style={{fontSize:9,color:"var(--text3)",marginBottom:5}}>Social / Class Structure</div>
+                        <div style={{fontSize:10,color:"var(--text3)",marginBottom:5}}>Social / Class Structure</div>
                         <input value={universeData.socialStructure||""} onChange={e=>wbField("socialStructure",e.target.value)} placeholder="e.g. Corporate tiers, powered vs. unpowered divide..." style={{width:"100%"}}/>
                       </div>
                       <div>
-                        <div style={{fontSize:9,color:"var(--text3)",marginBottom:5}}>Heroes' Moral Code</div>
+                        <div style={{fontSize:10,color:"var(--text3)",marginBottom:5}}>Heroes' Moral Code</div>
                         <input value={universeData.moralCode||""} onChange={e=>wbField("moralCode",e.target.value)} placeholder="The one rule every hero in this world follows..." style={{width:"100%"}}/>
                       </div>
                     </div>
@@ -4084,11 +4092,11 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
               <div style={{background:"var(--bg3)",border:`1px solid ${G}22`,borderRadius:12,marginBottom:16,overflow:"hidden"}}>
                 <div onClick={()=>setShowTimeline(p=>!p)} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 14px",cursor:"pointer",borderBottom:showTimeline?`1px solid ${G}18`:"none",userSelect:"none"}}>
                   <div style={{display:"flex",alignItems:"center",gap:10,minWidth:0}}>
-                    <span style={{fontSize:9,letterSpacing:"0.2em",color:`${G}88`,textTransform:"uppercase",fontFamily:"var(--font-mono)",flexShrink:0}}>Universe Timeline</span>
-                    {timeline.length>0&&<span style={{fontSize:9,color:"var(--text4)",fontFamily:"var(--font-mono)"}}>{timeline.length} event{timeline.length!==1?"s":""}</span>}
-                    {timeline.length===0&&!showTimeline&&<span style={{fontSize:9,color:"var(--text4)",fontStyle:"italic"}}>No events yet</span>}
+                    <span style={{fontSize:10,letterSpacing:"0.2em",color:`${G}88`,textTransform:"uppercase",fontFamily:"var(--font-mono)",flexShrink:0}}>Universe Timeline</span>
+                    {timeline.length>0&&<span style={{fontSize:10,color:"var(--text4)",fontFamily:"var(--font-mono)"}}>{timeline.length} event{timeline.length!==1?"s":""}</span>}
+                    {timeline.length===0&&!showTimeline&&<span style={{fontSize:10,color:"var(--text4)",fontStyle:"italic"}}>No events yet</span>}
                   </div>
-                  <span style={{fontSize:9,padding:"3px 10px",background:`${G}12`,border:`1px solid ${G}30`,borderRadius:16,color:G,fontFamily:"var(--font-mono)",flexShrink:0,marginLeft:10}}>{showTimeline?"↑ Close":"✚ Timeline"}</span>
+                  <span style={{fontSize:10,padding:"3px 10px",background:`${G}12`,border:`1px solid ${G}30`,borderRadius:16,color:G,fontFamily:"var(--font-mono)",flexShrink:0,marginLeft:10}}>{showTimeline?"↑ Close":"✚ Timeline"}</span>
                 </div>
                 {showTimeline&&(
                   <div style={{padding:"16px"}}>
@@ -4104,12 +4112,12 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                               </div>
                               <div style={{flex:1,minWidth:0,paddingTop:3}}>
                                 <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:3,flexWrap:"wrap"}}>
-                                  {ev.year&&<span style={{fontSize:9,fontFamily:"var(--font-mono)",color:c,fontWeight:"bold"}}>{ev.year}</span>}
-                                  <span style={{fontSize:9,padding:"1px 7px",background:`${c}18`,border:`1px solid ${c}33`,borderRadius:10,color:c,fontFamily:"var(--font-mono)"}}>{TL_LABELS[ev.type]||ev.type}</span>
-                                  <button onClick={()=>removeEvent(ev.id)} style={{marginLeft:"auto",border:0,background:"transparent",color:"var(--text4)",cursor:"pointer",fontSize:11,padding:"0 2px",lineHeight:1,flexShrink:0}}>✕</button>
+                                  {ev.year&&<span style={{fontSize:10,fontFamily:"var(--font-mono)",color:c,fontWeight:"bold"}}>{ev.year}</span>}
+                                  <span style={{fontSize:10,padding:"1px 7px",background:`${c}18`,border:`1px solid ${c}33`,borderRadius:10,color:c,fontFamily:"var(--font-mono)"}}>{TL_LABELS[ev.type]||ev.type}</span>
+                                  <button onClick={()=>removeEvent(ev.id)} style={{marginLeft:"auto",border:0,background:"transparent",color:"var(--text4)",cursor:"pointer",fontSize:12,padding:"0 2px",lineHeight:1,flexShrink:0}}>✕</button>
                                 </div>
-                                <div style={{fontSize:12,fontWeight:"bold",color:"var(--text-primary)",marginBottom:ev.description?3:0}}>{ev.title}</div>
-                                {ev.description&&<div style={{fontSize:11,color:"var(--text3)",lineHeight:1.55}}>{ev.description}</div>}
+                                <div style={{fontSize:13,fontWeight:"bold",color:"var(--text-primary)",marginBottom:ev.description?3:0}}>{ev.title}</div>
+                                {ev.description&&<div style={{fontSize:12,color:"var(--text3)",lineHeight:1.55}}>{ev.description}</div>}
                               </div>
                             </div>
                           );
@@ -4120,31 +4128,31 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                       <div style={{background:"var(--bg-card)",border:`1px solid ${G}22`,borderRadius:9,padding:14,display:"flex",flexDirection:"column",gap:10}}>
                         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
                           <div>
-                            <div style={{fontSize:9,color:"var(--text3)",marginBottom:4}}>Year / Date</div>
+                            <div style={{fontSize:10,color:"var(--text3)",marginBottom:4}}>Year / Date</div>
                             <input value={tlDraft.year} onChange={e=>setTlDraft(p=>({...p,year:e.target.value}))} placeholder="e.g. 2031" style={{width:"100%"}}/>
                           </div>
                           <div>
-                            <div style={{fontSize:9,color:"var(--text3)",marginBottom:4}}>Event Type</div>
-                            <select value={tlDraft.type} onChange={e=>setTlDraft(p=>({...p,type:e.target.value}))} style={{width:"100%",background:"var(--bg-card)",border:"1px solid var(--border)",borderRadius:6,color:"var(--text-primary)",padding:"8px 10px",fontSize:12,fontFamily:"var(--font-mono)"}}>
+                            <div style={{fontSize:10,color:"var(--text3)",marginBottom:4}}>Event Type</div>
+                            <select value={tlDraft.type} onChange={e=>setTlDraft(p=>({...p,type:e.target.value}))} style={{width:"100%",background:"var(--bg-card)",border:"1px solid var(--border)",borderRadius:6,color:"var(--text-primary)",padding:"8px 10px",fontSize:13,fontFamily:"var(--font-mono)"}}>
                               {Object.entries(TL_LABELS).map(([k,v])=><option key={k} value={k}>{v}</option>)}
                             </select>
                           </div>
                         </div>
                         <div>
-                          <div style={{fontSize:9,color:"var(--text3)",marginBottom:4}}>Title</div>
+                          <div style={{fontSize:10,color:"var(--text3)",marginBottom:4}}>Title</div>
                           <input value={tlDraft.title} onChange={e=>setTlDraft(p=>({...p,title:e.target.value}))} placeholder="Event title" style={{width:"100%"}}/>
                         </div>
                         <div>
-                          <div style={{fontSize:9,color:"var(--text3)",marginBottom:4}}>Description (optional)</div>
+                          <div style={{fontSize:10,color:"var(--text3)",marginBottom:4}}>Description (optional)</div>
                           <textarea value={tlDraft.description} onChange={e=>setTlDraft(p=>({...p,description:e.target.value}))} placeholder="What happened?" rows={2} style={{width:"100%",resize:"vertical"}}/>
                         </div>
                         <div style={{display:"flex",gap:8}}>
-                          <button onClick={addEvent} style={{flex:1,padding:"8px",background:`${G}18`,border:`1px solid ${G}`,borderRadius:7,color:G,fontSize:11,cursor:"pointer",fontFamily:"var(--font-mono)"}}>+ Add Event</button>
-                          <button onClick={()=>{setTlAddMode(false);setTlDraft({year:"",title:"",description:"",type:"other"});}} style={{padding:"8px 14px",background:"transparent",border:"1px solid var(--border)",borderRadius:7,color:"var(--text3)",fontSize:11,cursor:"pointer"}}>Cancel</button>
+                          <button onClick={addEvent} style={{flex:1,padding:"8px",background:`${G}18`,border:`1px solid ${G}`,borderRadius:7,color:G,fontSize:12,cursor:"pointer",fontFamily:"var(--font-mono)"}}>+ Add Event</button>
+                          <button onClick={()=>{setTlAddMode(false);setTlDraft({year:"",title:"",description:"",type:"other"});}} style={{padding:"8px 14px",background:"transparent",border:"1px solid var(--border)",borderRadius:7,color:"var(--text3)",fontSize:12,cursor:"pointer"}}>Cancel</button>
                         </div>
                       </div>
                     ):(
-                      <button onClick={()=>setTlAddMode(true)} style={{width:"100%",padding:"8px",background:"transparent",border:`1px dashed ${G}30`,borderRadius:8,color:`${G}77`,cursor:"pointer",fontSize:11,fontFamily:"var(--font-mono)"}}>+ Add Timeline Event</button>
+                      <button onClick={()=>setTlAddMode(true)} style={{width:"100%",padding:"8px",background:"transparent",border:`1px dashed ${G}30`,borderRadius:8,color:`${G}77`,cursor:"pointer",fontSize:12,fontFamily:"var(--font-mono)"}}>+ Add Timeline Event</button>
                     )}
                   </div>
                 )}
@@ -4152,7 +4160,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
             );
           })()}
 
-          <div style={{fontSize:9,letterSpacing:"0.2em",color:`${G}77`,textTransform:"uppercase",marginBottom:12}}>Universe Map — All Teams & Relationships</div>
+          <div style={{fontSize:10,letterSpacing:"0.2em",color:`${G}77`,textTransform:"uppercase",marginBottom:12}}>Universe Map — All Teams & Relationships</div>
           <div style={{background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:12,overflow:"hidden",marginBottom:12}}>
             <svg viewBox="0 0 800 516" style={{width:"100%",display:"block"}}>
               {teamPos.map(t=>{
@@ -4161,14 +4169,14 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                 return <line key={t.id+"-l"} x1={pC.x} y1={pC.y} x2={t.x} y2={t.y} stroke={lc} strokeWidth={1.5} strokeOpacity={0.45} strokeDasharray={dash}/>;
               })}
               <circle cx={pC.x} cy={pC.y} r={70} fill={`${primaryTeam.color}10`} stroke={primaryTeam.color} strokeWidth={1.5} strokeOpacity={0.7}/>
-              <text x={pC.x} y={pC.y-78} textAnchor="middle" fontSize="11" fill={primaryTeam.color} fontFamily="monospace" fontWeight="bold">{primaryTeam.abbr}</text>
+              <text x={pC.x} y={pC.y-78} textAnchor="middle" fontSize="12" fill={primaryTeam.color} fontFamily="monospace" fontWeight="bold">{primaryTeam.abbr}</text>
               {primaryRoster.map((m,i)=>{
                 const a=(i/Math.max(primaryRoster.length,1))*Math.PI*2-Math.PI/2;
                 const mx=pC.x+Math.cos(a)*45,my=pC.y+Math.sin(a)*45;
                 return(<g key={m.id} style={{cursor:"pointer"}} onClick={()=>setUniverseDossierTarget({type:"hero",id:m.id})}>
                   <defs><clipPath id={`um-${m.id}`}><circle cx={mx} cy={my} r={14}/></clipPath></defs>
                   <circle cx={mx} cy={my} r={16} fill={`${m.color}22`} stroke={m.color} strokeWidth={1.2}/>
-                  {images[m.id]?<image href={images[m.id]} x={mx-14} y={my-14} width={28} height={28} clipPath={`url(#um-${m.id})`} preserveAspectRatio="xMidYMin slice"/>:<text x={mx} y={my+4} textAnchor="middle" fontSize="7" fontWeight="bold" fill={m.color} fontFamily="monospace">{m.initials}</text>}
+                  {images[m.id]?<image href={images[m.id]} x={mx-14} y={my-14} width={28} height={28} clipPath={`url(#um-${m.id})`} preserveAspectRatio="xMidYMin slice"/>:<text x={mx} y={my+4} textAnchor="middle" fontSize="8" fontWeight="bold" fill={m.color} fontFamily="monospace">{m.initials}</text>}
                 </g>);
               })}
               {teamPos.map(t=>{
@@ -4176,15 +4184,15 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                 const lc=ALINE[t.nkAlignment]||"#555";
                 return(<g key={t.id}>
                   <circle cx={t.x} cy={t.y} r={50} fill={`${t.color}0E`} stroke={t.color} strokeWidth={1} strokeOpacity={0.6}/>
-                  <text x={t.x} y={t.y+(roster.length?-58:-8)} textAnchor="middle" fontSize="9.5" fill={t.color} fontFamily="monospace" fontWeight="bold">{t.abbr}</text>
-                  {roster.length>0&&<text x={t.x} y={t.y-47} textAnchor="middle" fontSize="7" fill={lc} fontFamily="monospace">{t.nkAlignment}</text>}
+                  <text x={t.x} y={t.y+(roster.length?-58:-8)} textAnchor="middle" fontSize="10.5" fill={t.color} fontFamily="monospace" fontWeight="bold">{t.abbr}</text>
+                  {roster.length>0&&<text x={t.x} y={t.y-47} textAnchor="middle" fontSize="8" fill={lc} fontFamily="monospace">{t.nkAlignment}</text>}
                   {roster.map((m,i)=>{
                     const a=(i/Math.max(roster.length,1))*Math.PI*2-Math.PI/2;
                     const mx=t.x+Math.cos(a)*30,my=t.y+Math.sin(a)*30;
                     return(<g key={m.id} style={{cursor:"pointer"}} onClick={()=>setUniverseDossierTarget({type:"hero",id:m.id})}>
                       <defs><clipPath id={`um2-${m.id}`}><circle cx={mx} cy={my} r={10}/></clipPath></defs>
                       <circle cx={mx} cy={my} r={11} fill={`${m.color}20`} stroke={m.color} strokeWidth={0.8}/>
-                      {images[m.id]?<image href={images[m.id]} x={mx-10} y={my-10} width={20} height={20} clipPath={`url(#um2-${m.id})`} preserveAspectRatio="xMidYMin slice"/>:<text x={mx} y={my+3} textAnchor="middle" fontSize="5.5" fontWeight="bold" fill={m.color} fontFamily="monospace">{m.initials}</text>}
+                      {images[m.id]?<image href={images[m.id]} x={mx-10} y={my-10} width={20} height={20} clipPath={`url(#um2-${m.id})`} preserveAspectRatio="xMidYMin slice"/>:<text x={mx} y={my+3} textAnchor="middle" fontSize="6.5" fontWeight="bold" fill={m.color} fontFamily="monospace">{m.initials}</text>}
                     </g>);
                   })}
                 </g>);
@@ -4194,16 +4202,16 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
           <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:8}}>
             {[["allied","#0F6E56"],["rival","#BA7517"],["enemy","#8B1A1A"],["splinter","#993C1D"],["neutral","#555555"]].map(([k,c])=><div key={k} style={{display:"flex",alignItems:"center",gap:5,padding:"3px 9px",background:`${c}10`,border:`1px solid ${c}33`,borderRadius:20}}>
               <div style={{width:14,height:2,background:c,borderRadius:1}}/>
-              <span style={{fontSize:9,color:c,fontFamily:"var(--font-mono)"}}>{k}</span>
+              <span style={{fontSize:10,color:c,fontFamily:"var(--font-mono)"}}>{k}</span>
             </div>)}
           </div>
-          {otherTeams.length===0&&<div style={{textAlign:"center",padding:"16px",color:"var(--text3)",fontSize:11}}>Create additional teams in the Teams tab to populate the map. The first team ({primaryTeam.name}) anchors the center.</div>}
+          {otherTeams.length===0&&<div style={{textAlign:"center",padding:"16px",color:"var(--text3)",fontSize:12}}>Create additional teams in the Teams tab to populate the map. The first team ({primaryTeam.name}) anchors the center.</div>}
 
           {/* ── HEROES ────────────────────────────────────────────────── */}
           {heroesList.length>0&&(<>
             <div style={{display:"flex",alignItems:"center",gap:10,marginTop:28,marginBottom:14}}>
               <div style={{flex:1,height:1,background:`${G}18`}}/>
-              <div style={{fontSize:9,letterSpacing:"0.2em",color:`${G}77`,textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>Heroes</div>
+              <div style={{fontSize:10,letterSpacing:"0.2em",color:`${G}77`,textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>Heroes</div>
               <div style={{flex:1,height:1,background:`${G}18`}}/>
             </div>
             <div style={{display:"flex",flexDirection:"column",gap:6}}>
@@ -4211,10 +4219,10 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                 <div key={m.id} onClick={()=>setUniverseDossierTarget({type:"hero",id:m.id})} style={uRowStyle(m.color)}>
                   {uPortrait(m)}
                   <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontSize:13,fontWeight:"bold",color:"var(--text-primary)",lineHeight:1.2}}>{m.heroName}</div>
-                    {m.realName&&<div style={{fontSize:10,color:"var(--text3)",marginTop:2}}>{m.realName}</div>}
+                    <div style={{fontSize:14,fontWeight:"bold",color:"var(--text-primary)",lineHeight:1.2}}>{m.heroName}</div>
+                    {m.realName&&<div style={{fontSize:11,color:"var(--text3)",marginTop:2}}>{m.realName}</div>}
                   </div>
-                  <div style={{fontSize:9,color:`${m.color}88`,fontFamily:"var(--font-mono)"}}>→</div>
+                  <div style={{fontSize:10,color:`${m.color}88`,fontFamily:"var(--font-mono)"}}>→</div>
                 </div>
               ))}
             </div>
@@ -4224,7 +4232,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
           {villainPool.length>0&&(<>
             <div style={{display:"flex",alignItems:"center",gap:10,marginTop:28,marginBottom:14}}>
               <div style={{flex:1,height:1,background:"rgba(139,26,26,0.2)"}}/>
-              <div style={{fontSize:9,letterSpacing:"0.2em",color:"rgba(139,26,26,0.6)",textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>Villains</div>
+              <div style={{fontSize:10,letterSpacing:"0.2em",color:"rgba(139,26,26,0.6)",textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>Villains</div>
               <div style={{flex:1,height:1,background:"rgba(139,26,26,0.2)"}}/>
             </div>
             <div style={{display:"flex",flexDirection:"column",gap:6}}>
@@ -4232,10 +4240,10 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                 <div key={v.id} onClick={()=>setUniverseDossierTarget({type:"villain",id:v.id})} style={uRowStyle(v.color||"#8B1A1A")}>
                   {uPortrait(v,true)}
                   <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontSize:13,fontWeight:"bold",color:"var(--text-primary)",lineHeight:1.2}}>{v.heroName}</div>
-                    {v.realName&&<div style={{fontSize:10,color:"var(--text3)",marginTop:2}}>{v.realName}</div>}
+                    <div style={{fontSize:14,fontWeight:"bold",color:"var(--text-primary)",lineHeight:1.2}}>{v.heroName}</div>
+                    {v.realName&&<div style={{fontSize:11,color:"var(--text3)",marginTop:2}}>{v.realName}</div>}
                   </div>
-                  <div style={{fontSize:9,color:"rgba(224,112,112,0.55)",fontFamily:"var(--font-mono)"}}>→</div>
+                  <div style={{fontSize:10,color:"rgba(224,112,112,0.55)",fontFamily:"var(--font-mono)"}}>→</div>
                 </div>
               ))}
             </div>
@@ -4245,7 +4253,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
           {villainFactions.length>0&&(<>
             <div style={{display:"flex",alignItems:"center",gap:10,marginTop:28,marginBottom:14}}>
               <div style={{flex:1,height:1,background:"rgba(139,26,26,0.2)"}}/>
-              <div style={{fontSize:9,letterSpacing:"0.2em",color:"rgba(139,26,26,0.6)",textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>Villain Factions</div>
+              <div style={{fontSize:10,letterSpacing:"0.2em",color:"rgba(139,26,26,0.6)",textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>Villain Factions</div>
               <div style={{flex:1,height:1,background:"rgba(139,26,26,0.2)"}}/>
             </div>
             <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:10}}>
@@ -4255,19 +4263,19 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                 return(<div key={f.id} style={{background:`${f.color}0D`,border:`1px solid ${f.color}2A`,borderRadius:10,padding:"12px 14px"}}>
                   <div style={{display:"flex",alignItems:"center",gap:9,marginBottom:fmembers.length>0?10:0}}>
                     <div style={{width:36,height:36,borderRadius:7,border:`1px solid ${f.color}44`,overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,background:flImg?"transparent":`${f.color}1A`}}>
-                      {flImg?<img src={flImg} style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<span style={{fontSize:10,fontWeight:"bold",color:f.color,letterSpacing:"0.05em"}}>{f.abbr||f.name.slice(0,2).toUpperCase()}</span>}
+                      {flImg?<img src={flImg} style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<span style={{fontSize:11,fontWeight:"bold",color:f.color,letterSpacing:"0.05em"}}>{f.abbr||f.name.slice(0,2).toUpperCase()}</span>}
                     </div>
                     <div style={{minWidth:0}}>
-                      <div style={{fontSize:11,fontWeight:"bold",color:"var(--text-primary)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{f.name}</div>
-                      {f.purpose&&<div style={{fontSize:9,color:"var(--text3)",marginTop:1,lineHeight:1.35,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{f.purpose}</div>}
+                      <div style={{fontSize:12,fontWeight:"bold",color:"var(--text-primary)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{f.name}</div>
+                      {f.purpose&&<div style={{fontSize:10,color:"var(--text3)",marginTop:1,lineHeight:1.35,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{f.purpose}</div>}
                     </div>
                   </div>
                   {fmembers.length>0&&(<div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
                     {fmembers.slice(0,6).map(m=>(<div key={m.id} title={m.heroName} style={{cursor:"pointer"}} onClick={()=>setUniverseDossierTarget({type:"villain",id:m.id})}>
                       {images[m.id]?<img src={images[m.id]} style={{width:24,height:24,borderRadius:"50%",objectFit:"cover",objectPosition:"top",border:`1px solid ${f.color}44`}}/>
-                        :<div style={{width:24,height:24,borderRadius:"50%",background:`${m.color||f.color}20`,border:`1px solid ${f.color}33`,display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{fontSize:7,fontWeight:"bold",color:m.color||f.color}}>{m.initials}</span></div>}
+                        :<div style={{width:24,height:24,borderRadius:"50%",background:`${m.color||f.color}20`,border:`1px solid ${f.color}33`,display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{fontSize:8,fontWeight:"bold",color:m.color||f.color}}>{m.initials}</span></div>}
                     </div>))}
-                    {fmembers.length>6&&<div style={{width:24,height:24,borderRadius:"50%",background:`${f.color}18`,border:`1px solid ${f.color}33`,display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{fontSize:7,color:f.color}}>+{fmembers.length-6}</span></div>}
+                    {fmembers.length>6&&<div style={{width:24,height:24,borderRadius:"50%",background:`${f.color}18`,border:`1px solid ${f.color}33`,display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{fontSize:8,color:f.color}}>+{fmembers.length-6}</span></div>}
                   </div>)}
                 </div>);
               })}
@@ -4281,14 +4289,14 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
         const CodexCard=({title,accent,sections,tagline})=>(
           <div style={{background:"var(--bg3)",border:`1px solid ${accent}33`,borderRadius:12,marginBottom:12,overflow:"hidden"}}>
             <div style={{padding:"16px 20px 12px",borderBottom:`1px solid ${accent}22`,background:`${accent}08`}}>
-              <div style={{fontSize:15,fontWeight:"bold",color:accent,fontFamily:"var(--font-mono)",letterSpacing:"0.05em",marginBottom:4}}>{title}</div>
-              {tagline&&<div style={{fontSize:11,color:"var(--text3)",fontStyle:"italic"}}>{tagline}</div>}
+              <div style={{fontSize:16,fontWeight:"bold",color:accent,fontFamily:"var(--font-mono)",letterSpacing:"0.05em",marginBottom:4}}>{title}</div>
+              {tagline&&<div style={{fontSize:12,color:"var(--text3)",fontStyle:"italic"}}>{tagline}</div>}
             </div>
             <div style={{padding:"16px 20px"}}>
               {sections.map(([label,text])=>text?(
                 <div key={label} style={{marginBottom:14}}>
-                  <div style={{fontSize:8.5,letterSpacing:"0.18em",textTransform:"uppercase",color:`${accent}99`,fontFamily:"var(--font-mono)",marginBottom:5}}>{label}</div>
-                  <div style={{fontSize:11.5,color:"var(--text2)",lineHeight:1.65}}>{text}</div>
+                  <div style={{fontSize:9.5,letterSpacing:"0.18em",textTransform:"uppercase",color:`${accent}99`,fontFamily:"var(--font-mono)",marginBottom:5}}>{label}</div>
+                  <div style={{fontSize:12.5,color:"var(--text2)",lineHeight:1.65}}>{text}</div>
                 </div>
               ):null)}
             </div>
@@ -4303,22 +4311,22 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
             <div style={{background:`${accent}06`,border:`1px solid ${accent}28`,borderRadius:10,marginBottom:20,overflow:"hidden"}}>
               <div style={{padding:"10px 16px",borderBottom:`1px solid ${accent}18`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                 <div style={{display:"flex",alignItems:"center",gap:10}}>
-                  <span style={{fontSize:9,letterSpacing:"0.18em",textTransform:"uppercase",color:accent,fontFamily:"var(--font-mono)",fontWeight:"bold"}}>{label}</span>
-                  <span style={{fontSize:9,color:"var(--text4)",fontFamily:"var(--font-mono)"}}>Inherent Abilities · {abilities.length}/10</span>
-                  {note&&<span style={{fontSize:8.5,color:`${accent}88`,fontStyle:"italic"}}>{note}</span>}
+                  <span style={{fontSize:10,letterSpacing:"0.18em",textTransform:"uppercase",color:accent,fontFamily:"var(--font-mono)",fontWeight:"bold"}}>{label}</span>
+                  <span style={{fontSize:10,color:"var(--text4)",fontFamily:"var(--font-mono)"}}>Inherent Abilities · {abilities.length}/10</span>
+                  {note&&<span style={{fontSize:9.5,color:`${accent}88`,fontStyle:"italic"}}>{note}</span>}
                 </div>
-                {abilities.length<10&&<button onClick={addAbility} style={{fontSize:9,padding:"3px 10px",background:`${accent}18`,border:`1px solid ${accent}44`,borderRadius:6,cursor:"pointer",color:accent,fontFamily:"var(--font-mono)"}}>+ Add</button>}
+                {abilities.length<10&&<button onClick={addAbility} style={{fontSize:10,padding:"3px 10px",background:`${accent}18`,border:`1px solid ${accent}44`,borderRadius:6,cursor:"pointer",color:accent,fontFamily:"var(--font-mono)"}}>+ Add</button>}
               </div>
               <div style={{padding:"12px 16px"}}>
-                {abilities.length===0&&<div style={{fontSize:10,color:"var(--text4)",fontStyle:"italic",padding:"4px 0"}}>No inherent abilities defined — add up to 10 racial defaults. Heroes with this race will inherit them based on their bloodline purity.</div>}
+                {abilities.length===0&&<div style={{fontSize:11,color:"var(--text4)",fontStyle:"italic",padding:"4px 0"}}>No inherent abilities defined — add up to 10 racial defaults. Heroes with this race will inherit them based on their bloodline purity.</div>}
                 {abilities.map((a,i)=>(
                   <div key={i} style={{display:"grid",gridTemplateColumns:"18px 150px 1fr auto",gap:8,marginBottom:8,alignItems:"center"}}>
-                    <span style={{fontSize:9,color:`${accent}66`,fontFamily:"var(--font-mono)",textAlign:"right"}}>{i+1}</span>
+                    <span style={{fontSize:10,color:`${accent}66`,fontFamily:"var(--font-mono)",textAlign:"right"}}>{i+1}</span>
                     <input type="text" placeholder="Ability name" value={a.name} onChange={e=>updateAbility(i,"name",e.target.value)}
-                      style={{padding:"6px 8px",background:"var(--bg2)",border:`1px solid ${accent}30`,borderRadius:6,color:"var(--text-primary)",fontSize:10,fontFamily:"var(--font-mono)"}}/>
+                      style={{padding:"6px 8px",background:"var(--bg2)",border:`1px solid ${accent}30`,borderRadius:6,color:"var(--text-primary)",fontSize:11,fontFamily:"var(--font-mono)"}}/>
                     <input type="text" placeholder="Short description" value={a.desc} onChange={e=>updateAbility(i,"desc",e.target.value)}
-                      style={{padding:"6px 8px",background:"var(--bg2)",border:`1px solid ${accent}30`,borderRadius:6,color:"var(--text-primary)",fontSize:10}}/>
-                    <button onClick={()=>removeAbility(i)} style={{fontSize:12,padding:"3px 8px",background:"rgba(163,45,45,0.08)",border:"1px solid rgba(163,45,45,0.22)",borderRadius:6,cursor:"pointer",color:"#e74c3c",lineHeight:1}}>×</button>
+                      style={{padding:"6px 8px",background:"var(--bg2)",border:`1px solid ${accent}30`,borderRadius:6,color:"var(--text-primary)",fontSize:11}}/>
+                    <button onClick={()=>removeAbility(i)} style={{fontSize:13,padding:"3px 8px",background:"rgba(163,45,45,0.08)",border:"1px solid rgba(163,45,45,0.22)",borderRadius:6,cursor:"pointer",color:"#e74c3c",lineHeight:1}}>×</button>
                   </div>
                 ))}
               </div>
@@ -4331,24 +4339,24 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
           (branch.subs||[]).filter(s=>!["auranthi","zyrenian","dravosi","a_gene_mutate"].includes(s.id)).map(s=>({...s,main,branchLabel:branch.label,accent:main==="human"?"#888780":main==="mutate"?"#0F9E75":"#888780"}))
         );
         return(<>
-          <div style={{fontSize:9,letterSpacing:"0.2em",color:`${G}77`,textTransform:"uppercase",marginBottom:4}}>{universeData?.universeName?`${universeData.universeName} — `:""}Universe Codex</div>
-          <div style={{fontSize:11,color:"var(--text3)",marginBottom:22}}>Canonical lore, species power index, and inherent ability defaults for every race.</div>
+          <div style={{fontSize:10,letterSpacing:"0.2em",color:`${G}77`,textTransform:"uppercase",marginBottom:4}}>{universeData?.universeName?`${universeData.universeName} — `:""}Universe Codex</div>
+          <div style={{fontSize:12,color:"var(--text3)",marginBottom:22}}>Canonical lore, species power index, and inherent ability defaults for every race.</div>
 
-          <div style={{fontSize:10,letterSpacing:"0.18em",textTransform:"uppercase",color:`${G}66`,fontFamily:"var(--font-mono)",marginBottom:12,paddingBottom:6,borderBottom:"1px solid var(--border)"}}>— Alien Species —</div>
+          <div style={{fontSize:11,letterSpacing:"0.18em",textTransform:"uppercase",color:`${G}66`,fontFamily:"var(--font-mono)",marginBottom:12,paddingBottom:6,borderBottom:"1px solid var(--border)"}}>— Alien Species —</div>
 
           {/* Auranthi Bloodline Hierarchy */}
           <div style={{background:"rgba(212,160,32,0.06)",border:"1px solid rgba(212,160,32,0.22)",borderRadius:10,padding:"12px 16px",marginBottom:20}}>
-            <div style={{fontSize:8.5,letterSpacing:"0.18em",textTransform:"uppercase",color:"#D4A02088",fontFamily:"var(--font-mono)",marginBottom:10}}>Auranthi Bloodline Hierarchy</div>
-            <div style={{fontSize:10.5,color:"var(--text3)",lineHeight:1.6,marginBottom:12}}>All three alien species share Auranthi blood. A portion of Auranthi inherent abilities passes down through each species proportional to their bloodline fraction. Further diluted when mixed with Human or A-gene parentage.</div>
+            <div style={{fontSize:9.5,letterSpacing:"0.18em",textTransform:"uppercase",color:"#D4A02088",fontFamily:"var(--font-mono)",marginBottom:10}}>Auranthi Bloodline Hierarchy</div>
+            <div style={{fontSize:11.5,color:"var(--text3)",lineHeight:1.6,marginBottom:12}}>All three alien species share Auranthi blood. A portion of Auranthi inherent abilities passes down through each species proportional to their bloodline fraction. Further diluted when mixed with Human or A-gene parentage.</div>
             <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
               {[{label:"Auranthi",id:"auranthi",pct:100,accent:"#D4A020"},{label:"Dravosi",id:"dravosi",pct:50,accent:"#5A5AE0"},{label:"Zyrenian",id:"zyrenian",pct:25,accent:"#B04A1A"}].map(({label,id,pct,accent})=>(
                 <div key={id} style={{flex:1,minWidth:140,background:`${accent}0A`,border:`1px solid ${accent}30`,borderRadius:8,padding:"8px 12px"}}>
-                  <div style={{fontSize:11,fontWeight:"bold",color:accent,fontFamily:"var(--font-mono)",marginBottom:4}}>{label}</div>
-                  <div style={{fontSize:9,color:"var(--text3)",marginBottom:6}}>{pct}% Auranthi blood</div>
+                  <div style={{fontSize:12,fontWeight:"bold",color:accent,fontFamily:"var(--font-mono)",marginBottom:4}}>{label}</div>
+                  <div style={{fontSize:10,color:"var(--text3)",marginBottom:6}}>{pct}% Auranthi blood</div>
                   <div style={{height:4,background:"var(--bg2)",borderRadius:2,overflow:"hidden"}}>
                     <div style={{height:"100%",width:`${pct}%`,background:`linear-gradient(90deg,${accent}66,${accent})`,borderRadius:2}}/>
                   </div>
-                  <div style={{fontSize:8.5,color:"var(--text4)",marginTop:4,fontFamily:"var(--font-mono)"}}>inherits {pct===100?"all":"up to "+(Math.floor(10*pct/100))+" of 10"} Auranthi abilities{pct<100?" (if defined)":""}</div>
+                  <div style={{fontSize:9.5,color:"var(--text4)",marginTop:4,fontFamily:"var(--font-mono)"}}>inherits {pct===100?"all":"up to "+(Math.floor(10*pct/100))+" of 10"} Auranthi abilities{pct<100?" (if defined)":""}</div>
                 </div>
               ))}
             </div>
@@ -4390,9 +4398,9 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
             ]}/>
           <AbilityEditor raceId="zyrenian" accent="#B04A1A" label="ZYRENIAN" note="25% Auranthi blood — also inherits 2 of 10 Auranthi defaults"/>
 
-          <div style={{fontSize:10,letterSpacing:"0.18em",textTransform:"uppercase",color:`${G}66`,fontFamily:"var(--font-mono)",marginBottom:12,paddingBottom:6,borderBottom:"1px solid var(--border)",marginTop:8}}>— Species Power Index —</div>
+          <div style={{fontSize:11,letterSpacing:"0.18em",textTransform:"uppercase",color:`${G}66`,fontFamily:"var(--font-mono)",marginBottom:12,paddingBottom:6,borderBottom:"1px solid var(--border)",marginTop:8}}>— Species Power Index —</div>
 
-          <div style={{fontSize:10.5,color:"var(--text3)",marginBottom:14,lineHeight:1.6}}>Current peak power vs. growth potential — rated across known full-blooded specimens. Lifespan averaged across documented cases.</div>
+          <div style={{fontSize:11.5,color:"var(--text3)",marginBottom:14,lineHeight:1.6}}>Current peak power vs. growth potential — rated across known full-blooded specimens. Lifespan averaged across documented cases.</div>
           {[
             {s:zyrenian,accent:"#B04A1A",badge:null,potBadge:true},
             {s:auranthi,accent:"#D4A020",badge:true,potBadge:false},
@@ -4400,16 +4408,16 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
           ].map(({s,accent,badge,potBadge})=>(
             <div key={s?.id} style={{background:"var(--bg3)",border:`1px solid ${accent}33`,borderRadius:10,padding:"14px 16px",marginBottom:10}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-                <div style={{fontSize:12,fontWeight:"bold",color:accent,fontFamily:"var(--font-mono)",letterSpacing:"0.06em"}}>{s?.label?.toUpperCase()}</div>
+                <div style={{fontSize:13,fontWeight:"bold",color:accent,fontFamily:"var(--font-mono)",letterSpacing:"0.06em"}}>{s?.label?.toUpperCase()}</div>
                 <div style={{display:"flex",gap:5}}>
-                  {badge&&<div style={{fontSize:7.5,padding:"2px 7px",background:"rgba(212,160,32,0.12)",border:"1px solid rgba(212,160,32,0.35)",borderRadius:10,color:"#D4A020",fontFamily:"var(--font-mono)",letterSpacing:"0.08em",whiteSpace:"nowrap"}}>STRONGEST</div>}
-                  {potBadge&&<div style={{fontSize:7.5,padding:"2px 7px",background:"rgba(83,74,183,0.12)",border:"1px solid rgba(83,74,183,0.35)",borderRadius:10,color:"#9090D8",fontFamily:"var(--font-mono)",letterSpacing:"0.08em",whiteSpace:"nowrap"}}>GREATEST POTENTIAL</div>}
+                  {badge&&<div style={{fontSize:8.5,padding:"2px 7px",background:"rgba(212,160,32,0.12)",border:"1px solid rgba(212,160,32,0.35)",borderRadius:10,color:"#D4A020",fontFamily:"var(--font-mono)",letterSpacing:"0.08em",whiteSpace:"nowrap"}}>STRONGEST</div>}
+                  {potBadge&&<div style={{fontSize:8.5,padding:"2px 7px",background:"rgba(83,74,183,0.12)",border:"1px solid rgba(83,74,183,0.35)",borderRadius:10,color:"#9090D8",fontFamily:"var(--font-mono)",letterSpacing:"0.08em",whiteSpace:"nowrap"}}>GREATEST POTENTIAL</div>}
                 </div>
               </div>
               <div style={{marginBottom:8}}>
                 <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
-                  <span style={{fontSize:8,letterSpacing:"0.12em",textTransform:"uppercase",color:"var(--text4)",fontFamily:"var(--font-mono)"}}>Peak Power</span>
-                  <span style={{fontSize:8,color:accent,fontFamily:"var(--font-mono)"}}>{s?.powerTier}/10</span>
+                  <span style={{fontSize:9,letterSpacing:"0.12em",textTransform:"uppercase",color:"var(--text4)",fontFamily:"var(--font-mono)"}}>Peak Power</span>
+                  <span style={{fontSize:9,color:accent,fontFamily:"var(--font-mono)"}}>{s?.powerTier}/10</span>
                 </div>
                 <div style={{height:5,background:"var(--bg2)",borderRadius:3,overflow:"hidden"}}>
                   <div style={{height:"100%",width:`${(s?.powerTier||0)*10}%`,background:`linear-gradient(90deg,${accent}88,${accent})`,borderRadius:3}}/>
@@ -4417,21 +4425,75 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
               </div>
               <div style={{marginBottom:10}}>
                 <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
-                  <span style={{fontSize:8,letterSpacing:"0.12em",textTransform:"uppercase",color:"var(--text4)",fontFamily:"var(--font-mono)"}}>Growth Potential</span>
-                  <span style={{fontSize:8,color:"#9090D8",fontFamily:"var(--font-mono)"}}>{s?.potentialTier===10?"∞ / 10":`${s?.potentialTier}/10`}</span>
+                  <span style={{fontSize:9,letterSpacing:"0.12em",textTransform:"uppercase",color:"var(--text4)",fontFamily:"var(--font-mono)"}}>Growth Potential</span>
+                  <span style={{fontSize:9,color:"#9090D8",fontFamily:"var(--font-mono)"}}>{s?.potentialTier===10?"∞ / 10":`${s?.potentialTier}/10`}</span>
                 </div>
                 <div style={{height:5,background:"var(--bg2)",borderRadius:3,overflow:"hidden"}}>
                   <div style={{height:"100%",width:`${(s?.potentialTier||0)*10}%`,background:`linear-gradient(90deg,rgba(128,128,216,0.45),#9090D8)`,borderRadius:3}}/>
                 </div>
               </div>
-              {s?.codex?.lifespan&&<div style={{fontSize:10,color:"var(--text3)"}}>
-                <span style={{fontSize:8,letterSpacing:"0.1em",textTransform:"uppercase",color:"var(--text4)",fontFamily:"var(--font-mono)"}}>Avg. Lifespan — </span>
+              {s?.codex?.lifespan&&<div style={{fontSize:11,color:"var(--text3)"}}>
+                <span style={{fontSize:9,letterSpacing:"0.1em",textTransform:"uppercase",color:"var(--text4)",fontFamily:"var(--font-mono)"}}>Avg. Lifespan — </span>
                 {s.codex.lifespan}
               </div>}
             </div>
           ))}
 
-          <div style={{fontSize:10,letterSpacing:"0.18em",textTransform:"uppercase",color:`${G}66`,fontFamily:"var(--font-mono)",marginBottom:12,paddingBottom:6,borderBottom:"1px solid var(--border)",marginTop:16}}>— Genetic Mutations —</div>
+          <div style={{fontSize:11,letterSpacing:"0.18em",textTransform:"uppercase",color:`${G}66`,fontFamily:"var(--font-mono)",marginBottom:12,paddingBottom:6,borderBottom:"1px solid var(--border)",marginTop:16}}>— Power Ceiling by Origin —</div>
+          <div style={{fontSize:11.5,color:"var(--text3)",marginBottom:14,lineHeight:1.6}}>
+            Auranthian biology sits at the top of the known power scale — strength in the same tier as myth (Superman / Thor / Goku / Vegeta calibre). Every other origin is capped as a percentage of that ceiling. Dravosi and Zyrenian inherit a diluted Auranthi bloodline that sets their <b style={{color:"var(--text2)"}}>base</b> ceiling; pairing with a Mutate can push a hybrid up toward — but never guaranteed to reach — their <b style={{color:"var(--text2)"}}>hybrid max</b>. Pairing with a plain Human never raises it above base. Mutate and Human carry no fixed ceiling of their own — their potential simply varies, which is also the rare exception that can rival or exceed an Auranthian. Adjust the numbers below as the story develops; nothing here is locked.
+          </div>
+          {(()=>{
+            const ORIGIN_ROWS=[
+              {id:"auranthi",label:"Auranthi",accent:"#D4A020"},
+              {id:"dravosi",label:"Dravosi",accent:"#5A5AE0"},
+              {id:"zyrenian",label:"Zyrenian",accent:"#B04A1A"},
+              {id:"mutate",label:"Mutate",accent:"#0F9E75"},
+              {id:"human",label:"Human",accent:"#888780"},
+            ];
+            return(<>
+              {ORIGIN_ROWS.map(({id,label,accent})=>{
+                const sc=getPowerScale(id);
+                const update=(field,val)=>savePowerScaling({...powerScaling,[id]:{...sc,[field]:val}});
+                const clamp=v=>Math.max(0,Math.min(100,Number(v)||0));
+                return(
+                  <div key={id} style={{background:`${accent}08`,border:`1px solid ${accent}30`,borderRadius:10,padding:"12px 16px",marginBottom:8}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:sc.varies?0:8}}>
+                      <div style={{fontSize:12.5,fontWeight:"bold",color:accent,fontFamily:"var(--font-mono)",letterSpacing:"0.05em"}}>{label.toUpperCase()}</div>
+                      {sc.varies?(
+                        <div style={{fontSize:9,padding:"3px 9px",background:`${accent}14`,border:`1px solid ${accent}44`,borderRadius:10,color:accent,fontFamily:"var(--font-mono)",letterSpacing:"0.06em"}}>VARIES — NO FIXED CEILING</div>
+                      ):id==="auranthi"?(
+                        <div style={{fontSize:9,padding:"3px 9px",background:`${accent}14`,border:`1px solid ${accent}44`,borderRadius:10,color:accent,fontFamily:"var(--font-mono)",letterSpacing:"0.06em"}}>REFERENCE CEILING</div>
+                      ):(
+                        <div style={{display:"flex",gap:10}}>
+                          <label style={{display:"flex",alignItems:"center",gap:5,fontSize:10,color:"var(--text3)",fontFamily:"var(--font-mono)"}}>Base
+                            <input type="number" min={0} max={100} value={sc.base??0} onChange={e=>update("base",clamp(e.target.value))}
+                              style={{width:46,padding:"3px 5px",background:"var(--bg2)",border:`1px solid ${accent}40`,borderRadius:5,color:"var(--text-primary)",fontSize:11,fontFamily:"var(--font-mono)"}}/>%
+                          </label>
+                          <label style={{display:"flex",alignItems:"center",gap:5,fontSize:10,color:"var(--text3)",fontFamily:"var(--font-mono)"}}>Hybrid Max
+                            <input type="number" min={0} max={100} value={sc.hybridMax??0} onChange={e=>update("hybridMax",clamp(e.target.value))}
+                              style={{width:46,padding:"3px 5px",background:"var(--bg2)",border:`1px solid ${accent}40`,borderRadius:5,color:"var(--text-primary)",fontSize:11,fontFamily:"var(--font-mono)"}}/>%
+                          </label>
+                        </div>
+                      )}
+                    </div>
+                    {!sc.varies&&(
+                      <div style={{position:"relative",height:8,background:"var(--bg2)",borderRadius:4,overflow:"hidden"}}>
+                        <div style={{position:"absolute",height:"100%",width:`${sc.hybridMax??sc.base}%`,background:`${accent}28`,borderRadius:4}}/>
+                        <div style={{position:"absolute",height:"100%",width:`${sc.base}%`,background:`linear-gradient(90deg,${accent}88,${accent})`,borderRadius:4}}/>
+                      </div>
+                    )}
+                    {!sc.varies&&id!=="auranthi"&&(
+                      <div style={{fontSize:9.5,color:"var(--text4)",marginTop:5,fontFamily:"var(--font-mono)"}}>solid = base ceiling · faint = hybrid max (Mutate-paired, not guaranteed)</div>
+                    )}
+                  </div>
+                );
+              })}
+              <button onClick={()=>savePowerScaling({})} style={{fontSize:10,padding:"4px 12px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:20,cursor:"pointer",color:"var(--text3)",fontFamily:"var(--font-mono)",marginTop:4,marginBottom:8}}>Reset to canon defaults</button>
+            </>);
+          })()}
+
+          <div style={{fontSize:11,letterSpacing:"0.18em",textTransform:"uppercase",color:`${G}66`,fontFamily:"var(--font-mono)",marginBottom:12,paddingBottom:6,borderBottom:"1px solid var(--border)",marginTop:16}}>— Genetic Mutations —</div>
 
           <CodexCard title="A-GENE MUTATION" accent="#0F9E75" tagline="It didn't give them power. It removed the locks on the power they already had."
             sections={[
@@ -4443,8 +4505,8 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
             ]}/>
           <AbilityEditor raceId="a_gene_mutate" accent="#0F9E75" label="A-GENE MUTATION" note="No Auranthi bloodline — abilities are purely this gene's baseline expression"/>
 
-          <div style={{fontSize:10,letterSpacing:"0.18em",textTransform:"uppercase",color:`${G}66`,fontFamily:"var(--font-mono)",marginBottom:12,paddingBottom:6,borderBottom:"1px solid var(--border)",marginTop:8}}>— Other Race Defaults —</div>
-          <div style={{fontSize:10.5,color:"var(--text3)",marginBottom:16,lineHeight:1.6}}>Define inherent ability defaults for any other race. Heroes with matching race inherit these at full strength (no bloodline dilution).</div>
+          <div style={{fontSize:11,letterSpacing:"0.18em",textTransform:"uppercase",color:`${G}66`,fontFamily:"var(--font-mono)",marginBottom:12,paddingBottom:6,borderBottom:"1px solid var(--border)",marginTop:8}}>— Other Race Defaults —</div>
+          <div style={{fontSize:11.5,color:"var(--text3)",marginBottom:16,lineHeight:1.6}}>Define inherent ability defaults for any other race. Heroes with matching race inherit these at full strength (no bloodline dilution).</div>
           {otherRaces.map(r=>(
             <AbilityEditor key={r.id} raceId={r.id} accent={r.accent} label={r.label.toUpperCase()} note={r.lore?.split("—")[0]?.trim()||r.branchLabel}/>
           ))}
@@ -4460,26 +4522,26 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
           {/* Header */}
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:22}}>
             <div>
-              <div style={{fontSize:8.5,letterSpacing:"0.24em",color:scPowerReforgeTarget?"#F5C54277":"rgba(136,135,128,0.65)",textTransform:"uppercase",marginBottom:5,fontFamily:"var(--font-mono)"}}>{scPowerReforgeTarget?"⚡ Power Forge · Independent Hero":scReforgeId?"Reforging · Independent Hero":"Independent Hero"}</div>
-              <div style={{fontSize:19,fontWeight:"900",color:"var(--text-primary)",letterSpacing:"0.02em"}}>{scPowerReforgeTarget?scPowerReforgeTarget.heroName:"Solo Hero Forge"}</div>
-              <div style={{fontSize:11,color:"var(--text3)",marginTop:3}}>{scPowerReforgeTarget?"Answer the phases to replace this hero's powers and stats.":scReforgeId?`Regenerating ${scHeroName||"hero"} — same identity, new result.`:"No team. Personal mission. Their own rogues gallery."}</div>
+              <div style={{fontSize:9.5,letterSpacing:"0.24em",color:scPowerReforgeTarget?"#F5C54277":"rgba(136,135,128,0.65)",textTransform:"uppercase",marginBottom:5,fontFamily:"var(--font-mono)"}}>{scPowerReforgeTarget?"⚡ Power Forge · Independent Hero":scReforgeId?"Reforging · Independent Hero":"Independent Hero"}</div>
+              <div style={{fontSize:20,fontWeight:"900",color:"var(--text-primary)",letterSpacing:"0.02em"}}>{scPowerReforgeTarget?scPowerReforgeTarget.heroName:"Solo Hero Forge"}</div>
+              <div style={{fontSize:12,color:"var(--text3)",marginTop:3}}>{scPowerReforgeTarget?"Answer the phases to replace this hero's powers and stats.":scReforgeId?`Regenerating ${scHeroName||"hero"} — same identity, new result.`:"No team. Personal mission. Their own rogues gallery."}</div>
             </div>
-            <button onClick={()=>{setShowSoloCreator(false);resetSoloCreator();}} style={{background:"none",border:"none",cursor:"pointer",color:"var(--text3)",fontSize:22,padding:"2px 6px",lineHeight:1,flexShrink:0}}>×</button>
+            <button onClick={()=>{setShowSoloCreator(false);resetSoloCreator();}} style={{background:"none",border:"none",cursor:"pointer",color:"var(--text3)",fontSize:23,padding:"2px 6px",lineHeight:1,flexShrink:0}}>×</button>
           </div>
           {/* Mode selector */}
           {!scPowerReforgeTarget&&!scResult&&(scStep===0&&scDeepPhase===0&&scProfileStep===0)&&(
             <div style={{display:"flex",gap:6,marginBottom:14}}>
               <button onClick={()=>{setScDeepMode(false);setScProfileMode(false);setScStep(0);setScDeepPhase(0);setScProfileStep(0);setScDeepAnswers({});setScProfileAnswers({});}} style={{flex:1,padding:"8px",background:!scDeepMode&&!scProfileMode?"rgba(136,135,128,0.15)":"var(--bg3)",border:`1px solid ${!scDeepMode&&!scProfileMode?"rgba(136,135,128,0.5)":"var(--border2)"}`,borderRadius:8,cursor:"pointer",fontFamily:"var(--font-mono)",textAlign:"center"}}>
-                <div style={{fontSize:11,fontWeight:"bold",color:!scDeepMode&&!scProfileMode?"var(--text-primary)":"var(--text2)"}}>⚡ Quick</div>
-                <div style={{fontSize:8.5,color:"var(--text3)",marginTop:1}}>6 questions</div>
+                <div style={{fontSize:12,fontWeight:"bold",color:!scDeepMode&&!scProfileMode?"var(--text-primary)":"var(--text2)"}}>⚡ Quick</div>
+                <div style={{fontSize:9.5,color:"var(--text3)",marginTop:1}}>6 questions</div>
               </button>
               <button onClick={()=>{setScDeepMode(true);setScProfileMode(false);setScStep(0);setScDeepPhase(0);setScProfileStep(0);setScAnswers({});setScProfileAnswers({});}} style={{flex:1,padding:"8px",background:scDeepMode?"rgba(136,135,128,0.15)":"var(--bg3)",border:`1px solid ${scDeepMode?"rgba(136,135,128,0.5)":"var(--border2)"}`,borderRadius:8,cursor:"pointer",fontFamily:"var(--font-mono)",textAlign:"center"}}>
-                <div style={{fontSize:11,fontWeight:"bold",color:scDeepMode?"var(--text-primary)":"var(--text2)"}}>📚 Deep Forge</div>
-                <div style={{fontSize:8.5,color:"var(--text3)",marginTop:1}}>7 lore phases</div>
+                <div style={{fontSize:12,fontWeight:"bold",color:scDeepMode?"var(--text-primary)":"var(--text2)"}}>📚 Deep Forge</div>
+                <div style={{fontSize:9.5,color:"var(--text3)",marginTop:1}}>7 lore phases</div>
               </button>
               <button onClick={()=>{setScProfileMode(true);setScDeepMode(false);setScStep(0);setScDeepPhase(0);setScProfileStep(0);setScAnswers({});setScDeepAnswers({});}} style={{flex:1,padding:"8px",background:scProfileMode?"rgba(136,135,128,0.15)":"var(--bg3)",border:`1px solid ${scProfileMode?"rgba(136,135,128,0.5)":"var(--border2)"}`,borderRadius:8,cursor:"pointer",fontFamily:"var(--font-mono)",textAlign:"center"}}>
-                <div style={{fontSize:11,fontWeight:"bold",color:scProfileMode?"var(--text-primary)":"var(--text2)"}}>🧬 Personal</div>
-                <div style={{fontSize:8.5,color:"var(--text3)",marginTop:1}}>25-answer profile</div>
+                <div style={{fontSize:12,fontWeight:"bold",color:scProfileMode?"var(--text-primary)":"var(--text2)"}}>🧬 Personal</div>
+                <div style={{fontSize:9.5,color:"var(--text3)",marginTop:1}}>25-answer profile</div>
               </button>
             </div>
           )}
@@ -4493,11 +4555,11 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
             const phComplete=ph.questions.every(q=>scPowerForgeAnswers[q.id]);
             const isLast=scPowerForgePhase===POWER_FORGE_PHASES.length;
             return(<div style={s.card}>
-              <div style={{fontSize:9,letterSpacing:"0.14em",color:"#F5C54277",textTransform:"uppercase",fontFamily:"var(--font-mono)",marginBottom:3}}>Power Forge · Phase {scPowerForgePhase} of {POWER_FORGE_PHASES.length}</div>
-              <div style={{fontSize:13,fontWeight:"bold",color:"var(--text-primary)",marginBottom:12}}>{ph.title}</div>
+              <div style={{fontSize:10,letterSpacing:"0.14em",color:"#F5C54277",textTransform:"uppercase",fontFamily:"var(--font-mono)",marginBottom:3}}>Power Forge · Phase {scPowerForgePhase} of {POWER_FORGE_PHASES.length}</div>
+              <div style={{fontSize:14,fontWeight:"bold",color:"var(--text-primary)",marginBottom:12}}>{ph.title}</div>
               {ph.questions.map(q=>(
                 <div key={q.id} style={{marginBottom:14}}>
-                  <div style={{fontSize:12,color:"var(--text2)",marginBottom:8,lineHeight:1.4}}>{q.q}</div>
+                  <div style={{fontSize:13,color:"var(--text2)",marginBottom:8,lineHeight:1.4}}>{q.q}</div>
                   <div style={{display:"flex",flexDirection:"column",gap:5}}>
                     {q.options.map(opt=>(
                       <button key={opt.id} onClick={()=>setScPowerForgeAnswers(p=>({...p,[q.id]:opt.id}))} style={{...s.optBtn(scPowerForgeAnswers[q.id]===opt.id,"#F5C542"),textAlign:"left",lineHeight:1.5}}>{opt.label}</button>
@@ -4506,7 +4568,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                 </div>
               ))}
               <div style={{display:"flex",gap:10,marginTop:4}}>
-                <button onClick={()=>setScPowerForgePhase(p=>Math.max(1,p-1))} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text3)",fontSize:10.5,fontFamily:"var(--font-mono)"}}>← Back</button>
+                <button onClick={()=>setScPowerForgePhase(p=>Math.max(1,p-1))} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text3)",fontSize:11.5,fontFamily:"var(--font-mono)"}}>← Back</button>
                 {!isLast&&<button disabled={!phComplete} onClick={()=>setScPowerForgePhase(p=>p+1)} style={{flex:2,...s.bigBtn(!phComplete,"#F5C542"),marginTop:0}}>
                   {phComplete?`Next: ${POWER_FORGE_PHASES[scPowerForgePhase]?.title} →`:"Answer all questions to continue"}
                 </button>}
@@ -4518,29 +4580,29 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
           })()}
           {/* Power Forge result — apply to existing solo hero */}
           {scPowerReforgeTarget&&scResult&&!scResult.error&&(<div style={s.card}>
-            <div style={{fontSize:9,letterSpacing:"0.14em",color:"#F5C54277",textTransform:"uppercase",fontFamily:"var(--font-mono)",marginBottom:8}}>Power Forge Complete</div>
+            <div style={{fontSize:10,letterSpacing:"0.14em",color:"#F5C54277",textTransform:"uppercase",fontFamily:"var(--font-mono)",marginBottom:8}}>Power Forge Complete</div>
             <div style={{marginBottom:14,padding:"12px 16px",background:"rgba(245,197,66,0.06)",border:"1px solid rgba(245,197,66,0.25)",borderRadius:10}}>
-              <div style={{fontSize:13,fontWeight:"bold",color:"var(--text-primary)",marginBottom:8}}>{scPowerReforgeTarget.heroName}</div>
-              {(scResult.powers||[]).map((p,i)=><div key={i} style={{fontSize:10.5,color:"var(--text2)",marginBottom:4}}><strong style={{color:"#F5C542"}}>{p.name}</strong> — {p.desc}</div>)}
-              {scResult.powerFX&&<div style={{fontSize:10,color:"var(--text3)",marginTop:8,fontStyle:"italic"}}>{scResult.powerFX}</div>}
+              <div style={{fontSize:14,fontWeight:"bold",color:"var(--text-primary)",marginBottom:8}}>{scPowerReforgeTarget.heroName}</div>
+              {(scResult.powers||[]).map((p,i)=><div key={i} style={{fontSize:11.5,color:"var(--text2)",marginBottom:4}}><strong style={{color:"#F5C542"}}>{p.name}</strong> — {p.desc}</div>)}
+              {scResult.powerFX&&<div style={{fontSize:11,color:"var(--text3)",marginTop:8,fontStyle:"italic"}}>{scResult.powerFX}</div>}
             </div>
             <div style={{display:"flex",gap:10}}>
-              <button onClick={()=>{setScResult(null);setScPowerForgePhase(1);setScPowerForgeAnswers({});}} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:10.5,fontFamily:"var(--font-mono)"}}>Regenerate</button>
-              <button onClick={applySoloPowerReforge} style={{flex:2,padding:"11px",background:"rgba(245,197,66,0.14)",border:"1px solid #F5C542",borderRadius:8,cursor:"pointer",color:"#F5C542",fontSize:10.5,letterSpacing:"0.1em",textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>⚡ Apply to {scPowerReforgeTarget.heroName} →</button>
+              <button onClick={()=>{setScResult(null);setScPowerForgePhase(1);setScPowerForgeAnswers({});}} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:11.5,fontFamily:"var(--font-mono)"}}>Regenerate</button>
+              <button onClick={applySoloPowerReforge} style={{flex:2,padding:"11px",background:"rgba(245,197,66,0.14)",border:"1px solid #F5C542",borderRadius:8,cursor:"pointer",color:"#F5C542",fontSize:11.5,letterSpacing:"0.1em",textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>⚡ Apply to {scPowerReforgeTarget.heroName} →</button>
             </div>
           </div>)}
           {/* Step 0 — Identity */}
           {!scPowerReforgeTarget&&!scResult&&scStep===0&&scDeepPhase===0&&scProfileStep===0&&(
             <div>
-              <div style={{fontSize:14,fontWeight:"bold",color:"var(--text-primary)",marginBottom:14}}>Who is this hero?</div>
+              <div style={{fontSize:15,fontWeight:"bold",color:"var(--text-primary)",marginBottom:14}}>Who is this hero?</div>
               <span style={s.lbl}>Hero Name <span style={{color:"#E07070"}}>*</span></span>
-              <div style={{display:"flex",gap:6,marginBottom:12}}><input type="text" placeholder="e.g. Ironhawk" value={scHeroName} onChange={e=>setScHeroName(e.target.value)} style={{flex:1}}/><button onClick={()=>setScHeroName(randHeroName(scRace))} style={{padding:"0 12px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:16,flexShrink:0}}>⚄</button></div>
+              <div style={{display:"flex",gap:6,marginBottom:12}}><input type="text" placeholder="e.g. Ironhawk" value={scHeroName} onChange={e=>setScHeroName(e.target.value)} style={{flex:1}}/><button onClick={()=>setScHeroName(randHeroName(scRace))} style={{padding:"0 12px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:17,flexShrink:0}}>⚄</button></div>
               <span style={s.lbl}>Real Name</span>
               <input type="text" placeholder="e.g. Devon Marshall" value={scName} onChange={e=>setScName(e.target.value)} style={{marginBottom:12}}/>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
                 <div>
                   <span style={s.lbl}>Gender</span>
-                  <select value={scGender} onChange={e=>setScGender(e.target.value)} style={{width:"100%",padding:"8px 10px",background:"var(--bg2)",border:"1px solid var(--border2)",borderRadius:7,color:"var(--text-primary)",fontSize:11,marginTop:4}}>
+                  <select value={scGender} onChange={e=>setScGender(e.target.value)} style={{width:"100%",padding:"8px 10px",background:"var(--bg2)",border:"1px solid var(--border2)",borderRadius:7,color:"var(--text-primary)",fontSize:12,marginTop:4}}>
                     <option value="Male">Male</option><option value="Female">Female</option><option value="Non-binary">Non-binary</option><option value="Other">Other</option>
                   </select>
                 </div>
@@ -4551,7 +4613,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
               </div>
               <div style={{marginBottom:12}}>
                 <span style={s.lbl}>Story Direction (optional)</span>
-                <textarea style={{height:52,fontSize:11,marginTop:4}} placeholder={`e.g. "Vigilante protecting one neighborhood" · "Former gov agent gone rogue" · "Alien stranded on Earth"`} value={scStoryDir} onChange={e=>setScStoryDir(e.target.value)}/>
+                <textarea style={{height:52,fontSize:12,marginTop:4}} placeholder={`e.g. "Vigilante protecting one neighborhood" · "Former gov agent gone rogue" · "Alien stranded on Earth"`} value={scStoryDir} onChange={e=>setScStoryDir(e.target.value)}/>
               </div>
               <InspirationsField value={scInspirations} onChange={setScInspirations} accentColor={scColors[0]||"#888780"}/>
               <div style={{marginBottom:12}}>
@@ -4560,12 +4622,12 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
               </div>
               <span style={s.lbl}>Color Palette <span style={{color:"var(--text4)",fontWeight:"normal"}}>(up to 3)</span></span>
               <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:8}}>
-                {ACCENT_COLORS.map(ac=>{const sel=scColors.includes(ac.hex);const idx=scColors.indexOf(ac.hex);return(<button key={ac.id} onClick={()=>toggleScColor(ac.hex)} style={{display:"flex",alignItems:"center",gap:6,padding:"5px 10px",background:sel?`${ac.hex}18`:"var(--bg3)",border:`1px solid ${sel?ac.hex:"var(--border2)"}`,borderRadius:20,cursor:"pointer",fontFamily:"var(--font-mono)",fontSize:10.5,color:sel?"var(--text-primary)":"var(--text2)"}}><div style={{width:9,height:9,borderRadius:"50%",background:ac.hex}}/>{ac.label}{sel&&<span style={{fontSize:7.5,background:ac.hex,color:"#fff",borderRadius:"50%",width:13,height:13,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:"bold"}}>{idx+1}</span>}</button>);})}
+                {ACCENT_COLORS.map(ac=>{const sel=scColors.includes(ac.hex);const idx=scColors.indexOf(ac.hex);return(<button key={ac.id} onClick={()=>toggleScColor(ac.hex)} style={{display:"flex",alignItems:"center",gap:6,padding:"5px 10px",background:sel?`${ac.hex}18`:"var(--bg3)",border:`1px solid ${sel?ac.hex:"var(--border2)"}`,borderRadius:20,cursor:"pointer",fontFamily:"var(--font-mono)",fontSize:11.5,color:sel?"var(--text-primary)":"var(--text2)"}}><div style={{width:9,height:9,borderRadius:"50%",background:ac.hex}}/>{ac.label}{sel&&<span style={{fontSize:8.5,background:ac.hex,color:"#fff",borderRadius:"50%",width:13,height:13,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:"bold"}}>{idx+1}</span>}</button>);})}
               </div>
               <div style={{display:"flex",gap:6,alignItems:"center",marginBottom:16}}>
                 <input type="color" value={scCustomHex||"#ffffff"} onChange={e=>setScCustomHex(e.target.value)} style={{width:32,height:32,padding:2,border:"1px solid var(--border2)",borderRadius:6,cursor:"pointer",background:"var(--bg3)",flexShrink:0}}/>
-                <input type="text" placeholder="#A3B2C1" value={scCustomHex} onChange={e=>setScCustomHex(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addCustomScColor()} style={{flex:1,padding:"6px 10px",fontFamily:"var(--font-mono)",fontSize:11}}/>
-                <button onClick={addCustomScColor} disabled={scColors.length>=3} style={{padding:"6px 12px",background:scColors.length>=3?"var(--bg3)":`${G}14`,border:`1px solid ${scColors.length>=3?"var(--border2)":G}`,borderRadius:8,cursor:scColors.length>=3?"not-allowed":"pointer",color:scColors.length>=3?"var(--text4)":G,fontSize:10,fontFamily:"var(--font-mono)",flexShrink:0}}>+ Add</button>
+                <input type="text" placeholder="#A3B2C1" value={scCustomHex} onChange={e=>setScCustomHex(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addCustomScColor()} style={{flex:1,padding:"6px 10px",fontFamily:"var(--font-mono)",fontSize:12}}/>
+                <button onClick={addCustomScColor} disabled={scColors.length>=3} style={{padding:"6px 12px",background:scColors.length>=3?"var(--bg3)":`${G}14`,border:`1px solid ${scColors.length>=3?"var(--border2)":G}`,borderRadius:8,cursor:scColors.length>=3?"not-allowed":"pointer",color:scColors.length>=3?"var(--text4)":G,fontSize:11,fontFamily:"var(--font-mono)",flexShrink:0}}>+ Add</button>
               </div>
               <button onClick={()=>{if(!scHeroName.trim()&&!scName.trim())return;if(scDeepMode)setScDeepPhase(1);else if(scProfileMode)setScProfileStep(1);else setScStep(1);}} disabled={!scHeroName.trim()&&!scName.trim()} style={{width:"100%",...s.bigBtn(!scHeroName.trim()&&!scName.trim(),"#888780")}}>
                 {scDeepMode?"Begin Deep Forge →":scProfileMode?"Begin Profile →":"Begin Forge →"}
@@ -4575,12 +4637,12 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
           {/* Quick quiz steps */}
           {!scPowerReforgeTarget&&!scResult&&!scDeepMode&&!scProfileMode&&scStep>=1&&scStep<=RECRUIT_QUIZ.length&&(()=>{const q=RECRUIT_QUIZ[scStep-1];return(
             <div>
-              <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}><span style={{fontSize:10,color:"var(--text2)"}}>Question {scStep} of {RECRUIT_QUIZ.length}</span><span style={{fontSize:10,color:"#888780"}}>{Math.round((scStep/(RECRUIT_QUIZ.length+1))*100)}%</span></div>
+              <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}><span style={{fontSize:11,color:"var(--text2)"}}>Question {scStep} of {RECRUIT_QUIZ.length}</span><span style={{fontSize:11,color:"#888780"}}>{Math.round((scStep/(RECRUIT_QUIZ.length+1))*100)}%</span></div>
               <div style={s.card}>
-                <div style={{fontSize:14,fontWeight:"bold",color:"var(--text-primary)",marginBottom:16,lineHeight:1.4}}>{q.question}</div>
+                <div style={{fontSize:15,fontWeight:"bold",color:"var(--text-primary)",marginBottom:16,lineHeight:1.4}}>{q.question}</div>
                 {q.options.map(opt=><button key={opt.id} onClick={()=>{setScAnswers(p=>({...p,[q.id]:opt.id}));if(scStep<RECRUIT_QUIZ.length)setScStep(p=>p+1);}} style={s.optBtn(scAnswers[q.id]===opt.id,"#888780")}>{opt.label}</button>)}
                 <div style={{display:"flex",gap:10,marginTop:10}}>
-                  <button onClick={()=>scStep===1?setScStep(0):setScStep(p=>p-1)} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text3)",fontSize:10.5,fontFamily:"var(--font-mono)"}}>← Back</button>
+                  <button onClick={()=>scStep===1?setScStep(0):setScStep(p=>p-1)} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text3)",fontSize:11.5,fontFamily:"var(--font-mono)"}}>← Back</button>
                   {scStep===RECRUIT_QUIZ.length&&scAnswers[q.id]&&<button onClick={generateSoloHero} disabled={scLoading} style={{flex:2,...s.bigBtn(scLoading,"#888780"),marginTop:0}}>{scLoading?"Forging hero...":"Generate Solo Hero →"}</button>}
                 </div>
               </div>
@@ -4594,7 +4656,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
             return(<>
               <DeepLoreQuiz phase={scDeepPhase-1} answers={scDeepAnswers} onAnswer={(qid,oid)=>setScDeepAnswers(p=>({...p,[qid]:oid}))} accentColor="#888780"/>
               <div style={{display:"flex",gap:10,marginTop:14}}>
-                <button onClick={()=>setScDeepPhase(p=>Math.max(0,p-1))} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text3)",fontSize:10.5,fontFamily:"var(--font-mono)"}}>← Back</button>
+                <button onClick={()=>setScDeepPhase(p=>Math.max(0,p-1))} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text3)",fontSize:11.5,fontFamily:"var(--font-mono)"}}>← Back</button>
                 {!isLast&&<button disabled={!phaseComplete} onClick={()=>setScDeepPhase(p=>p+1)} style={{flex:2,...s.bigBtn(!phaseComplete,"#888780"),marginTop:0}}>{phaseComplete?`Next: ${DEEP_LORE_PHASES[scDeepPhase]?.title||"Generate"} →`:"Answer all questions to continue"}</button>}
                 {isLast&&<button disabled={!phaseComplete||scLoading} onClick={generateSoloHeroDeep} style={{flex:2,...s.bigBtn(!phaseComplete||scLoading,"#888780"),marginTop:0}}>{scLoading?"Forging hero...":phaseComplete?"Generate Deep Solo Hero →":"Answer all questions"}</button>}
               </div>
@@ -4606,31 +4668,31 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
             const secComplete=sec.questions.every(q=>scProfileAnswers[q.id]);
             const isLast=scProfileStep===5;
             return(<div style={s.card}>
-              <div style={{fontSize:9,letterSpacing:"0.12em",color:"rgba(136,135,128,0.7)",textTransform:"uppercase",marginBottom:12}}>{sec.section} · {scProfileStep} of 5</div>
+              <div style={{fontSize:10,letterSpacing:"0.12em",color:"rgba(136,135,128,0.7)",textTransform:"uppercase",marginBottom:12}}>{sec.section} · {scProfileStep} of 5</div>
               {sec.questions.map(q=>(<div key={q.id} style={{marginBottom:14}}>
-                <div style={{fontSize:13,fontWeight:"bold",color:"var(--text-primary)",marginBottom:8,lineHeight:1.4}}>{q.q}</div>
+                <div style={{fontSize:14,fontWeight:"bold",color:"var(--text-primary)",marginBottom:8,lineHeight:1.4}}>{q.q}</div>
                 {q.options.map(opt=><button key={opt.id} onClick={()=>setScProfileAnswers(p=>({...p,[q.id]:opt.id}))} style={s.optBtn(scProfileAnswers[q.id]===opt.id,"#888780")}>{opt.label}</button>)}
               </div>))}
               <div style={{display:"flex",gap:10,marginTop:6}}>
-                <button onClick={()=>setScProfileStep(p=>Math.max(0,p-1))} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text3)",fontSize:10.5,fontFamily:"var(--font-mono)"}}>← Back</button>
+                <button onClick={()=>setScProfileStep(p=>Math.max(0,p-1))} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text3)",fontSize:11.5,fontFamily:"var(--font-mono)"}}>← Back</button>
                 {!isLast&&<button disabled={!secComplete} onClick={()=>setScProfileStep(p=>p+1)} style={{flex:2,...s.bigBtn(!secComplete,"#888780"),marginTop:0}}>{secComplete?`Next: ${PERSONAL_PROFILE[scProfileStep]?.section} →`:"Answer all questions to continue"}</button>}
                 {isLast&&<button disabled={!secComplete||scLoading} onClick={generateSoloHeroProfile} style={{flex:2,...s.bigBtn(!secComplete||scLoading,"#888780"),marginTop:0}}>{scLoading?"Forging hero...":secComplete?"Generate My Hero →":"Answer all questions"}</button>}
               </div>
             </div>);
           })()}
           {/* Loading */}
-          {scLoading&&<div style={{padding:"14px",background:"var(--bg2)",border:"1px solid rgba(136,135,128,0.2)",borderRadius:8,fontSize:10,color:"var(--text3)",fontFamily:"var(--font-mono)",marginTop:10}}>Forging independent hero…</div>}
+          {scLoading&&<div style={{padding:"14px",background:"var(--bg2)",border:"1px solid rgba(136,135,128,0.2)",borderRadius:8,fontSize:11,color:"var(--text3)",fontFamily:"var(--font-mono)",marginTop:10}}>Forging independent hero…</div>}
           {/* Result */}
           {!scPowerReforgeTarget&&scResult&&!scResult.error&&(<>
             <CharacterPage member={scResult} imageUrl={null} isVillain={false} teamName="Independent" inherentPowers={getRaceInherentPowers(scResult)}/>
             <div style={{display:"flex",gap:10,marginTop:14}}>
-              <button onClick={resetSoloCreator} style={{flex:1,padding:"11px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:10.5,fontFamily:"var(--font-mono)"}}>Regenerate</button>
-              <button onClick={saveSoloHero} style={{flex:2,padding:"11px",background:"rgba(136,135,128,0.12)",border:"1px solid rgba(136,135,128,0.4)",borderRadius:8,cursor:"pointer",color:"var(--text-primary)",fontSize:10.5,letterSpacing:"0.1em",textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>{scReforgeId?"Update Hero →":"Add to Independents →"}</button>
+              <button onClick={resetSoloCreator} style={{flex:1,padding:"11px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:11.5,fontFamily:"var(--font-mono)"}}>Regenerate</button>
+              <button onClick={saveSoloHero} style={{flex:2,padding:"11px",background:"rgba(136,135,128,0.12)",border:"1px solid rgba(136,135,128,0.4)",borderRadius:8,cursor:"pointer",color:"var(--text-primary)",fontSize:11.5,letterSpacing:"0.1em",textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>{scReforgeId?"Update Hero →":"Add to Independents →"}</button>
             </div>
           </>)}
           {scResult?.error&&(<div style={{padding:"14px",background:"rgba(192,57,43,0.08)",border:"1px solid rgba(192,57,43,0.28)",borderRadius:10,marginBottom:8}}>
-            <div style={{fontSize:11,color:"#e74c3c",marginBottom:10,fontFamily:"var(--font-mono)"}}>Generation failed: {scResult.msg}</div>
-            <button onClick={resetSoloCreator} style={{padding:"9px 18px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:10.5,fontFamily:"var(--font-mono)"}}>↺ Try Again</button>
+            <div style={{fontSize:12,color:"#e74c3c",marginBottom:10,fontFamily:"var(--font-mono)"}}>Generation failed: {scResult.msg}</div>
+            <button onClick={resetSoloCreator} style={{padding:"9px 18px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:11.5,fontFamily:"var(--font-mono)"}}>↺ Try Again</button>
           </div>)}
         </div>
       </div>
@@ -4648,31 +4710,31 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
           {/* Top bar */}
           <div style={{position:"sticky",top:0,zIndex:10,background:"var(--header-bg)",borderBottom:`1px solid ${heroColor}25`,padding:"12px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",backdropFilter:"blur(8px)"}}>
             <div style={{display:"flex",alignItems:"center",gap:14}}>
-              <button onClick={()=>{setActiveSoloId(null);setSoloHeroView("profile");setRogueMode(null);setVStep(0);setVResult(null);setVAnswers({});setVName("");setVGender("Male");setSoloPromptResult(null);}} style={{padding:"6px 14px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:10.5,fontFamily:"var(--font-mono)"}}>← Back</button>
+              <button onClick={()=>{setActiveSoloId(null);setSoloHeroView("profile");setRogueMode(null);setVStep(0);setVResult(null);setVAnswers({});setVName("");setVGender("Male");setSoloPromptResult(null);}} style={{padding:"6px 14px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:11.5,fontFamily:"var(--font-mono)"}}>← Back</button>
               <div>
-                <div style={{fontSize:8,letterSpacing:"0.22em",color:"rgba(136,135,128,0.65)",textTransform:"uppercase",fontFamily:"var(--font-mono)",marginBottom:2}}>Independent Hero</div>
-                <div style={{fontSize:16,fontWeight:"900",color:heroColor}}>{hero.heroName}</div>
+                <div style={{fontSize:9,letterSpacing:"0.22em",color:"rgba(136,135,128,0.65)",textTransform:"uppercase",fontFamily:"var(--font-mono)",marginBottom:2}}>Independent Hero</div>
+                <div style={{fontSize:17,fontWeight:"900",color:heroColor}}>{hero.heroName}</div>
               </div>
             </div>
             <div style={{display:"flex",gap:8,alignItems:"center"}}>
-              <label style={{cursor:"pointer",padding:"6px 12px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:8,fontSize:10,color:"var(--text3)",fontFamily:"var(--font-mono)"}}>
+              <label style={{cursor:"pointer",padding:"6px 12px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:8,fontSize:11,color:"var(--text3)",fontFamily:"var(--font-mono)"}}>
                 ↑ Real <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>e.target.files?.[0]&&handleImg(hero.id,e.target.files[0])}/>
               </label>
-              <label style={{cursor:"pointer",padding:"6px 12px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:8,fontSize:10,color:"var(--text3)",fontFamily:"var(--font-mono)"}}>
+              <label style={{cursor:"pointer",padding:"6px 12px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:8,fontSize:11,color:"var(--text3)",fontFamily:"var(--font-mono)"}}>
                 ↑ Comic <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>e.target.files?.[0]&&handleImg(hero.id+"-civ",e.target.files[0])}/>
               </label>
-              {images[hero.id]&&<button onClick={()=>downloadImg(hero.id,hero.heroName)} style={{padding:"6px 12px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:8,cursor:"pointer",color:"var(--text3)",fontSize:10,fontFamily:"var(--font-mono)"}}>⬇ Save Image</button>}
-              <button onClick={()=>startHeroReforge(hero)} style={{padding:"6px 12px",background:"rgba(136,135,128,0.08)",border:"1px solid rgba(136,135,128,0.3)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:10,fontFamily:"var(--font-mono)"}}>Reforge</button>
-              <button onClick={()=>startSoloPowerReforge(hero)} style={{padding:"6px 12px",background:"rgba(245,197,66,0.08)",border:"1px solid rgba(245,197,66,0.3)",borderRadius:8,cursor:"pointer",color:"#F5C542",fontSize:10,fontFamily:"var(--font-mono)"}}>⚡ Powers</button>
-              <button onClick={()=>{setSoloPromptResult(null);generateSoloImagePrompt(hero);setSoloHeroView("profile");}} style={{padding:"6px 12px",background:"rgba(100,160,255,0.08)",border:"1px solid rgba(100,160,255,0.3)",borderRadius:8,cursor:"pointer",color:"#64A0FF",fontSize:10,fontFamily:"var(--font-mono)"}}>🎨 Image</button>
-              <button onClick={()=>requirePin(`Delete ${hero.heroName}`,()=>removeSoloHeroFn(hero.id))} style={{padding:"6px 12px",background:"rgba(163,45,45,0.08)",border:"1px solid rgba(163,45,45,0.25)",borderRadius:8,cursor:"pointer",color:"#e74c3c",fontSize:10,fontFamily:"var(--font-mono)"}}>Delete</button>
+              {images[hero.id]&&<button onClick={()=>downloadImg(hero.id,hero.heroName)} style={{padding:"6px 12px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:8,cursor:"pointer",color:"var(--text3)",fontSize:11,fontFamily:"var(--font-mono)"}}>⬇ Save Image</button>}
+              <button onClick={()=>startHeroReforge(hero)} style={{padding:"6px 12px",background:"rgba(136,135,128,0.08)",border:"1px solid rgba(136,135,128,0.3)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:11,fontFamily:"var(--font-mono)"}}>Reforge</button>
+              <button onClick={()=>startSoloPowerReforge(hero)} style={{padding:"6px 12px",background:"rgba(245,197,66,0.08)",border:"1px solid rgba(245,197,66,0.3)",borderRadius:8,cursor:"pointer",color:"#F5C542",fontSize:11,fontFamily:"var(--font-mono)"}}>⚡ Powers</button>
+              <button onClick={()=>{setSoloPromptResult(null);generateSoloImagePrompt(hero);setSoloHeroView("profile");}} style={{padding:"6px 12px",background:"rgba(100,160,255,0.08)",border:"1px solid rgba(100,160,255,0.3)",borderRadius:8,cursor:"pointer",color:"#64A0FF",fontSize:11,fontFamily:"var(--font-mono)"}}>🎨 Image</button>
+              <button onClick={()=>requirePin(`Delete ${hero.heroName}`,()=>removeSoloHeroFn(hero.id))} style={{padding:"6px 12px",background:"rgba(163,45,45,0.08)",border:"1px solid rgba(163,45,45,0.25)",borderRadius:8,cursor:"pointer",color:"#e74c3c",fontSize:11,fontFamily:"var(--font-mono)"}}>Delete</button>
             </div>
           </div>
 
           {/* Sub-nav */}
           <div style={{display:"flex",gap:2,padding:"0 20px",borderBottom:`1px solid ${heroColor}18`,background:"var(--header-bg)"}}>
             {[["profile","Profile"],["rogues",`Rogues${rogues.length?` (${rogues.length})`:""}`,],["story","Story"]].map(([id,label])=>(
-              <button key={id} onClick={()=>{setSoloHeroView(id);if(id!=="rogues"){setRogueMode(null);setVStep(0);setVResult(null);setVAnswers({});setVName("");setVGender("Male");}}} style={{padding:"10px 18px",background:"none",border:"none",borderBottom:soloHeroView===id?`2px solid ${heroColor}`:"2px solid transparent",cursor:"pointer",color:soloHeroView===id?"var(--text-primary)":"var(--text3)",fontSize:11,fontFamily:"var(--font-mono)",marginBottom:-1,transition:"color 0.15s"}}>{label}</button>
+              <button key={id} onClick={()=>{setSoloHeroView(id);if(id!=="rogues"){setRogueMode(null);setVStep(0);setVResult(null);setVAnswers({});setVName("");setVGender("Male");}}} style={{padding:"10px 18px",background:"none",border:"none",borderBottom:soloHeroView===id?`2px solid ${heroColor}`:"2px solid transparent",cursor:"pointer",color:soloHeroView===id?"var(--text-primary)":"var(--text3)",fontSize:12,fontFamily:"var(--font-mono)",marginBottom:-1,transition:"color 0.15s"}}>{label}</button>
             ))}
           </div>
 
@@ -4684,27 +4746,27 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
               {/* Location editor */}
               <div style={{...s.card,marginTop:14}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer"}} onClick={()=>setSoloLocEdit(p=>p.open?{open:false,hometown:"",baseOfOps:""}:{open:true,hometown:hero.hometown||"",baseOfOps:hero.baseOfOps||""})}>
-                  <div style={{fontSize:10,fontWeight:"bold",color:"var(--text2)",fontFamily:"var(--font-mono)"}}>📍 Location</div>
+                  <div style={{fontSize:11,fontWeight:"bold",color:"var(--text2)",fontFamily:"var(--font-mono)"}}>📍 Location</div>
                   <div style={{display:"flex",gap:12,alignItems:"center"}}>
-                    {(hero.hometown||hero.baseOfOps)&&!soloLocEdit.open&&<div style={{fontSize:9,color:"var(--text4)"}}>{[hero.hometown,hero.baseOfOps].filter(Boolean).join(" · ")}</div>}
-                    <div style={{fontSize:11,color:"var(--text4)"}}>{soloLocEdit.open?"▲":"▼"}</div>
+                    {(hero.hometown||hero.baseOfOps)&&!soloLocEdit.open&&<div style={{fontSize:10,color:"var(--text4)"}}>{[hero.hometown,hero.baseOfOps].filter(Boolean).join(" · ")}</div>}
+                    <div style={{fontSize:12,color:"var(--text4)"}}>{soloLocEdit.open?"▲":"▼"}</div>
                   </div>
                 </div>
                 {soloLocEdit.open&&(
                   <div style={{marginTop:12}}>
                     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
                       <div>
-                        <div style={{fontSize:8.5,letterSpacing:"0.12em",color:`${heroColor}88`,textTransform:"uppercase",marginBottom:5}}>Hometown</div>
+                        <div style={{fontSize:9.5,letterSpacing:"0.12em",color:`${heroColor}88`,textTransform:"uppercase",marginBottom:5}}>Hometown</div>
                         <input type="text" placeholder="e.g. Chicago, IL" value={soloLocEdit.hometown} onChange={e=>setSoloLocEdit(p=>({...p,hometown:e.target.value}))} style={{padding:"7px 10px"}}/>
                       </div>
                       <div>
-                        <div style={{fontSize:8.5,letterSpacing:"0.12em",color:`${heroColor}88`,textTransform:"uppercase",marginBottom:5}}>Base of Operations</div>
+                        <div style={{fontSize:9.5,letterSpacing:"0.12em",color:`${heroColor}88`,textTransform:"uppercase",marginBottom:5}}>Base of Operations</div>
                         <input type="text" placeholder="e.g. Warehouse, Midtown" value={soloLocEdit.baseOfOps} onChange={e=>setSoloLocEdit(p=>({...p,baseOfOps:e.target.value}))} style={{padding:"7px 10px"}}/>
                       </div>
                     </div>
                     <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
-                      <button onClick={()=>setSoloLocEdit({open:false,hometown:"",baseOfOps:""})} style={{padding:"5px 14px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:7,cursor:"pointer",color:"var(--text3)",fontSize:10,fontFamily:"var(--font-mono)"}}>Cancel</button>
-                      <button onClick={()=>{patchSoloHero(hero.id,{hometown:soloLocEdit.hometown.trim(),baseOfOps:soloLocEdit.baseOfOps.trim()});setSoloLocEdit({open:false,hometown:"",baseOfOps:""}); }} style={{padding:"5px 18px",background:`${heroColor}18`,border:`1px solid ${heroColor}55`,borderRadius:7,cursor:"pointer",color:heroColor,fontSize:10,fontFamily:"var(--font-mono)"}}>Save</button>
+                      <button onClick={()=>setSoloLocEdit({open:false,hometown:"",baseOfOps:""})} style={{padding:"5px 14px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:7,cursor:"pointer",color:"var(--text3)",fontSize:11,fontFamily:"var(--font-mono)"}}>Cancel</button>
+                      <button onClick={()=>{patchSoloHero(hero.id,{hometown:soloLocEdit.hometown.trim(),baseOfOps:soloLocEdit.baseOfOps.trim()});setSoloLocEdit({open:false,hometown:"",baseOfOps:""}); }} style={{padding:"5px 18px",background:`${heroColor}18`,border:`1px solid ${heroColor}55`,borderRadius:7,cursor:"pointer",color:heroColor,fontSize:11,fontFamily:"var(--font-mono)"}}>Save</button>
                     </div>
                   </div>
                 )}
@@ -4712,8 +4774,8 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
               {soloPromptResult&&soloPromptResult.hero?.id===hero.id&&(
                 <div style={{...s.card,marginTop:20}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-                    <div style={{fontSize:12,fontWeight:"bold",color:"#64A0FF"}}>{hero.heroName} · Image Prompts</div>
-                    <button onClick={()=>setSoloPromptResult(null)} style={{background:"none",border:"none",cursor:"pointer",color:"var(--text4)",fontSize:14,lineHeight:1}}>×</button>
+                    <div style={{fontSize:13,fontWeight:"bold",color:"#64A0FF"}}>{hero.heroName} · Image Prompts</div>
+                    <button onClick={()=>setSoloPromptResult(null)} style={{background:"none",border:"none",cursor:"pointer",color:"var(--text4)",fontSize:15,lineHeight:1}}>×</button>
                   </div>
                   <div style={{display:"flex",gap:6,marginBottom:14}}>
                     {[["meta-ai","Meta AI"],["midjourney","Midjourney"],["dalle","DALL-E 3"]].map(([id,label])=>(
@@ -4729,14 +4791,14 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                   ):soloPromptResult.platform==="dalle"?(
                     <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:6,marginBottom:12}}>
                       <button style={s.cpyBtn(copied.spmeta)} onClick={()=>copy("spmeta",soloPromptResult.metaAI)}>{copied.spmeta?"Copied!":"Copy"}</button>
-                      <button onClick={()=>{try{window.open("https://chat.openai.com/","_blank");}catch(e){}copy("spmeta",soloPromptResult.metaAI);}} style={{padding:"5px 14px",background:"rgba(16,163,127,0.12)",border:"1px solid rgba(16,163,127,0.4)",borderRadius:6,cursor:"pointer",fontSize:10,color:"#10A37F",fontFamily:"var(--font-mono)"}}>Open ChatGPT →</button>
+                      <button onClick={()=>{try{window.open("https://chat.openai.com/","_blank");}catch(e){}copy("spmeta",soloPromptResult.metaAI);}} style={{padding:"5px 14px",background:"rgba(16,163,127,0.12)",border:"1px solid rgba(16,163,127,0.4)",borderRadius:6,cursor:"pointer",fontSize:11,color:"#10A37F",fontFamily:"var(--font-mono)"}}>Open ChatGPT →</button>
                     </div>
                   ):(
                     hasMetaAI?<MetaAILauncher prompt={soloPromptResult.metaAI} label="Meta AI" copied={copied.spmeta} onCopy={()=>copy("spmeta",soloPromptResult.metaAI)}/>:<div style={{display:"flex",justifyContent:"flex-end",marginTop:6,marginBottom:12}}><button style={s.cpyBtn(copied.spmeta)} onClick={()=>copy("spmeta",soloPromptResult.metaAI)}>{copied.spmeta?"Copied!":"Copy"}</button></div>
                   )}
                   {images[hero.id]&&<div style={{marginTop:12}}>
                     <button style={{...s.bigBtn(false),background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.15)"}} onClick={()=>downloadImg(hero.id,hero.heroName)}>📎 Download Reference Image</button>
-                    <div style={{fontSize:9.5,color:"var(--text4)",marginTop:6}}>{soloPromptResult.platform==="midjourney"?"Use as reference with --cref [image-url] for character consistency":soloPromptResult.platform==="dalle"?"Upload alongside the prompt in ChatGPT for best accuracy":"Upload alongside the prompt in Meta AI for best accuracy"}</div>
+                    <div style={{fontSize:10.5,color:"var(--text4)",marginTop:6}}>{soloPromptResult.platform==="midjourney"?"Use as reference with --cref [image-url] for character consistency":soloPromptResult.platform==="dalle"?"Upload alongside the prompt in ChatGPT for best accuracy":"Upload alongside the prompt in Meta AI for best accuracy"}</div>
                   </div>}
                   {soloPromptResult.tripo3D&&<><span style={s.lbl}>Tripo3D Model Prompt</span><div style={s.pBox}>{soloPromptResult.tripo3D}</div><Tripo3DLauncher prompt={soloPromptResult.tripo3D} copied={copied.sptripo} onCopy={()=>copy("sptripo",soloPromptResult.tripo3D)}/></>}
                 </div>
@@ -4747,29 +4809,29 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
             {soloHeroView==="rogues"&&(<>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
                 <div>
-                  <div style={{fontSize:9,letterSpacing:"0.2em",color:"rgba(139,26,26,0.7)",textTransform:"uppercase",marginBottom:4}}>Rogues Gallery</div>
-                  <div style={{fontSize:12,color:"var(--text3)"}}>Villains personally tied to {hero.heroName}. Their story is intertwined.</div>
+                  <div style={{fontSize:10,letterSpacing:"0.2em",color:"rgba(139,26,26,0.7)",textTransform:"uppercase",marginBottom:4}}>Rogues Gallery</div>
+                  <div style={{fontSize:13,color:"var(--text3)"}}>Villains personally tied to {hero.heroName}. Their story is intertwined.</div>
                 </div>
-                {!isAddingRogue&&<button onClick={()=>{setRogueMode(activeSoloId);setVStep(0);setVResult(null);setVAnswers({});setVName("");setVGender("Male");}} style={{padding:"8px 16px",background:"rgba(139,26,26,0.1)",border:"1px solid rgba(139,26,26,0.35)",borderRadius:8,cursor:"pointer",color:"#E07070",fontSize:10.5,fontFamily:"var(--font-mono)",whiteSpace:"nowrap"}}>+ Add Rogue</button>}
+                {!isAddingRogue&&<button onClick={()=>{setRogueMode(activeSoloId);setVStep(0);setVResult(null);setVAnswers({});setVName("");setVGender("Male");}} style={{padding:"8px 16px",background:"rgba(139,26,26,0.1)",border:"1px solid rgba(139,26,26,0.35)",borderRadius:8,cursor:"pointer",color:"#E07070",fontSize:11.5,fontFamily:"var(--font-mono)",whiteSpace:"nowrap"}}>+ Add Rogue</button>}
               </div>
 
               {/* Villain creation flow (reused, in rogueMode) */}
               {isAddingRogue&&(<>
-                <div style={{padding:"10px 14px",background:`${heroColor}0A`,border:`1px solid ${heroColor}25`,borderRadius:8,fontSize:11,color:"var(--text2)",marginBottom:18}}>
+                <div style={{padding:"10px 14px",background:`${heroColor}0A`,border:`1px solid ${heroColor}25`,borderRadius:8,fontSize:12,color:"var(--text2)",marginBottom:18}}>
                   Creating rogue for: <strong style={{color:heroColor}}>{hero.heroName}</strong>
-                  <button onClick={()=>{setRogueMode(null);setVStep(0);setVResult(null);setVAnswers({});setVName("");setVGender("Male");}} style={{float:"right",background:"none",border:"none",cursor:"pointer",color:"var(--text4)",fontSize:13}}>×</button>
+                  <button onClick={()=>{setRogueMode(null);setVStep(0);setVResult(null);setVAnswers({});setVName("");setVGender("Male");}} style={{float:"right",background:"none",border:"none",cursor:"pointer",color:"var(--text4)",fontSize:14}}>×</button>
                 </div>
                 <div style={{marginBottom:20}}>
                   <div style={{height:3,background:"rgba(255,255,255,0.06)",borderRadius:2,marginBottom:6}}><div style={{height:3,width:`${vResult?100:(vStep/(VILLAIN_QUIZ.length+1))*100}%`,background:"#8B1A1A",borderRadius:2}}/></div>
-                  <div style={{display:"flex",justifyContent:"space-between"}}><span style={{fontSize:10,color:"var(--text2)"}}>{vResult?"Review rogue":`Question ${vStep} of ${VILLAIN_QUIZ.length}`}</span><span style={{fontSize:10,color:"#E07070"}}>{vResult?"Complete":`${Math.round((vStep/(VILLAIN_QUIZ.length+1))*100)}%`}</span></div>
+                  <div style={{display:"flex",justifyContent:"space-between"}}><span style={{fontSize:11,color:"var(--text2)"}}>{vResult?"Review rogue":`Question ${vStep} of ${VILLAIN_QUIZ.length}`}</span><span style={{fontSize:11,color:"#E07070"}}>{vResult?"Complete":`${Math.round((vStep/(VILLAIN_QUIZ.length+1))*100)}%`}</span></div>
                 </div>
                 {!vResult&&vStep===0&&(
                   <div style={s.card}>
-                    <div style={{fontSize:13,fontWeight:"bold",color:"var(--text-primary)",marginBottom:12}}>Who is this rogue?</div>
+                    <div style={{fontSize:14,fontWeight:"bold",color:"var(--text-primary)",marginBottom:12}}>Who is this rogue?</div>
                     <span style={s.lbl}>Real Name (optional)</span>
                     <input type="text" placeholder="e.g. Marcus Vane" value={vName} onChange={e=>setVName(e.target.value)} style={{marginBottom:10}}/>
                     <span style={s.lbl}>Gender</span>
-                    <select value={vGender} onChange={e=>setVGender(e.target.value)} style={{width:"100%",padding:"8px 10px",background:"var(--bg2)",border:"1px solid var(--border2)",borderRadius:7,color:"var(--text-primary)",fontSize:11,marginTop:4,marginBottom:14}}>
+                    <select value={vGender} onChange={e=>setVGender(e.target.value)} style={{width:"100%",padding:"8px 10px",background:"var(--bg2)",border:"1px solid var(--border2)",borderRadius:7,color:"var(--text-primary)",fontSize:12,marginTop:4,marginBottom:14}}>
                       <option value="Male">Male</option><option value="Female">Female</option><option value="Non-binary">Non-binary</option><option value="Other">Other</option>
                     </select>
                     <button style={s.bigBtn(false,"#8B1A1A")} onClick={()=>setVStep(1)}>Begin Threat Assessment →</button>
@@ -4777,55 +4839,55 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                 )}
                 {!vResult&&vStep>=1&&vStep<=VILLAIN_QUIZ.length&&(()=>{const vq=VILLAIN_QUIZ[vStep-1];return(
                   <div style={s.card}>
-                    <div style={{fontSize:14,fontWeight:"bold",color:"var(--text-primary)",marginBottom:16,lineHeight:1.4}}>{vq.question}</div>
+                    <div style={{fontSize:15,fontWeight:"bold",color:"var(--text-primary)",marginBottom:16,lineHeight:1.4}}>{vq.question}</div>
                     {vq.options.map(opt=><button key={opt.id} onClick={()=>{setVAnswers(p=>({...p,[vq.id]:opt.id}));if(vStep<VILLAIN_QUIZ.length)setVStep(p=>p+1);}} style={s.optBtn(vAnswers[vq.id]===opt.id,"#8B1A1A")}>{opt.label}</button>)}
                     <div style={{display:"flex",gap:10,marginTop:10}}>
-                      <button onClick={()=>vStep===1?setVStep(0):setVStep(p=>p-1)} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text3)",fontSize:10.5,fontFamily:"var(--font-mono)"}}>← Back</button>
+                      <button onClick={()=>vStep===1?setVStep(0):setVStep(p=>p-1)} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text3)",fontSize:11.5,fontFamily:"var(--font-mono)"}}>← Back</button>
                       {vStep===VILLAIN_QUIZ.length&&vAnswers[vq.id]&&<button onClick={generateVillain} disabled={vLoading} style={{flex:2,...s.bigBtn(vLoading,"#8B1A1A"),marginTop:0}}>{vLoading?"Forging rogue...":"Generate Rogue →"}</button>}
                     </div>
                   </div>
                 );})()}
-                {vLoading&&<div style={{padding:"12px",background:"var(--bg2)",border:"1px solid rgba(139,26,26,0.2)",borderRadius:8,fontSize:10,color:"var(--text3)",fontFamily:"var(--font-mono)",marginTop:10}}>Forging rogue for {hero.heroName}…</div>}
+                {vLoading&&<div style={{padding:"12px",background:"var(--bg2)",border:"1px solid rgba(139,26,26,0.2)",borderRadius:8,fontSize:11,color:"var(--text3)",fontFamily:"var(--font-mono)",marginTop:10}}>Forging rogue for {hero.heroName}…</div>}
                 {vResult&&!vResult.error&&(<>
                   <CharacterPage member={vResult} imageUrl={null} isVillain={true} inherentPowers={getRaceInherentPowers(vResult)}/>
                   <div style={{display:"flex",gap:10,marginTop:14,marginBottom:20}}>
-                    <button onClick={()=>{setVResult(null);setVStep(0);setVAnswers({});setVDeepPhase(0);setVDeepAnswers({});setVProfileStep(0);setVProfileAnswers({});}} style={{flex:1,padding:"11px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:10.5,fontFamily:"var(--font-mono)"}}>Regenerate</button>
-                    <button onClick={addVillain} style={{flex:2,padding:"11px",background:"rgba(139,26,26,0.2)",border:"1px solid #8B1A1A",borderRadius:8,cursor:"pointer",color:"#E07070",fontSize:10.5,letterSpacing:"0.1em",textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>{vReforgeId?"Update Rogue →":"Add to Rogues Gallery →"}</button>
+                    <button onClick={()=>{setVResult(null);setVStep(0);setVAnswers({});setVDeepPhase(0);setVDeepAnswers({});setVProfileStep(0);setVProfileAnswers({});}} style={{flex:1,padding:"11px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:11.5,fontFamily:"var(--font-mono)"}}>Regenerate</button>
+                    <button onClick={addVillain} style={{flex:2,padding:"11px",background:"rgba(139,26,26,0.2)",border:"1px solid #8B1A1A",borderRadius:8,cursor:"pointer",color:"#E07070",fontSize:11.5,letterSpacing:"0.1em",textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>{vReforgeId?"Update Rogue →":"Add to Rogues Gallery →"}</button>
                   </div>
                 </>)}
                 {vResult?.error&&(<div style={{padding:"14px",background:"rgba(192,57,43,0.08)",border:"1px solid rgba(192,57,43,0.28)",borderRadius:10,marginBottom:16}}>
-                  <div style={{fontSize:11,color:"#e74c3c",marginBottom:10,fontFamily:"var(--font-mono)"}}>Generation failed: {vResult.msg}</div>
+                  <div style={{fontSize:12,color:"#e74c3c",marginBottom:10,fontFamily:"var(--font-mono)"}}>Generation failed: {vResult.msg}</div>
                   <div style={{display:"flex",gap:10}}>
-                    <button onClick={()=>setVResult(null)} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:10.5,fontFamily:"var(--font-mono)"}}>↺ Try Again</button>
-                    <button onClick={saveBareVillain} style={{flex:2,padding:"10px",background:"rgba(139,26,26,0.15)",border:"1px solid rgba(139,26,26,0.5)",borderRadius:8,cursor:"pointer",color:"#E07070",fontSize:10.5,fontFamily:"var(--font-mono)"}}>Save Without AI →</button>
+                    <button onClick={()=>setVResult(null)} style={{flex:1,padding:"10px",background:"var(--bg3)",border:"1px solid var(--border2)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:11.5,fontFamily:"var(--font-mono)"}}>↺ Try Again</button>
+                    <button onClick={saveBareVillain} style={{flex:2,padding:"10px",background:"rgba(139,26,26,0.15)",border:"1px solid rgba(139,26,26,0.5)",borderRadius:8,cursor:"pointer",color:"#E07070",fontSize:11.5,fontFamily:"var(--font-mono)"}}>Save Without AI →</button>
                   </div>
                 </div>)}
               </>)}
 
               {/* Existing rogues */}
-              {rogues.length===0&&!isAddingRogue&&<div style={{textAlign:"center",padding:"40px 20px",color:"var(--text4)",fontSize:12,fontStyle:"italic"}}>No rogues yet. Every solo hero needs a nemesis.</div>}
+              {rogues.length===0&&!isAddingRogue&&<div style={{textAlign:"center",padding:"40px 20px",color:"var(--text4)",fontSize:13,fontStyle:"italic"}}>No rogues yet. Every solo hero needs a nemesis.</div>}
               {rogues.length>0&&(
                 <div style={{display:"flex",flexDirection:"column",gap:10,marginTop:isAddingRogue?24:0}}>
                   {rogues.map(v=>(
                     <div key={v.id} style={{background:"rgba(139,26,26,0.07)",border:"1px solid rgba(139,26,26,0.22)",borderRadius:10,padding:"14px 16px"}}>
                       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
                         <div style={{display:"flex",alignItems:"center",gap:10}}>
-                          <div style={{width:36,height:36,borderRadius:"50%",background:"rgba(139,26,26,0.18)",border:"1px solid rgba(139,26,26,0.38)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:"bold",color:"#E07070",flexShrink:0}}>{v.initials}</div>
-                          <div><div style={{fontSize:13,fontWeight:"bold",color:"var(--text-primary)"}}>{v.heroName}</div><div style={{fontSize:10,color:"var(--text3)"}}>{v.realName} · {v.role}</div></div>
+                          <div style={{width:36,height:36,borderRadius:"50%",background:"rgba(139,26,26,0.18)",border:"1px solid rgba(139,26,26,0.38)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:"bold",color:"#E07070",flexShrink:0}}>{v.initials}</div>
+                          <div><div style={{fontSize:14,fontWeight:"bold",color:"var(--text-primary)"}}>{v.heroName}</div><div style={{fontSize:11,color:"var(--text3)"}}>{v.realName} · {v.role}</div></div>
                         </div>
-                        <button onClick={()=>{if(editingRogueTarget===v.id){setEditingRogueTarget(null);}else{setVtDraft({teams:[],heroes:[],realName:v.realName||"",heroName:v.heroName||""});setEditingRogueTarget(v.id);}}} style={{fontSize:9,padding:"3px 9px",background:editingRogueTarget===v.id?"rgba(139,26,26,0.15)":"rgba(139,26,26,0.08)",border:`1px solid ${editingRogueTarget===v.id?"rgba(139,26,26,0.5)":"rgba(139,26,26,0.25)"}`,borderRadius:6,cursor:"pointer",color:"#E07070",fontFamily:"var(--font-mono)"}}>Edit</button>
-                        <button onClick={()=>startVillainReforge(v,activeSoloId)} style={{fontSize:9,padding:"3px 9px",background:"rgba(139,26,26,0.08)",border:"1px solid rgba(139,26,26,0.25)",borderRadius:6,cursor:"pointer",color:"#E07070",fontFamily:"var(--font-mono)"}}>Reforge</button>
-                        <button onClick={()=>removeSoloRogueFn(activeSoloId,v.id)} style={{fontSize:9,padding:"3px 9px",background:"rgba(163,45,45,0.08)",border:"1px solid rgba(163,45,45,0.25)",borderRadius:6,cursor:"pointer",color:"#e74c3c",fontFamily:"var(--font-mono)"}}>Remove</button>
+                        <button onClick={()=>{if(editingRogueTarget===v.id){setEditingRogueTarget(null);}else{setVtDraft({teams:[],heroes:[],realName:v.realName||"",heroName:v.heroName||""});setEditingRogueTarget(v.id);}}} style={{fontSize:10,padding:"3px 9px",background:editingRogueTarget===v.id?"rgba(139,26,26,0.15)":"rgba(139,26,26,0.08)",border:`1px solid ${editingRogueTarget===v.id?"rgba(139,26,26,0.5)":"rgba(139,26,26,0.25)"}`,borderRadius:6,cursor:"pointer",color:"#E07070",fontFamily:"var(--font-mono)"}}>Edit</button>
+                        <button onClick={()=>startVillainReforge(v,activeSoloId)} style={{fontSize:10,padding:"3px 9px",background:"rgba(139,26,26,0.08)",border:"1px solid rgba(139,26,26,0.25)",borderRadius:6,cursor:"pointer",color:"#E07070",fontFamily:"var(--font-mono)"}}>Reforge</button>
+                        <button onClick={()=>removeSoloRogueFn(activeSoloId,v.id)} style={{fontSize:10,padding:"3px 9px",background:"rgba(163,45,45,0.08)",border:"1px solid rgba(163,45,45,0.25)",borderRadius:6,cursor:"pointer",color:"#e74c3c",fontFamily:"var(--font-mono)"}}>Remove</button>
                       </div>
-                      <div style={{fontSize:11,color:"var(--text3)",fontStyle:"italic",lineHeight:1.5}}>{v.tagline}</div>
+                      <div style={{fontSize:12,color:"var(--text3)",fontStyle:"italic",lineHeight:1.5}}>{v.tagline}</div>
                       {editingRogueTarget===v.id&&(<div style={{borderTop:"1px solid rgba(139,26,26,0.2)",paddingTop:10,marginTop:8}}>
                         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
-                          <div><div style={{fontSize:9,letterSpacing:"0.12em",color:"rgba(139,26,26,0.6)",textTransform:"uppercase",marginBottom:5}}>Real Name</div><input type="text" value={vtDraft.realName} onChange={e=>setVtDraft(p=>({...p,realName:e.target.value}))} placeholder={v.realName||"Real name"} style={{width:"100%",padding:"6px 8px",background:"var(--bg2)",border:"1px solid rgba(139,26,26,0.3)",borderRadius:6,color:"var(--text-primary)",fontSize:10,fontFamily:"var(--font-mono)",boxSizing:"border-box"}}/></div>
-                          <div><div style={{fontSize:9,letterSpacing:"0.12em",color:"rgba(139,26,26,0.6)",textTransform:"uppercase",marginBottom:5}}>Villain Name</div><input type="text" value={vtDraft.heroName} onChange={e=>setVtDraft(p=>({...p,heroName:e.target.value}))} placeholder={v.heroName||"Villain name"} style={{width:"100%",padding:"6px 8px",background:"var(--bg2)",border:"1px solid rgba(139,26,26,0.3)",borderRadius:6,color:"var(--text-primary)",fontSize:10,fontFamily:"var(--font-mono)",boxSizing:"border-box"}}/></div>
+                          <div><div style={{fontSize:10,letterSpacing:"0.12em",color:"rgba(139,26,26,0.6)",textTransform:"uppercase",marginBottom:5}}>Real Name</div><input type="text" value={vtDraft.realName} onChange={e=>setVtDraft(p=>({...p,realName:e.target.value}))} placeholder={v.realName||"Real name"} style={{width:"100%",padding:"6px 8px",background:"var(--bg2)",border:"1px solid rgba(139,26,26,0.3)",borderRadius:6,color:"var(--text-primary)",fontSize:11,fontFamily:"var(--font-mono)",boxSizing:"border-box"}}/></div>
+                          <div><div style={{fontSize:10,letterSpacing:"0.12em",color:"rgba(139,26,26,0.6)",textTransform:"uppercase",marginBottom:5}}>Villain Name</div><input type="text" value={vtDraft.heroName} onChange={e=>setVtDraft(p=>({...p,heroName:e.target.value}))} placeholder={v.heroName||"Villain name"} style={{width:"100%",padding:"6px 8px",background:"var(--bg2)",border:"1px solid rgba(139,26,26,0.3)",borderRadius:6,color:"var(--text-primary)",fontSize:11,fontFamily:"var(--font-mono)",boxSizing:"border-box"}}/></div>
                         </div>
                         <div style={{display:"flex",gap:8}}>
-                          <button onClick={()=>setEditingRogueTarget(null)} style={{flex:1,fontSize:9,padding:"6px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:6,cursor:"pointer",color:"var(--text3)",fontFamily:"var(--font-mono)"}}>Cancel</button>
-                          <button onClick={()=>saveRogueName(activeSoloId,v.id,vtDraft)} style={{flex:2,fontSize:9,padding:"6px",background:"rgba(139,26,26,0.15)",border:"1px solid rgba(139,26,26,0.4)",borderRadius:6,cursor:"pointer",color:"#E07070",fontFamily:"var(--font-mono)"}}>Save Names</button>
+                          <button onClick={()=>setEditingRogueTarget(null)} style={{flex:1,fontSize:10,padding:"6px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:6,cursor:"pointer",color:"var(--text3)",fontFamily:"var(--font-mono)"}}>Cancel</button>
+                          <button onClick={()=>saveRogueName(activeSoloId,v.id,vtDraft)} style={{flex:2,fontSize:10,padding:"6px",background:"rgba(139,26,26,0.15)",border:"1px solid rgba(139,26,26,0.4)",borderRadius:6,cursor:"pointer",color:"#E07070",fontFamily:"var(--font-mono)"}}>Save Names</button>
                         </div>
                       </div>)}
                     </div>
@@ -4837,19 +4899,19 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
             {/* Story Generator */}
             {soloHeroView==="story"&&(<>
               <div style={{marginBottom:20}}>
-                <div style={{fontSize:9,letterSpacing:"0.2em",color:`${heroColor}77`,textTransform:"uppercase",marginBottom:4}}>Solo Story</div>
-                <div style={{fontSize:12,color:"var(--text3)"}}>Generate a cinematic scene between {hero.heroName} and their rogues.</div>
+                <div style={{fontSize:10,letterSpacing:"0.2em",color:`${heroColor}77`,textTransform:"uppercase",marginBottom:4}}>Solo Story</div>
+                <div style={{fontSize:13,color:"var(--text3)"}}>Generate a cinematic scene between {hero.heroName} and their rogues.</div>
               </div>
               {rogues.length===0&&(
                 <div style={{...s.card,textAlign:"center",padding:"30px"}}>
-                  <div style={{fontSize:13,color:"var(--text3)",marginBottom:14}}>No rogues in the gallery yet.</div>
-                  <button onClick={()=>setSoloHeroView("rogues")} style={{padding:"9px 20px",background:"rgba(139,26,26,0.1)",border:"1px solid rgba(139,26,26,0.3)",borderRadius:8,cursor:"pointer",color:"#E07070",fontSize:11,fontFamily:"var(--font-mono)"}}>Add a Rogue First</button>
+                  <div style={{fontSize:14,color:"var(--text3)",marginBottom:14}}>No rogues in the gallery yet.</div>
+                  <button onClick={()=>setSoloHeroView("rogues")} style={{padding:"9px 20px",background:"rgba(139,26,26,0.1)",border:"1px solid rgba(139,26,26,0.3)",borderRadius:8,cursor:"pointer",color:"#E07070",fontSize:12,fontFamily:"var(--font-mono)"}}>Add a Rogue First</button>
                 </div>
               )}
               {rogues.length>0&&(<>
                 <div style={s.card}>
-                  <div style={{fontSize:12,fontWeight:"bold",color:"var(--text-primary)",marginBottom:12}}>Cast of Rogues</div>
-                  <div style={{fontSize:11,color:"var(--text3)",marginBottom:12}}>Select which rogues appear (leave all unchecked for the full gallery):</div>
+                  <div style={{fontSize:13,fontWeight:"bold",color:"var(--text-primary)",marginBottom:12}}>Cast of Rogues</div>
+                  <div style={{fontSize:12,color:"var(--text3)",marginBottom:12}}>Select which rogues appear (leave all unchecked for the full gallery):</div>
                   <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:20}}>
                     {rogues.map(v=>(
                       <button key={v.id} onClick={()=>setSoloStoryRogueIds(p=>p.includes(v.id)?p.filter(x=>x!==v.id):[...p,v.id])} style={{...s.chip(soloStoryRogueIds.includes(v.id),"#8B1A1A"),display:"flex",alignItems:"center",gap:6}}>
@@ -4862,15 +4924,15 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                 </div>
                 {soloStoryResult&&!soloStoryResult.error&&(
                   <div style={{...s.card,marginTop:16}}>
-                    <div style={{fontSize:15,fontWeight:"bold",color:heroColor,marginBottom:14}}>{soloStoryResult.title}</div>
-                    <div style={{fontSize:12,color:"var(--text2)",lineHeight:1.8,whiteSpace:"pre-wrap",marginBottom:16}}>{soloStoryResult.scene}</div>
+                    <div style={{fontSize:16,fontWeight:"bold",color:heroColor,marginBottom:14}}>{soloStoryResult.title}</div>
+                    <div style={{fontSize:13,color:"var(--text2)",lineHeight:1.8,whiteSpace:"pre-wrap",marginBottom:16}}>{soloStoryResult.scene}</div>
                     <div style={{borderTop:"1px solid var(--border2)",paddingTop:12,display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-                      <div><div style={{fontSize:8.5,letterSpacing:"0.16em",color:"var(--text4)",textTransform:"uppercase",marginBottom:4}}>Outcome</div><div style={{fontSize:11,color:"var(--text2)"}}>{soloStoryResult.outcome}</div></div>
-                      <div><div style={{fontSize:8.5,letterSpacing:"0.16em",color:"var(--text4)",textTransform:"uppercase",marginBottom:4}}>Next Chapter Hook</div><div style={{fontSize:11,color:heroColor,fontStyle:"italic"}}>{soloStoryResult.hook}</div></div>
+                      <div><div style={{fontSize:9.5,letterSpacing:"0.16em",color:"var(--text4)",textTransform:"uppercase",marginBottom:4}}>Outcome</div><div style={{fontSize:12,color:"var(--text2)"}}>{soloStoryResult.outcome}</div></div>
+                      <div><div style={{fontSize:9.5,letterSpacing:"0.16em",color:"var(--text4)",textTransform:"uppercase",marginBottom:4}}>Next Chapter Hook</div><div style={{fontSize:12,color:heroColor,fontStyle:"italic"}}>{soloStoryResult.hook}</div></div>
                     </div>
                   </div>
                 )}
-                {soloStoryResult?.error&&<div style={{padding:"12px",background:"rgba(192,57,43,0.08)",border:"1px solid rgba(192,57,43,0.25)",borderRadius:8,marginTop:14,fontSize:11,color:"#e74c3c",fontFamily:"var(--font-mono)"}}>{soloStoryResult.error}</div>}
+                {soloStoryResult?.error&&<div style={{padding:"12px",background:"rgba(192,57,43,0.08)",border:"1px solid rgba(192,57,43,0.25)",borderRadius:8,marginTop:14,fontSize:12,color:"#e74c3c",fontFamily:"var(--font-mono)"}}>{soloStoryResult.error}</div>}
               </>)}
             </>)}
 

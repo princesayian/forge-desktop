@@ -19,7 +19,7 @@ export default function RaceSelector({value,onChange,color}){
       onChange(out);
     }
   },[main,sub,bloodPct,JSON.stringify(h)]);
-  const bs=(active)=>({padding:"4px 10px",background:active?`${c}22`:"var(--bg3)",border:`1px solid ${active?c:"var(--border2)"}`,borderRadius:20,cursor:"pointer",color:active?c:"var(--text2)",fontSize:9,fontFamily:"var(--font-mono)"});
+  const bs=(active)=>({padding:"4px 10px",background:active?`${c}22`:"var(--bg3)",border:`1px solid ${active?c:"var(--border2)"}`,borderRadius:20,cursor:"pointer",color:active?c:"var(--text2)",fontSize:10,fontFamily:"var(--font-mono)"});
   const label=raceLabel(main==="hybrid"?{main:"hybrid",sub1:h[0],sub2:h[1]}:main&&sub?{main,sub,bloodPct:main==="alien"?bloodPct:undefined}:null);
   return(
     <div>
@@ -37,7 +37,7 @@ export default function RaceSelector({value,onChange,color}){
       )}
       {main==="alien"&&sub&&(
         <div style={{display:"flex",flexWrap:"wrap",gap:5,marginTop:8,paddingLeft:8,borderLeft:`2px solid ${c}20`,alignItems:"center"}}>
-          <div style={{fontSize:7.5,color:"var(--text4)",letterSpacing:"0.1em",fontFamily:"var(--font-mono)",marginRight:2}}>BLOODLINE</div>
+          <div style={{fontSize:8.5,color:"var(--text4)",letterSpacing:"0.1em",fontFamily:"var(--font-mono)",marginRight:2}}>BLOODLINE</div>
           {[100,75,50,25].map(pct=>(
             <button key={pct} style={bs(bloodPct===pct)} onClick={()=>setBloodPct(pct)}>
               {pct===100?"Full-Blooded":`${pct}%`}
@@ -51,7 +51,7 @@ export default function RaceSelector({value,onChange,color}){
             const hv=h[i];
             return(
               <div key={i}>
-                <div style={{fontSize:7.5,color:"var(--text4)",letterSpacing:"0.1em",marginBottom:4}}>{i===0?"FIRST RACE":"SECOND RACE"}</div>
+                <div style={{fontSize:8.5,color:"var(--text4)",letterSpacing:"0.1em",marginBottom:4}}>{i===0?"FIRST RACE":"SECOND RACE"}</div>
                 <div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:4}}>
                   {Object.entries(RACE_TREE).filter(([id])=>id!=="hybrid").map(([id,r])=>(
                     <button key={id} title={r.hint||""} style={bs(hv.main===id)} onClick={()=>setH(prev=>prev.map((x,j)=>j===i?{main:id,sub:null}:x))}>{r.label}</button>
@@ -69,7 +69,7 @@ export default function RaceSelector({value,onChange,color}){
           })}
         </div>
       )}
-      {label&&<div style={{fontSize:8.5,color:`${c}88`,marginTop:5,fontFamily:"var(--font-mono)"}}>→ {label}</div>}
+      {label&&<div style={{fontSize:9.5,color:`${c}88`,marginTop:5,fontFamily:"var(--font-mono)"}}>→ {label}</div>}
       {main&&main!=="hybrid"&&sub&&(()=>{
         const entry=(RACE_TREE[main]?.subs||[]).find(s=>s.id===sub);
         const cx=entry?.codex;
@@ -80,17 +80,17 @@ export default function RaceSelector({value,onChange,color}){
         const rows=[...ordered,...rest];
         return(
           <div style={{marginTop:10,padding:"10px 13px",background:`${c}08`,border:`1px solid ${c}22`,borderRadius:8}}>
-            <div style={{fontSize:7.5,letterSpacing:"0.18em",textTransform:"uppercase",color:`${c}88`,fontFamily:"var(--font-mono)",marginBottom:8}}>Codex — {entry.label}</div>
+            <div style={{fontSize:8.5,letterSpacing:"0.18em",textTransform:"uppercase",color:`${c}88`,fontFamily:"var(--font-mono)",marginBottom:8}}>Codex — {entry.label}</div>
             {rows.map(([label,text])=>(
               <div key={label} style={{marginBottom:8}}>
-                <span style={{fontSize:8,letterSpacing:"0.12em",textTransform:"uppercase",color:`${c}77`,fontFamily:"var(--font-mono)"}}>{label}: </span>
-                <span style={{fontSize:10.5,color:"var(--text3)",lineHeight:1.6}}>{text}</span>
+                <span style={{fontSize:9,letterSpacing:"0.12em",textTransform:"uppercase",color:`${c}77`,fontFamily:"var(--font-mono)"}}>{label}: </span>
+                <span style={{fontSize:11.5,color:"var(--text3)",lineHeight:1.6}}>{text}</span>
               </div>
             ))}
             {main==="alien"&&bloodPct!=null&&bloodPct<100&&(
               <div style={{marginTop:8,paddingTop:8,borderTop:`1px solid ${c}20`}}>
-                <span style={{fontSize:8,letterSpacing:"0.12em",textTransform:"uppercase",color:`${c}77`,fontFamily:"var(--font-mono)"}}>Bloodline Dilution: </span>
-                <span style={{fontSize:10.5,color:"var(--text3)",lineHeight:1.6}}>
+                <span style={{fontSize:9,letterSpacing:"0.12em",textTransform:"uppercase",color:`${c}77`,fontFamily:"var(--font-mono)"}}>Bloodline Dilution: </span>
+                <span style={{fontSize:11.5,color:"var(--text3)",lineHeight:1.6}}>
                   {bloodPct===75&&"Most racial powers manifest at this bloodline level; power ceiling is marginally reduced from full-blooded baseline."}
                   {bloodPct===50&&"Half the racial capabilities manifest; unique hybrid expressions can emerge as human and alien biology negotiate."}
                   {bloodPct===25&&"Trace heritage only — racial traits are latent, surfacing unpredictably under extreme stress."}

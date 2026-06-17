@@ -77,3 +77,16 @@ export function hexToColorName(hex){
   }
   return best.n;
 }
+
+// Fields that legitimately hold a literal hex value (used directly in CSS), never prose --
+// skip these when scrubbing AI-generated text so we don't corrupt actual color storage.
+const _HEX_SAFE_KEYS=new Set(["color","colorLight","colorPalette","hex"]);
+export function stripHexDeep(value,key){
+  if(typeof value==="string"){
+    if(key&&_HEX_SAFE_KEYS.has(key))return value;
+    return value.replace(/#[0-9A-Fa-f]{6}\b/g,hexToColorName);
+  }
+  if(Array.isArray(value))return value.map(v=>stripHexDeep(v,key));
+  if(value&&typeof value==="object")return Object.fromEntries(Object.entries(value).map(([k,v])=>[k,stripHexDeep(v,k)]));
+  return value;
+}
