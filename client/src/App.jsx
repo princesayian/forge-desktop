@@ -5,11 +5,11 @@ import {
   RACE_TREE, raceLabel, raceLore, POWER_FORGE_PHASES,
   RECRUIT_QUIZ, VILLAIN_QUIZ, SCENARIOS, TONES,
   TEAM_RANKS, FAMILY_RELATIONS, HERO_ASSOC_TYPES,
-  ART_STYLES, POSE_OPTIONS, ACCENT_COLORS, TIER_DEFS,
+  ART_STYLES, COMIC_SUB_STYLES, ANIME_SUB_STYLES, artStyleText, POSE_OPTIONS, ACCENT_COLORS, TIER_DEFS,
   DEEP_LORE_PHASES, PERSONAL_PROFILE, DEEP_VILLAIN_PHASES, VILLAIN_PERSONAL_PROFILE,
   _rp, _NAMES, _TS, randTeamName, randHeroName, COSTUME_FORGE_QUESTIONS,
 } from './constants/index.js';
-import { autoScore, autoTierFn, pronounOf, ageStage, hexToColorName } from './utils/helpers.js';
+import { autoScore, autoTierFn, pronounOf, ageStage, hexToColorName, copyToClipboard } from './utils/helpers.js';
 import AlignmentBadge from './components/AlignmentBadge.jsx';
 import StatBar from './components/StatBar.jsx';
 import CharacterPage from './components/CharacterPage.jsx';
@@ -85,6 +85,7 @@ function App(){
   const[comicPageCount,setComicPageCount]=useState(6);
   const[comicPanelsPerPage,setComicPanelsPerPage]=useState(4);
   const[comicStyle,setComicStyle]=useState("comic");
+  const[comicSubStyle,setComicSubStyle]=useState("");
   const[comicLoading,setComicLoading]=useState(false);
   const[comicResult,setComicResult]=useState(null);
   const[comicPanelPrompts,setComicPanelPrompts]=useState({});
@@ -218,6 +219,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
   const[crossover,setCrossover]=useState(false);
   // ── Prompts ──────────────────────────────────────────────────────────────
   const[pStyle,setPStyle]=useState("comic");
+  const[pSubStyle,setPSubStyle]=useState("");
   const[pPlatform,setPPlatform]=useState("meta-ai");
   const[pPose,setPPose]=useState("3/4");
   const[pSelected,setPSelected]=useState(null);
@@ -235,6 +237,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
   const[ftAddB,setFtAddB]=useState("");
   const[ftAddRelation,setFtAddRelation]=useState("parent");
   const[ftActiveNode,setFtActiveNode]=useState(null);
+  const[ftShowInferred,setFtShowInferred]=useState(false);
   const[heroAssocs,setHeroAssocs]=useState([]);
   const[haAddA,setHaAddA]=useState("");
   const[haAddB,setHaAddB]=useState("");
@@ -674,7 +677,10 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
   },[villainPool,teamRosters,persist]);
 
   const copy=useCallback((key,text)=>{
-    navigator.clipboard.writeText(text).then(()=>{setCopied(p=>({...p,[key]:true}));setTimeout(()=>setCopied(p=>({...p,[key]:false})),2000);});
+    copyToClipboard(text).then(ok=>{
+      if(ok){setCopied(p=>({...p,[key]:true}));setTimeout(()=>setCopied(p=>({...p,[key]:false})),2000);}
+      else{window.prompt("Clipboard access is blocked here — copy this manually:",text);}
+    });
   },[]);
 
   // ── AI ────────────────────────────────────────────────────────────────────
@@ -1142,7 +1148,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
 
   const generateCharPrompt=(member)=>{
     setPSelected(member.id);setPLoading(true);setPResult(null);
-    const style=ART_STYLES.find(a=>a.id===pStyle)?.text||"character concept art, vibrant colors";
+    const style=artStyleText(pStyle,pSubStyle)||"character concept art, vibrant colors";
     const hasRef=images[member.id];
     const refPfx=hasRef?"Based on reference image, same face and build. ":"";
     const costume=sanitizeDesc(member.costumeDesc||(hexToColorName(member.color)+" suit"));
@@ -1160,8 +1166,8 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
       metaAI=`${refPfx}${ph}, ${poseText}. ${costume}${fxNote}. ${pal}. Plain clean background. ${style}.`;
     } else {
       metaAI=hasRef
-        ?`Using this reference for face and likeness, transform into a person with ${phStripped}, ${poseText}. ${costume}${fxNote}, ${pal}. ${metaQuality}.`
-        :`A ${ph}, ${poseText}. ${costume}${fxNote}, ${pal}. ${metaQuality}.`;
+        ?`Using this reference for face and likeness, transform into a person with ${phStripped}, ${poseText}. ${costume}${fxNote}, ${pal}. ${style}. ${metaQuality}.`
+        :`A ${ph}, ${poseText}. ${costume}${fxNote}, ${pal}. ${style}. ${metaQuality}.`;
     }
     tripo3D=`Full-body 3D character model of ${member.heroName}, ${ph}, ${costume}, neutral A-pose, ${pal}, separate color regions for FDM printing, watertight mesh.`;
     setPResult({member,metaAI,tripo3D,platform:pPlatform});
@@ -1171,7 +1177,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
   const generateSoloImagePrompt=(hero,overridePlatform)=>{
     const plat=overridePlatform||pPlatform;
     if(overridePlatform){setPPlatform(overridePlatform);persist("forge-prompt-platform",overridePlatform);}
-    const style=ART_STYLES.find(a=>a.id===pStyle)?.text||"character concept art, vibrant colors";
+    const style=artStyleText(pStyle,pSubStyle)||"character concept art, vibrant colors";
     const hasRef=images[hero.id];
     const refPfx=hasRef?"Based on reference image, same face and build. ":"";
     const costume=sanitizeDesc(hero.costumeDesc||(hexToColorName(hero.color)+" suit"));
@@ -1189,8 +1195,8 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
       metaAI=`${refPfx}${ph}, ${poseText}. ${costume}${fxNote}. ${pal}. Plain clean background. ${style}.`;
     } else {
       metaAI=hasRef
-        ?`Using this reference for face and likeness, transform into a person with ${phStripped}, ${poseText}. ${costume}${fxNote}, ${pal}. ${metaQuality}.`
-        :`A ${ph}, ${poseText}. ${costume}${fxNote}, ${pal}. ${metaQuality}.`;
+        ?`Using this reference for face and likeness, transform into a person with ${phStripped}, ${poseText}. ${costume}${fxNote}, ${pal}. ${style}. ${metaQuality}.`
+        :`A ${ph}, ${poseText}. ${costume}${fxNote}, ${pal}. ${style}. ${metaQuality}.`;
     }
     tripo3D=`Full-body 3D character model of ${hero.heroName}, ${ph}, ${costume}, neutral A-pose, ${pal}, separate color regions for FDM printing, watertight mesh.`;
     setSoloPromptResult({hero,metaAI,tripo3D,platform:plat});
@@ -1198,7 +1204,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
 
   const generateVillainPrompt=(villain)=>{
     setPSelected(villain.id);setPLoading(true);setPResult(null);
-    const style=ART_STYLES.find(a=>a.id===pStyle)?.text||"character concept art, dramatic lighting";
+    const style=artStyleText(pStyle,pSubStyle)||"character concept art, dramatic lighting";
     const hasRef=images[villain.id];
     const refPfx=hasRef?"Based on reference image, same face and build. ":"";
     const costume=sanitizeDesc(villain.costumeDesc||"dark tailored suit with imposing silhouette");
@@ -1216,8 +1222,8 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
       metaAI=`${refPfx}${ph}, ${poseText}. ${costume}${fxNote}. ${pal}. Plain clean background. ${style}.`;
     } else {
       metaAI=hasRef
-        ?`Using this reference for face and likeness, transform into a person with ${phStripped}, ${poseText}. ${costume}${fxNote}, ${pal}. ${metaQuality}.`
-        :`A ${ph}, ${poseText}. ${costume}${fxNote}, ${pal}. ${metaQuality}.`;
+        ?`Using this reference for face and likeness, transform into a person with ${phStripped}, ${poseText}. ${costume}${fxNote}, ${pal}. ${style}. ${metaQuality}.`
+        :`A ${ph}, ${poseText}. ${costume}${fxNote}, ${pal}. ${style}. ${metaQuality}.`;
     }
     tripo3D=`Full-body 3D character model of ${villain.heroName}, ${ph}, ${costume}, neutral A-pose, ${pal}, separate color regions for FDM printing, watertight mesh.`;
     setPResult({member:villain,isVillain:true,metaAI,tripo3D,platform:pPlatform});
@@ -1226,7 +1232,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
 
   const generateVillainPromptInline=(villain,overridePlatform,overrideStyle,overridePose)=>{
     const plat=overridePlatform||pPlatform;
-    const styleText=ART_STYLES.find(a=>a.id===(overrideStyle||pStyle))?.text||"character concept art, dramatic lighting";
+    const styleText=artStyleText(overrideStyle||pStyle,pSubStyle)||"character concept art, dramatic lighting";
     const activePose=overridePose||pPose;
     if(overridePlatform){setPPlatform(overridePlatform);persist("forge-prompt-platform",overridePlatform);}
     if(overrideStyle){setPStyle(overrideStyle);persist("forge-prompt-style",overrideStyle);}
@@ -1248,8 +1254,8 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
       metaAI=`${refPfx}${ph}, ${poseText}. ${costume}${fxNote}. ${pal}. Plain clean background. ${styleText}.`;
     } else {
       metaAI=hasRef
-        ?`Using this reference for face and likeness, transform into a person with ${phStripped}, ${poseText}. ${costume}${fxNote}, ${pal}. ${metaQuality}.`
-        :`A ${ph}, ${poseText}. ${costume}${fxNote}, ${pal}. ${metaQuality}.`;
+        ?`Using this reference for face and likeness, transform into a person with ${phStripped}, ${poseText}. ${costume}${fxNote}, ${pal}. ${styleText}. ${metaQuality}.`
+        :`A ${ph}, ${poseText}. ${costume}${fxNote}, ${pal}. ${styleText}. ${metaQuality}.`;
     }
     tripo3D=`Full-body 3D character model of ${villain.heroName}, ${ph}, ${costume}, neutral A-pose, ${pal}, separate color regions for FDM printing, watertight mesh.`;
     setVInlinePrompt({villainId:villain.id,metaAI,tripo3D,platform:plat,styleId:overrideStyle||pStyle,poseId:overridePose||pPose});
@@ -1257,7 +1263,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
 
   const generateGroupPrompt=()=>{
     setPSelected("group");setPLoading(true);setPResult(null);
-    const style=ART_STYLES.find(a=>a.id===pStyle)?.text||"comic book art style, vibrant colors";
+    const style=artStyleText(pStyle,pSubStyle)||"comic book art style, vibrant colors";
     const hasRef=activeRoster.some(m=>images[m.id]);
     const charList=activeRoster.map(m=>`${m.heroName} in ${hexToColorName(m.color)} ${m.costumeDesc||"superhero suit"}`).join(", ");
     let metaAI;
@@ -1276,7 +1282,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     const a=activeRoster.find(m=>m.id===duoA),b=activeRoster.find(m=>m.id===duoB);
     if(!a||!b)return;
     setPSelected("duo");setPLoading(true);setPResult(null);
-    const style=ART_STYLES.find(x=>x.id===pStyle)?.text||"comic book art style, vibrant colors";
+    const style=artStyleText(pStyle,pSubStyle)||"comic book art style, vibrant colors";
     const cnA=hexToColorName(a.color),cnB=hexToColorName(b.color);
     let metaAI;
     if(pPlatform==="midjourney"){
@@ -1407,7 +1413,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
   };
 
   const generateComicPanelPrompt=(panel,pageNum)=>{
-    const styleText=ART_STYLES.find(a=>a.id===comicStyle)?.text||"comic book art style";
+    const styleText=artStyleText(comicStyle,comicSubStyle)||"comic book art style";
     const castChars=[...allCharacters,...villainPool].filter(m=>comicCast.includes(m.id));
     const mentioned=castChars.filter(m=>panel.description.toLowerCase().includes(m.heroName.toLowerCase()));
     const charDesc=mentioned.length>0?". "+mentioned.map(m=>`${m.heroName} in ${hexToColorName(m.color)} ${m.costumeDesc||"suit"}`).join(", "):"";
@@ -1576,7 +1582,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
           const bd=live?"rgba(93,202,165,0.3)":partial?"rgba(212,175,55,0.3)":"rgba(136,135,128,0.18)";
           return(
             <div style={{display:"flex",alignItems:"center",gap:4,padding:"3px 9px",background:bg,border:`1px solid ${bd}`,borderRadius:20,cursor:"pointer"}}
-              onClick={()=>live?navigator.clipboard.writeText(remoteInfo.url):setShowRemotePanel(p=>!p)}>
+              onClick={()=>live?copyToClipboard(remoteInfo.url):setShowRemotePanel(p=>!p)}>
               <div style={{width:5,height:5,borderRadius:"50%",background:sc,boxShadow:live?`0 0 4px ${sc}`:undefined}}/>
               <span style={{fontSize:8,color:sc,fontFamily:"var(--font-mono)",whiteSpace:"nowrap"}}>{live?"Remote: Live":partial?"Remote: Restart":"Remote: Off"}</span>
             </div>
@@ -2097,7 +2103,14 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
         </div>}
         <div style={{...s.card,marginBottom:14}}>
           <span style={s.lbl}>Art Style</span>
-          <div style={{display:"flex",flexWrap:"wrap",gap:8}}>{ART_STYLES.map(a=><button key={a.id} style={s.chip(pStyle===a.id)} onClick={()=>setPStyle(a.id)}>{a.label}</button>)}</div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:8}}>{ART_STYLES.map(a=><button key={a.id} style={s.chip(pStyle===a.id)} onClick={()=>{setPStyle(a.id);setPSubStyle("");}}>{a.label}</button>)}</div>
+          {(pStyle==="comic"||pStyle==="anime")&&<div style={{marginTop:10}}>
+            <span style={{...s.lbl,fontSize:8.5}}>{pStyle==="comic"?"Comic Style":"Anime Style"}</span>
+            <div style={{display:"flex",flexWrap:"wrap",gap:6,marginTop:4}}>
+              <button style={s.chip(!pSubStyle)} onClick={()=>setPSubStyle("")}>General</button>
+              {(pStyle==="comic"?COMIC_SUB_STYLES:ANIME_SUB_STYLES).map(sub=><button key={sub.id} style={s.chip(pSubStyle===sub.id)} onClick={()=>setPSubStyle(sub.id)}>{sub.label}</button>)}
+            </div>
+          </div>}
         </div>
         <div style={{...s.card,marginBottom:16}}>
           <span style={s.lbl}>Pose</span>
@@ -2168,7 +2181,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
             ):(pResult.platform||pPlatform)==="dalle"?(
               <div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap",marginBottom:12}}>
                 <button style={s.cpyBtn(copied.pmeta)} onClick={()=>copy("pmeta",pResult.metaAI)}>{copied.pmeta?"Copied!":"Copy"}</button>
-                <button onClick={()=>{navigator.clipboard.writeText(pResult.metaAI).then(()=>{copy("pmeta",pResult.metaAI);window.open("https://chat.openai.com/","_blank");});}} style={{padding:"5px 14px",background:"rgba(16,163,127,0.12)",border:"1px solid rgba(16,163,127,0.4)",borderRadius:6,cursor:"pointer",fontSize:10,color:"#10A37F",fontFamily:"var(--font-mono)",display:"flex",alignItems:"center",gap:5}}>
+                <button onClick={()=>{try{window.open("https://chat.openai.com/","_blank");}catch(e){}copy("pmeta",pResult.metaAI);}} style={{padding:"5px 14px",background:"rgba(16,163,127,0.12)",border:"1px solid rgba(16,163,127,0.4)",borderRadius:6,cursor:"pointer",fontSize:10,color:"#10A37F",fontFamily:"var(--font-mono)",display:"flex",alignItems:"center",gap:5}}>
                   <span style={{fontSize:12}}>✦</span> Copy & Open ChatGPT
                 </button>
               </div>
@@ -2822,11 +2835,11 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                   </div>
                   <div style={{position:"relative",marginBottom:10}}>
                     <textarea readOnly value={vInlinePrompt.metaAI} rows={3} style={{width:"100%",padding:"10px 44px 10px 12px",background:"var(--bg3)",border:"1px solid rgba(139,26,26,0.3)",borderRadius:8,color:"var(--text-primary)",fontSize:10.5,fontFamily:"var(--font-mono)",resize:"none",lineHeight:1.6,boxSizing:"border-box"}}/>
-                    <button onClick={()=>navigator.clipboard.writeText(vInlinePrompt.metaAI)} style={{position:"absolute",top:8,right:8,fontSize:8,padding:"3px 8px",background:"rgba(139,26,26,0.15)",border:"1px solid rgba(224,112,112,0.35)",borderRadius:6,cursor:"pointer",color:"#E07070",fontFamily:"var(--font-mono)"}}>Copy</button>
+                    <button onClick={()=>copyToClipboard(vInlinePrompt.metaAI)} style={{position:"absolute",top:8,right:8,fontSize:8,padding:"3px 8px",background:"rgba(139,26,26,0.15)",border:"1px solid rgba(224,112,112,0.35)",borderRadius:6,cursor:"pointer",color:"#E07070",fontFamily:"var(--font-mono)"}}>Copy</button>
                   </div>
                   <div style={{position:"relative"}}>
                     <textarea readOnly value={vInlinePrompt.tripo3D} rows={2} style={{width:"100%",padding:"10px 44px 10px 12px",background:"var(--bg3)",border:"1px solid rgba(15,110,86,0.2)",borderRadius:8,color:"var(--text-primary)",fontSize:10.5,fontFamily:"var(--font-mono)",resize:"none",lineHeight:1.6,boxSizing:"border-box"}}/>
-                    <button onClick={()=>navigator.clipboard.writeText(vInlinePrompt.tripo3D)} style={{position:"absolute",top:8,right:8,fontSize:8,padding:"3px 8px",background:"rgba(15,110,86,0.1)",border:"1px solid rgba(15,110,86,0.3)",borderRadius:6,cursor:"pointer",color:"#5DCAA5",fontFamily:"var(--font-mono)"}}>Copy</button>
+                    <button onClick={()=>copyToClipboard(vInlinePrompt.tripo3D)} style={{position:"absolute",top:8,right:8,fontSize:8,padding:"3px 8px",background:"rgba(15,110,86,0.1)",border:"1px solid rgba(15,110,86,0.3)",borderRadius:6,cursor:"pointer",color:"#5DCAA5",fontFamily:"var(--font-mono)"}}>Copy</button>
                   </div>
                   {images[v.id]&&<div style={{marginTop:8,fontSize:9,color:"rgba(224,112,112,0.55)",lineHeight:1.5}}>✓ Reference image detected — upload alongside the prompt for best results.</div>}
                 </div>)}
@@ -3264,9 +3277,16 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
           </div>
 
           <span style={s.lbl}>Art Style</span>
-          <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:18}}>
-            {ART_STYLES.map(a=><button key={a.id} style={s.chip(comicStyle===a.id)} onClick={()=>setComicStyle(a.id)}>{a.label}</button>)}
+          <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:(comicStyle==="comic"||comicStyle==="anime")?10:18}}>
+            {ART_STYLES.map(a=><button key={a.id} style={s.chip(comicStyle===a.id)} onClick={()=>{setComicStyle(a.id);setComicSubStyle("");}}>{a.label}</button>)}
           </div>
+          {(comicStyle==="comic"||comicStyle==="anime")&&<div style={{marginBottom:18}}>
+            <span style={{...s.lbl,fontSize:8.5}}>{comicStyle==="comic"?"Comic Style":"Anime Style"}</span>
+            <div style={{display:"flex",flexWrap:"wrap",gap:6,marginTop:4}}>
+              <button style={s.chip(!comicSubStyle)} onClick={()=>setComicSubStyle("")}>General</button>
+              {(comicStyle==="comic"?COMIC_SUB_STYLES:ANIME_SUB_STYLES).map(sub=><button key={sub.id} style={s.chip(comicSubStyle===sub.id)} onClick={()=>setComicSubStyle(sub.id)}>{sub.label}</button>)}
+            </div>
+          </div>}
 
           <button style={s.bigBtn(!ollamaOk||comicCast.length===0)} disabled={!ollamaOk||comicCast.length===0} onClick={generateComic}>
             {!ollamaOk?"AI Offline":comicCast.length===0?"Select cast to continue":"Generate Comic Script →"}
@@ -3295,10 +3315,15 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
           </div>
 
           {/* Style selector */}
-          <div style={{display:"flex",flexWrap:"wrap",gap:5,alignItems:"center",marginBottom:16}}>
+          <div style={{display:"flex",flexWrap:"wrap",gap:5,alignItems:"center",marginBottom:(comicStyle==="comic"||comicStyle==="anime")?6:16}}>
             <span style={{...s.lbl,marginRight:4}}>Art style:</span>
-            {ART_STYLES.map(a=><button key={a.id} style={s.chip(comicStyle===a.id)} onClick={()=>setComicStyle(a.id)}>{a.label}</button>)}
+            {ART_STYLES.map(a=><button key={a.id} style={s.chip(comicStyle===a.id)} onClick={()=>{setComicStyle(a.id);setComicSubStyle("");}}>{a.label}</button>)}
           </div>
+          {(comicStyle==="comic"||comicStyle==="anime")&&<div style={{display:"flex",flexWrap:"wrap",gap:5,alignItems:"center",marginBottom:16}}>
+            <span style={{...s.lbl,marginRight:4,fontSize:8.5}}>{comicStyle==="comic"?"Comic style:":"Anime style:"}</span>
+            <button style={s.chip(!comicSubStyle)} onClick={()=>setComicSubStyle("")}>General</button>
+            {(comicStyle==="comic"?COMIC_SUB_STYLES:ANIME_SUB_STYLES).map(sub=><button key={sub.id} style={s.chip(comicSubStyle===sub.id)} onClick={()=>setComicSubStyle(sub.id)}>{sub.label}</button>)}
+          </div>}
 
           {/* Pages */}
           {(comicResult.pages||[]).map(page=>(
@@ -3354,7 +3379,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                         <div style={{padding:"8px 10px",borderTop:`1px solid ${G}18`,background:`${G}04`}}>
                           <div style={{position:"relative"}}>
                             <textarea readOnly value={comicPanelPrompts[panel.id].metaAI} rows={2} style={{width:"100%",padding:"8px 44px 8px 10px",background:"var(--bg3)",border:`1px solid ${G}22`,borderRadius:6,color:"var(--text-primary)",fontSize:9,fontFamily:"var(--font-mono)",resize:"none",lineHeight:1.5,boxSizing:"border-box"}}/>
-                            <button onClick={()=>navigator.clipboard.writeText(comicPanelPrompts[panel.id].metaAI)} style={{position:"absolute",top:6,right:6,fontSize:7.5,padding:"2px 7px",background:`${G}18`,border:`1px solid ${G}44`,borderRadius:4,cursor:"pointer",color:G,fontFamily:"var(--font-mono)"}}>Copy</button>
+                            <button onClick={()=>copyToClipboard(comicPanelPrompts[panel.id].metaAI)} style={{position:"absolute",top:6,right:6,fontSize:7.5,padding:"2px 7px",background:`${G}18`,border:`1px solid ${G}44`,borderRadius:4,cursor:"pointer",color:G,fontFamily:"var(--font-mono)"}}>Copy</button>
                           </div>
                           {hasImg&&<div style={{marginTop:4,fontSize:8,color:`${G}66`}}>✓ Reference uploaded — include with prompt for consistency</div>}
                         </div>
@@ -3469,15 +3494,46 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
         const byGen={};
         for(let g=0;g<=maxGen;g++)byGen[g]=charIds.filter(id=>(gen[id]||0)===g);
 
-        // Layout
-        const W=760,nodeR=26,HGAP=68,VGAP=110;
+        // Spouses found anywhere in the graph -- used to keep couples adjacent in gen 0.
+        const spouseOf={};
+        familyLinks.forEach(link=>{
+          if(link.aRelation==="Spouse"){spouseOf[link.a]=link.b;spouseOf[link.b]=link.a;}
+        });
+
+        // Layout — width grows to fit the widest generation so nodes never overlap/squish;
+        // the section scrolls instead once the tree outgrows it.
+        const nodeR=26,HGAP=68,VGAP=110;
+        const genWidths=Object.values(byGen).map(ids=>ids.length*(nodeR*2)+Math.max(0,ids.length-1)*HGAP);
+        const W=Math.max(760,...(genWidths.length?genWidths:[0]))+nodeR*2;
         const pos={};
-        Object.entries(byGen).forEach(([gStr,ids])=>{
-          const g=parseInt(gStr);
+        // Order each generation to minimize crossing lines: gen 0 keeps couples side by
+        // side; every later generation is sorted by the average x of its own parents
+        // (already placed, since we go top-down), so kids land roughly under their family.
+        for(let g=0;g<=maxGen;g++){
+          let ids=byGen[g];
+          if(g===0){
+            const placed=new Set(),ordered=[];
+            ids.forEach(id=>{
+              if(placed.has(id))return;
+              ordered.push(id);placed.add(id);
+              const sp=spouseOf[id];
+              if(sp&&ids.includes(sp)&&!placed.has(sp)){ordered.push(sp);placed.add(sp);}
+            });
+            ids=ordered;
+          }else{
+            ids=[...ids].sort((a,b)=>{
+              const xs=id=>(parentsOf[id]||[]).map(p=>pos[p]?.x).filter(x=>x!==undefined);
+              const xa=xs(a),xb=xs(b);
+              const ax=xa.length?xa.reduce((s,x)=>s+x,0)/xa.length:Infinity;
+              const bx=xb.length?xb.reduce((s,x)=>s+x,0)/xb.length:Infinity;
+              return ax-bx;
+            });
+          }
+          byGen[g]=ids;
           const totalW=ids.length*(nodeR*2)+(ids.length-1)*HGAP;
           const startX=(W-totalW)/2+nodeR;
           ids.forEach((id,i)=>{pos[id]={x:startX+i*(nodeR*2+HGAP),y:52+g*VGAP};});
-        });
+        }
         const svgH=Math.max(200,(maxGen+1)*VGAP+90);
 
         // Relation colors
@@ -3486,14 +3542,23 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
         const isHierarchical=rel=>PARENT_RELS.has(rel)||rel==="Child"||rel==="Grandchild"||rel==="Adopted Child";
 
         return(<>
-          <div style={{fontSize:9,letterSpacing:"0.2em",color:`${G}77`,textTransform:"uppercase",marginBottom:14}}>Family Tree</div>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
+            <div style={{fontSize:9,letterSpacing:"0.2em",color:`${G}77`,textTransform:"uppercase"}}>Family Tree</div>
+            {derivedLinks.length>0&&(
+              <label style={{display:"flex",alignItems:"center",gap:6,fontSize:9.5,color:"var(--text3)",cursor:"pointer",fontFamily:"var(--font-mono)"}}>
+                <input type="checkbox" checked={ftShowInferred} onChange={e=>setFtShowInferred(e.target.checked)} style={{cursor:"pointer"}}/>
+                Show inferred relations ({derivedLinks.length})
+              </label>
+            )}
+          </div>
 
           {/* SVG Tree */}
           {charIds.length>0?(
             <div style={{background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:12,overflow:"hidden",marginBottom:20}}>
-              <svg viewBox={`0 0 ${W} ${svgH}`} style={{width:"100%",display:"block"}}>
-                {/* Inferred links (dashed, behind explicit) */}
-                {derivedLinks.map(link=>{
+              <div style={{overflow:"auto",maxHeight:480}}>
+              <svg viewBox={`0 0 ${W} ${svgH}`} width={W} height={svgH} style={{display:"block"}}>
+                {/* Inferred links (dashed, behind explicit) -- hidden by default, they grow combinatorially */}
+                {ftShowInferred&&derivedLinks.map(link=>{
                   const pa=pos[link.a],pb=pos[link.b];
                   if(!pa||!pb)return null;
                   const color=relColor(link.aRelation);
@@ -3564,6 +3629,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                   );
                 })}
               </svg>
+              </div>
               {/* Legend */}
               <div style={{display:"flex",flexWrap:"wrap",gap:10,padding:"8px 14px 12px",borderTop:"1px solid var(--border)"}}>
                 {[["#D4AF37","Parent / Child"],["#5BA3D4","Sibling / Twin"],["#E07070","Spouse"],["#8B5CF6","Aunt / Uncle"],["#1D9E75","Cousin"],["#F0997B","Adoptive"],["#BA7517","Grandparent"]].map(([color,label])=>(
@@ -3572,7 +3638,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                     <span style={{fontSize:8.5,color:"var(--text3)",fontFamily:"var(--font-mono)"}}>{label}</span>
                   </div>
                 ))}
-                {derivedLinks.length>0&&(
+                {ftShowInferred&&derivedLinks.length>0&&(
                   <div style={{display:"flex",alignItems:"center",gap:5}}>
                     <div style={{width:18,height:2,background:"rgba(255,255,255,0.2)",borderRadius:1,backgroundImage:"repeating-linear-gradient(to right,rgba(255,255,255,0.35) 0,rgba(255,255,255,0.35) 3px,transparent 3px,transparent 7px)"}}/>
                     <span style={{fontSize:8.5,color:"var(--text4)",fontFamily:"var(--font-mono)",fontStyle:"italic"}}>Inferred</span>
@@ -4649,7 +4715,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                   ):soloPromptResult.platform==="dalle"?(
                     <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:6,marginBottom:12}}>
                       <button style={s.cpyBtn(copied.spmeta)} onClick={()=>copy("spmeta",soloPromptResult.metaAI)}>{copied.spmeta?"Copied!":"Copy"}</button>
-                      <button onClick={()=>{navigator.clipboard.writeText(soloPromptResult.metaAI).then(()=>{copy("spmeta",soloPromptResult.metaAI);window.open("https://chat.openai.com/","_blank");});}} style={{padding:"5px 14px",background:"rgba(16,163,127,0.12)",border:"1px solid rgba(16,163,127,0.4)",borderRadius:6,cursor:"pointer",fontSize:10,color:"#10A37F",fontFamily:"var(--font-mono)"}}>Open ChatGPT →</button>
+                      <button onClick={()=>{try{window.open("https://chat.openai.com/","_blank");}catch(e){}copy("spmeta",soloPromptResult.metaAI);}} style={{padding:"5px 14px",background:"rgba(16,163,127,0.12)",border:"1px solid rgba(16,163,127,0.4)",borderRadius:6,cursor:"pointer",fontSize:10,color:"#10A37F",fontFamily:"var(--font-mono)"}}>Open ChatGPT →</button>
                     </div>
                   ):(
                     hasMetaAI?<MetaAILauncher prompt={soloPromptResult.metaAI} label="Meta AI" copied={copied.spmeta} onCopy={()=>copy("spmeta",soloPromptResult.metaAI)}/>:<div style={{display:"flex",justifyContent:"flex-end",marginTop:6,marginBottom:12}}><button style={s.cpyBtn(copied.spmeta)} onClick={()=>copy("spmeta",soloPromptResult.metaAI)}>{copied.spmeta?"Copied!":"Copy"}</button></div>

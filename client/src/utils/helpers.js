@@ -1,3 +1,22 @@
+export async function copyToClipboard(text){
+  try{
+    if(navigator.clipboard&&window.isSecureContext){
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  }catch(e){}
+  try{
+    const ta=document.createElement("textarea");
+    ta.value=text;
+    ta.style.position="fixed";ta.style.top="-9999px";ta.style.left="-9999px";
+    document.body.appendChild(ta);
+    ta.focus();ta.select();
+    const ok=document.execCommand("copy");
+    document.body.removeChild(ta);
+    return ok;
+  }catch(e){return false;}
+}
+
 export const autoScore=m=>{const v=Object.values(m.stats||{});return v.length?Math.round(v.reduce((a,b)=>a+b,0)/v.length):0;};
 export const autoTierFn=m=>{const sc=autoScore(m);return sc>=85?"S":sc>=70?"A":sc>=55?"B":"C";};
 export const pronounOf=g=>g==="Female"?"she":g==="Non-binary"?"they":"he";

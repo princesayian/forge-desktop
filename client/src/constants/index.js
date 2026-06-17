@@ -168,6 +168,31 @@ export const HERO_ASSOC_TYPES=[
   {id:"legacy",    label:"Legacy Ally of",    inverse:"Legacy Predecessor of"},
 ];
 export const ART_STYLES=[{id:"comic",label:"Comic Art",text:"cinematic character concept art, flat color with sharp ink lines, bold graphic novel style"},{id:"rendered",label:"3D Render",text:"hyper-realistic CGI character design render, cinematic studio lighting, photorealistic detail"},{id:"anime",label:"Anime",text:"high-quality anime character illustration, dynamic cel shading, clean linework"},{id:"statue",label:"Statue",text:"collectible resin figurine render, museum-quality hand-painted detail, neutral display pose"}];
+export const COMIC_SUB_STYLES=[
+  {id:"modern",label:"Modern Superhero",text:"modern superhero comic art in the style of contemporary Marvel/DC house art, dynamic inking, glossy digital coloring"},
+  {id:"golden-age",label:"Golden Age",text:"Golden Age comic book art (1940s style), simple bold outlines, flat primary colors, vintage halftone print texture"},
+  {id:"silver-age",label:"Silver Age",text:"Silver Age comic book art (1960s style), bold ink outlines, Ben-Day dot shading, bright primary palette"},
+  {id:"indie",label:"Indie / Creator-Owned",text:"creator-owned indie comic art style, painterly textures, moody atmospheric color grading"},
+  {id:"noir",label:"Noir / Ink-Heavy",text:"noir comic art style, heavy black ink shadows, high-contrast chiaroscuro lighting, minimal spot color"},
+  {id:"manga-hybrid",label:"Manga-Western Hybrid",text:"manga-influenced western comic art style, dynamic speed lines, sharp angular linework"},
+  {id:"euro",label:"Franco-Belgian (BD)",text:"European bande dessinée comic art style, clean ligne claire linework, flat watercolor-style coloring"},
+  {id:"webcomic",label:"Webcomic / Flat Digital",text:"modern webcomic art style, flat vector coloring, minimal cel shading, clean digital linework"},
+];
+export const ANIME_SUB_STYLES=[
+  {id:"shonen",label:"Shonen Action",text:"shonen anime art style, bold dynamic linework, sharp angular proportions, high-energy action shading"},
+  {id:"shoujo",label:"Shoujo",text:"shoujo anime art style, soft delicate linework, large expressive eyes, pastel color palette, sparkle highlights"},
+  {id:"retro90s",label:"90s Retro Anime",text:"90s retro anime art style, grainy classic cel-shaded look, muted vintage color palette"},
+  {id:"modern-cinematic",label:"Modern Cinematic",text:"modern cinematic anime art style, hyper-detailed digital cel shading, dramatic lighting, painterly backgrounds"},
+  {id:"chibi",label:"Chibi",text:"chibi anime art style, super-deformed cute proportions, oversized head, simplified features"},
+  {id:"seinen",label:"Seinen / Gritty",text:"seinen anime art style, gritty detailed linework, dark moody shading, mature realistic proportions"},
+  {id:"ghibli",label:"Ghibli-Inspired",text:"Ghibli-inspired anime art style, soft painterly backgrounds, warm natural color palette, whimsical hand-drawn linework"},
+  {id:"mecha",label:"Mecha / Sci-Fi",text:"mecha anime art style, sharp technical linework, metallic shading, sci-fi industrial design"},
+];
+export function artStyleText(styleId,subStyleId){
+  if(styleId==="comic"){const sub=COMIC_SUB_STYLES.find(s=>s.id===subStyleId);if(sub)return sub.text;}
+  if(styleId==="anime"){const sub=ANIME_SUB_STYLES.find(s=>s.id===subStyleId);if(sub)return sub.text;}
+  return ART_STYLES.find(a=>a.id===styleId)?.text;
+}
 export const POSE_OPTIONS=[
   {id:"3/4",label:"3/4 Stance",hero:"confident heroic 3/4 stance, feet flat on the ground",villain:"confident commanding 3/4 stance, feet flat on the ground"},
   {id:"action",label:"Action",hero:"dynamic action pose, body in motion, powerful forward momentum",villain:"aggressive forward stance, body lunging, dominant threatening energy"},

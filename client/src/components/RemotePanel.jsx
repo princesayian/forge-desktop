@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { G } from '../constants/index.js';
+import { copyToClipboard } from '../utils/helpers.js';
 const LAN_BLUE = "#5EB1FF";
 
 export default function RemotePanel({remoteInfo,setRemoteInfo,onClose,s,forgeVersion,setAppAlert}){
@@ -12,7 +13,7 @@ export default function RemotePanel({remoteInfo,setRemoteInfo,onClose,s,forgeVer
   const[pwErr,setPwErr]=useState("");
   const[lanCopied,setLanCopied]=useState(false);
   useEffect(()=>{fetch("/api/remote").then(r=>r.json()).then(d=>setRemoteInfo(d)).catch(()=>{});},[]);
-  const copyLan=()=>{if(remoteInfo?.lan_url){navigator.clipboard.writeText(remoteInfo.lan_url).then(()=>{setLanCopied(true);setTimeout(()=>setLanCopied(false),2000);}).catch(()=>{});}};
+  const copyLan=()=>{if(remoteInfo?.lan_url){copyToClipboard(remoteInfo.lan_url).then(ok=>{if(ok){setLanCopied(true);setTimeout(()=>setLanCopied(false),2000);}});}};
   const saveRemote=async(enabled)=>{
     if(rpassword&&rpassword!==rconfirm){setPwErr("Passwords do not match.");return;}
     setPwErr("");
@@ -48,7 +49,7 @@ export default function RemotePanel({remoteInfo,setRemoteInfo,onClose,s,forgeVer
             <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
               <div style={{width:8,height:8,borderRadius:"50%",background:sc,flexShrink:0,boxShadow:live?`0 0 7px ${sc}`:undefined}}/>
               <span style={{fontSize:10,fontWeight:"bold",color:sc,letterSpacing:"0.1em"}}>{statusLabel}</span>
-              {live&&<span style={{fontSize:9,color:"#5DCAA5AA",fontFamily:"var(--font-mono)",marginLeft:4,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:260,cursor:"pointer"}} onClick={()=>navigator.clipboard.writeText(remoteInfo.url)}>{remoteInfo.url}</span>}
+              {live&&<span style={{fontSize:9,color:"#5DCAA5AA",fontFamily:"var(--font-mono)",marginLeft:4,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:260,cursor:"pointer"}} onClick={()=>copyToClipboard(remoteInfo.url)}>{remoteInfo.url}</span>}
             </div>
             <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:"4px 16px"}}>
               {checks.map(({ok,label,fix})=>(
