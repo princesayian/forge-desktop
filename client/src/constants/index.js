@@ -219,6 +219,20 @@ export const POSE_OPTIONS=[
   {id:"power",label:"Power Stance",hero:"arms crossed over chest, standing tall, commanding heroic authority",villain:"arms crossed, standing tall, cold dominant authority"},
   {id:"airborne",label:"Airborne",hero:"hovering just above the ground, arms slightly out, mid-flight posture",villain:"levitating above the ground, arms at sides, imperious floating pose"},
 ];
+export const BACKGROUND_OPTIONS=[
+  {id:"auto",label:"Auto (HQ / Lair)",hero:"hero headquarters type background",villain:"world domination lair type background"},
+  {id:"plain",label:"Plain / Studio",hero:"plain clean uncluttered studio background",villain:"plain clean uncluttered studio background"},
+  {id:"city",label:"City Skyline",hero:"dramatic city skyline backdrop, dusk lighting",villain:"dramatic city skyline backdrop, dusk lighting"},
+  {id:"battle",label:"Battle-Torn Streets",hero:"battle-damaged urban street background, smoke and debris",villain:"battle-damaged urban street background, smoke and debris"},
+  {id:"cosmic",label:"Cosmic / Space",hero:"deep space cosmic backdrop, distant stars and nebula",villain:"deep space cosmic backdrop, distant stars and nebula"},
+  {id:"wilderness",label:"Wilderness",hero:"dramatic natural wilderness backdrop, forest or mountain terrain",villain:"dramatic natural wilderness backdrop, forest or mountain terrain"},
+  {id:"lab",label:"Lab / Tech Facility",hero:"high-tech laboratory or research facility background",villain:"high-tech laboratory or research facility background"},
+  {id:"action",label:"Action / Energy FX",hero:"dynamic action-scene backdrop, motion blur and energy effects",villain:"dynamic action-scene backdrop, motion blur and energy effects"},
+];
+export function backgroundText(bgId,isVillain){
+  const opt=BACKGROUND_OPTIONS.find(b=>b.id===bgId)||BACKGROUND_OPTIONS[0];
+  return isVillain?(opt.villain||opt.hero):(opt.hero||opt.villain);
+}
 export const ACCENT_COLORS=[{id:"crimson",label:"Crimson",hex:"#A32D2D"},{id:"jade",label:"Jade",hex:"#1D9E75"},{id:"amber",label:"Amber",hex:"#BA7517"},{id:"silver",label:"Silver",hex:"#888780"},{id:"indigo",label:"Indigo",hex:"#4A3FA0"},{id:"copper",label:"Copper",hex:"#8B4513"},{id:"frost",label:"Frost",hex:"#378ADD"},{id:"violet",label:"Violet",hex:"#8B2FC9"}];
 export const TIER_DEFS=[{id:"S",label:"S",color:"#D4AF37"},{id:"A",label:"A",color:"#5DCAA5"},{id:"B",label:"B",color:"#5EB1FF"},{id:"C",label:"C",color:"#888780"}];
 

@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import { ALIGN_META, TEAM_RANKS, raceLabel } from '../constants/index.js';
 import AlignmentBadge from './AlignmentBadge.jsx';
 import StatBar from './StatBar.jsx';
 
 export default function CharacterPage({member,imageUrl,isVillain=false,teamName,teamColor,memberTeams,inherentPowers=[],teamBase=""}){
+  const[zoomed,setZoomed]=useState(false);
   const c=member.color,cl=member.colorLight||c;
   const tName=teamName||"Unknown Team";
   const multiTeam=memberTeams&&memberTeams.length>1;
@@ -42,7 +44,7 @@ export default function CharacterPage({member,imageUrl,isVillain=false,teamName,
       <div style={{fontSize:12,fontStyle:"italic",color:"var(--text2)"}}>{[member.realName,member.role].filter(Boolean).join("  ·  ")}</div>
     </div>
     <div className="fchar-grid" style={{display:"grid",gridTemplateColumns:"1.05fr 1fr",minHeight:330}}>
-      <div className="fchar-portrait-frame" style={{position:"relative",overflow:"hidden",background:`${c}05`}}>
+      <div className="fchar-portrait-frame" onClick={()=>imageUrl&&setZoomed(true)} style={{position:"relative",overflow:"hidden",background:`${c}05`,cursor:imageUrl?"zoom-in":"default"}}>
         {imageUrl
           ?<img className="fchar-portrait-img" src={imageUrl} alt={member.heroName} style={{width:"100%",height:"100%",minHeight:360,objectFit:"cover",objectPosition:"center top",display:"block"}}/>
           :<div style={{minHeight:360,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:10}}>
@@ -121,5 +123,10 @@ export default function CharacterPage({member,imageUrl,isVillain=false,teamName,
       <div style={{fontSize:8.5,letterSpacing:"0.15em",color:"var(--text4)"}}>{isVillain?"HIGH PRIORITY TARGET · CLASSIFIED":`${tName.toUpperCase()} · CLASSIFIED`}</div>
       {member.number&&<div style={{fontSize:23,fontWeight:900,color:`${c}22`,fontFamily:"var(--font-mono)",lineHeight:1}}>#{member.number}</div>}
     </div>
+    {zoomed&&imageUrl&&(
+      <div onClick={()=>setZoomed(false)} style={{position:"fixed",inset:0,background:"rgba(2,2,6,0.92)",zIndex:5000,display:"flex",alignItems:"center",justifyContent:"center",padding:24,cursor:"zoom-out"}}>
+        <img src={imageUrl} alt={member.heroName} style={{maxWidth:"92vw",maxHeight:"92vh",objectFit:"contain",borderRadius:8,boxShadow:`0 0 60px ${c}40`}}/>
+      </div>
+    )}
   </div>);
 }

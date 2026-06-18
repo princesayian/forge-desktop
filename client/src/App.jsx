@@ -5,7 +5,7 @@ import {
   RACE_TREE, raceLabel, raceLore, POWER_FORGE_PHASES,
   RECRUIT_QUIZ, VILLAIN_QUIZ, SCENARIOS, TONES,
   TEAM_RANKS, FAMILY_RELATIONS, HERO_ASSOC_TYPES,
-  ART_STYLES, COMIC_SUB_STYLES, ANIME_SUB_STYLES, artStyleText, POSE_OPTIONS, ACCENT_COLORS, TIER_DEFS,
+  ART_STYLES, COMIC_SUB_STYLES, ANIME_SUB_STYLES, artStyleText, POSE_OPTIONS, BACKGROUND_OPTIONS, backgroundText, ACCENT_COLORS, TIER_DEFS,
   POWER_SCALING_DEFAULTS,
   DEEP_LORE_PHASES, PERSONAL_PROFILE, DEEP_VILLAIN_PHASES, VILLAIN_PERSONAL_PROFILE,
   _rp, _NAMES, _TS, randTeamName, randHeroName, COSTUME_FORGE_QUESTIONS,
@@ -51,6 +51,60 @@ const storage = {
     await fetch(`/api/store/${encodeURIComponent(key)}`, { method: 'DELETE' });
   },
 };
+
+// Hoisted to module scope (not defined inside App's render) so React keeps the same
+// component identity across re-renders — defining these inline per-render previously
+// caused the whole subtree to unmount/remount on every keystroke, dropping input focus
+// and resetting scroll position.
+function CodexCard({title,accent,sections,tagline}){
+  return(
+    <div style={{background:"var(--bg3)",border:`1px solid ${accent}33`,borderRadius:12,marginBottom:12,overflow:"hidden"}}>
+      <div style={{padding:"16px 20px 12px",borderBottom:`1px solid ${accent}22`,background:`${accent}08`}}>
+        <div style={{fontSize:16,fontWeight:"bold",color:accent,fontFamily:"var(--font-mono)",letterSpacing:"0.05em",marginBottom:4}}>{title}</div>
+        {tagline&&<div style={{fontSize:12,color:"var(--text3)",fontStyle:"italic"}}>{tagline}</div>}
+      </div>
+      <div style={{padding:"16px 20px"}}>
+        {sections.map(([label,text])=>text?(
+          <div key={label} style={{marginBottom:14}}>
+            <div style={{fontSize:9.5,letterSpacing:"0.18em",textTransform:"uppercase",color:`${accent}99`,fontFamily:"var(--font-mono)",marginBottom:5}}>{label}</div>
+            <div style={{fontSize:12.5,color:"var(--text2)",lineHeight:1.65}}>{text}</div>
+          </div>
+        ):null)}
+      </div>
+    </div>
+  );
+}
+function AbilityEditor({raceId,accent,label,note,raceAbilities,saveRaceAbilities}){
+  const abilities=raceAbilities[raceId]||[];
+  const updateAbility=(i,field,val)=>saveRaceAbilities({...raceAbilities,[raceId]:abilities.map((a,j)=>j===i?{...a,[field]:val}:a)});
+  const addAbility=()=>{if(abilities.length>=10)return;saveRaceAbilities({...raceAbilities,[raceId]:[...abilities,{name:"",desc:""}]});};
+  const removeAbility=(i)=>saveRaceAbilities({...raceAbilities,[raceId]:abilities.filter((_,j)=>j!==i)});
+  return(
+    <div style={{background:`${accent}06`,border:`1px solid ${accent}28`,borderRadius:10,marginBottom:20,overflow:"hidden"}}>
+      <div style={{padding:"10px 16px",borderBottom:`1px solid ${accent}18`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <span style={{fontSize:10,letterSpacing:"0.18em",textTransform:"uppercase",color:accent,fontFamily:"var(--font-mono)",fontWeight:"bold"}}>{label}</span>
+          <span style={{fontSize:10,color:"var(--text4)",fontFamily:"var(--font-mono)"}}>Inherent Abilities · {abilities.length}/10</span>
+          {note&&<span style={{fontSize:9.5,color:`${accent}88`,fontStyle:"italic"}}>{note}</span>}
+        </div>
+        {abilities.length<10&&<button onClick={addAbility} style={{fontSize:10,padding:"3px 10px",background:`${accent}18`,border:`1px solid ${accent}44`,borderRadius:6,cursor:"pointer",color:accent,fontFamily:"var(--font-mono)"}}>+ Add</button>}
+      </div>
+      <div style={{padding:"12px 16px"}}>
+        {abilities.length===0&&<div style={{fontSize:11,color:"var(--text4)",fontStyle:"italic",padding:"4px 0"}}>No inherent abilities defined — add up to 10 racial defaults. Heroes with this race will inherit them based on their bloodline purity.</div>}
+        {abilities.map((a,i)=>(
+          <div key={i} style={{display:"grid",gridTemplateColumns:"18px 150px 1fr auto",gap:8,marginBottom:8,alignItems:"center"}}>
+            <span style={{fontSize:10,color:`${accent}66`,fontFamily:"var(--font-mono)",textAlign:"right"}}>{i+1}</span>
+            <input type="text" placeholder="Ability name" value={a.name} onChange={e=>updateAbility(i,"name",e.target.value)}
+              style={{padding:"6px 8px",background:"var(--bg2)",border:`1px solid ${accent}30`,borderRadius:6,color:"var(--text-primary)",fontSize:11,fontFamily:"var(--font-mono)"}}/>
+            <input type="text" placeholder="Short description" value={a.desc} onChange={e=>updateAbility(i,"desc",e.target.value)}
+              style={{padding:"6px 8px",background:"var(--bg2)",border:`1px solid ${accent}30`,borderRadius:6,color:"var(--text-primary)",fontSize:11}}/>
+            <button onClick={()=>removeAbility(i)} style={{fontSize:13,padding:"3px 8px",background:"rgba(163,45,45,0.08)",border:"1px solid rgba(163,45,45,0.22)",borderRadius:6,cursor:"pointer",color:"#e74c3c",lineHeight:1}}>×</button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default
 function App(){
@@ -228,6 +282,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
   const[pRealism,setPRealism]=useState(false);
   const[pPlatform,setPPlatform]=useState("meta-ai");
   const[pPose,setPPose]=useState("3/4");
+  const[pBackground,setPBackground]=useState("auto");
   const[pSelected,setPSelected]=useState(null);
   const[pQuestionnaire,setPQuestionnaire]=useState(null); // {kind:"hero"|"villain"|"solo", subject}
   const[pLoading,setPLoading]=useState(false);const[pResult,setPResult]=useState(null);const[sheetLoading,setSheetLoading]=useState(false);
@@ -317,6 +372,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
       try{const d=await storage.get("nk-recruits");const rec=stripHexDeep(JSON.parse(d.value)||[]);if(rec.length){setTeamRosters(p=>({...p,"nocturnal-knights":[...(p["nocturnal-knights"]||[]),...rec.map(r=>({...r,teamId:"nocturnal-knights"}))]}))};}catch(e){}
       try{const d=await storage.get("forge-meta-ai-pref");if(d)setHasMetaAI(JSON.parse(d.value));}catch(e){}
       try{const d=await storage.get("forge-prompt-platform");if(d)setPPlatform(JSON.parse(d.value)||"meta-ai");}catch(e){}
+      try{const d=await storage.get("forge-prompt-background");if(d)setPBackground(JSON.parse(d.value)||"auto");}catch(e){}
       try{const d=await storage.get("forge-family");setFamilyLinks(JSON.parse(d.value)||[]);}catch(e){
         try{const d2=await storage.get("nk-family");setFamilyLinks(JSON.parse(d2.value)||[]);}catch(e2){}
       }
@@ -1148,34 +1204,31 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
   // Per-platform visual-quality tail — keeps every prompt camera/lighting/detail
   // oriented instead of drifting into narrative description.
   const VISUAL_QUALITY={
-    "meta-ai":"Realistic render, full body head to toe, feet fully visible, wide shot with space below feet, no cropping, cinematic dramatic lighting, hero headquarters type background, highly detailed, increase resolution, enhanced quality",
+    "meta-ai":"Realistic render, full body head to toe, feet fully visible, wide shot with space below feet, no cropping, cinematic dramatic lighting, highly detailed, increase resolution, enhanced quality",
     "midjourney":"full body shot, feet fully visible, no cropping, cinematic dramatic lighting, intricate surface detail, sharp focus",
-    "dalle":"Full body shot from head to toe, feet fully visible, no cropping, cinematic dramatic lighting, highly detailed textures, sharp focus, plain uncluttered background",
-    "firefly":"Full-body shot from head to toe, feet fully visible, no cropping, cinematic studio lighting, highly detailed textures, sharp focus, clean uncluttered background, no text, no watermark, no logo",
-  };
-  const VISUAL_QUALITY_VILLAIN={
-    ...VISUAL_QUALITY,
-    "meta-ai":"Realistic render, full body head to toe, feet fully visible, wide shot with space below feet, no cropping, cinematic dramatic lighting, world domination lair type background, highly detailed, increase resolution, enhanced quality",
+    "dalle":"Full body shot from head to toe, feet fully visible, no cropping, cinematic dramatic lighting, highly detailed textures, sharp focus",
+    "firefly":"Full-body shot from head to toe, feet fully visible, no cropping, cinematic studio lighting, highly detailed textures, sharp focus, no text, no watermark, no logo",
   };
   // Builds the platform-specific prompt string. Centralizes Midjourney/DALL-E/
   // Meta AI/Firefly syntax differences so every caller stays optimized per-generator.
-  const buildPlatformPrompt=({platform,subjectLabel,ph,poseText,costume,fxNote,pal,style,hasRef,refPfx,visualQ,note})=>{
+  const buildPlatformPrompt=({platform,subjectLabel,ph,poseText,costume,fxNote,pal,style,hasRef,refPfx,visualQ,note,bg})=>{
     const phStripped=ph?ph.replace(/^(?:teen |child |young adult )?(?:male|female|person) /i,""):"";
     const noteTag=note?cap(note):"";
+    const bgText=bg||"plain background";
     if(platform==="midjourney"){
       const ref=hasRef?" --cref [upload reference image]":"";
-      return`${subjectLabel}, ${ph}, ${poseText}. ${costume}${fxNote}, ${pal}, plain background, ${style}, ${visualQ}${note?", "+note:""} --ar 2:3 --v 6.1${ref}`;
+      return`${subjectLabel}, ${ph}, ${poseText}. ${costume}${fxNote}, ${pal}, ${bgText}, ${style}, ${visualQ}${note?", "+note:""} --ar 2:3 --v 6.1${ref}`;
     }
     if(platform==="dalle"){
-      return`${refPfx}${ph}, ${poseText}. ${costume}${fxNote}. ${pal}. Plain clean background. ${style}. ${cap(visualQ)}.${noteTag?" "+noteTag+".":""}`;
+      return`${refPfx}${ph}, ${poseText}. ${costume}${fxNote}. ${pal}. ${cap(bgText)}. ${style}. ${cap(visualQ)}.${noteTag?" "+noteTag+".":""}`;
     }
     if(platform==="firefly"){
-      return`${refPfx}${ph}, ${poseText}. ${costume}${fxNote}. ${pal}. Plain clean background. ${style}. ${cap(visualQ)}.${noteTag?" "+noteTag+".":""}`;
+      return`${refPfx}${ph}, ${poseText}. ${costume}${fxNote}. ${pal}. ${cap(bgText)}. ${style}. ${cap(visualQ)}.${noteTag?" "+noteTag+".":""}`;
     }
     // meta-ai
     return hasRef
-      ?`Using this reference for face and likeness, transform into a person with ${phStripped}, ${poseText}. ${costume}${fxNote}, ${pal}. ${style}. ${visualQ}.${noteTag?" "+noteTag+".":""}`
-      :`A ${ph}, ${poseText}. ${costume}${fxNote}, ${pal}. ${style}. ${visualQ}.${noteTag?" "+noteTag+".":""}`;
+      ?`Using this reference for face and likeness, transform into a person with ${phStripped}, ${poseText}. ${costume}${fxNote}, ${pal}, ${bgText}. ${style}. ${visualQ}.${noteTag?" "+noteTag+".":""}`
+      :`A ${ph}, ${poseText}. ${costume}${fxNote}, ${pal}, ${bgText}. ${style}. ${visualQ}.${noteTag?" "+noteTag+".":""}`;
   };
   // Auranthi bloodline fractions — how much Auranthi blood each alien species carries
   const AURANTHI_FRACTION={auranthi:1.0,dravosi:0.5,zyrenian:0.25};
@@ -1249,7 +1302,8 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     const pal=palDesc(subj);
     const poseText=POSE_OPTIONS.find(p=>p.id===pPose)?.hero||POSE_OPTIONS[0].hero;
     const note=guard?safetyNote(subj.gender,ageStageVal):"";
-    const metaAI=buildPlatformPrompt({platform:pPlatform,subjectLabel:member.heroName,ph,poseText,costume,fxNote,pal,style,hasRef,refPfx,visualQ:VISUAL_QUALITY[pPlatform],note});
+    const bg=backgroundText(pBackground,false);
+    const metaAI=buildPlatformPrompt({platform:pPlatform,subjectLabel:member.heroName,ph,poseText,costume,fxNote,pal,style,hasRef,refPfx,visualQ:VISUAL_QUALITY[pPlatform],note,bg});
     const tripo3D=`Full-body 3D character model of ${member.heroName}, ${ph}, ${costume}, neutral A-pose, ${pal}, separate color regions for FDM printing, watertight mesh.`;
     setPResult({member,metaAI,tripo3D,platform:pPlatform});
     setPLoading(false);
@@ -1273,7 +1327,8 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     const pal=palDesc(subj);
     const poseText=POSE_OPTIONS.find(p=>p.id===pPose)?.hero||POSE_OPTIONS[0].hero;
     const note=guard?safetyNote(subj.gender,ageStageVal):"";
-    const metaAI=buildPlatformPrompt({platform:plat,subjectLabel:hero.heroName,ph,poseText,costume,fxNote,pal,style,hasRef,refPfx,visualQ:VISUAL_QUALITY[plat],note});
+    const bg=backgroundText(pBackground,false);
+    const metaAI=buildPlatformPrompt({platform:plat,subjectLabel:hero.heroName,ph,poseText,costume,fxNote,pal,style,hasRef,refPfx,visualQ:VISUAL_QUALITY[plat],note,bg});
     const tripo3D=`Full-body 3D character model of ${hero.heroName}, ${ph}, ${costume}, neutral A-pose, ${pal}, separate color regions for FDM printing, watertight mesh.`;
     setSoloPromptResult({hero,metaAI,tripo3D,platform:plat});
   };
@@ -1295,19 +1350,22 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     const pal=palDesc(subj);
     const poseText=POSE_OPTIONS.find(p=>p.id===pPose)?.villain||POSE_OPTIONS[0].villain;
     const note=guard?safetyNote(subj.gender,ageStageVal):"";
-    const metaAI=buildPlatformPrompt({platform:pPlatform,subjectLabel:villain.heroName,ph,poseText,costume,fxNote,pal,style,hasRef,refPfx,visualQ:VISUAL_QUALITY_VILLAIN[pPlatform],note});
+    const bg=backgroundText(pBackground,true);
+    const metaAI=buildPlatformPrompt({platform:pPlatform,subjectLabel:villain.heroName,ph,poseText,costume,fxNote,pal,style,hasRef,refPfx,visualQ:VISUAL_QUALITY[pPlatform],note,bg});
     const tripo3D=`Full-body 3D character model of ${villain.heroName}, ${ph}, ${costume}, neutral A-pose, ${pal}, separate color regions for FDM printing, watertight mesh.`;
     setPResult({member:villain,isVillain:true,metaAI,tripo3D,platform:pPlatform});
     setPLoading(false);
   };
 
-  const generateVillainPromptInline=(villain,overridePlatform,overrideStyle,overridePose,overrides)=>{
+  const generateVillainPromptInline=(villain,overridePlatform,overrideStyle,overridePose,overrides,overrideBackground)=>{
     const plat=overridePlatform||pPlatform;
     const styleText=artStyleText(overrideStyle||pStyle,pSubStyle,pRealism)||"character concept art, dramatic lighting";
     const activePose=overridePose||pPose;
+    const activeBackground=overrideBackground||pBackground;
     if(overridePlatform){setPPlatform(overridePlatform);persist("forge-prompt-platform",overridePlatform);}
     if(overrideStyle){setPStyle(overrideStyle);persist("forge-prompt-style",overrideStyle);}
     if(overridePose){setPPose(overridePose);}
+    if(overrideBackground){setPBackground(overrideBackground);persist("forge-prompt-background",overrideBackground);}
     const subj={...villain,...overrides};
     const hasRef=images[villain.id];
     const refPfx=hasRef?"Based on reference image, same face and build. ":"";
@@ -1322,9 +1380,10 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     const pal=palDesc(subj);
     const poseText=POSE_OPTIONS.find(p=>p.id===activePose)?.villain||POSE_OPTIONS[0].villain;
     const note=guard?safetyNote(subj.gender,ageStageVal):"";
-    const metaAI=buildPlatformPrompt({platform:plat,subjectLabel:villain.heroName,ph,poseText,costume,fxNote,pal,style:styleText,hasRef,refPfx,visualQ:VISUAL_QUALITY_VILLAIN[plat],note});
+    const bg=backgroundText(activeBackground,true);
+    const metaAI=buildPlatformPrompt({platform:plat,subjectLabel:villain.heroName,ph,poseText,costume,fxNote,pal,style:styleText,hasRef,refPfx,visualQ:VISUAL_QUALITY[plat],note,bg});
     const tripo3D=`Full-body 3D character model of ${villain.heroName}, ${ph}, ${costume}, neutral A-pose, ${pal}, separate color regions for FDM printing, watertight mesh.`;
-    setVInlinePrompt({villainId:villain.id,metaAI,tripo3D,platform:plat,styleId:overrideStyle||pStyle,poseId:overridePose||pPose});
+    setVInlinePrompt({villainId:villain.id,metaAI,tripo3D,platform:plat,styleId:overrideStyle||pStyle,poseId:overridePose||pPose,backgroundId:activeBackground});
   };
 
   // Per-member costume text, safety-guarded individually before joining into the group/duo prompt.
@@ -1340,13 +1399,14 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     const charList=activeRoster.map(m=>`${m.heroName} in ${hexToColorName(m.color)} ${memberCostumeText(m)}`).join(", ");
     const groupNote=activeRoster.some(m=>needsSafetyGuard(m.gender,ageStage(m.age)))?"modest, full-coverage costume designs throughout, non-sexualized, family-friendly presentation":"";
     const visualQ=VISUAL_QUALITY[pPlatform]||VISUAL_QUALITY["meta-ai"];
+    const bg=backgroundText(pBackground,false);
     let metaAI;
     if(pPlatform==="midjourney"){
       const chars=activeRoster.map(m=>`${m.heroName} (${hexToColorName(m.color)} suit)`).join(", ");
-      metaAI=`${activeTeam.name} hero team: ${chars}, group shot, all heroes fully visible, dynamic poses, ${style}, ${visualQ}${groupNote?", "+groupNote:""} --ar 16:9 --v 6.1`;
+      metaAI=`${activeTeam.name} hero team: ${chars}, group shot, all heroes fully visible, dynamic poses, ${bg}, ${style}, ${visualQ}${groupNote?", "+groupNote:""} --ar 16:9 --v 6.1`;
     } else {
       const ref=hasRef?"Based on uploaded character reference sheet, same faces and costumes. ":"";
-      metaAI=`${ref}${activeTeam.name} hero team: ${charList}. All ${activeRoster.length} heroes together in a group portrait, everyone fully visible. ${style}. ${cap(visualQ)}.${groupNote?" "+cap(groupNote)+".":""}`;
+      metaAI=`${ref}${activeTeam.name} hero team: ${charList}. All ${activeRoster.length} heroes together in a group portrait, everyone fully visible. ${cap(bg)}. ${style}. ${cap(visualQ)}.${groupNote?" "+cap(groupNote)+".":""}`;
     }
     setPResult({group:true,teamName:activeTeam.name,metaAI,platform:pPlatform});
     setPLoading(false);
@@ -1361,12 +1421,13 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     const costA=memberCostumeText(a),costB=memberCostumeText(b);
     const duoNote=[a,b].some(m=>needsSafetyGuard(m.gender,ageStage(m.age)))?"modest, full-coverage costume designs, non-sexualized, family-friendly presentation":"";
     const visualQ=VISUAL_QUALITY[pPlatform]||VISUAL_QUALITY["meta-ai"];
+    const bg=backgroundText(pBackground,false);
     let metaAI;
     if(pPlatform==="midjourney"){
-      metaAI=`${a.heroName} and ${b.heroName} duo shot, [LEFT] ${a.heroName} in ${cnA} ${costA}, [RIGHT] ${b.heroName} in ${cnB} ${costB}, both fully visible, ${style}, ${visualQ}${duoNote?", "+duoNote:""} --ar 2:3 --v 6.1`;
+      metaAI=`${a.heroName} and ${b.heroName} duo shot, [LEFT] ${a.heroName} in ${cnA} ${costA}, [RIGHT] ${b.heroName} in ${cnB} ${costB}, both fully visible, ${bg}, ${style}, ${visualQ}${duoNote?", "+duoNote:""} --ar 2:3 --v 6.1`;
     } else {
       const ref=(images[a.id]||images[b.id])?"Based on uploaded reference images, same faces and costumes. ":"";
-      metaAI=`${ref}${a.heroName} in a ${cnA} ${costA} and ${b.heroName} in a ${cnB} ${costB}, side by side, both fully visible. ${style}. ${cap(visualQ)}.${duoNote?" "+cap(duoNote)+".":""}`;
+      metaAI=`${ref}${a.heroName} in a ${cnA} ${costA} and ${b.heroName} in a ${cnB} ${costB}, side by side, both fully visible. ${cap(bg)}. ${style}. ${cap(visualQ)}.${duoNote?" "+cap(duoNote)+".":""}`;
     }
     setPResult({duo:true,heroA:a,heroB:b,metaAI,platform:pPlatform});
     setPLoading(false);
@@ -2221,6 +2282,11 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
           <span style={s.lbl}>Pose</span>
           <div style={{display:"flex",flexWrap:"wrap",gap:8}}>{POSE_OPTIONS.map(p=><button key={p.id} style={s.chip(pPose===p.id)} onClick={()=>setPPose(p.id)}>{p.label}</button>)}</div>
         </div>
+        <div style={{...s.card,marginBottom:16}}>
+          <span style={s.lbl}>Background</span>
+          <div style={{display:"flex",flexWrap:"wrap",gap:8}}>{BACKGROUND_OPTIONS.map(b=><button key={b.id} style={s.chip(pBackground===b.id)} onClick={()=>{setPBackground(b.id);persist("forge-prompt-background",b.id);}}>{b.label}</button>)}</div>
+          <div style={{fontSize:10,color:"var(--text3)",marginTop:7}}>{BACKGROUND_OPTIONS.find(b=>b.id===pBackground)?.hero}</div>
+        </div>
         {activeRoster.length===0&&<div style={{textAlign:"center",padding:"30px",color:"var(--text3)"}}>No members on {activeTeam.name} yet. Add some via Recruit first.</div>}
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(190px,1fr))",gap:10,marginBottom:14}}>
           {activeRoster.map(m=>(<div key={m.id} onClick={()=>setPQuestionnaire({kind:"hero",subject:m})} style={{background:pSelected===m.id?`${m.color}12`:"var(--bg3)",border:`1px solid ${pSelected===m.id?m.color+"55":"rgba(255,255,255,0.06)"}`,borderRadius:10,padding:"14px 16px",cursor:"pointer"}}>
@@ -2935,9 +3001,14 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                       <button key={a.id} onClick={()=>generateVillainPromptInline(v,undefined,a.id)} style={{fontSize:10,padding:"3px 10px",background:(vInlinePrompt.styleId||pStyle)===a.id?"rgba(139,26,26,0.1)":"var(--bg3)",border:`1px solid ${(vInlinePrompt.styleId||pStyle)===a.id?"rgba(224,112,120,0.4)":"var(--border)"}`,borderRadius:20,cursor:"pointer",color:(vInlinePrompt.styleId||pStyle)===a.id?"#E07070":"var(--text3)",fontFamily:"var(--font-mono)"}}>{a.label}</button>
                     ))}
                   </div>
-                  <div style={{display:"flex",gap:5,marginBottom:10,flexWrap:"wrap"}}>
+                  <div style={{display:"flex",gap:5,marginBottom:8,flexWrap:"wrap"}}>
                     {POSE_OPTIONS.map(p=>(
                       <button key={p.id} onClick={()=>generateVillainPromptInline(v,undefined,undefined,p.id)} style={{fontSize:10,padding:"3px 10px",background:(vInlinePrompt.poseId||pPose)===p.id?"rgba(139,26,26,0.1)":"var(--bg3)",border:`1px solid ${(vInlinePrompt.poseId||pPose)===p.id?"rgba(224,112,112,0.4)":"var(--border)"}`,borderRadius:20,cursor:"pointer",color:(vInlinePrompt.poseId||pPose)===p.id?"#E07070":"var(--text3)",fontFamily:"var(--font-mono)"}}>{p.label}</button>
+                    ))}
+                  </div>
+                  <div style={{display:"flex",gap:5,marginBottom:10,flexWrap:"wrap"}}>
+                    {BACKGROUND_OPTIONS.map(b=>(
+                      <button key={b.id} onClick={()=>generateVillainPromptInline(v,undefined,undefined,undefined,undefined,b.id)} style={{fontSize:10,padding:"3px 10px",background:(vInlinePrompt.backgroundId||pBackground)===b.id?"rgba(139,26,26,0.1)":"var(--bg3)",border:`1px solid ${(vInlinePrompt.backgroundId||pBackground)===b.id?"rgba(224,112,112,0.4)":"var(--border)"}`,borderRadius:20,cursor:"pointer",color:(vInlinePrompt.backgroundId||pBackground)===b.id?"#E07070":"var(--text3)",fontFamily:"var(--font-mono)"}}>{b.label}</button>
                     ))}
                   </div>
                   <div style={{position:"relative",marginBottom:10}}>
@@ -4379,53 +4450,6 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
 
       {/* ── CODEX TAB ─────────────────────────────────────────────────── */}
       {tab==="codex"&&(()=>{
-        const CodexCard=({title,accent,sections,tagline})=>(
-          <div style={{background:"var(--bg3)",border:`1px solid ${accent}33`,borderRadius:12,marginBottom:12,overflow:"hidden"}}>
-            <div style={{padding:"16px 20px 12px",borderBottom:`1px solid ${accent}22`,background:`${accent}08`}}>
-              <div style={{fontSize:16,fontWeight:"bold",color:accent,fontFamily:"var(--font-mono)",letterSpacing:"0.05em",marginBottom:4}}>{title}</div>
-              {tagline&&<div style={{fontSize:12,color:"var(--text3)",fontStyle:"italic"}}>{tagline}</div>}
-            </div>
-            <div style={{padding:"16px 20px"}}>
-              {sections.map(([label,text])=>text?(
-                <div key={label} style={{marginBottom:14}}>
-                  <div style={{fontSize:9.5,letterSpacing:"0.18em",textTransform:"uppercase",color:`${accent}99`,fontFamily:"var(--font-mono)",marginBottom:5}}>{label}</div>
-                  <div style={{fontSize:12.5,color:"var(--text2)",lineHeight:1.65}}>{text}</div>
-                </div>
-              ):null)}
-            </div>
-          </div>
-        );
-        const AbilityEditor=({raceId,accent,label,note})=>{
-          const abilities=raceAbilities[raceId]||[];
-          const updateAbility=(i,field,val)=>saveRaceAbilities({...raceAbilities,[raceId]:abilities.map((a,j)=>j===i?{...a,[field]:val}:a)});
-          const addAbility=()=>{if(abilities.length>=10)return;saveRaceAbilities({...raceAbilities,[raceId]:[...abilities,{name:"",desc:""}]});};
-          const removeAbility=(i)=>saveRaceAbilities({...raceAbilities,[raceId]:abilities.filter((_,j)=>j!==i)});
-          return(
-            <div style={{background:`${accent}06`,border:`1px solid ${accent}28`,borderRadius:10,marginBottom:20,overflow:"hidden"}}>
-              <div style={{padding:"10px 16px",borderBottom:`1px solid ${accent}18`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                <div style={{display:"flex",alignItems:"center",gap:10}}>
-                  <span style={{fontSize:10,letterSpacing:"0.18em",textTransform:"uppercase",color:accent,fontFamily:"var(--font-mono)",fontWeight:"bold"}}>{label}</span>
-                  <span style={{fontSize:10,color:"var(--text4)",fontFamily:"var(--font-mono)"}}>Inherent Abilities · {abilities.length}/10</span>
-                  {note&&<span style={{fontSize:9.5,color:`${accent}88`,fontStyle:"italic"}}>{note}</span>}
-                </div>
-                {abilities.length<10&&<button onClick={addAbility} style={{fontSize:10,padding:"3px 10px",background:`${accent}18`,border:`1px solid ${accent}44`,borderRadius:6,cursor:"pointer",color:accent,fontFamily:"var(--font-mono)"}}>+ Add</button>}
-              </div>
-              <div style={{padding:"12px 16px"}}>
-                {abilities.length===0&&<div style={{fontSize:11,color:"var(--text4)",fontStyle:"italic",padding:"4px 0"}}>No inherent abilities defined — add up to 10 racial defaults. Heroes with this race will inherit them based on their bloodline purity.</div>}
-                {abilities.map((a,i)=>(
-                  <div key={i} style={{display:"grid",gridTemplateColumns:"18px 150px 1fr auto",gap:8,marginBottom:8,alignItems:"center"}}>
-                    <span style={{fontSize:10,color:`${accent}66`,fontFamily:"var(--font-mono)",textAlign:"right"}}>{i+1}</span>
-                    <input type="text" placeholder="Ability name" value={a.name} onChange={e=>updateAbility(i,"name",e.target.value)}
-                      style={{padding:"6px 8px",background:"var(--bg2)",border:`1px solid ${accent}30`,borderRadius:6,color:"var(--text-primary)",fontSize:11,fontFamily:"var(--font-mono)"}}/>
-                    <input type="text" placeholder="Short description" value={a.desc} onChange={e=>updateAbility(i,"desc",e.target.value)}
-                      style={{padding:"6px 8px",background:"var(--bg2)",border:`1px solid ${accent}30`,borderRadius:6,color:"var(--text-primary)",fontSize:11}}/>
-                    <button onClick={()=>removeAbility(i)} style={{fontSize:13,padding:"3px 8px",background:"rgba(163,45,45,0.08)",border:"1px solid rgba(163,45,45,0.22)",borderRadius:6,cursor:"pointer",color:"#e74c3c",lineHeight:1}}>×</button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          );
-        };
         const {zyrenian,auranthi,dravosi}=RACE_TREE.alien.subs.reduce((a,s)=>({...a,[s.id]:s}),{});
         const agene=RACE_TREE.mutate.subs.find(s=>s.id==="a_gene_mutate");
         const otherRaces=Object.entries(RACE_TREE).flatMap(([main,branch])=>
@@ -4465,7 +4489,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
               ["Average Lifespan",auranthi?.codex?.lifespan],
               ["In This Universe",auranthi?.codex?.note],
             ]}/>
-          <AbilityEditor raceId="auranthi" accent="#D4A020" label="AURANTHI" note="Apex bloodline — all abilities pass down to Dravosi (50%) and Zyrenian (25%)"/>
+          <AbilityEditor raceId="auranthi" accent="#D4A020" label="AURANTHI" note="Apex bloodline — all abilities pass down to Dravosi (50%) and Zyrenian (25%)" raceAbilities={raceAbilities} saveRaceAbilities={saveRaceAbilities}/>
 
           <CodexCard title="DRAVOSI" accent="#5A5AE0" tagline="They are not cruel. They are orderly. That distinction makes them more dangerous."
             sections={[
@@ -4477,7 +4501,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
               ["Average Lifespan",dravosi?.codex?.lifespan],
               ["In This Universe",dravosi?.codex?.note],
             ]}/>
-          <AbilityEditor raceId="dravosi" accent="#5A5AE0" label="DRAVOSI" note="50% Auranthi blood — also inherits half of Auranthi defaults"/>
+          <AbilityEditor raceId="dravosi" accent="#5A5AE0" label="DRAVOSI" note="50% Auranthi blood — also inherits half of Auranthi defaults" raceAbilities={raceAbilities} saveRaceAbilities={saveRaceAbilities}/>
 
           <CodexCard title="ZYRENIAN" accent="#B04A1A" tagline="War is not what they do. War is what they are."
             sections={[
@@ -4489,7 +4513,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
               ["Average Lifespan",zyrenian?.codex?.lifespan],
               ["In This Universe",zyrenian?.codex?.note],
             ]}/>
-          <AbilityEditor raceId="zyrenian" accent="#B04A1A" label="ZYRENIAN" note="25% Auranthi blood — also inherits 2 of 10 Auranthi defaults"/>
+          <AbilityEditor raceId="zyrenian" accent="#B04A1A" label="ZYRENIAN" note="25% Auranthi blood — also inherits 2 of 10 Auranthi defaults" raceAbilities={raceAbilities} saveRaceAbilities={saveRaceAbilities}/>
 
           <div style={{fontSize:11,letterSpacing:"0.18em",textTransform:"uppercase",color:`${G}66`,fontFamily:"var(--font-mono)",marginBottom:12,paddingBottom:6,borderBottom:"1px solid var(--border)",marginTop:8}}>— Species Power Index —</div>
 
@@ -4596,12 +4620,12 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
               ["Discovery & the Nexus Foundation",agene?.codex?.discovery],
               ["What It Means",agene?.codex?.note],
             ]}/>
-          <AbilityEditor raceId="a_gene_mutate" accent="#0F9E75" label="A-GENE MUTATION" note="No Auranthi bloodline — abilities are purely this gene's baseline expression"/>
+          <AbilityEditor raceId="a_gene_mutate" accent="#0F9E75" label="A-GENE MUTATION" note="No Auranthi bloodline — abilities are purely this gene's baseline expression" raceAbilities={raceAbilities} saveRaceAbilities={saveRaceAbilities}/>
 
           <div style={{fontSize:11,letterSpacing:"0.18em",textTransform:"uppercase",color:`${G}66`,fontFamily:"var(--font-mono)",marginBottom:12,paddingBottom:6,borderBottom:"1px solid var(--border)",marginTop:8}}>— Other Race Defaults —</div>
           <div style={{fontSize:11.5,color:"var(--text3)",marginBottom:16,lineHeight:1.6}}>Define inherent ability defaults for any other race. Heroes with matching race inherit these at full strength (no bloodline dilution).</div>
           {otherRaces.map(r=>(
-            <AbilityEditor key={r.id} raceId={r.id} accent={r.accent} label={r.label.toUpperCase()} note={r.lore?.split("—")[0]?.trim()||r.branchLabel}/>
+            <AbilityEditor key={r.id} raceId={r.id} accent={r.accent} label={r.label.toUpperCase()} note={r.lore?.split("—")[0]?.trim()||r.branchLabel} raceAbilities={raceAbilities} saveRaceAbilities={saveRaceAbilities}/>
           ))}
         </>);
       })()}
