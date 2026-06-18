@@ -23,6 +23,8 @@ import OllamaGuide from './components/OllamaGuide.jsx';
 import DeepLoreQuiz from './components/DeepLoreQuiz.jsx';
 import MetaAILauncher from './components/MetaAILauncher.jsx';
 import Tripo3DLauncher from './components/Tripo3DLauncher.jsx';
+import FireflyLauncher from './components/FireflyLauncher.jsx';
+import ImagePromptQuestionnaire from './components/ImagePromptQuestionnaire.jsx';
 import RemotePanel from './components/RemotePanel.jsx';
 import InspirationsField from './components/InspirationsField.jsx';
 
@@ -221,12 +223,13 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
   const[sLoading,setSLoading]=useState(false);const[sResult,setSResult]=useState(null);
   const[crossover,setCrossover]=useState(false);
   // ── Prompts ──────────────────────────────────────────────────────────────
-  const[pStyle,setPStyle]=useState("comic");
+  const[pStyle,setPStyle]=useState("photoreal"); // ultra-real by default unless the user picks another style
   const[pSubStyle,setPSubStyle]=useState("");
   const[pRealism,setPRealism]=useState(false);
   const[pPlatform,setPPlatform]=useState("meta-ai");
   const[pPose,setPPose]=useState("3/4");
   const[pSelected,setPSelected]=useState(null);
+  const[pQuestionnaire,setPQuestionnaire]=useState(null); // {kind:"hero"|"villain"|"solo", subject}
   const[pLoading,setPLoading]=useState(false);const[pResult,setPResult]=useState(null);const[sheetLoading,setSheetLoading]=useState(false);
   const[soloPromptResult,setSoloPromptResult]=useState(null);
   const[soloLocEdit,setSoloLocEdit]=useState({open:false,hometown:"",baseOfOps:""});
@@ -445,6 +448,17 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     const url=images[id];if(!url)return;
     fetch(url).then(r=>r.blob()).then(blob=>{const bUrl=URL.createObjectURL(blob);const a=document.createElement("a");a.href=bUrl;a.download=`${heroName.toLowerCase().replace(/\s+/g,"-")}.png`;document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(()=>URL.revokeObjectURL(bUrl),1000);}).catch(()=>{});
   },[images]);
+  // Vision analysis of an existing reference image — feeds visual details (hair,
+  // costume materials, accessories, pose) back into the image-prompt questionnaire.
+  const analyzeReferenceImage=useCallback(async(id,contextText)=>{
+    const res=await fetch(`/api/analyze-image/${encodeURIComponent(id)}`,{
+      method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({context:contextText||""}),
+    });
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok)throw new Error(data.error||`Analysis failed (${res.status})`);
+    return data.description||"";
+  },[]);
   const toggle=useCallback(id=>setExpanded(p=>({...p,[id]:!p[id]})),[]);
 
   const saveCharEdit=useCallback((id,data,teamId)=>{
@@ -1101,6 +1115,68 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     t=t.replace(/#[0-9A-Fa-f]{6}\b/g,m=>hexToColorName(m));
     return t;
   };
+  const cap=s=>s?s.charAt(0).toUpperCase()+s.slice(1):s;
+  // Extra safety measures for women and kids — image still gets generated, but
+  // costume language is steered away from sexualized/revealing descriptors and
+  // an explicit modesty directive is appended to the prompt for the platform.
+  const needsSafetyGuard=(gender,ageStageVal)=>gender==="Female"||ageStageVal==="child"||ageStageVal==="teen";
+  const SAFETY_TERM_SWAPS=[
+    [/skin-?tight|form-?fitting|tight-?fitting/gi,"structured athletic"],
+    [/curvy|curvaceous|voluptuous/gi,"athletic"],
+    [/reveal(?:ing|ed)?/gi,"sleek"],
+    [/expos(?:ed|ing)\s*(?:skin|midriff)?/gi,"covered"],
+    [/bare (?:legs|arms|shoulders|chest|midriff)/gi,"armored limbs"],
+    [/cleavage/gi,"chest plate"],
+    [/midriff/gi,"waistline"],
+    [/low-?cut/gi,"high-neck"],
+    [/lingerie|bikini|swimsuit/gi,"full-coverage suit"],
+    [/seductive|sexy|provocative|sultry/gi,"confident"],
+    [/thigh-?high (?:slit|cut)/gi,"tailored leg"],
+  ];
+  const applySafetyGuard=(text)=>{
+    if(!text)return text;
+    let t=text;
+    SAFETY_TERM_SWAPS.forEach(([re,rep])=>{t=t.replace(re,rep);});
+    return t;
+  };
+  const safetyNote=(gender,ageStageVal)=>{
+    if(ageStageVal==="child")return"child-appropriate design, fully covered modest costume, wholesome and non-sexualized, suitable for all audiences";
+    if(ageStageVal==="teen")return"teen-appropriate design, fully covered modest costume, non-sexualized, suitable for all audiences";
+    if(gender==="Female")return"modest, full-coverage costume design, non-sexualized, tasteful and empowering presentation";
+    return"";
+  };
+  // Per-platform visual-quality tail — keeps every prompt camera/lighting/detail
+  // oriented instead of drifting into narrative description.
+  const VISUAL_QUALITY={
+    "meta-ai":"Realistic render, full body head to toe, feet fully visible, wide shot with space below feet, no cropping, cinematic dramatic lighting, hero headquarters type background, highly detailed, increase resolution, enhanced quality",
+    "midjourney":"full body shot, feet fully visible, no cropping, cinematic dramatic lighting, intricate surface detail, sharp focus",
+    "dalle":"Full body shot from head to toe, feet fully visible, no cropping, cinematic dramatic lighting, highly detailed textures, sharp focus, plain uncluttered background",
+    "firefly":"Full-body shot from head to toe, feet fully visible, no cropping, cinematic studio lighting, highly detailed textures, sharp focus, clean uncluttered background, no text, no watermark, no logo",
+  };
+  const VISUAL_QUALITY_VILLAIN={
+    ...VISUAL_QUALITY,
+    "meta-ai":"Realistic render, full body head to toe, feet fully visible, wide shot with space below feet, no cropping, cinematic dramatic lighting, world domination lair type background, highly detailed, increase resolution, enhanced quality",
+  };
+  // Builds the platform-specific prompt string. Centralizes Midjourney/DALL-E/
+  // Meta AI/Firefly syntax differences so every caller stays optimized per-generator.
+  const buildPlatformPrompt=({platform,subjectLabel,ph,poseText,costume,fxNote,pal,style,hasRef,refPfx,visualQ,note})=>{
+    const phStripped=ph?ph.replace(/^(?:teen |child |young adult )?(?:male|female|person) /i,""):"";
+    const noteTag=note?cap(note):"";
+    if(platform==="midjourney"){
+      const ref=hasRef?" --cref [upload reference image]":"";
+      return`${subjectLabel}, ${ph}, ${poseText}. ${costume}${fxNote}, ${pal}, plain background, ${style}, ${visualQ}${note?", "+note:""} --ar 2:3 --v 6.1${ref}`;
+    }
+    if(platform==="dalle"){
+      return`${refPfx}${ph}, ${poseText}. ${costume}${fxNote}. ${pal}. Plain clean background. ${style}. ${cap(visualQ)}.${noteTag?" "+noteTag+".":""}`;
+    }
+    if(platform==="firefly"){
+      return`${refPfx}${ph}, ${poseText}. ${costume}${fxNote}. ${pal}. Plain clean background. ${style}. ${cap(visualQ)}.${noteTag?" "+noteTag+".":""}`;
+    }
+    // meta-ai
+    return hasRef
+      ?`Using this reference for face and likeness, transform into a person with ${phStripped}, ${poseText}. ${costume}${fxNote}, ${pal}. ${style}. ${visualQ}.${noteTag?" "+noteTag+".":""}`
+      :`A ${ph}, ${poseText}. ${costume}${fxNote}, ${pal}. ${style}. ${visualQ}.${noteTag?" "+noteTag+".":""}`;
+  };
   // Auranthi bloodline fractions — how much Auranthi blood each alien species carries
   const AURANTHI_FRACTION={auranthi:1.0,dravosi:0.5,zyrenian:0.25};
 
@@ -1156,133 +1232,121 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     return`dominant ${names[0]} with accent colors of ${names[1]}${names[2]?" and "+names[2]:""}`;
   };
 
-  const generateCharPrompt=(member)=>{
+  const generateCharPrompt=(member,overrides)=>{
     setPSelected(member.id);setPLoading(true);setPResult(null);
+    const subj={...member,...overrides};
     const style=artStyleText(pStyle,pSubStyle,pRealism)||"character concept art, vibrant colors";
     const hasRef=images[member.id];
     const refPfx=hasRef?"Based on reference image, same face and build. ":"";
-    const costume=sanitizeDesc(member.costumeDesc||(hexToColorName(member.color)+" suit"));
-    const fxNote=member.powerFX?`, subtle ${sanitizeDesc(member.powerFX)} accent`:"";
-    const ph=physique(member.gender,member.age);
-    const pal=palDesc(member);
+    const visualAge=subj.appearanceAge||subj.age; // image render + safety follow how they LOOK, not lore age
+    const ageStageVal=ageStage(visualAge);
+    const guard=needsSafetyGuard(subj.gender,ageStageVal);
+    let costume=sanitizeDesc(subj.costumeDesc||(hexToColorName(subj.color)+" suit"));
+    if(overrides?.designNotes)costume=`${costume}, ${sanitizeDesc(overrides.designNotes)}`;
+    if(guard)costume=applySafetyGuard(costume);
+    const fxNote=subj.powerFX?`, subtle ${sanitizeDesc(subj.powerFX)} accent`:"";
+    const ph=physique(subj.gender,visualAge);
+    const pal=palDesc(subj);
     const poseText=POSE_OPTIONS.find(p=>p.id===pPose)?.hero||POSE_OPTIONS[0].hero;
-    let metaAI,tripo3D;
-    const metaQuality="Realistic render, full body head to toe, feet fully visible, wide shot with space below feet, no cropping, cinematic dramatic lighting, hero headquarters type background, highly detailed, increase resolution, enhanced quality";
-    const phStripped=ph.replace(/^(?:teen |child |young adult )?(?:male|female|person) /i,"");
-    if(pPlatform==="midjourney"){
-      const ref=hasRef?" --cref [upload reference image]":"";
-      metaAI=`${member.heroName}, ${ph}, ${poseText}. ${costume}${fxNote}, ${pal}, plain background, ${style} --ar 2:3 --v 6.1${ref}`;
-    } else if(pPlatform==="dalle"){
-      metaAI=`${refPfx}${ph}, ${poseText}. ${costume}${fxNote}. ${pal}. Plain clean background. ${style}.`;
-    } else {
-      metaAI=hasRef
-        ?`Using this reference for face and likeness, transform into a person with ${phStripped}, ${poseText}. ${costume}${fxNote}, ${pal}. ${style}. ${metaQuality}.`
-        :`A ${ph}, ${poseText}. ${costume}${fxNote}, ${pal}. ${style}. ${metaQuality}.`;
-    }
-    tripo3D=`Full-body 3D character model of ${member.heroName}, ${ph}, ${costume}, neutral A-pose, ${pal}, separate color regions for FDM printing, watertight mesh.`;
+    const note=guard?safetyNote(subj.gender,ageStageVal):"";
+    const metaAI=buildPlatformPrompt({platform:pPlatform,subjectLabel:member.heroName,ph,poseText,costume,fxNote,pal,style,hasRef,refPfx,visualQ:VISUAL_QUALITY[pPlatform],note});
+    const tripo3D=`Full-body 3D character model of ${member.heroName}, ${ph}, ${costume}, neutral A-pose, ${pal}, separate color regions for FDM printing, watertight mesh.`;
     setPResult({member,metaAI,tripo3D,platform:pPlatform});
     setPLoading(false);
   };
 
-  const generateSoloImagePrompt=(hero,overridePlatform)=>{
+  const generateSoloImagePrompt=(hero,overridePlatform,overrides)=>{
     const plat=overridePlatform||pPlatform;
     if(overridePlatform){setPPlatform(overridePlatform);persist("forge-prompt-platform",overridePlatform);}
+    const subj={...hero,...overrides};
     const style=artStyleText(pStyle,pSubStyle,pRealism)||"character concept art, vibrant colors";
     const hasRef=images[hero.id];
     const refPfx=hasRef?"Based on reference image, same face and build. ":"";
-    const costume=sanitizeDesc(hero.costumeDesc||(hexToColorName(hero.color)+" suit"));
-    const fxNote=hero.powerFX?`, subtle ${sanitizeDesc(hero.powerFX)} accent`:"";
-    const ph=physique(hero.gender,hero.age);
-    const pal=palDesc(hero);
+    const visualAge=subj.appearanceAge||subj.age; // image render + safety follow how they LOOK, not lore age
+    const ageStageVal=ageStage(visualAge);
+    const guard=needsSafetyGuard(subj.gender,ageStageVal);
+    let costume=sanitizeDesc(subj.costumeDesc||(hexToColorName(subj.color)+" suit"));
+    if(overrides?.designNotes)costume=`${costume}, ${sanitizeDesc(overrides.designNotes)}`;
+    if(guard)costume=applySafetyGuard(costume);
+    const fxNote=subj.powerFX?`, subtle ${sanitizeDesc(subj.powerFX)} accent`:"";
+    const ph=physique(subj.gender,visualAge);
+    const pal=palDesc(subj);
     const poseText=POSE_OPTIONS.find(p=>p.id===pPose)?.hero||POSE_OPTIONS[0].hero;
-    let metaAI,tripo3D;
-    const metaQuality="Realistic render, full body head to toe, feet fully visible, wide shot with space below feet, no cropping, cinematic dramatic lighting, hero headquarters type background, highly detailed, increase resolution, enhanced quality";
-    const phStripped=ph.replace(/^(?:teen |child |young adult )?(?:male|female|person) /i,"");
-    if(plat==="midjourney"){
-      const ref=hasRef?" --cref [upload reference image]":"";
-      metaAI=`${hero.heroName}, ${ph}, ${poseText}. ${costume}${fxNote}, ${pal}, plain background, ${style} --ar 2:3 --v 6.1${ref}`;
-    } else if(plat==="dalle"){
-      metaAI=`${refPfx}${ph}, ${poseText}. ${costume}${fxNote}. ${pal}. Plain clean background. ${style}.`;
-    } else {
-      metaAI=hasRef
-        ?`Using this reference for face and likeness, transform into a person with ${phStripped}, ${poseText}. ${costume}${fxNote}, ${pal}. ${style}. ${metaQuality}.`
-        :`A ${ph}, ${poseText}. ${costume}${fxNote}, ${pal}. ${style}. ${metaQuality}.`;
-    }
-    tripo3D=`Full-body 3D character model of ${hero.heroName}, ${ph}, ${costume}, neutral A-pose, ${pal}, separate color regions for FDM printing, watertight mesh.`;
+    const note=guard?safetyNote(subj.gender,ageStageVal):"";
+    const metaAI=buildPlatformPrompt({platform:plat,subjectLabel:hero.heroName,ph,poseText,costume,fxNote,pal,style,hasRef,refPfx,visualQ:VISUAL_QUALITY[plat],note});
+    const tripo3D=`Full-body 3D character model of ${hero.heroName}, ${ph}, ${costume}, neutral A-pose, ${pal}, separate color regions for FDM printing, watertight mesh.`;
     setSoloPromptResult({hero,metaAI,tripo3D,platform:plat});
   };
 
-  const generateVillainPrompt=(villain)=>{
+  const generateVillainPrompt=(villain,overrides)=>{
     setPSelected(villain.id);setPLoading(true);setPResult(null);
+    const subj={...villain,...overrides};
     const style=artStyleText(pStyle,pSubStyle,pRealism)||"character concept art, dramatic lighting";
     const hasRef=images[villain.id];
     const refPfx=hasRef?"Based on reference image, same face and build. ":"";
-    const costume=sanitizeDesc(villain.costumeDesc||"dark tailored suit with imposing silhouette");
-    const fxNote=villain.powerFX?`, subtle ${sanitizeDesc(villain.powerFX)} effect`:"";
-    const ph=physique(villain.gender,villain.age);
-    const pal=palDesc(villain);
+    const visualAge=subj.appearanceAge||subj.age; // image render + safety follow how they LOOK, not lore age
+    const ageStageVal=ageStage(visualAge);
+    const guard=needsSafetyGuard(subj.gender,ageStageVal);
+    let costume=sanitizeDesc(subj.costumeDesc||"dark tailored suit with imposing silhouette");
+    if(overrides?.designNotes)costume=`${costume}, ${sanitizeDesc(overrides.designNotes)}`;
+    if(guard)costume=applySafetyGuard(costume);
+    const fxNote=subj.powerFX?`, subtle ${sanitizeDesc(subj.powerFX)} effect`:"";
+    const ph=physique(subj.gender,visualAge);
+    const pal=palDesc(subj);
     const poseText=POSE_OPTIONS.find(p=>p.id===pPose)?.villain||POSE_OPTIONS[0].villain;
-    let metaAI,tripo3D;
-    const metaQuality="Realistic render, full body head to toe, feet fully visible, wide shot with space below feet, no cropping, cinematic dramatic lighting, world domination lair type background, highly detailed, increase resolution, enhanced quality";
-    const phStripped=ph.replace(/^(?:teen |child |young adult )?(?:male|female|person) /i,"");
-    if(pPlatform==="midjourney"){
-      const ref=hasRef?" --cref [upload reference image]":"";
-      metaAI=`${villain.heroName}, ${ph}, ${poseText}. ${costume}${fxNote}, ${pal}, plain background, ${style} --ar 2:3 --v 6.1${ref}`;
-    } else if(pPlatform==="dalle"){
-      metaAI=`${refPfx}${ph}, ${poseText}. ${costume}${fxNote}. ${pal}. Plain clean background. ${style}.`;
-    } else {
-      metaAI=hasRef
-        ?`Using this reference for face and likeness, transform into a person with ${phStripped}, ${poseText}. ${costume}${fxNote}, ${pal}. ${style}. ${metaQuality}.`
-        :`A ${ph}, ${poseText}. ${costume}${fxNote}, ${pal}. ${style}. ${metaQuality}.`;
-    }
-    tripo3D=`Full-body 3D character model of ${villain.heroName}, ${ph}, ${costume}, neutral A-pose, ${pal}, separate color regions for FDM printing, watertight mesh.`;
+    const note=guard?safetyNote(subj.gender,ageStageVal):"";
+    const metaAI=buildPlatformPrompt({platform:pPlatform,subjectLabel:villain.heroName,ph,poseText,costume,fxNote,pal,style,hasRef,refPfx,visualQ:VISUAL_QUALITY_VILLAIN[pPlatform],note});
+    const tripo3D=`Full-body 3D character model of ${villain.heroName}, ${ph}, ${costume}, neutral A-pose, ${pal}, separate color regions for FDM printing, watertight mesh.`;
     setPResult({member:villain,isVillain:true,metaAI,tripo3D,platform:pPlatform});
     setPLoading(false);
   };
 
-  const generateVillainPromptInline=(villain,overridePlatform,overrideStyle,overridePose)=>{
+  const generateVillainPromptInline=(villain,overridePlatform,overrideStyle,overridePose,overrides)=>{
     const plat=overridePlatform||pPlatform;
     const styleText=artStyleText(overrideStyle||pStyle,pSubStyle,pRealism)||"character concept art, dramatic lighting";
     const activePose=overridePose||pPose;
     if(overridePlatform){setPPlatform(overridePlatform);persist("forge-prompt-platform",overridePlatform);}
     if(overrideStyle){setPStyle(overrideStyle);persist("forge-prompt-style",overrideStyle);}
     if(overridePose){setPPose(overridePose);}
+    const subj={...villain,...overrides};
     const hasRef=images[villain.id];
     const refPfx=hasRef?"Based on reference image, same face and build. ":"";
-    const costume=sanitizeDesc(villain.costumeDesc||"dark tailored suit with imposing silhouette");
-    const fxNote=villain.powerFX?`, subtle ${sanitizeDesc(villain.powerFX)} effect`:"";
-    const ph=physique(villain.gender,villain.age);
-    const pal=palDesc(villain);
+    const visualAge=subj.appearanceAge||subj.age; // image render + safety follow how they LOOK, not lore age
+    const ageStageVal=ageStage(visualAge);
+    const guard=needsSafetyGuard(subj.gender,ageStageVal);
+    let costume=sanitizeDesc(subj.costumeDesc||"dark tailored suit with imposing silhouette");
+    if(overrides?.designNotes)costume=`${costume}, ${sanitizeDesc(overrides.designNotes)}`;
+    if(guard)costume=applySafetyGuard(costume);
+    const fxNote=subj.powerFX?`, subtle ${sanitizeDesc(subj.powerFX)} effect`:"";
+    const ph=physique(subj.gender,visualAge);
+    const pal=palDesc(subj);
     const poseText=POSE_OPTIONS.find(p=>p.id===activePose)?.villain||POSE_OPTIONS[0].villain;
-    let metaAI,tripo3D;
-    const metaQuality="Realistic render, full body head to toe, feet fully visible, wide shot with space below feet, no cropping, cinematic dramatic lighting, world domination lair type background, highly detailed, increase resolution, enhanced quality";
-    const phStripped=ph.replace(/^(?:teen |child |young adult )?(?:male|female|person) /i,"");
-    if(plat==="midjourney"){
-      const ref=hasRef?" --cref [upload reference image]":"";
-      metaAI=`${villain.heroName}, ${ph}, ${poseText}. ${costume}${fxNote}, ${pal}, plain background, ${styleText} --ar 2:3 --v 6.1${ref}`;
-    } else if(plat==="dalle"){
-      metaAI=`${refPfx}${ph}, ${poseText}. ${costume}${fxNote}. ${pal}. Plain clean background. ${styleText}.`;
-    } else {
-      metaAI=hasRef
-        ?`Using this reference for face and likeness, transform into a person with ${phStripped}, ${poseText}. ${costume}${fxNote}, ${pal}. ${styleText}. ${metaQuality}.`
-        :`A ${ph}, ${poseText}. ${costume}${fxNote}, ${pal}. ${styleText}. ${metaQuality}.`;
-    }
-    tripo3D=`Full-body 3D character model of ${villain.heroName}, ${ph}, ${costume}, neutral A-pose, ${pal}, separate color regions for FDM printing, watertight mesh.`;
+    const note=guard?safetyNote(subj.gender,ageStageVal):"";
+    const metaAI=buildPlatformPrompt({platform:plat,subjectLabel:villain.heroName,ph,poseText,costume,fxNote,pal,style:styleText,hasRef,refPfx,visualQ:VISUAL_QUALITY_VILLAIN[plat],note});
+    const tripo3D=`Full-body 3D character model of ${villain.heroName}, ${ph}, ${costume}, neutral A-pose, ${pal}, separate color regions for FDM printing, watertight mesh.`;
     setVInlinePrompt({villainId:villain.id,metaAI,tripo3D,platform:plat,styleId:overrideStyle||pStyle,poseId:overridePose||pPose});
   };
 
+  // Per-member costume text, safety-guarded individually before joining into the group/duo prompt.
+  const memberCostumeText=(m)=>{
+    const guard=needsSafetyGuard(m.gender,ageStage(m.age));
+    const c=sanitizeDesc(m.costumeDesc||"superhero suit");
+    return guard?applySafetyGuard(c):c;
+  };
   const generateGroupPrompt=()=>{
     setPSelected("group");setPLoading(true);setPResult(null);
     const style=artStyleText(pStyle,pSubStyle,pRealism)||"comic book art style, vibrant colors";
     const hasRef=activeRoster.some(m=>images[m.id]);
-    const charList=activeRoster.map(m=>`${m.heroName} in ${hexToColorName(m.color)} ${m.costumeDesc||"superhero suit"}`).join(", ");
+    const charList=activeRoster.map(m=>`${m.heroName} in ${hexToColorName(m.color)} ${memberCostumeText(m)}`).join(", ");
+    const groupNote=activeRoster.some(m=>needsSafetyGuard(m.gender,ageStage(m.age)))?"modest, full-coverage costume designs throughout, non-sexualized, family-friendly presentation":"";
+    const visualQ=VISUAL_QUALITY[pPlatform]||VISUAL_QUALITY["meta-ai"];
     let metaAI;
     if(pPlatform==="midjourney"){
       const chars=activeRoster.map(m=>`${m.heroName} (${hexToColorName(m.color)} suit)`).join(", ");
-      metaAI=`${activeTeam.name} hero team: ${chars}, group shot, all heroes fully visible, dynamic poses, ${style} --ar 16:9 --v 6.1`;
+      metaAI=`${activeTeam.name} hero team: ${chars}, group shot, all heroes fully visible, dynamic poses, ${style}, ${visualQ}${groupNote?", "+groupNote:""} --ar 16:9 --v 6.1`;
     } else {
       const ref=hasRef?"Based on uploaded character reference sheet, same faces and costumes. ":"";
-      metaAI=`${ref}${activeTeam.name} hero team: ${charList}. All ${activeRoster.length} heroes together in a group portrait, everyone fully visible. ${style}.`;
+      metaAI=`${ref}${activeTeam.name} hero team: ${charList}. All ${activeRoster.length} heroes together in a group portrait, everyone fully visible. ${style}. ${cap(visualQ)}.${groupNote?" "+cap(groupNote)+".":""}`;
     }
     setPResult({group:true,teamName:activeTeam.name,metaAI,platform:pPlatform});
     setPLoading(false);
@@ -1294,12 +1358,15 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     setPSelected("duo");setPLoading(true);setPResult(null);
     const style=artStyleText(pStyle,pSubStyle,pRealism)||"comic book art style, vibrant colors";
     const cnA=hexToColorName(a.color),cnB=hexToColorName(b.color);
+    const costA=memberCostumeText(a),costB=memberCostumeText(b);
+    const duoNote=[a,b].some(m=>needsSafetyGuard(m.gender,ageStage(m.age)))?"modest, full-coverage costume designs, non-sexualized, family-friendly presentation":"";
+    const visualQ=VISUAL_QUALITY[pPlatform]||VISUAL_QUALITY["meta-ai"];
     let metaAI;
     if(pPlatform==="midjourney"){
-      metaAI=`${a.heroName} and ${b.heroName} duo shot, [LEFT] ${a.heroName} in ${cnA} ${a.costumeDesc||"superhero suit"}, [RIGHT] ${b.heroName} in ${cnB} ${b.costumeDesc||"superhero suit"}, both fully visible, ${style} --ar 2:3 --v 6.1`;
+      metaAI=`${a.heroName} and ${b.heroName} duo shot, [LEFT] ${a.heroName} in ${cnA} ${costA}, [RIGHT] ${b.heroName} in ${cnB} ${costB}, both fully visible, ${style}, ${visualQ}${duoNote?", "+duoNote:""} --ar 2:3 --v 6.1`;
     } else {
       const ref=(images[a.id]||images[b.id])?"Based on uploaded reference images, same faces and costumes. ":"";
-      metaAI=`${ref}${a.heroName} in a ${cnA} ${a.costumeDesc||"superhero suit"} and ${b.heroName} in a ${cnB} ${b.costumeDesc||"superhero suit"}, side by side, both fully visible. ${style}.`;
+      metaAI=`${ref}${a.heroName} in a ${cnA} ${costA} and ${b.heroName} in a ${cnB} ${costB}, side by side, both fully visible. ${style}. ${cap(visualQ)}.${duoNote?" "+cap(duoNote)+".":""}`;
     }
     setPResult({duo:true,heroA:a,heroB:b,metaAI,platform:pPlatform});
     setPLoading(false);
@@ -1694,6 +1761,29 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
       </div>
     </div>}
 
+    {/* ── Image Prompt Questionnaire ──────────────────────────────────── */}
+    {pQuestionnaire&&(()=>{const subj=pQuestionnaire.subject;const isVillain=pQuestionnaire.kind==="villain";return(
+      <ImagePromptQuestionnaire
+        subjectLabel={subj.heroName}
+        accentColor={subj.color}
+        isVillain={isVillain}
+        initialGender={subj.gender||""}
+        initialAge={subj.age||""}
+        initialAppearanceAge={subj.age||""}
+        initialCostume={subj.costumeDesc||""}
+        initialNotes=""
+        hasImage={!!images[subj.id]}
+        onAnalyzeImage={()=>analyzeReferenceImage(subj.id,`${subj.heroName||""} — ${subj.costumeDesc||subj.role||subj.tagline||""}`)}
+        onCancel={()=>setPQuestionnaire(null)}
+        onSubmit={(draft)=>{
+          const overrides={gender:draft.gender,age:draft.age,appearanceAge:draft.appearanceAge,costumeDesc:draft.costumeDesc,designNotes:draft.designNotes};
+          if(pQuestionnaire.kind==="hero")generateCharPrompt(subj,overrides);
+          else if(pQuestionnaire.kind==="villain")generateVillainPrompt(subj,overrides);
+          else if(pQuestionnaire.kind==="solo")generateSoloImagePrompt(subj,undefined,overrides);
+          setPQuestionnaire(null);
+        }}
+      />
+    );})()}
 
 <div className="fmain" style={{padding:"28px 26px",maxWidth:960,margin:"0 auto"}}>
       {ollamaOk===false&&<OllamaGuide/>}
@@ -2098,12 +2188,12 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
         <div style={{...s.card,marginBottom:14}}>
           <span style={s.lbl}>Image Platform</span>
           <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-            {[["meta-ai","Meta AI"],["midjourney","Midjourney"],["dalle","DALL-E 3"]].map(([id,label])=>(
+            {[["meta-ai","Meta AI"],["midjourney","Midjourney"],["dalle","DALL-E 3"],["firefly","Adobe Firefly"]].map(([id,label])=>(
               <button key={id} onClick={()=>{setPPlatform(id);persist("forge-prompt-platform",id);setPResult(null);}} style={s.chip(pPlatform===id)}>{label}</button>
             ))}
           </div>
           <div style={{fontSize:10,color:"var(--text3)",marginTop:7}}>
-            {pPlatform==="midjourney"?"Paste into Discord /imagine — best quality for detailed characters. Optimal for Midjourney v6.":pPlatform==="dalle"?"Works in ChatGPT (DALL-E 3) — excellent at following detailed descriptions. Requires ChatGPT Plus.":"Paste into Meta AI Imagine — best with reference image uploaded alongside the prompt."}
+            {pPlatform==="midjourney"?"Paste into Discord /imagine — best quality for detailed characters. Optimal for Midjourney v6.":pPlatform==="dalle"?"Works in ChatGPT (DALL-E 3) — excellent at following detailed descriptions. Requires ChatGPT Plus.":pPlatform==="firefly"?"Works at firefly.adobe.com — Adobe's commercially-safe generator with strong built-in content filtering.":"Paste into Meta AI Imagine — best with reference image uploaded alongside the prompt."}
           </div>
         </div>
         {/* Meta AI account toggle — only relevant for Meta AI platform */}
@@ -2121,10 +2211,11 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
               {(pStyle==="comic"?COMIC_SUB_STYLES:ANIME_SUB_STYLES).map(sub=><button key={sub.id} style={s.chip(pSubStyle===sub.id)} onClick={()=>setPSubStyle(sub.id)}>{sub.label}</button>)}
             </div>
           </div>}
-          <label style={{display:"flex",alignItems:"center",gap:6,fontSize:10.5,color:pRealism?"#5DCAA5":"var(--text3)",cursor:"pointer",fontFamily:"var(--font-mono)",marginTop:12}}>
+          {pStyle!=="photoreal"&&<label style={{display:"flex",alignItems:"center",gap:6,fontSize:10.5,color:pRealism?"#5DCAA5":"var(--text3)",cursor:"pointer",fontFamily:"var(--font-mono)",marginTop:12}}>
             <input type="checkbox" checked={pRealism} onChange={e=>setPRealism(e.target.checked)} style={{cursor:"pointer"}}/>
             📷 Maximize Realism — push toward photographic detail on top of the chosen style
-          </label>
+          </label>}
+          {pStyle==="photoreal"&&<div style={{fontSize:10.5,color:"#5DCAA5",marginTop:12,fontFamily:"var(--font-mono)"}}>📷 Ultra-real mode — ON by default. Pick another style above for stylized art.</div>}
         </div>
         <div style={{...s.card,marginBottom:16}}>
           <span style={s.lbl}>Pose</span>
@@ -2132,7 +2223,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
         </div>
         {activeRoster.length===0&&<div style={{textAlign:"center",padding:"30px",color:"var(--text3)"}}>No members on {activeTeam.name} yet. Add some via Recruit first.</div>}
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(190px,1fr))",gap:10,marginBottom:14}}>
-          {activeRoster.map(m=>(<div key={m.id} onClick={()=>generateCharPrompt(m)} style={{background:pSelected===m.id?`${m.color}12`:"var(--bg3)",border:`1px solid ${pSelected===m.id?m.color+"55":"rgba(255,255,255,0.06)"}`,borderRadius:10,padding:"14px 16px",cursor:"pointer"}}>
+          {activeRoster.map(m=>(<div key={m.id} onClick={()=>setPQuestionnaire({kind:"hero",subject:m})} style={{background:pSelected===m.id?`${m.color}12`:"var(--bg3)",border:`1px solid ${pSelected===m.id?m.color+"55":"rgba(255,255,255,0.06)"}`,borderRadius:10,padding:"14px 16px",cursor:"pointer"}}>
             <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
               {images[m.id]?<div style={{position:"relative",flexShrink:0}}><img src={images[m.id]} alt="" style={{width:30,height:30,borderRadius:"50%",objectFit:"cover",objectPosition:"top"}}/><div style={{position:"absolute",bottom:-1,right:-1,width:10,height:10,background:"#0F6E56",borderRadius:"50%",border:"1px solid #09090F",display:"flex",alignItems:"center",justifyContent:"center",fontSize:7,color:"#fff"}}>✓</div></div>:<div style={{width:30,height:30,borderRadius:"50%",background:`${m.color}16`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:"bold",color:m.color,flexShrink:0}}>{m.initials}</div>}
               <div><div style={{fontSize:13,fontWeight:"bold",color:"var(--text-primary)"}}>{m.heroName}</div><div style={{fontSize:10,color:m.color}}>{m.realName}</div></div>
@@ -2150,7 +2241,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
           </div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(190px,1fr))",gap:10,marginBottom:14}}>
             {villainPool.map(v=>(
-              <div key={v.id} onClick={()=>generateVillainPrompt(v)} style={{background:pSelected===v.id?"rgba(139,26,26,0.12)":"rgba(139,26,26,0.05)",border:`1px solid ${pSelected===v.id?"rgba(224,112,112,0.4)":"rgba(139,26,26,0.25)"}`,borderRadius:10,padding:"14px 16px",cursor:"pointer",transition:"all 0.15s"}}>
+              <div key={v.id} onClick={()=>setPQuestionnaire({kind:"villain",subject:v})} style={{background:pSelected===v.id?"rgba(139,26,26,0.12)":"rgba(139,26,26,0.05)",border:`1px solid ${pSelected===v.id?"rgba(224,112,112,0.4)":"rgba(139,26,26,0.25)"}`,borderRadius:10,padding:"14px 16px",cursor:"pointer",transition:"all 0.15s"}}>
                 <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
                   {images[v.id]
                     ?<div style={{position:"relative",flexShrink:0}}><img src={images[v.id]} alt="" style={{width:30,height:30,borderRadius:"50%",objectFit:"cover",objectPosition:"top"}}/></div>
@@ -2185,7 +2276,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
         {pResult&&!pResult.error&&(<div ref={pResultRef} style={{...s.card,marginTop:16}}>
           <div style={{fontSize:13,fontWeight:"bold",color:pResult.group||pResult.duo?G:pResult.isVillain?"#E07070":pResult.member?.color||G,marginBottom:10}}>{pResult.group?`Group Shot — ${pResult.teamName||activeTeam.name}`:pResult.duo?`Duo Shot — ${pResult.heroA?.heroName} + ${pResult.heroB?.heroName}`:pResult.isVillain?`${pResult.member?.heroName} · Villain Portrait`:`${pResult.member?.heroName} · Image Prompts`}</div>
           {pResult.metaAI&&<>
-            <span style={s.lbl}>{(pResult.platform||pPlatform)==="midjourney"?"Midjourney /imagine Prompt":(pResult.platform||pPlatform)==="dalle"?"DALL-E 3 Prompt":"Meta AI Image Prompt"}</span>
+            <span style={s.lbl}>{(pResult.platform||pPlatform)==="midjourney"?"Midjourney /imagine Prompt":(pResult.platform||pPlatform)==="dalle"?"DALL-E 3 Prompt":(pResult.platform||pPlatform)==="firefly"?"Adobe Firefly Prompt":"Meta AI Image Prompt"}</span>
             <div style={s.pBox}>{pResult.metaAI}</div>
             {(pResult.platform||pPlatform)==="midjourney"?(
               <div style={{display:"flex",alignItems:"center",gap:8,marginTop:8,marginBottom:12}}>
@@ -2199,6 +2290,8 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                   <span style={{fontSize:13}}>✦</span> Copy & Open ChatGPT
                 </button>
               </div>
+            ):(pResult.platform||pPlatform)==="firefly"?(
+              <FireflyLauncher prompt={pResult.metaAI} copied={copied.pmeta} onCopy={()=>copy("pmeta",pResult.metaAI)}/>
             ):(
               hasMetaAI?<MetaAILauncher prompt={pResult.metaAI} label="Meta AI" copied={copied.pmeta} onCopy={()=>copy("pmeta",pResult.metaAI)}/>:<div style={{display:"flex",justifyContent:"flex-end",marginTop:6,marginBottom:12}}><button style={s.cpyBtn(copied.pmeta)} onClick={()=>copy("pmeta",pResult.metaAI)}>{copied.pmeta?"Copied!":"Copy"}</button></div>
             )}
@@ -2206,13 +2299,13 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
           {(pResult.group||pResult.duo)&&<div style={{marginTop:12}}>
             <button style={{...s.bigBtn(sheetLoading),background:sheetLoading?"var(--bg3)":"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.15)"}} onClick={()=>downloadTeamSheet(pResult.duo?[pResult.heroA,pResult.heroB]:undefined)} disabled={sheetLoading}>{sheetLoading?"Building reference sheet…":"📎 Download Reference Sheet"}</button>
             <div style={{fontSize:10,color:"var(--text3)",textAlign:"center",marginTop:6}}>
-              {(pResult.platform||pPlatform)==="midjourney"?"Use as reference with --cref [image-url] for character consistency":(pResult.platform||pPlatform)==="dalle"?"Upload alongside the prompt in ChatGPT for best accuracy":"Upload alongside the prompt in Meta AI for best accuracy"}
+              {(pResult.platform||pPlatform)==="midjourney"?"Use as reference with --cref [image-url] for character consistency":(pResult.platform||pPlatform)==="dalle"?"Upload alongside the prompt in ChatGPT for best accuracy":(pResult.platform||pPlatform)==="firefly"?"Upload alongside the prompt at firefly.adobe.com for best accuracy":"Upload alongside the prompt in Meta AI for best accuracy"}
             </div>
           </div>}
           {!pResult.group&&!pResult.duo&&pResult.member&&images[pResult.member.id]&&<div style={{marginTop:12}}>
             <button style={{...s.bigBtn(false),background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.15)"}} onClick={()=>downloadImg(pResult.member.id,pResult.member.heroName)}>📎 Download Reference Image</button>
             <div style={{fontSize:10,color:"var(--text3)",textAlign:"center",marginTop:6}}>
-              {(pResult.platform||pPlatform)==="midjourney"?"Use as reference with --cref [image-url] for character consistency":(pResult.platform||pPlatform)==="dalle"?"Upload alongside the prompt in ChatGPT for best accuracy":"Upload alongside the prompt in Meta AI for best accuracy"}
+              {(pResult.platform||pPlatform)==="midjourney"?"Use as reference with --cref [image-url] for character consistency":(pResult.platform||pPlatform)==="dalle"?"Upload alongside the prompt in ChatGPT for best accuracy":(pResult.platform||pPlatform)==="firefly"?"Upload alongside the prompt at firefly.adobe.com for best accuracy":"Upload alongside the prompt in Meta AI for best accuracy"}
             </div>
           </div>}
           {pResult.tripo3D&&<><span style={s.lbl}>Tripo3D Model Prompt</span><div style={s.pBox}>{pResult.tripo3D}</div><Tripo3DLauncher prompt={pResult.tripo3D} copied={copied.ptripo} onCopy={()=>copy("ptripo",pResult.tripo3D)}/></>}
@@ -2833,7 +2926,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                 {vInlinePrompt?.villainId===v.id&&(<div style={{borderTop:"1px solid rgba(139,26,26,0.2)",paddingTop:12,marginTop:4}}>
                   <div style={{fontSize:10,letterSpacing:"0.15em",color:"rgba(224,112,112,0.6)",textTransform:"uppercase",marginBottom:10}}>Image Prompt</div>
                   <div style={{display:"flex",gap:5,marginBottom:8,flexWrap:"wrap"}}>
-                    {[["meta-ai","Meta AI"],["midjourney","Midjourney"],["dalle","DALL-E"]].map(([id,label])=>(
+                    {[["meta-ai","Meta AI"],["midjourney","Midjourney"],["dalle","DALL-E"],["firefly","Firefly"]].map(([id,label])=>(
                       <button key={id} onClick={()=>generateVillainPromptInline(v,id,undefined)} style={{fontSize:10,padding:"3px 10px",background:(vInlinePrompt.platform||pPlatform)===id?"rgba(139,26,26,0.15)":"var(--bg3)",border:`1px solid ${(vInlinePrompt.platform||pPlatform)===id?"rgba(224,112,112,0.5)":"var(--border)"}`,borderRadius:20,cursor:"pointer",color:(vInlinePrompt.platform||pPlatform)===id?"#E07070":"var(--text3)",fontFamily:"var(--font-mono)"}}>{label}</button>
                     ))}
                   </div>
@@ -4726,7 +4819,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
               {images[hero.id]&&<button onClick={()=>downloadImg(hero.id,hero.heroName)} style={{padding:"6px 12px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:8,cursor:"pointer",color:"var(--text3)",fontSize:11,fontFamily:"var(--font-mono)"}}>⬇ Save Image</button>}
               <button onClick={()=>startHeroReforge(hero)} style={{padding:"6px 12px",background:"rgba(136,135,128,0.08)",border:"1px solid rgba(136,135,128,0.3)",borderRadius:8,cursor:"pointer",color:"var(--text2)",fontSize:11,fontFamily:"var(--font-mono)"}}>Reforge</button>
               <button onClick={()=>startSoloPowerReforge(hero)} style={{padding:"6px 12px",background:"rgba(245,197,66,0.08)",border:"1px solid rgba(245,197,66,0.3)",borderRadius:8,cursor:"pointer",color:"#F5C542",fontSize:11,fontFamily:"var(--font-mono)"}}>⚡ Powers</button>
-              <button onClick={()=>{setSoloPromptResult(null);generateSoloImagePrompt(hero);setSoloHeroView("profile");}} style={{padding:"6px 12px",background:"rgba(100,160,255,0.08)",border:"1px solid rgba(100,160,255,0.3)",borderRadius:8,cursor:"pointer",color:"#64A0FF",fontSize:11,fontFamily:"var(--font-mono)"}}>🎨 Image</button>
+              <button onClick={()=>{setSoloPromptResult(null);setPQuestionnaire({kind:"solo",subject:hero});setSoloHeroView("profile");}} style={{padding:"6px 12px",background:"rgba(100,160,255,0.08)",border:"1px solid rgba(100,160,255,0.3)",borderRadius:8,cursor:"pointer",color:"#64A0FF",fontSize:11,fontFamily:"var(--font-mono)"}}>🎨 Image</button>
               <button onClick={()=>requirePin(`Delete ${hero.heroName}`,()=>removeSoloHeroFn(hero.id))} style={{padding:"6px 12px",background:"rgba(163,45,45,0.08)",border:"1px solid rgba(163,45,45,0.25)",borderRadius:8,cursor:"pointer",color:"#e74c3c",fontSize:11,fontFamily:"var(--font-mono)"}}>Delete</button>
             </div>
           </div>
@@ -4778,11 +4871,11 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                     <button onClick={()=>setSoloPromptResult(null)} style={{background:"none",border:"none",cursor:"pointer",color:"var(--text4)",fontSize:15,lineHeight:1}}>×</button>
                   </div>
                   <div style={{display:"flex",gap:6,marginBottom:14}}>
-                    {[["meta-ai","Meta AI"],["midjourney","Midjourney"],["dalle","DALL-E 3"]].map(([id,label])=>(
+                    {[["meta-ai","Meta AI"],["midjourney","Midjourney"],["dalle","DALL-E 3"],["firefly","Adobe Firefly"]].map(([id,label])=>(
                       <button key={id} onClick={()=>generateSoloImagePrompt(hero,id)} style={{...s.chip((soloPromptResult.platform||pPlatform)===id)}}>{label}</button>
                     ))}
                   </div>
-                  <span style={s.lbl}>{soloPromptResult.platform==="midjourney"?"Midjourney /imagine Prompt":soloPromptResult.platform==="dalle"?"DALL-E 3 Prompt":"Meta AI Image Prompt"}</span>
+                  <span style={s.lbl}>{soloPromptResult.platform==="midjourney"?"Midjourney /imagine Prompt":soloPromptResult.platform==="dalle"?"DALL-E 3 Prompt":soloPromptResult.platform==="firefly"?"Adobe Firefly Prompt":"Meta AI Image Prompt"}</span>
                   <div style={s.pBox}>{soloPromptResult.metaAI}</div>
                   {soloPromptResult.platform==="midjourney"?(
                     <div style={{display:"flex",justifyContent:"flex-end",marginTop:6,marginBottom:12}}>
@@ -4793,12 +4886,14 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                       <button style={s.cpyBtn(copied.spmeta)} onClick={()=>copy("spmeta",soloPromptResult.metaAI)}>{copied.spmeta?"Copied!":"Copy"}</button>
                       <button onClick={()=>{try{window.open("https://chat.openai.com/","_blank");}catch(e){}copy("spmeta",soloPromptResult.metaAI);}} style={{padding:"5px 14px",background:"rgba(16,163,127,0.12)",border:"1px solid rgba(16,163,127,0.4)",borderRadius:6,cursor:"pointer",fontSize:11,color:"#10A37F",fontFamily:"var(--font-mono)"}}>Open ChatGPT →</button>
                     </div>
+                  ):soloPromptResult.platform==="firefly"?(
+                    <FireflyLauncher prompt={soloPromptResult.metaAI} copied={copied.spmeta} onCopy={()=>copy("spmeta",soloPromptResult.metaAI)}/>
                   ):(
                     hasMetaAI?<MetaAILauncher prompt={soloPromptResult.metaAI} label="Meta AI" copied={copied.spmeta} onCopy={()=>copy("spmeta",soloPromptResult.metaAI)}/>:<div style={{display:"flex",justifyContent:"flex-end",marginTop:6,marginBottom:12}}><button style={s.cpyBtn(copied.spmeta)} onClick={()=>copy("spmeta",soloPromptResult.metaAI)}>{copied.spmeta?"Copied!":"Copy"}</button></div>
                   )}
                   {images[hero.id]&&<div style={{marginTop:12}}>
                     <button style={{...s.bigBtn(false),background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.15)"}} onClick={()=>downloadImg(hero.id,hero.heroName)}>📎 Download Reference Image</button>
-                    <div style={{fontSize:10.5,color:"var(--text4)",marginTop:6}}>{soloPromptResult.platform==="midjourney"?"Use as reference with --cref [image-url] for character consistency":soloPromptResult.platform==="dalle"?"Upload alongside the prompt in ChatGPT for best accuracy":"Upload alongside the prompt in Meta AI for best accuracy"}</div>
+                    <div style={{fontSize:10.5,color:"var(--text4)",marginTop:6}}>{soloPromptResult.platform==="midjourney"?"Use as reference with --cref [image-url] for character consistency":soloPromptResult.platform==="dalle"?"Upload alongside the prompt in ChatGPT for best accuracy":soloPromptResult.platform==="firefly"?"Upload alongside the prompt at firefly.adobe.com for best accuracy":"Upload alongside the prompt in Meta AI for best accuracy"}</div>
                   </div>}
                   {soloPromptResult.tripo3D&&<><span style={s.lbl}>Tripo3D Model Prompt</span><div style={s.pBox}>{soloPromptResult.tripo3D}</div><Tripo3DLauncher prompt={soloPromptResult.tripo3D} copied={copied.sptripo} onCopy={()=>copy("sptripo",soloPromptResult.tripo3D)}/></>}
                 </div>

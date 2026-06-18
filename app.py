@@ -169,6 +169,7 @@ DEFAULTS = {
     "ollama_url": "http://localhost:11434",
     "ollama_api_key": "",
     "port": 7432,
+    "groq_vision_model": "meta-llama/llama-4-scout-17b-16e-instruct",
 }
 
 def load_config():
@@ -1108,6 +1109,99 @@ def delete_image(img_id):
             os.remove(path)
             return jsonify({"ok": True})
     return jsonify({"ok": False, "error": "not found"}), 404
+
+# ---------------------------------------------------------------------------
+# API: Image Analysis (vision) â€” lets prompt generation reuse visual details
+# already present in an uploaded reference image.
+# ---------------------------------------------------------------------------
+VISION_ANALYSIS_PROMPT = (
+    "Look at this character reference image and describe ONLY what you can visually see, "
+    "written for reuse inside an AI image-generation prompt. Cover hair (color/style), build, "
+    "costume colors and materials, distinctive costume details, accessories, and pose or "
+    "expression if notable. Plain descriptive text, 2-4 sentences, no markdown, no preamble."
+)
+
+def _vision_provider():
+    """Pick a vision-capable model: a Groq vision model if a Groq key is configured,
+    otherwise the first locally-installed Ollama model that advertises vision support."""
+    if GROQ_KEY:
+        return ("groq", config.get("groq_vision_model") or DEFAULTS["groq_vision_model"])
+    for name in ollama_models():
+        if "llava" in name.lower() or "vision" in name.lower():
+            return ("ollama", name)
+    return (None, None)
+
+def _image_data_uri(img_id):
+    safe_id = os.path.basename(img_id)
+    mimes = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".gif": "image/gif", ".webp": "image/webp"}
+    for ext in IMAGE_EXTENSIONS:
+        path = os.path.join(IMAGES_DIR, f"{safe_id}{ext}")
+        if os.path.exists(path):
+            with open(path, "rb") as f:
+                raw_b64 = base64.b64encode(f.read()).decode()
+            return f"data:{mimes[ext]};base64,{raw_b64}", raw_b64
+    return None, None
+
+@app.route("/api/analyze-image/<img_id>", methods=["POST"])
+def analyze_image(img_id):
+    data_uri, raw_b64 = _image_data_uri(img_id)
+    if not data_uri:
+        return jsonify({"error": "No reference image found for this character."}), 404
+
+    provider, model = _vision_provider()
+    if not provider:
+        return jsonify({"error": "No vision-capable model available. Configure a Groq API key, or run `ollama pull llava` locally."}), 503
+
+    body = request.get_json(silent=True) or {}
+    extra = (body.get("context") or "").strip()
+    prompt = VISION_ANALYSIS_PROMPT + (f"\n\nCharacter context: {extra}" if extra else "")
+
+    try:
+        if provider == "groq":
+            r = requests.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={"Content-Type": "application/json", "Authorization": f"Bearer {GROQ_KEY}"},
+                json={
+                    "model": model,
+                    "messages": [{
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": prompt},
+                            {"type": "image_url", "image_url": {"url": data_uri}},
+                        ],
+                    }],
+                    "max_tokens": 400,
+                },
+                timeout=60,
+            )
+            r.raise_for_status()
+            text = r.json().get("choices", [{}])[0].get("message", {}).get("content", "")
+        else:
+            base = config["ollama_url"].rstrip("/")
+            r = requests.post(
+                f"{base}/api/chat",
+                json={"model": model, "messages": [{"role": "user", "content": prompt, "images": [raw_b64]}], "stream": False},
+                timeout=120,
+            )
+            r.raise_for_status()
+            text = r.json().get("message", {}).get("content", "")
+        return jsonify({"description": text.strip(), "model": model})
+    except requests.exceptions.HTTPError as e:
+        code = e.response.status_code if e.response is not None else 500
+        if code == 401:
+            return jsonify({"error": "Authentication failed. Check your API key."}), 401
+        detail = ""
+        try:
+            detail = e.response.text[:300] if e.response is not None else ""
+        except Exception:
+            pass
+        return jsonify({"error": f"Vision model error ({code}). {detail}"}), code
+    except requests.exceptions.ConnectionError:
+        return jsonify({"error": "Could not reach the vision model provider."}), 503
+    except requests.exceptions.Timeout:
+        return jsonify({"error": "Vision analysis timed out."}), 504
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 # ---------------------------------------------------------------------------
 # API: AI Generation endpoints
