@@ -7,9 +7,10 @@ import os
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
 from reportlab.lib import colors
+from reportlab.lib.utils import ImageReader
 from reportlab.platypus import (
     SimpleDocTemplate, Paragraph, Spacer, HRFlowable,
-    Table, TableStyle, PageBreak, KeepTogether
+    Table, TableStyle, PageBreak, KeepTogether, Image
 )
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_RIGHT
@@ -40,6 +41,8 @@ def hx(color):
     return f"{r:02x}{g:02x}{b:02x}"
 
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Forge_Features.pdf")
+LOGO_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "branding", "forge-logo.jpg")
+LOGO_IMG = ImageReader(LOGO_PATH)
 W, H = letter
 
 # ── Styles ───────────────────────────────────────────────────────────────────
@@ -181,10 +184,12 @@ def on_page(canvas, doc):
     # Bottom accent bar
     canvas.setFillColor(colors.HexColor("#D4AF3730"))
     canvas.rect(0, 0, W, 2, fill=1, stroke=0)
+    # Logo mark, top-left
+    canvas.drawImage(LOGO_IMG, 0.5*inch, H-0.58*inch, width=0.38*inch, height=0.38*inch, mask='auto')
     # Footer text
     canvas.setFont("Courier", 7)
     canvas.setFillColor(TEXT3)
-    canvas.drawCentredString(W/2, 20, f"NOCTURNAL INNOVATIONS'S SUPERHERO FORGE  ·  CLASSIFIED")
+    canvas.drawCentredString(W/2, 20, "CLASSIFIED  ·  FEATURE REFERENCE")
     canvas.restoreState()
 
 # ── Document ─────────────────────────────────────────────────────────────────
@@ -202,9 +207,11 @@ story = []
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # COVER PAGE
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-story.append(Spacer(1, 1.4*inch))
-story.append(Paragraph("NOCTURNAL INNOVATIONS'S SUPERHERO FORGE", S_COVER_TITLE))
-story.append(Spacer(1, 0.1*inch))
+story.append(Spacer(1, 0.7*inch))
+cover_logo = Image(LOGO_PATH, width=2.6*inch, height=2.6*inch)
+cover_logo.hAlign = "CENTER"
+story.append(cover_logo)
+story.append(Spacer(1, 0.15*inch))
 story.append(Paragraph("Feature Reference  ·  Superhero Universe Builder", S_COVER_SUB))
 story.append(Spacer(1, 0.25*inch))
 
@@ -240,6 +247,7 @@ story.append(Paragraph("CONTENTS", S_SECTION))
 story.append(hr())
 
 toc_items = [
+    ("00", "How It's Made",     "Architecture — backend, frontend, AI, and storage"),
     ("01", "Teams",             "Create and manage multiple hero teams"),
     ("02", "Roster",            "Character cards, images, exports"),
     ("03", "Recruit",           "Three-mode AI character generator"),
@@ -274,6 +282,59 @@ for num, title, desc in toc_items:
     story.append(row_tbl)
     story.append(hr(TEXT3, 0.3, 0, 2))
 
+story.append(PageBreak())
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 00 — HOW IT'S MADE
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+story.append(Paragraph("00 — HOW IT'S MADE", S_SECTION))
+story.append(hr())
+story.append(Paragraph(
+    "The Forge is a single local application — there is no cloud backend and no required subscription. "
+    "Every layer below runs on your machine; the only thing that ever leaves the device is an AI request, "
+    "and only to whichever backend you've selected in Settings.",
+    S_BODY))
+story.append(Spacer(1, 8))
+
+arch_data = [
+    ["Desktop Shell", "PyWebView", "Wraps the local Flask server in a native window — no browser chrome, no terminal window"],
+    ["Backend", "Flask (Python), single app.py", "REST API, AI prompt orchestration, PDF/image generation, login auth"],
+    ["Database", "SQLite, WAL mode (forge.db)", "Key-value store for every character, team, and villain — replaced the original flat forge-data.json file"],
+    ["Frontend", "React 18 + Vite", "Component-driven UI in client/src, built to content-hashed JS/CSS bundles served directly by Flask"],
+    ["PDF Engine", "ReportLab", "Character dossiers, Universe/Custom dossiers, and this feature reference document"],
+    ["AI — Text", "Ollama / Groq / Claude", "Swappable backend for character generation, battles, arcs, and stories — picked per-request in Settings"],
+    ["AI — Images", "Stability AI / OpenAI", "Direct in-app portrait generation; Adobe Firefly available as a no-API-key fallback"],
+    ["Remote Access", "Cloudflare Tunnel + DuckDNS", "Public HTTPS URL and a persistent custom domain, with no router configuration"],
+    ["Process Safety", "PID lock file + Git", "Single-instance enforcement (.forge.lock) and one-click update-in-place via git pull"],
+]
+arch_tbl = Table(arch_data, colWidths=[1.25*inch, 1.85*inch, 3.4*inch])
+arch_tbl.setStyle(TableStyle([
+    ("BACKGROUND",(0,i),(-1,i), colors.HexColor("#D4AF3710" if i%2==0 else "#09090F")) for i in range(len(arch_data))
+] + [
+    ("TEXTCOLOR",(0,0),(0,-1), GOLD),
+    ("TEXTCOLOR",(1,0),(1,-1), TEAL_LT),
+    ("TEXTCOLOR",(2,0),(2,-1), TEXT2),
+    ("FONTNAME",(0,0),(1,-1), "Helvetica-Bold"),
+    ("FONTNAME",(2,0),(2,-1), "Helvetica"),
+    ("FONTSIZE",(0,0),(-1,-1), 8.5),("LEADING",(0,0),(-1,-1), 12.5),
+    ("TOPPADDING",(0,0),(-1,-1),6),("BOTTOMPADDING",(0,0),(-1,-1),6),
+    ("LEFTPADDING",(0,0),(-1,-1),8),
+    ("BOX",(0,0),(-1,-1),0.5,colors.HexColor("#D4AF3740")),
+    ("INNERGRID",(0,0),(-1,-1),0.3,colors.HexColor("#D4AF3720")),
+    ("VALIGN",(0,0),(-1,-1),"TOP"),
+]))
+story.append(arch_tbl)
+story.append(Spacer(1, 10))
+
+story.append(Paragraph("Why This Stack", S_H2))
+story.append(two_col(
+    [bullet("Flask + SQLite keep the whole backend to one process and one file — easy to back up, easy to move between machines"),
+     bullet("React/Vite gives a real component model without needing a Node server at runtime — Vite's production build is just static files Flask already knows how to serve"),
+    ],
+    [bullet("PyWebView avoids shipping an Electron/Chromium runtime — the OS's own native webview renders the app"),
+     bullet("AI backends are swappable by design — Ollama keeps the app fully offline-capable; Groq/Claude trade that for speed or quality when a key is supplied"),
+    ]
+))
 story.append(PageBreak())
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -369,6 +430,8 @@ left = [
 right = [
     Paragraph("Exports", S_H2),
     bullet("⬇ Export PDF — full team PDF with every character sheet"),
+    bullet("⬇ Universe Dossier — one combined PDF containing every hero and villain across every team"),
+    bullet("☑ Custom Dossier — hand-pick any mix of heroes and villains across every team for a single combined PDF"),
     bullet("PNG Reference Sheet — artist-reference grid showing all members: portrait, hero name, real name, first two power names, color swatch, and power FX line"),
     bullet("⬇ Save Image — downloads individual character portrait"),
     Spacer(1, 8),
@@ -662,6 +725,27 @@ story.append(two_col(
      bullet("Select any two characters — generates a paired duo composition"),
      bullet("Characters positioned left/right, facing slightly inward"),
      bullet("Reference sheet attached to lock in both character designs"),
+    ]
+))
+story.append(Spacer(1, 10))
+
+story.append(Paragraph("Image Prompt Setup & Direct Generation", S_H2))
+story.append(Paragraph(
+    "Before any prompt is built, a short setup modal locks in the details that matter most for a faithful render.",
+    S_BODY))
+story.append(two_col(
+    [Paragraph("Prompt Setup Modal", S_H3),
+     bullet("Gender, lore age, and a separate appearance age — useful when lore age and appearance diverge (immortals, de-aged forms)"),
+     bullet("Background selector: Auto (HQ/Lair), Plain/Studio, City Skyline, Battle-Torn Streets, Cosmic, Wilderness, Lab/Tech, Action/Energy FX"),
+     bullet("🔍 Analyze Reference Image — pulls hair, costume, and accessory detail straight from an uploaded portrait via AI vision"),
+     bullet("Safety guardrails auto-activate for female or child/teen-appearance subjects — costume descriptors are kept modest and full-coverage; the image still generates"),
+    ],
+    [Paragraph("Generate Image Button", S_H3),
+     bullet("Sends the finished prompt straight to Stability AI (default) or OpenAI — selected via the FORGE_IMAGE_PROVIDER setting"),
+     bullet("Preview renders in-app; Use This Image saves it directly to the character, Discard re-rolls"),
+     Spacer(1, 6),
+     Paragraph("Copy & Open Firefly", S_H3),
+     bullet("No-API-key fallback — copies the finished prompt and opens Adobe Firefly's image generator in the browser for manual generation"),
     ]
 ))
 story.append(PageBreak())
@@ -968,8 +1052,22 @@ changelog = [
     {
         "version": "Current Build",
         "date": "June 2026",
-        "title": "Power Evolution + Logo Consistency + Performance",
+        "title": "Direct AI Image Generation + Custom Dossiers",
         "color": GOLD,
+        "items": [
+            "Generate Image button: sends the finished AI image prompt straight to Stability AI or OpenAI and saves the result directly to the character — no copy/paste round trip",
+            "Image Prompt Setup modal: separate lore age vs. appearance age, 8-option background selector, and 🔍 Analyze Reference Image (AI vision pulls hair/costume/accessory detail from an uploaded portrait)",
+            "Automatic safety guardrails for female or child/teen-appearance subjects keep generated costume descriptors modest and full-coverage",
+            "Copy & Open Firefly: no-API-key fallback that copies the prompt and opens Adobe Firefly's generator for manual image creation",
+            "Custom Dossier export: pick any combination of heroes and villains across every team and generate one combined PDF",
+            "This feature reference document now carries the Forge wordmark logo instead of a text title, and documents the app's own architecture (see How It's Made)",
+        ]
+    },
+    {
+        "version": "v1.2.x",
+        "date": "June 2026",
+        "title": "Power Evolution + Logo Consistency + Performance",
+        "color": colors.HexColor("#AFA9EC"),
         "items": [
             "Power set editor now supports + Add and × Remove buttons — heroes can gain, lose, or evolve powers at any time",
             "Ability Type selector: Powers / Arsenal / Skills — changes all section labels and input placeholders without altering data structure (supports Batman / Iron Man style characters with no innate powers)",
@@ -1088,8 +1186,12 @@ for entry in changelog:
         ))
     story.append(hr(colors.HexColor(f"#{hex_c}40"), 0.5, 6, 8))
 
-story.append(Spacer(1, 0.4*inch))
-story.append(Paragraph("NOCTURNAL INNOVATIONS'S SUPERHERO FORGE  ·  ALL RIGHTS RESERVED  ·  2026",
+story.append(Spacer(1, 0.3*inch))
+foot_logo = Image(LOGO_PATH, width=0.5*inch, height=0.5*inch)
+foot_logo.hAlign = "CENTER"
+story.append(foot_logo)
+story.append(Spacer(1, 6))
+story.append(Paragraph("ALL RIGHTS RESERVED  ·  2026",
     ParagraphStyle("foot",fontName="Courier",fontSize=7.5,textColor=TEXT3,leading=11,alignment=TA_CENTER)))
 
 # ── Build ─────────────────────────────────────────────────────────────────────
