@@ -43,12 +43,21 @@ FORGE_VERSION = _compute_version()
 
 GROQ_KEY = ""
 GROQ_MODELS = ["llama-3.1-8b-instant", "llama-3.3-70b-versatile", "mixtral-8x7b-32768"]
+STABILITY_KEY = ""
+OPENAI_IMAGE_KEY = ""
+IMAGE_GEN_PROVIDER = "stability"
 try:
     with open(os.path.join(BASE, ".env")) as _ef:
         for _line in _ef:
             _line = _line.strip()
             if _line.startswith("GROQ_API_KEY="):
                 GROQ_KEY = _line.split("=", 1)[1].strip().strip('"').strip("'")
+            elif _line.startswith("STABILITY_API_KEY="):
+                STABILITY_KEY = _line.split("=", 1)[1].strip().strip('"').strip("'")
+            elif _line.startswith("OPENAI_API_KEY="):
+                OPENAI_IMAGE_KEY = _line.split("=", 1)[1].strip().strip('"').strip("'")
+            elif _line.startswith("FORGE_IMAGE_PROVIDER="):
+                IMAGE_GEN_PROVIDER = _line.split("=", 1)[1].strip().strip('"').strip("'") or "stability"
 except FileNotFoundError:
     pass
 
@@ -858,6 +867,7 @@ def status():
         "mode": "remote" if _is_remote() else "local",
         "version": FORGE_VERSION,
         "groq": groq_enabled,
+        "image_gen": bool(STABILITY_KEY or OPENAI_IMAGE_KEY),
     })
 
 @app.route("/api/models")
@@ -1200,6 +1210,62 @@ def analyze_image(img_id):
         return jsonify({"error": "Could not reach the vision model provider."}), 503
     except requests.exceptions.Timeout:
         return jsonify({"error": "Vision analysis timed out."}), 504
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# ---------------------------------------------------------------------------
+# API: Image Generation â€” optional cloud image gen (Stability / OpenAI),
+# replaces the manual copy-prompt-into-Meta-AI loop when a key is present.
+# Off by default: set STABILITY_API_KEY or OPENAI_API_KEY in .env to enable.
+# ---------------------------------------------------------------------------
+def _stability_generate_image(prompt, aspect_ratio):
+    resp = requests.post(
+        "https://api.stability.ai/v2beta/stable-image/generate/core",
+        headers={"Authorization": f"Bearer {STABILITY_KEY}", "Accept": "image/*"},
+        data={"prompt": prompt, "aspect_ratio": aspect_ratio, "output_format": "png"},
+        files={"none": ("", b"")},  # required by this endpoint even with no input image
+        timeout=60,
+    )
+    if resp.status_code != 200:
+        raise Exception(f"Stability API error {resp.status_code}: {resp.text[:300]}")
+    b64 = base64.b64encode(resp.content).decode("utf-8")
+    return f"data:image/png;base64,{b64}", "stability"
+
+def _openai_generate_image(prompt, aspect_ratio):
+    size_map = {"1:1": "1024x1024", "16:9": "1792x1024", "9:16": "1024x1792"}
+    resp = requests.post(
+        "https://api.openai.com/v1/images/generations",
+        headers={"Authorization": f"Bearer {OPENAI_IMAGE_KEY}", "Content-Type": "application/json"},
+        json={"model": "gpt-image-1", "prompt": prompt, "n": 1, "size": size_map.get(aspect_ratio, "1024x1024")},
+        timeout=60,
+    )
+    if resp.status_code != 200:
+        raise Exception(f"OpenAI API error {resp.status_code}: {resp.text[:300]}")
+    b64 = resp.json()["data"][0]["b64_json"]
+    return f"data:image/png;base64,{b64}", "openai"
+
+@app.route("/api/generate-image", methods=["POST"])
+def generate_image():
+    if not (STABILITY_KEY or OPENAI_IMAGE_KEY):
+        return jsonify({"error": "No image generation key configured. Add STABILITY_API_KEY or OPENAI_API_KEY to .env."}), 503
+
+    data = request.get_json(silent=True) or {}
+    prompt = (data.get("prompt") or "").strip()
+    aspect_ratio = data.get("aspect_ratio", "1:1")
+    if not prompt:
+        return jsonify({"error": "prompt is required"}), 400
+
+    use_openai = IMAGE_GEN_PROVIDER == "openai" and OPENAI_IMAGE_KEY
+    use_stability = not use_openai and STABILITY_KEY
+
+    try:
+        if use_stability:
+            image_b64, provider = _stability_generate_image(prompt, aspect_ratio)
+        elif use_openai or OPENAI_IMAGE_KEY:
+            image_b64, provider = _openai_generate_image(prompt, aspect_ratio)
+        else:
+            return jsonify({"error": "No image generation key configured."}), 503
+        return jsonify({"image_b64": image_b64, "provider": provider})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

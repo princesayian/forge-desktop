@@ -2082,3 +2082,65 @@ OSError: [WinError -2147467231] The operation attempted is not supported: 'http:
    at System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw()
    at System.Runtime.CompilerServices.TaskAwaiter.HandleNonSuccessAndDebuggerNotification(Task task)
    at Microsoft.Web.WebView2.WinForms.WebView2.<InitCoreWebView2Async>d__25.MoveNext()
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.63 ready at http://127.0.0.1:7432
+  Local network:  http://192.168.1.174:7432  -- share this with devices on your Wi-Fi
+  Remote (DuckDNS): heroforge.duckdns.org:7432
+  Opening native window (minimized) + browser tab...
+
+Exception in thread Thread-6 (_on_started):
+Traceback (most recent call last):
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\threading.py", line 1041, in _bootstrap_inner
+    self.run()
+    ~~~~~~~~^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\threading.py", line 992, in run
+    self._target(*self._args, **self._kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Apps\superhero-forge\app.py", line 2997, in _on_started
+    _open_browser(url)
+    ~~~~~~~~~~~~~^^^^^
+  File "C:\Apps\superhero-forge\app.py", line 2981, in _open_browser
+    os.startfile(target_url)
+    ~~~~~~~~~~~~^^^^^^^^^^^^
+OSError: [WinError -2147467231] The operation attempted is not supported: 'http://127.0.0.1:7432'
+ * Tip: There are .env files present. Install python-dotenv to use them.
+
+  Starting Ollama...
+  Ollama ready
+ * Serving Flask app 'app'
+ * Debug mode: off
+
+  Superhero Forge v1.2.63 ready at http://127.0.0.1:7432
+  Local network:  http://192.168.1.174:7432  -- share this with devices on your Wi-Fi
+  Remote (DuckDNS): heroforge.duckdns.org:7432
+  Opening native window (minimized) + browser tab...
+
+Exception in thread Thread-6 (_on_started):
+Traceback (most recent call last):
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\threading.py", line 1041, in _bootstrap_inner
+    self.run()
+    ~~~~~~~~^^
+  File "C:\Users\Kareem\AppData\Local\Programs\Python\Python313\Lib\threading.py", line 992, in run
+    self._target(*self._args, **self._kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Apps\superhero-forge\app.py", line 2997, in _on_started
+    _open_browser(url)
+    ~~~~~~~~~~~~~^^^^^
+  File "C:\Apps\superhero-forge\app.py", line 2981, in _open_browser
+    os.startfile(target_url)
+    ~~~~~~~~~~~~^^^^^^^^^^^^
+OSError: [WinError -2147467231] The operation attempted is not supported: 'http://127.0.0.1:7432'
+[pywebview] WebView2 initialization failed with exception:
+  (0x800705B4): This operation returned because the timeout period expired. (Exception from HRESULT: 0x800705B4)
+   at System.Runtime.InteropServices.Marshal.ThrowExceptionForHRInternal(Int32 errorCode, IntPtr errorInfo)
+   at Microsoft.Web.WebView2.Core.CoreWebView2Environment.<CreateCoreWebView2ControllerAsync>d__21.MoveNext()
+--- End of stack trace from previous location where exception was thrown ---
+   at System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw()
+   at System.Runtime.CompilerServices.TaskAwaiter.HandleNonSuccessAndDebuggerNotification(Task task)
+   at Microsoft.Web.WebView2.WinForms.WebView2.<InitCoreWebView2Async>d__25.MoveNext()

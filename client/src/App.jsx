@@ -24,6 +24,7 @@ import DeepLoreQuiz from './components/DeepLoreQuiz.jsx';
 import MetaAILauncher from './components/MetaAILauncher.jsx';
 import Tripo3DLauncher from './components/Tripo3DLauncher.jsx';
 import FireflyLauncher from './components/FireflyLauncher.jsx';
+import GenerateImageButton from './components/GenerateImageButton.jsx';
 import ImagePromptQuestionnaire from './components/ImagePromptQuestionnaire.jsx';
 import RemotePanel from './components/RemotePanel.jsx';
 import InspirationsField from './components/InspirationsField.jsx';
@@ -74,11 +75,13 @@ function CodexCard({title,accent,sections,tagline}){
     </div>
   );
 }
-function AbilityEditor({raceId,accent,label,note,raceAbilities,saveRaceAbilities}){
+function AbilityEditor({raceId,accent,label,note,raceAbilities,saveRaceAbilities,canCopyAuranthi}){
   const abilities=raceAbilities[raceId]||[];
+  const auranthiAbilities=raceAbilities["auranthi"]||[];
   const updateAbility=(i,field,val)=>saveRaceAbilities({...raceAbilities,[raceId]:abilities.map((a,j)=>j===i?{...a,[field]:val}:a)});
   const addAbility=()=>{if(abilities.length>=10)return;saveRaceAbilities({...raceAbilities,[raceId]:[...abilities,{name:"",desc:""}]});};
   const removeAbility=(i)=>saveRaceAbilities({...raceAbilities,[raceId]:abilities.filter((_,j)=>j!==i)});
+  const copyFromAuranthi=()=>saveRaceAbilities({...raceAbilities,[raceId]:auranthiAbilities.map(a=>({...a}))});
   return(
     <div style={{background:`${accent}06`,border:`1px solid ${accent}28`,borderRadius:10,marginBottom:20,overflow:"hidden"}}>
       <div style={{padding:"10px 16px",borderBottom:`1px solid ${accent}18`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
@@ -87,18 +90,21 @@ function AbilityEditor({raceId,accent,label,note,raceAbilities,saveRaceAbilities
           <span style={{fontSize:10,color:"var(--text4)",fontFamily:"var(--font-mono)"}}>Inherent Abilities · {abilities.length}/10</span>
           {note&&<span style={{fontSize:9.5,color:`${accent}88`,fontStyle:"italic"}}>{note}</span>}
         </div>
-        {abilities.length<10&&<button onClick={addAbility} style={{fontSize:10,padding:"3px 10px",background:`${accent}18`,border:`1px solid ${accent}44`,borderRadius:6,cursor:"pointer",color:accent,fontFamily:"var(--font-mono)"}}>+ Add</button>}
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          {canCopyAuranthi&&<button onClick={copyFromAuranthi} disabled={!auranthiAbilities.length} title={auranthiAbilities.length?"Replace this race's abilities with a standard copy of Auranthi's":"Auranthi has no abilities defined yet"} style={{fontSize:10,padding:"3px 10px",background:auranthiAbilities.length?`${accent}10`:"var(--bg3)",border:`1px solid ${auranthiAbilities.length?accent+"44":"var(--border)"}`,borderRadius:6,cursor:auranthiAbilities.length?"pointer":"not-allowed",color:auranthiAbilities.length?accent:"var(--text4)",fontFamily:"var(--font-mono)",whiteSpace:"nowrap"}}>Copy from Auranthi</button>}
+          {abilities.length<10&&<button onClick={addAbility} style={{fontSize:10,padding:"3px 10px",background:`${accent}18`,border:`1px solid ${accent}44`,borderRadius:6,cursor:"pointer",color:accent,fontFamily:"var(--font-mono)"}}>+ Add</button>}
+        </div>
       </div>
       <div style={{padding:"12px 16px"}}>
-        {abilities.length===0&&<div style={{fontSize:11,color:"var(--text4)",fontStyle:"italic",padding:"4px 0"}}>No inherent abilities defined — add up to 10 racial defaults. Heroes with this race will inherit them based on their bloodline purity.</div>}
+        {abilities.length===0&&<div style={{fontSize:11,color:"var(--text4)",fontStyle:"italic",padding:"4px 0"}}>No inherent abilities defined — add up to 10 racial defaults, or copy Auranthi's as a starting standard. Heroes with this race will inherit them based on their bloodline purity.</div>}
         {abilities.map((a,i)=>(
-          <div key={i} style={{display:"grid",gridTemplateColumns:"18px 150px 1fr auto",gap:8,marginBottom:8,alignItems:"center"}}>
-            <span style={{fontSize:10,color:`${accent}66`,fontFamily:"var(--font-mono)",textAlign:"right"}}>{i+1}</span>
+          <div key={i} style={{display:"grid",gridTemplateColumns:"18px 150px 1fr auto",gap:8,marginBottom:8,alignItems:"start"}}>
+            <span style={{fontSize:10,color:`${accent}66`,fontFamily:"var(--font-mono)",textAlign:"right",paddingTop:7}}>{i+1}</span>
             <input type="text" placeholder="Ability name" value={a.name} onChange={e=>updateAbility(i,"name",e.target.value)}
               style={{padding:"6px 8px",background:"var(--bg2)",border:`1px solid ${accent}30`,borderRadius:6,color:"var(--text-primary)",fontSize:11,fontFamily:"var(--font-mono)"}}/>
-            <input type="text" placeholder="Short description" value={a.desc} onChange={e=>updateAbility(i,"desc",e.target.value)}
-              style={{padding:"6px 8px",background:"var(--bg2)",border:`1px solid ${accent}30`,borderRadius:6,color:"var(--text-primary)",fontSize:11}}/>
-            <button onClick={()=>removeAbility(i)} style={{fontSize:13,padding:"3px 8px",background:"rgba(163,45,45,0.08)",border:"1px solid rgba(163,45,45,0.22)",borderRadius:6,cursor:"pointer",color:"#e74c3c",lineHeight:1}}>×</button>
+            <textarea placeholder="Short description (can run up to ~5 sentences if needed)" value={a.desc} onChange={e=>updateAbility(i,"desc",e.target.value)} rows={2}
+              style={{padding:"6px 8px",background:"var(--bg2)",border:`1px solid ${accent}30`,borderRadius:6,color:"var(--text-primary)",fontSize:11,fontFamily:"inherit",resize:"vertical",lineHeight:1.4}}/>
+            <button onClick={()=>removeAbility(i)} style={{fontSize:13,padding:"3px 8px",background:"rgba(163,45,45,0.08)",border:"1px solid rgba(163,45,45,0.22)",borderRadius:6,cursor:"pointer",color:"#e74c3c",lineHeight:1,marginTop:4}}>×</button>
           </div>
         ))}
       </div>
@@ -211,7 +217,7 @@ function App(){
   const addCustomScColor=()=>{const h=scCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{6}$/))return;setScColors(prev=>{if(prev.includes(h)||prev.length>=3)return prev;return[...prev,h];});setScCustomHex("#ffffff");};
   const resetSoloCreator=()=>{setScStep(0);setScAnswers({});setScName("");setScHeroName("");setScGender("Male");setScRace(null);setScColors(["#888780"]);setScCustomHex("#ffffff");setScStoryDir("");setScAge("");setScBirthYear("");setScResult(null);setScLoading(false);setScDeepMode(false);setScProfileMode(false);setScPowerForgeMode(false);setScDeepPhase(0);setScDeepAnswers({});setScProfileStep(0);setScProfileAnswers({});setScPowerForgePhase(0);setScPowerForgeAnswers({});setScReforgeId(null);setScPowerReforgeTarget(null);setScInspirations([]);};
   // ── Ollama ──────────────────────────────────────────────────────────────
-  const[ollamaOk,setOllamaOk]=useState(null);const[groqOk,setGroqOk]=useState(false);
+  const[ollamaOk,setOllamaOk]=useState(null);const[groqOk,setGroqOk]=useState(false);const[imageGenOk,setImageGenOk]=useState(false);
   const[forgeVersion,setForgeVersion]=useState("");
   const[models,setModels]=useState([]);
   const[currentModel,setCurrentModel]=useState("llama3.2");
@@ -337,7 +343,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
 
   // ── Ollama check ─────────────────────────────────────────────────────────
   const checkOllama=useCallback(()=>{
-    fetch("/api/status").then(r=>r.json()).then(d=>{setOllamaOk(d.ollama);setGroqOk(d.groq||false);setModels(d.models||[]);setCurrentModel(d.current_model||(d.groq?"llama-3.1-8b-instant":"llama3.2"));if(d.version)setForgeVersion(d.version);}).catch(()=>setOllamaOk(false));
+    fetch("/api/status").then(r=>r.json()).then(d=>{setOllamaOk(d.ollama);setGroqOk(d.groq||false);setImageGenOk(d.image_gen||false);setModels(d.models||[]);setCurrentModel(d.current_model||(d.groq?"llama-3.1-8b-instant":"llama3.2"));if(d.version)setForgeVersion(d.version);}).catch(()=>setOllamaOk(false));
   },[]);
   useEffect(()=>{checkOllama();const t=setInterval(checkOllama,10000);return()=>clearInterval(t);},[checkOllama]);
 
@@ -500,6 +506,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     };
     reader.readAsDataURL(file);
   },[]);
+  const markImageSaved=useCallback((id)=>{setImages(p=>({...p,[id]:`/api/images/${id}?t=${Date.now()}`}));},[]);
   const downloadImg=useCallback((id,heroName)=>{
     const url=images[id];if(!url)return;
     fetch(url).then(r=>r.blob()).then(blob=>{const bUrl=URL.createObjectURL(blob);const a=document.createElement("a");a.href=bUrl;a.download=`${heroName.toLowerCase().replace(/\s+/g,"-")}.png`;document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(()=>URL.revokeObjectURL(bUrl),1000);}).catch(()=>{});
@@ -2361,6 +2368,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
             ):(
               hasMetaAI?<MetaAILauncher prompt={pResult.metaAI} label="Meta AI" copied={copied.pmeta} onCopy={()=>copy("pmeta",pResult.metaAI)}/>:<div style={{display:"flex",justifyContent:"flex-end",marginTop:6,marginBottom:12}}><button style={s.cpyBtn(copied.pmeta)} onClick={()=>copy("pmeta",pResult.metaAI)}>{copied.pmeta?"Copied!":"Copy"}</button></div>
             )}
+            {!pResult.group&&!pResult.duo&&pResult.member&&<GenerateImageButton prompt={pResult.metaAI} imgId={pResult.member.id} enabled={imageGenOk} onSaved={markImageSaved}/>}
           </>}
           {(pResult.group||pResult.duo)&&<div style={{marginTop:12}}>
             <button style={{...s.bigBtn(sheetLoading),background:sheetLoading?"var(--bg3)":"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.15)"}} onClick={()=>downloadTeamSheet(pResult.duo?[pResult.heroA,pResult.heroB]:undefined)} disabled={sheetLoading}>{sheetLoading?"Building reference sheet…":"📎 Download Reference Sheet"}</button>
@@ -4501,7 +4509,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
               ["Average Lifespan",dravosi?.codex?.lifespan],
               ["In This Universe",dravosi?.codex?.note],
             ]}/>
-          <AbilityEditor raceId="dravosi" accent="#5A5AE0" label="DRAVOSI" note="50% Auranthi blood — also inherits half of Auranthi defaults" raceAbilities={raceAbilities} saveRaceAbilities={saveRaceAbilities}/>
+          <AbilityEditor raceId="dravosi" accent="#5A5AE0" label="DRAVOSI" note="50% Auranthi blood — also inherits half of Auranthi defaults" raceAbilities={raceAbilities} saveRaceAbilities={saveRaceAbilities} canCopyAuranthi/>
 
           <CodexCard title="ZYRENIAN" accent="#B04A1A" tagline="War is not what they do. War is what they are."
             sections={[
@@ -4513,7 +4521,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
               ["Average Lifespan",zyrenian?.codex?.lifespan],
               ["In This Universe",zyrenian?.codex?.note],
             ]}/>
-          <AbilityEditor raceId="zyrenian" accent="#B04A1A" label="ZYRENIAN" note="25% Auranthi blood — also inherits 2 of 10 Auranthi defaults" raceAbilities={raceAbilities} saveRaceAbilities={saveRaceAbilities}/>
+          <AbilityEditor raceId="zyrenian" accent="#B04A1A" label="ZYRENIAN" note="25% Auranthi blood — also inherits 2 of 10 Auranthi defaults" raceAbilities={raceAbilities} saveRaceAbilities={saveRaceAbilities} canCopyAuranthi/>
 
           <div style={{fontSize:11,letterSpacing:"0.18em",textTransform:"uppercase",color:`${G}66`,fontFamily:"var(--font-mono)",marginBottom:12,paddingBottom:6,borderBottom:"1px solid var(--border)",marginTop:8}}>— Species Power Index —</div>
 
@@ -4625,7 +4633,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
           <div style={{fontSize:11,letterSpacing:"0.18em",textTransform:"uppercase",color:`${G}66`,fontFamily:"var(--font-mono)",marginBottom:12,paddingBottom:6,borderBottom:"1px solid var(--border)",marginTop:8}}>— Other Race Defaults —</div>
           <div style={{fontSize:11.5,color:"var(--text3)",marginBottom:16,lineHeight:1.6}}>Define inherent ability defaults for any other race. Heroes with matching race inherit these at full strength (no bloodline dilution).</div>
           {otherRaces.map(r=>(
-            <AbilityEditor key={r.id} raceId={r.id} accent={r.accent} label={r.label.toUpperCase()} note={r.lore?.split("—")[0]?.trim()||r.branchLabel} raceAbilities={raceAbilities} saveRaceAbilities={saveRaceAbilities}/>
+            <AbilityEditor key={r.id} raceId={r.id} accent={r.accent} label={r.label.toUpperCase()} note={r.lore?.split("—")[0]?.trim()||r.branchLabel} raceAbilities={raceAbilities} saveRaceAbilities={saveRaceAbilities} canCopyAuranthi={r.main==="alien"}/>
           ))}
         </>);
       })()}
@@ -4915,6 +4923,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
                   ):(
                     hasMetaAI?<MetaAILauncher prompt={soloPromptResult.metaAI} label="Meta AI" copied={copied.spmeta} onCopy={()=>copy("spmeta",soloPromptResult.metaAI)}/>:<div style={{display:"flex",justifyContent:"flex-end",marginTop:6,marginBottom:12}}><button style={s.cpyBtn(copied.spmeta)} onClick={()=>copy("spmeta",soloPromptResult.metaAI)}>{copied.spmeta?"Copied!":"Copy"}</button></div>
                   )}
+                  <GenerateImageButton prompt={soloPromptResult.metaAI} imgId={hero.id} enabled={imageGenOk} onSaved={markImageSaved}/>
                   {images[hero.id]&&<div style={{marginTop:12}}>
                     <button style={{...s.bigBtn(false),background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.15)"}} onClick={()=>downloadImg(hero.id,hero.heroName)}>📎 Download Reference Image</button>
                     <div style={{fontSize:10.5,color:"var(--text4)",marginTop:6}}>{soloPromptResult.platform==="midjourney"?"Use as reference with --cref [image-url] for character consistency":soloPromptResult.platform==="dalle"?"Upload alongside the prompt in ChatGPT for best accuracy":soloPromptResult.platform==="firefly"?"Upload alongside the prompt at firefly.adobe.com for best accuracy":"Upload alongside the prompt in Meta AI for best accuracy"}</div>
