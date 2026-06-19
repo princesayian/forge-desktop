@@ -330,6 +330,9 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
   const[saved,setSaved]=useState(false);
   const[pdfLoading,setPdfLoading]=useState(false);
   const[allDossierLoading,setAllDossierLoading]=useState(false);
+  const[showCustomDossier,setShowCustomDossier]=useState(false);
+  const[customDossierSel,setCustomDossierSel]=useState({});
+  const[customDossierLoading,setCustomDossierLoading]=useState(false);
   const[encLoading,setEncLoading]=useState(false);
   const[lightMode,setLightMode]=useState(()=>{try{return localStorage.getItem("forge-theme")==="light";}catch{return false;}});
 
@@ -476,6 +479,12 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     });
     return map;
   },[teamRosters]);
+
+  const allHeroesList=useMemo(()=>{
+    const seen=new Set();const out=[];
+    allCharacters.forEach(m=>{if(!seen.has(m.id)){seen.add(m.id);out.push(m);}});
+    return out;
+  },[allCharacters]);
 
   const getTeamMemberCount=useCallback((teamId)=>getTeamRoster(teamId).length,[getTeamRoster]);
 
@@ -1643,6 +1652,41 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
     setAllDossierLoading(false);
   };
 
+  const exportCustomDossier=async()=>{
+    const selIds=Object.keys(customDossierSel).filter(id=>customDossierSel[id]);
+    if(selIds.length===0)return;
+    setCustomDossierLoading(true);
+    try{
+      const selHeroes=allHeroesList.filter(m=>selIds.includes(m.id));
+      const selVillains=villainPool.filter(v=>selIds.includes(v.id));
+      const b64Images={};
+      for(const id of selIds){
+        const url=images[id];
+        if(url){try{const res=await fetch(url);const blob=await res.blob();const reader=new FileReader();await new Promise(resolve=>{reader.onload=e=>{b64Images[id]=e.target.result;resolve();};reader.readAsDataURL(blob);});}catch(e){}}
+      }
+      const sections=[];
+      if(selHeroes.length>0)sections.push({type:"solo",name:"Selected Heroes",color:G,members:selHeroes.map(m=>{
+        const tid=(memberTeamMap[m.id]||[m.teamId])[0];
+        const t=teams.find(x=>x.id===tid);
+        return{...m,teamName:t?t.name:"Independent",teamColor:t?(t.color||G):(m.color||G),
+          nkAlignment:m.nkAlignment||(t?t.nkAlignment:"neutral")||"neutral",
+          sharedVillains:t?villainPool.filter(v=>v.targetTeams?.includes(t.id)).map(v=>v.heroName):(soloVillains[m.id]||[]).map(v=>v.heroName)};
+      })});
+      if(selVillains.length>0)sections.push({type:"villains",name:"Selected Villains",color:"#8B1A1A",members:selVillains.map(v=>({...v,teamName:"Classified",teamColor:v.color||"#8B1A1A",nkAlignment:"enemy",sharedVillains:[]}))});
+      const allChars=[
+        ...teams.flatMap(t=>getTeamRoster(t.id).map(m=>({id:m.id,heroName:m.heroName,teamName:t.name}))),
+        ...soloHeroes.map(h=>({id:h.id,heroName:h.heroName,teamName:"Independent"})),
+        ...villainPool.map(v=>({id:v.id,heroName:v.heroName,teamName:"Villain"})),
+      ];
+      const res=await fetch("/api/export-all-pdf",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sections,images:b64Images,familyLinks,heroAssocs,allChars})});
+      if(!res.ok){const err=await res.json();alert("PDF error: "+(err.error||"Unknown error"));setCustomDossierLoading(false);return;}
+      const blob=await res.blob();const url=URL.createObjectURL(blob);
+      const a=document.createElement("a");a.href=url;a.download="forge-custom-dossier.pdf";document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+      setShowCustomDossier(false);
+    }catch(e){alert("Export failed: "+e.message);}
+    setCustomDossierLoading(false);
+  };
+
   const exportEncyclopedia=async()=>{
     setEncLoading(true);
     try{
@@ -1829,6 +1873,47 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
       </div>
     </div>}
 
+    {/* ── Custom Dossier Picker Modal ─────────────────────────────────── */}
+    {showCustomDossier&&(()=>{
+      const selCount=Object.values(customDossierSel).filter(Boolean).length;
+      const toggle=id=>setCustomDossierSel(p=>({...p,[id]:!p[id]}));
+      const selectAll=list=>setCustomDossierSel(p=>{const n={...p};list.forEach(m=>n[m.id]=true);return n;});
+      const deselectAll=list=>setCustomDossierSel(p=>{const n={...p};list.forEach(m=>delete n[m.id]);return n;});
+      const sectionHead=(label,list,color)=>(
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",margin:"14px 0 8px"}}>
+          <span style={{fontSize:10,letterSpacing:"0.18em",color:`${color}99`,textTransform:"uppercase",fontFamily:"var(--font-mono)"}}>{label} ({list.length})</span>
+          <div style={{display:"flex",gap:10}}>
+            <button onClick={()=>selectAll(list)} disabled={!list.length} style={{fontSize:10,color,background:"none",border:"none",cursor:list.length?"pointer":"default",textDecoration:"underline",fontFamily:"var(--font-mono)"}}>Select all</button>
+            <button onClick={()=>deselectAll(list)} disabled={!list.length} style={{fontSize:10,color:"var(--text3)",background:"none",border:"none",cursor:list.length?"pointer":"default",textDecoration:"underline",fontFamily:"var(--font-mono)"}}>Deselect all</button>
+          </div>
+        </div>
+      );
+      const row=(m,color)=>(
+        <label key={m.id} style={{display:"flex",alignItems:"center",gap:10,padding:"6px 8px",borderRadius:6,cursor:"pointer"}}>
+          <input type="checkbox" checked={!!customDossierSel[m.id]} onChange={()=>toggle(m.id)} style={{cursor:"pointer"}}/>
+          <span style={{fontSize:13,color:"var(--text2)"}}>{m.heroName}</span>
+        </label>
+      );
+      return(
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.75)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setShowCustomDossier(false)}>
+          <div style={{background:"#0D0D1A",border:`1px solid ${G}44`,borderRadius:14,padding:"24px 28px",width:480,maxHeight:"82vh",display:"flex",flexDirection:"column",boxShadow:"0 8px 40px rgba(0,0,0,0.7)"}} onClick={e=>e.stopPropagation()}>
+            <div style={{fontSize:12,fontWeight:"bold",color:G,letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:6}}>Custom Dossier</div>
+            <div style={{fontSize:12.5,color:"var(--text3)",marginBottom:8,lineHeight:1.5}}>Pick any number of heroes and villains — one or all. Heroes and villains export as separate sections.</div>
+            <div style={{flex:1,overflowY:"auto",paddingRight:4}}>
+              {sectionHead("Heroes",allHeroesList,G)}
+              {allHeroesList.length?allHeroesList.map(m=>row(m,G)):<div style={{fontSize:12,color:"var(--text4)",padding:"4px 8px"}}>No heroes yet.</div>}
+              {sectionHead("Villains",villainPool,"#E07070")}
+              {villainPool.length?villainPool.map(v=>row(v,"#E07070")):<div style={{fontSize:12,color:"var(--text4)",padding:"4px 8px"}}>No villains yet.</div>}
+            </div>
+            <div style={{display:"flex",gap:10,marginTop:18}}>
+              <button onClick={()=>setShowCustomDossier(false)} style={{flex:1,padding:"9px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:8,color:"var(--text2)",fontSize:12,fontFamily:"var(--font-mono)",cursor:"pointer"}}>Cancel</button>
+              <button onClick={exportCustomDossier} disabled={customDossierLoading||selCount===0} style={{flex:1,padding:"9px",background:customDossierLoading||!selCount?"var(--bg3)":`${G}1A`,border:`1px solid ${customDossierLoading||!selCount?"var(--border2)":G}`,borderRadius:8,color:customDossierLoading||!selCount?"var(--text4)":G,fontSize:12,fontFamily:"var(--font-mono)",cursor:customDossierLoading||!selCount?"not-allowed":"pointer",fontWeight:"bold"}}>{customDossierLoading?"Building...":`Generate (${selCount})`}</button>
+            </div>
+          </div>
+        </div>
+      );
+    })()}
+
     {/* ── Image Prompt Questionnaire ──────────────────────────────────── */}
     {pQuestionnaire&&(()=>{const subj=pQuestionnaire.subject;const isVillain=pQuestionnaire.kind==="villain";return(
       <ImagePromptQuestionnaire
@@ -1884,6 +1969,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
               <div style={{display:"flex",gap:8,alignItems:"center"}}>
                 <button onClick={exportEncyclopedia} disabled={encLoading} style={{padding:"9px 16px",background:encLoading?"var(--bg3)":`${G}0A`,border:`1px solid ${encLoading?"var(--border2)":`${G}44`}`,borderRadius:8,cursor:encLoading?"not-allowed":"pointer",color:encLoading?"var(--text4)":G,fontSize:11.5,letterSpacing:"0.12em",textTransform:"uppercase",fontFamily:"var(--font-mono)",whiteSpace:"nowrap"}}>{encLoading?"Building...":"⬇ Encyclopedia"}</button>
                 <button onClick={exportAllDossiers} disabled={allDossierLoading} style={{padding:"9px 16px",background:allDossierLoading?"var(--bg3)":"rgba(139,26,26,0.08)",border:`1px solid ${allDossierLoading?"var(--border2)":"rgba(139,26,26,0.4)"}`,borderRadius:8,cursor:allDossierLoading?"not-allowed":"pointer",color:allDossierLoading?"var(--text4)":"#E07070",fontSize:11.5,letterSpacing:"0.12em",textTransform:"uppercase",fontFamily:"var(--font-mono)",whiteSpace:"nowrap"}}>{allDossierLoading?"Building...":"⬇ Universe Dossier"}</button>
+                <button onClick={()=>{setCustomDossierSel({});setShowCustomDossier(true);}} style={{padding:"9px 16px",background:`${G}0A`,border:`1px solid ${G}44`,borderRadius:8,cursor:"pointer",color:G,fontSize:11.5,letterSpacing:"0.12em",textTransform:"uppercase",fontFamily:"var(--font-mono)",whiteSpace:"nowrap"}}>☑ Custom Dossier</button>
                 <button onClick={()=>setShowTeamCreator(true)} style={{padding:"9px 18px",background:`${G}14`,border:`1px solid ${G}`,borderRadius:8,cursor:"pointer",color:G,fontSize:11.5,letterSpacing:"0.12em",textTransform:"uppercase",fontFamily:"var(--font-mono)",whiteSpace:"nowrap"}}>+ New Team</button>
               </div>
             </div>}
