@@ -342,7 +342,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
   },[lightMode]);
   useEffect(()=>{try{localStorage.setItem("forge-active-tab",tab);}catch{}},[tab]);
   const[copied,setCopied]=useState({});
-  const fileRefs=useRef({});const teamLogoRefs=useRef({});const factionLogoRefs=useRef({});
+  const fileRefs=useRef({});const teamLogoRefs=useRef({});const factionLogoRefs=useRef({});const forgeLogoRef=useRef(null);
 
   // ── Ollama check ─────────────────────────────────────────────────────────
   const checkOllama=useCallback(()=>{
@@ -1754,7 +1754,7 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
   return(<div style={{background:"var(--bg-base)",color:"var(--text-primary)",minHeight:"100vh",paddingBottom:60}}>
 
     {/* ── Header ─────────────────────────────────────────────────────────── */}
-    <div className="fhdr" style={{borderBottom:"1px solid rgba(212,175,55,0.14)",padding:"12px 16px 0",display:"flex",flexDirection:"column",alignItems:"center",background:"var(--header-bg)",backdropFilter:"blur(12px)",position:"sticky",top:0,zIndex:50}}>
+    <div className="fhdr" style={{borderBottom:"1px solid rgba(212,175,55,0.14)",padding:"16px 16px",display:"flex",flexDirection:"row",alignItems:"flex-start",gap:24,background:"var(--header-bg)",backdropFilter:"blur(12px)",position:"sticky",top:0,zIndex:50}}>
 
       {/* Utility controls — top right */}
       <div className="fhdr-utils" style={{position:"absolute",top:8,right:12,display:"flex",alignItems:"center",gap:5,flexWrap:"nowrap"}}>
@@ -1788,56 +1788,55 @@ const addCustomRColor=()=>{const h=rCustomHex.trim();if(!h.match(/^#[0-9a-fA-F]{
         <button onClick={()=>setLightMode(p=>!p)} title={lightMode?"Switch to Dark Mode":"Switch to Light Mode"} style={{padding:"4px 9px",background:lightMode?"rgba(0,0,0,0.08)":"var(--bg2)",border:`1px solid ${lightMode?"rgba(0,0,0,0.15)":"var(--border)"}`,borderRadius:7,cursor:"pointer",fontSize:13,lineHeight:1,transition:"all 0.2s"}}>{lightMode?"🌙":"☀️"}</button>
       </div>
 
-      {/* Logo + app name — centered */}
-      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
-        <div style={{width:34,height:34,borderRadius:9,background:`linear-gradient(135deg,${G}22,${G}0A)`,border:`1px solid ${G}33`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,flexShrink:0,boxShadow:`0 0 18px ${G}1A`}}>⚒</div>
-        <div>
-          <div style={{fontSize:9.5,letterSpacing:"0.3em",color:`${G}70`,textTransform:"uppercase",fontFamily:"var(--font-mono)",marginBottom:1}}>Nocturnal Innovations's Superhero Forge</div>
-          <div style={{display:"flex",alignItems:"baseline",gap:7}}>
-            <div style={{fontSize:18,fontWeight:"800",letterSpacing:"0.04em",color:"var(--text-primary)",fontFamily:"var(--font-mono)",lineHeight:1}}>SUPERHERO FORGE</div>
-            {forgeVersion&&<div style={{fontSize:9,color:"var(--text4)",letterSpacing:"0.12em",fontFamily:"var(--font-mono)"}}>{`v${forgeVersion}`}</div>}
-          </div>
+      {/* Branding — prominent logo, pinned top-left */}
+      <div className="fhdr-brand" style={{display:"flex",flexDirection:"column",alignItems:"center",flexShrink:0,gap:6}}>
+        <input type="file" accept="image/*" style={{display:"none"}} ref={forgeLogoRef} onChange={e=>e.target.files?.[0]&&handleImg('forge-logo',e.target.files[0])}/>
+        <div style={{fontSize:10,letterSpacing:"0.25em",color:`${G}80`,textTransform:"uppercase",fontFamily:"var(--font-mono)",whiteSpace:"nowrap"}}>Nocturnal Innovation's</div>
+        <div className="fhdr-logo-box" onClick={()=>forgeLogoRef.current?.click()} title="Click to upload a custom Forge logo" style={{width:170,height:170,borderRadius:45,background:images['forge-logo']?"transparent":`linear-gradient(135deg,${G}22,${G}0A)`,border:`1px solid ${G}33`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:85,flexShrink:0,boxShadow:`0 0 30px ${G}1A`,cursor:"pointer",overflow:"hidden"}}>
+          {images['forge-logo']?<img src={images['forge-logo']} alt="Forge logo" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:"⚒"}
         </div>
+        {forgeVersion&&<div style={{fontSize:9,color:"var(--text4)",letterSpacing:"0.12em",fontFamily:"var(--font-mono)"}}>{`v${forgeVersion}`}</div>}
       </div>
 
-      {/* Active team — centered */}
-      {activeTeam
-        ?<div onClick={()=>setTab("teams")} style={{display:"flex",alignItems:"center",gap:7,padding:"4px 14px",background:`${activeTeam.color}10`,border:`1px solid ${activeTeam.color}33`,borderRadius:20,cursor:"pointer",marginBottom:10}}>
-          <div style={{width:8,height:8,borderRadius:2,background:activeTeam.color,flexShrink:0,boxShadow:`0 0 6px ${activeTeam.color}88`}}/>
-          <span style={{fontSize:11,color:activeTeam.color,fontFamily:"var(--font-mono)",letterSpacing:"0.07em",fontWeight:"600"}}>{activeTeam.abbr} · {activeTeam.name}</span>
-        </div>
-        :<div style={{height:8}}/>}
-
-      {/* Nav tabs — grouped into categories, centered */}
-      {(()=>{
-        const TAB_CATEGORIES=[
-          {id:"roster",label:"Roster",tabs:[["teams","Teams"],["roster","Roster"],["team","Team"],["family","Family"],["recruit","+ Recruit"]]},
-          {id:"story",label:"Story",tabs:[["prompts","Prompts"],["story","Story"],["arc","Arc"],["comic","📖 Comic"]]},
-          {id:"conflict",label:"Conflict",tabs:[["villains","Villains"],["battle","⚡ Battle"],["tiers","Tiers"]]},
-          {id:"world",label:"World",tabs:[["universe","Universe"],["codex","Codex"]]},
-        ];
-        const activeCat=TAB_CATEGORIES.find(cat=>cat.tabs.some(([id])=>id===tab))||TAB_CATEGORIES[0];
-        return(<>
-          <div className="ftabs-cat" style={{display:"flex",justifyContent:"center",padding:"0 16px",gap:6,width:"100%",boxSizing:"border-box",marginBottom:8}}>
-            {TAB_CATEGORIES.map(cat=>{
-              const catDisabled=!activeTeam&&!cat.tabs.some(([id])=>id==="teams"||id==="codex");
-              return(<button key={cat.id} className="ftab-cat" style={s.chip(cat.id===activeCat.id)} disabled={catDisabled} onClick={()=>{
-                if(cat.id===activeCat.id)return;
-                const target=cat.tabs.find(([id])=>id==="teams"||id==="codex"||activeTeam);
-                if(target)setTab(target[0]);
-              }}>{cat.label}</button>);
-            })}
-          </div>
-          <div className="ftabs" style={{display:"flex",justifyContent:"center",padding:"0 16px",overflowX:"auto",gap:2,width:"100%",boxSizing:"border-box"}}>
-            {activeCat.tabs.map(([id,label])=>{
-              const freeTab=id==="teams"||id==="codex";
-              return(<button key={id} className="ftab" style={s.tab(tab===id)} onClick={()=>{if(!activeTeam&&!freeTab)return;setTab(id);}} disabled={!activeTeam&&!freeTab}>{label}</button>);
-            })}
-          </div>
-        </>);
-      })()}
-
+      {/* Nav content — centered in remaining space */}
+      <div className="fhdr-nav" style={{flex:1,alignSelf:"stretch",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-end",width:"100%",minWidth:0}}>
+        {/* Nav tabs — grouped into categories, centered */}
+        {(()=>{
+          const TAB_CATEGORIES=[
+            {id:"roster",label:"Roster",tabs:[["teams","Teams"],["roster","Roster"],["team","Team"],["family","Family"],["recruit","+ Recruit"]]},
+            {id:"story",label:"Story",tabs:[["prompts","Prompts"],["story","Story"],["arc","Arc"],["comic","📖 Comic"]]},
+            {id:"conflict",label:"Conflict",tabs:[["villains","Villains"],["battle","⚡ Battle"],["tiers","Tiers"]]},
+            {id:"world",label:"World",tabs:[["universe","Universe"],["codex","Codex"]]},
+          ];
+          const activeCat=TAB_CATEGORIES.find(cat=>cat.tabs.some(([id])=>id===tab))||TAB_CATEGORIES[0];
+          return(<>
+            <div className="ftabs-cat" style={{display:"flex",justifyContent:"center",padding:"0 16px",gap:6,width:"100%",boxSizing:"border-box",marginBottom:8}}>
+              {TAB_CATEGORIES.map(cat=>{
+                const catDisabled=!activeTeam&&!cat.tabs.some(([id])=>id==="teams"||id==="codex");
+                return(<button key={cat.id} className="ftab-cat" style={s.chip(cat.id===activeCat.id)} disabled={catDisabled} onClick={()=>{
+                  if(cat.id===activeCat.id)return;
+                  const target=cat.tabs.find(([id])=>id==="teams"||id==="codex"||activeTeam);
+                  if(target)setTab(target[0]);
+                }}>{cat.label}</button>);
+              })}
+            </div>
+            <div className="ftabs" style={{display:"flex",justifyContent:"center",padding:"0 16px",overflowX:"auto",gap:2,width:"100%",boxSizing:"border-box"}}>
+              {activeCat.tabs.map(([id,label])=>{
+                const freeTab=id==="teams"||id==="codex";
+                return(<button key={id} className="ftab" style={s.tab(tab===id)} onClick={()=>{if(!activeTeam&&!freeTab)return;setTab(id);}} disabled={!activeTeam&&!freeTab}>{label}</button>);
+              })}
+            </div>
+          </>);
+        })()}
+      </div>
     </div>
+
+    {/* ── Active team bar — full width strip below header ──────────────── */}
+    {activeTeam&&
+      <div onClick={()=>setTab("teams")} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,width:"100%",padding:"6px 16px",boxSizing:"border-box",background:`${activeTeam.color}14`,borderBottom:`1px solid ${activeTeam.color}33`,cursor:"pointer"}}>
+        <TeamLogo team={activeTeam} size={40} imageUrl={images['teamlogo-'+activeTeam.id]}/>
+        <span style={{fontSize:13,color:activeTeam.color,fontFamily:"var(--font-mono)",letterSpacing:"0.06em",fontWeight:"600",lineHeight:1}}>{activeTeam.abbr} · {activeTeam.name}</span>
+      </div>}
 
     {/* ── Remote / Settings Panel ────────────────────────────────────── */}
     {showRemotePanel&&<RemotePanel remoteInfo={remoteInfo} setRemoteInfo={setRemoteInfo} onClose={()=>setShowRemotePanel(false)} G={G} s={s} forgeVersion={forgeVersion} setAppAlert={setAppAlert}/>}

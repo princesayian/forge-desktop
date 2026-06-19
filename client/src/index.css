@@ -66,8 +66,11 @@ button[disabled]{opacity:0.45;cursor:not-allowed;}
 .fchar-portrait-frame:hover .fchar-portrait-img{transform:scale(1.2);}
 @media (max-width:640px){
   /* Header: pull utility bar out of absolute positioning so it doesn't overlap the logo */
-  .fhdr{height:auto!important;padding:6px 10px 0!important;}
+  .fhdr{height:auto!important;padding:6px 10px 10px!important;flex-direction:column!important;gap:0!important;}
   .fhdr-utils{position:static!important;top:auto!important;right:auto!important;width:100%!important;justify-content:flex-end!important;flex-wrap:wrap!important;margin-bottom:4px!important;gap:4px!important;}
+  .fhdr-brand{margin-bottom:10px!important;}
+  .fhdr-logo-box{width:90px!important;height:90px!important;font-size:45px!important;border-radius:24px!important;}
+  .fhdr-nav{width:100%!important;}
   .fhdr-right{gap:5px!important;flex-wrap:wrap!important;}
   .fhdr-model,.fhdr-refresh,.fhdr-restart{display:none!important;}
   .fmain{padding:14px 12px!important;}
